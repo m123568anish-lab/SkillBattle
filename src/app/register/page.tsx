@@ -6,8 +6,8 @@ export default function RegisterPage() {
   return (
     <AuthLayout>
       <AuthCard
-        title="Create Account"
-        subtitle="Join SkillBattle and start competing today."
+        title="Create Account 🚀"
+        subtitle="Join SkillBattle and start your placement journey."
       >
         <RegisterForm />
       </AuthCard>
