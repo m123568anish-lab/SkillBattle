@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Swords } from "lucide-react";
 
-export default function NavLogo() {
+export default function Logo() {
   return (
     <Link
       href="/"
@@ -11,7 +11,7 @@ export default function NavLogo() {
         <Swords className="h-6 w-6 text-white" />
       </div>
 
-      <span className="text-2xl font-bold tracking-wide text-white">
+      <span className="text-2xl font-bold tracking-tight text-white">
         SkillBattle
       </span>
     </Link>
