@@ -9,15 +9,21 @@ import {
   Trophy,
 } from "lucide-react";
 
-import { LeaderboardPlayer } from "@/data/leaderboard";
+import type { LeaderboardUser } from "@/data/leaderboard";
 
 interface Props {
-  player: LeaderboardPlayer;
+  player: LeaderboardUser;
 }
 
 export default function LeaderboardRow({ player }: Props) {
+  const rank = Number(1);
+  const change = "same" as string;
+  const online = true;
+  const country = "India";
+  const streak = 12;
+
   const getRankColor = () => {
-    switch (player.rank) {
+    switch (rank) {
       case 1:
         return "from-yellow-400 to-amber-500";
       case 2:
@@ -30,7 +36,7 @@ export default function LeaderboardRow({ player }: Props) {
   };
 
   const RankIcon = () => {
-    switch (player.change) {
+    switch (change) {
       case "up":
         return <ArrowUp className="h-4 w-4 text-green-400" />;
       case "down":
@@ -83,7 +89,7 @@ export default function LeaderboardRow({ player }: Props) {
             text-white
           `}
         >
-          {player.rank}
+          {rank}
         </div>
 
         {/* Avatar */}
@@ -94,7 +100,7 @@ export default function LeaderboardRow({ player }: Props) {
             {player.name.charAt(0)}
           </div>
 
-          {player.online && (
+          {online && (
             <span className="absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-[#070B14] bg-green-400" />
           )}
 
@@ -110,7 +116,7 @@ export default function LeaderboardRow({ player }: Props) {
               {player.name}
             </h3>
 
-            <span>{player.country}</span>
+            <span>{country}</span>
 
           </div>
 
@@ -139,7 +145,7 @@ export default function LeaderboardRow({ player }: Props) {
             <Flame className="text-orange-400" size={18} />
 
             <span className="font-semibold text-white">
-              {player.streak}
+              {streak}
             </span>
 
           </div>

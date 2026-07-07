@@ -17,12 +17,17 @@ export function useLogin() {
 
       localStorage.setItem(
         "accessToken",
-        response.access_token
+        response.tokens.access_token
+      );
+
+      localStorage.setItem(
+        "access_token",
+        response.tokens.access_token
       );
 
       localStorage.setItem(
         "refreshToken",
-        response.refresh_token
+        response.tokens.refresh_token
       );
 
       return response;

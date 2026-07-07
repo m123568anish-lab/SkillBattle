@@ -10,7 +10,10 @@ export async function login(
 ) {
   const response = await api.post(
     "/auth/login",
-    data
+    {
+      email: data.email,
+      password: data.password,
+    }
   );
 
   return response.data;
@@ -21,7 +24,12 @@ export async function register(
 ) {
   const response = await api.post(
     "/auth/register",
-    data
+    {
+      username: data.name.trim().toLowerCase().replace(/\s+/g, "_"),
+      email: data.email,
+      full_name: data.name,
+      password: data.password,
+    }
   );
 
   return response.data;

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { AuthGuard } from "@/components/auth/AuthGuard";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,7 +30,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full`}
     >
       <body className="min-h-screen bg-[#070B14] text-white">
-        {children}
+        <AuthGuard>{children}</AuthGuard>
 
         <Toaster
           position="top-right"
