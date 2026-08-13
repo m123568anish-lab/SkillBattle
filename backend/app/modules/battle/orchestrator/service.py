@@ -1,14 +1,33 @@
-import asyncio
+"""
+=========================================================
+
+SkillBattle
+
+Battle Orchestrator
+
+Production Version
+
+=========================================================
+"""
+
+from __future__ import annotations
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.battle.timer import battle_timer
+
 from app.modules.battle.websocket import (
     battle_ws,
+)
+
+from app.modules.battle.events import (
     BattleEvent,
 )
+
 from app.modules.battle.reward import (
     battle_reward_service,
 )
-# Do not import tournament scheduler here to avoid import cycles.
+
 
 class BattleOrchestrator:
 
@@ -18,12 +37,15 @@ class BattleOrchestrator:
 
     def __init__(self):
 
-        self.active_battles = {}
+        self.active_battles: dict[str, dict] = {}
 
+    # =====================================================
+    # Start Battle
     # =====================================================
 
     async def start_battle(
         self,
+        db: AsyncSession,
         battle_id: str,
         duration: int,
     ):
@@ -41,7 +63,7 @@ class BattleOrchestrator:
 
             battle_id,
 
-            BattleEvent.BATTLE_STARTED,
+            BattleEvent.BATTLE_STARTED.value,
 
             {
 
@@ -59,50 +81,70 @@ class BattleOrchestrator:
 
         )
 
-        battle_reward_service.finish_battle(
-            self.db,
-            battle_id,
-)
+        await battle_reward_service.finish_battle(
 
-        await self.finish_battle(
-         battle_id,
-)
-
-    # =====================================================
-
-    async def finish_battle(
-        self,
-        battle_id: str,
-    ):
-
-        await battle_ws.broadcast(
+            db,
 
             battle_id,
 
-            BattleEvent.BATTLE_FINISHED,
+        )
 
-            {
+        from app.modules.battle.service import battle_service
 
-                "battle_id": battle_id,
+        await battle_service.finish_battle(
 
-            },
+            db,
+
+            battle_id,
 
         )
 
         self.active_battles.pop(
+
             battle_id,
+
             None,
+
         )
 
+    # =====================================================
+    # Force Finish
+    # =====================================================
+
+    async def finish_battle(
+        self,
+        db: AsyncSession,
+        battle_id: str,
+    ):
+
+        from app.modules.battle.service import battle_service
+
+        await battle_service.finish_battle(
+
+            db,
+
+            battle_id,
+
+        )
+
+        self.active_battles.pop(
+
+            battle_id,
+
+            None,
+
+        )
+
+    # =====================================================
+    # Running?
     # =====================================================
 
     def running(
         self,
         battle_id: str,
-    ):
+    ) -> bool:
 
         return battle_id in self.active_battles
-    
 
 
 battle_orchestrator = BattleOrchestrator()

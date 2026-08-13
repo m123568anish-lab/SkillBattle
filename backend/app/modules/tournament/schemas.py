@@ -1,7 +1,19 @@
-from datetime import datetime
-from typing import Optional
+"""
+=========================================================
 
-from pydantic import BaseModel, Field
+SkillBattle
+
+Tournament Schemas
+
+=========================================================
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+
+from pydantic import BaseModel
+from pydantic import Field
 
 
 # ==========================================================
@@ -10,17 +22,25 @@ from pydantic import BaseModel, Field
 
 class CreateTournamentRequest(BaseModel):
 
-    title: str = Field(..., min_length=3, max_length=150)
+    title: str = Field(
+        ...,
+        min_length=3,
+        max_length=120,
+    )
 
-    description: str = Field(..., max_length=500)
-
-    difficulty: str
+    description: str
 
     max_players: int = Field(
         default=16,
         ge=2,
         le=256,
     )
+
+    tournament_type: str = "single_elimination"
+
+    registration_end: datetime
+
+    starts_at: datetime
 
 
 # ==========================================================
@@ -44,13 +64,17 @@ class TournamentResponse(BaseModel):
 
     description: str
 
-    difficulty: str
-
-    max_players: int
+    tournament_type: str
 
     status: str
 
-    created_at: datetime
+    max_players: int
+
+    registered_players: int
+
+    starts_at: datetime
+
+    registration_end: datetime
 
     class Config:
 
@@ -58,7 +82,7 @@ class TournamentResponse(BaseModel):
 
 
 # ==========================================================
-# Tournament Participant
+# Participant
 # ==========================================================
 
 class TournamentParticipantResponse(BaseModel):
@@ -69,7 +93,9 @@ class TournamentParticipantResponse(BaseModel):
 
     user_id: str
 
-    joined_at: datetime
+    seed: int
+
+    eliminated: bool
 
     class Config:
 
@@ -77,7 +103,7 @@ class TournamentParticipantResponse(BaseModel):
 
 
 # ==========================================================
-# Tournament Match
+# Match
 # ==========================================================
 
 class TournamentMatchResponse(BaseModel):
@@ -88,47 +114,14 @@ class TournamentMatchResponse(BaseModel):
 
     round_number: int
 
-    battle_id: Optional[str]
+    battle_id: str | None
 
-    player_one_id: str
+    player_one_id: str | None
 
-    player_two_id: str
+    player_two_id: str | None
 
-    winner_id: Optional[str]
+    winner_id: str | None
 
     class Config:
 
         from_attributes = True
-
-
-# ==========================================================
-# Tournament Bracket
-# ==========================================================
-
-class TournamentBracketResponse(BaseModel):
-
-    tournament_id: str
-
-    rounds: list[TournamentMatchResponse]
-
-
-# ==========================================================
-# Tournament Leaderboard
-# ==========================================================
-
-class TournamentLeaderboardEntry(BaseModel):
-
-    user_id: str
-
-    wins: int
-
-    losses: int
-
-    position: int
-
-
-class TournamentLeaderboardResponse(BaseModel):
-
-    tournament_id: str
-
-    players: list[TournamentLeaderboardEntry]

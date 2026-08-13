@@ -1,6 +1,19 @@
-from typing import Optional
+"""
+=========================================================
 
-from sqlalchemy.orm import Session
+SkillBattle
+
+Battle Repository
+
+Production SQLAlchemy 2.x Async Repository
+
+=========================================================
+"""
+
+from __future__ import annotations
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.battle import (
     BattleRoom,
@@ -16,237 +29,272 @@ class BattleRepository:
     # Battle Room
     # ==========================================================
 
-    def create_battle(
+    async def create_battle(
         self,
-        db: Session,
+        db: AsyncSession,
         battle: BattleRoom,
-    ):
+    ) -> BattleRoom:
 
         db.add(battle)
 
-        db.flush()
+        await db.flush()
+        await db.refresh(battle)
 
         return battle
 
-    def get_battle(
+    async def get_battle(
         self,
-        db: Session,
+        db: AsyncSession,
         battle_id: str,
-    ) -> Optional[BattleRoom]:
+    ) -> BattleRoom | None:
 
-        return (
-
-            db.query(BattleRoom)
-
-            .filter(
+        result = await db.execute(
+            select(BattleRoom).where(
                 BattleRoom.id == battle_id
             )
-
-            .first()
-
         )
 
-    def get_waiting_battles(
+        return result.scalar_one_or_none()
+
+    async def get_waiting_battles(
         self,
-        db: Session,
-    ):
+        db: AsyncSession,
+    ) -> list[BattleRoom]:
 
-        return (
-
-            db.query(BattleRoom)
-
-            .filter(
-                BattleRoom.status == "waiting"
-            )
-
-            .all()
-
+        result = await db.execute(
+            select(BattleRoom)
+            .where(BattleRoom.status == "waiting")
+            .order_by(BattleRoom.created_at.asc())
         )
 
-    def update_battle(
+        return list(result.scalars().all())
+
+    async def update_battle(
         self,
-        db: Session,
+        db: AsyncSession,
         battle: BattleRoom,
-    ):
+    ) -> BattleRoom:
 
         db.add(battle)
 
-        db.flush()
+        await db.flush()
+        await db.refresh(battle)
 
         return battle
+
+    async def delete_battle(
+        self,
+        db: AsyncSession,
+        battle: BattleRoom,
+    ) -> None:
+
+        await db.delete(battle)
+
+        await db.flush()
 
     # ==========================================================
     # Participants
     # ==========================================================
 
-    def add_participant(
+    async def add_participant(
         self,
-        db: Session,
+        db: AsyncSession,
         participant: BattleParticipant,
-    ):
+    ) -> BattleParticipant:
 
         db.add(participant)
 
-        db.flush()
+        await db.flush()
+        await db.refresh(participant)
 
         return participant
 
-    def get_participants(
+    async def get_participant(
         self,
-        db: Session,
-        battle_id: str,
-    ):
-
-        return (
-
-            db.query(BattleParticipant)
-
-            .filter(
-                BattleParticipant.battle_id == battle_id
-            )
-
-            .all()
-
-        )
-
-    def get_participant(
-        self,
-        db: Session,
+        db: AsyncSession,
         battle_id: str,
         user_id: str,
-    ):
+    ) -> BattleParticipant | None:
 
-        return (
-
-            db.query(BattleParticipant)
-
-            .filter(
-
+        result = await db.execute(
+            select(BattleParticipant).where(
                 BattleParticipant.battle_id == battle_id,
-
                 BattleParticipant.user_id == user_id,
-
             )
-
-            .first()
-
         )
 
-    def update_participant(
+        return result.scalar_one_or_none()
+
+    async def get_participants(
         self,
-        db: Session,
+        db: AsyncSession,
+        battle_id: str,
+    ) -> list[BattleParticipant]:
+
+        result = await db.execute(
+            select(BattleParticipant)
+            .where(
+                BattleParticipant.battle_id == battle_id
+            )
+            .order_by(
+                BattleParticipant.score.desc()
+            )
+        )
+
+        return list(result.scalars().all())
+
+    async def get_active_battle_for_user(
+        self,
+        db: AsyncSession,
+        user_id: str,
+    ) -> BattleParticipant | None:
+
+        result = await db.execute(
+            select(BattleParticipant).where(
+                BattleParticipant.user_id == user_id
+            )
+        )
+
+        return result.scalar_one_or_none()
+
+    async def update_participant(
+        self,
+        db: AsyncSession,
         participant: BattleParticipant,
-    ):
+    ) -> BattleParticipant:
 
         db.add(participant)
 
-        db.flush()
+        await db.flush()
+        await db.refresh(participant)
 
         return participant
 
-    def remove_participant(
+    async def remove_participant(
         self,
-        db: Session,
+        db: AsyncSession,
         participant: BattleParticipant,
-    ):
+    ) -> None:
 
-        db.delete(participant)
+        await db.delete(participant)
 
-        db.flush()
+        await db.flush()
 
     # ==========================================================
     # Submissions
     # ==========================================================
 
-    def create_submission(
+    async def create_submission(
         self,
-        db: Session,
+        db: AsyncSession,
         submission: BattleSubmission,
-    ):
+    ) -> BattleSubmission:
 
         db.add(submission)
 
-        db.flush()
+        await db.flush()
+        await db.refresh(submission)
 
         return submission
 
-    def get_submissions(
+    async def get_submissions(
         self,
-        db: Session,
+        db: AsyncSession,
         battle_id: str,
-    ):
+    ) -> list[BattleSubmission]:
 
-        return (
-
-            db.query(BattleSubmission)
-
-            .filter(
+        result = await db.execute(
+            select(BattleSubmission)
+            .where(
                 BattleSubmission.battle_id == battle_id
             )
-
-            .all()
-
+            .order_by(
+                BattleSubmission.submitted_at.desc()
+            )
         )
+
+        return list(result.scalars().all())
+
+    async def get_latest_submission(
+        self,
+        db: AsyncSession,
+        battle_id: str,
+        user_id: str,
+    ) -> BattleSubmission | None:
+
+        result = await db.execute(
+            select(BattleSubmission)
+            .where(
+                BattleSubmission.battle_id == battle_id,
+                BattleSubmission.user_id == user_id,
+            )
+            .order_by(
+                BattleSubmission.submitted_at.desc()
+            )
+        )
+
+        return result.scalars().first()
 
     # ==========================================================
     # Results
     # ==========================================================
 
-    def create_result(
+    async def create_result(
         self,
-        db: Session,
-        result: BattleResult,
-    ):
+        db: AsyncSession,
+        result_obj: BattleResult,
+    ) -> BattleResult:
 
-        db.add(result)
+        db.add(result_obj)
 
-        db.flush()
+        await db.flush()
+        await db.refresh(result_obj)
 
-        return result
+        return result_obj
 
-    def get_result(
+    async def get_result(
         self,
-        db: Session,
+        db: AsyncSession,
         battle_id: str,
-    ):
+    ) -> BattleResult | None:
 
-        return (
-
-            db.query(BattleResult)
-
-            .filter(
+        result = await db.execute(
+            select(BattleResult).where(
                 BattleResult.battle_id == battle_id
             )
-
-            .first()
-
         )
 
+        return result.scalar_one_or_none()
+
     # ==========================================================
-    # Database Helpers
+    # Statistics
     # ==========================================================
 
-    def commit(
+    async def battle_exists(
         self,
-        db: Session,
-    ):
+        db: AsyncSession,
+        battle_id: str,
+    ) -> bool:
 
-        db.commit()
+        battle = await self.get_battle(
+            db,
+            battle_id,
+        )
 
-    def rollback(
+        return battle is not None
+
+    async def player_count(
         self,
-        db: Session,
-    ):
+        db: AsyncSession,
+        battle_id: str,
+    ) -> int:
 
-        db.rollback()
+        participants = await self.get_participants(
+            db,
+            battle_id,
+        )
 
-    def refresh(
-        self,
-        db: Session,
-        obj,
-    ):
-
-        db.refresh(obj)
+        return len(participants)
 
 
 battle_repository = BattleRepository()

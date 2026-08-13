@@ -174,10 +174,10 @@ class CareerMentorRequest(BaseModel):
 
 
 # =========================================================
-# Resume Builder
+# Resume Screening
 # =========================================================
 
-class ResumeBuilderRequest(BaseModel):
+class ResumeScreeningRequest(BaseModel):
 
     model_config = ConfigDict(
         extra="forbid",

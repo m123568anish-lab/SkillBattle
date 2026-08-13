@@ -22,26 +22,30 @@ class Achievement(Base):
         autoincrement=True,
     )
 
-    user_id: Mapped[str]
+from sqlalchemy import ForeignKey
 
-    title: Mapped[str] = mapped_column(
+user_id: Mapped[str] = mapped_column(
+    ForeignKey("users.id"),
+)
+
+title: Mapped[str] = mapped_column(
         String(120),
     )
 
-    description: Mapped[str] = mapped_column(
+description: Mapped[str] = mapped_column(
         String(300),
     )
 
-    icon: Mapped[str] = mapped_column(
+icon: Mapped[str] = mapped_column(
         String(50),
     )
 
-    unlocked: Mapped[bool] = mapped_column(
+unlocked: Mapped[bool] = mapped_column(
         Boolean,
         default=False,
     )
 
-    earned_at: Mapped[datetime] = mapped_column(
+earned_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
     )

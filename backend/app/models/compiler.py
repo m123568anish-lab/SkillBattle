@@ -19,96 +19,7 @@ from sqlalchemy.orm import (
 )
 
 from app.database.base import Base
-
-
-# ==========================================================
-# Problem
-# ==========================================================
-
-class Problem(Base):
-
-    __tablename__ = "problems"
-
-    id: Mapped[int] = mapped_column(
-        Integer,
-        primary_key=True,
-        autoincrement=True,
-    )
-
-    title: Mapped[str] = mapped_column(
-        String(200),
-        nullable=False,
-    )
-
-    slug: Mapped[str] = mapped_column(
-        String(200),
-        unique=True,
-        index=True,
-    )
-
-    difficulty: Mapped[str] = mapped_column(
-        String(20),
-        default="Easy",
-    )
-
-    category: Mapped[str] = mapped_column(
-        String(100),
-        default="Arrays",
-    )
-
-    description: Mapped[str] = mapped_column(
-        Text,
-    )
-
-    input_format: Mapped[str] = mapped_column(
-        Text,
-    )
-
-    output_format: Mapped[str] = mapped_column(
-        Text,
-    )
-
-    constraints: Mapped[str] = mapped_column(
-        Text,
-        default="",
-    )
-
-    sample_input: Mapped[str] = mapped_column(
-        Text,
-        default="",
-    )
-
-    sample_output: Mapped[str] = mapped_column(
-        Text,
-        default="",
-    )
-
-    explanation: Mapped[str] = mapped_column(
-        Text,
-        default="",
-    )
-
-    xp_reward: Mapped[int] = mapped_column(
-        Integer,
-        default=100,
-    )
-
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow,
-    )
-
-    test_cases: Mapped[List["TestCase"]] = relationship(
-        back_populates="problem",
-        cascade="all, delete-orphan",
-        lazy="selectin",
-    )
-
-    submissions: Mapped[List["CodeSubmission"]] = relationship(
-        back_populates="problem",
-        cascade="all, delete-orphan",
-        lazy="selectin",
-    )
+from app.models.problem import Problem
 
 
 # ==========================================================
@@ -145,9 +56,7 @@ class TestCase(Base):
         default=False,
     )
 
-    problem: Mapped["Problem"] = relationship(
-        back_populates="test_cases",
-    )
+    problem: Mapped["Problem"] = relationship()
 
 
 # ==========================================================
@@ -217,6 +126,4 @@ class CodeSubmission(Base):
         default=datetime.utcnow,
     )
 
-    problem: Mapped["Problem"] = relationship(
-        back_populates="submissions",
-    )
+    problem: Mapped["Problem"] = relationship()

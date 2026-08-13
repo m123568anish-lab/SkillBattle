@@ -1,18 +1,75 @@
-from pydantic import BaseModel
+"""
+=========================================================
+
+SkillBattle
+
+AI Schemas
+
+=========================================================
+"""
+
+from __future__ import annotations
+
+from typing import Optional
+
+from pydantic import BaseModel, Field
 
 
-class AIRequest(BaseModel):
-    prompt: str
+# ==========================================================
+# Chat
+# ==========================================================
+
+class AIChatRequest(BaseModel):
+
+    message: str = Field(..., min_length=1)
+
+    conversation_id: Optional[str] = None
 
 
-class AIResponse(BaseModel):
+class AIChatResponse(BaseModel):
+
     response: str
 
 
-class AICoachResponse(BaseModel):
-    study_plan: list[str]
-    weak_topics: list[str]
-    coding_challenge: str
-    motivation: str
-    company_strategy: str
-    next_milestone: str
+# ==========================================================
+# Roadmap
+# ==========================================================
+
+class RoadmapRequest(BaseModel):
+
+    target_role: str
+
+    current_level: str
+
+    weekly_hours: int = 10
+
+
+# ==========================================================
+# Resume
+# ==========================================================
+
+class ResumeReviewRequest(BaseModel):
+
+    resume_text: str
+
+
+# ==========================================================
+# Interview
+# ==========================================================
+
+class InterviewRequest(BaseModel):
+
+    role: str
+
+    level: str
+
+
+# ==========================================================
+# Recommendation
+# ==========================================================
+
+class RecommendationRequest(BaseModel):
+
+    topic: str
+
+    skill_level: str

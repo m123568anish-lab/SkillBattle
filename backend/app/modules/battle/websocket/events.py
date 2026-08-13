@@ -1,19 +1,18 @@
-class BattleEvent:
+from enum import StrEnum
 
+
+class BattleEvent(StrEnum):
     PLAYER_JOINED = "player_joined"
-
     PLAYER_LEFT = "player_left"
 
     BATTLE_STARTED = "battle_started"
-
     BATTLE_FINISHED = "battle_finished"
 
-    CODE_SUBMITTED = "code_submitted"
+    SUBMISSION = "submission"
+    SCORE_UPDATE = "score_update"
 
-    SCORE_UPDATED = "score_updated"
+    TIMER = "timer"
 
-    TIMER_UPDATED = "timer_updated"
+    CHAT = "chat"
 
-    ERROR = "error"
-
-    CHAT_MESSAGE = "chat_message"
+    SYSTEM = "system"

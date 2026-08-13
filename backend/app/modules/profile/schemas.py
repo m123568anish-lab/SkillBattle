@@ -3,6 +3,7 @@ from typing import Optional
 
 
 class ProfileUpdateRequest(BaseModel):
+    full_name: Optional[str] = None
     avatar: Optional[str] = ""
     bio: Optional[str] = Field(default="", max_length=500)
     college: Optional[str] = ""
@@ -10,8 +11,8 @@ class ProfileUpdateRequest(BaseModel):
     graduation_year: Optional[int] = 2027
     target_company: Optional[str] = ""
     target_package: Optional[str] = ""
-    github: Optional[HttpUrl] = None
-    linkedin: Optional[HttpUrl] = None
+    github: Optional[str] = ""
+    linkedin: Optional[str] = ""
 
 
 class ProfileResponse(BaseModel):

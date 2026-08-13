@@ -1,22 +1,36 @@
+"""
+=========================================================
+
+Request ID Middleware
+
+=========================================================
+"""
+
+from __future__ import annotations
+
 import uuid
 
-from fastapi import Request
+from starlette.middleware.base import BaseHTTPMiddleware
 
 
-async def add_request_id(
-    request: Request,
-    call_next,
-):
-    request.state.request_id = str(
-        uuid.uuid4()
-    )
+class RequestIDMiddleware(BaseHTTPMiddleware):
 
-    response = await call_next(
-        request
-    )
+    async def dispatch(
 
-    response.headers[
-        "X-Request-ID"
-    ] = request.state.request_id
+        self,
 
-    return response
+        request,
+
+        call_next,
+
+    ):
+
+        request_id = str(uuid.uuid4())
+
+        request.state.request_id = request_id
+
+        response = await call_next(request)
+
+        response.headers["X-Request-ID"] = request_id
+
+        return response

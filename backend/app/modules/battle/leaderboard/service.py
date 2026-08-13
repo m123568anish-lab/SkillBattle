@@ -24,7 +24,7 @@ class BattleLeaderboardService:
 
     ):
 
-        participants = battle_repository.get_participants(
+        participants = await battle_repository.get_participants(
 
             db,
 
@@ -56,7 +56,7 @@ class BattleLeaderboardService:
 
             player.rank = rank
 
-            battle_repository.update_participant(
+            await battle_repository.update_participant(
 
                 db,
 

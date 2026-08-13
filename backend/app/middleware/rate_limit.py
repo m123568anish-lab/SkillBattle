@@ -1,32 +1,82 @@
-import time
+"""
+=========================================================
 
-from collections import defaultdict
+Rate Limiting Middleware
 
-REQUESTS = defaultdict(list)
+=========================================================
+"""
 
-LIMIT = 100
+from __future__ import annotations
 
-WINDOW = 60
+from fastapi.responses import JSONResponse
+
+from starlette.middleware.base import BaseHTTPMiddleware
+
+from app.core.redis.rate_limiter import (
+
+    rate_limiter,
+
+)
 
 
-def check_limit(api_key: str):
+class RateLimitMiddleware(
 
-    now = time.time()
+    BaseHTTPMiddleware,
 
-    REQUESTS[api_key] = [
+):
 
-        t
+    LIMIT = 120
 
-        for t in REQUESTS[api_key]
+    WINDOW = 60
 
-        if now - t < WINDOW
+    async def dispatch(
 
-    ]
+        self,
 
-    if len(REQUESTS[api_key]) >= LIMIT:
+        request,
 
-        return False
+        call_next,
 
-    REQUESTS[api_key].append(now)
+    ):
 
-    return True
+        client = (
+
+            request.client.host
+
+            if request.client
+
+            else "unknown"
+
+        )
+
+        allowed = await rate_limiter.allow(
+
+            client,
+
+            self.LIMIT,
+
+            self.WINDOW,
+
+        )
+
+        if not allowed:
+
+            return JSONResponse(
+
+                status_code=429,
+
+                content={
+
+                    "success": False,
+
+                    "message": "Too many requests.",
+
+                },
+
+            )
+
+        return await call_next(
+
+            request,
+
+        )

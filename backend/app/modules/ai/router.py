@@ -1,29 +1,107 @@
-from fastapi import APIRouter
+"""
+=========================================================
 
-from app.modules.ai.schemas import AIRequest, AIResponse, AICoachResponse
-from app.modules.ai.service import ai_service
+SkillBattle
 
-router = APIRouter(prefix="/ai", tags=["AI Coach"])
+AI Router
+
+=========================================================
+"""
+
+from __future__ import annotations
+
+from fastapi import (
+    APIRouter,
+)
+
+from app.modules.ai.schemas import (
+    AIChatRequest,
+    RoadmapRequest,
+    ResumeReviewRequest,
+    InterviewRequest,
+    RecommendationRequest,
+)
+
+from app.modules.ai.service import (
+    ai_service,
+)
+
+router = APIRouter(
+
+    prefix="/ai",
+
+    tags=["AI"],
+
+)
 
 
 @router.get("/health")
-async def health() -> dict[str, str]:
-    return {"module": "ai", "status": "healthy"}
+async def health():
+
+    return {
+
+        "module": "ai",
+
+        "status": "healthy",
+
+    }
 
 
-@router.post("/chat", response_model=AIResponse)
-def chat(request: AIRequest):
-    answer = ai_service.generate_response(request.prompt)
-    return AIResponse(response=answer)
+@router.post("/chat")
+async def chat(
+    request: AIChatRequest,
+):
+
+    return await ai_service.chat(
+        request.message,
+    )
 
 
-@router.get("/coach", response_model=AICoachResponse)
-def coach():
-    return AICoachResponse(
-        study_plan=["DSA", "System Design"],
-        weak_topics=["Graphs", "Concurrency"],
-        coding_challenge="Solve two medium-level problems",
-        motivation="Keep building steadily every day",
-        company_strategy="Target product-based companies with strong DSA preparation",
-        next_milestone="Complete one mock interview this week",
+@router.post("/roadmap")
+async def roadmap(
+    request: RoadmapRequest,
+):
+
+    return await ai_service.roadmap(
+        request,
+    )
+
+
+@router.post("/resume")
+async def resume(
+    request: ResumeReviewRequest,
+):
+
+    return await ai_service.resume_review(
+        request,
+    )
+
+
+@router.post("/interview")
+async def interview(
+    request: InterviewRequest,
+):
+
+    return await ai_service.interview(
+        request,
+    )
+
+
+@router.post("/recommend")
+async def recommend(
+    request: RecommendationRequest,
+):
+
+    return await ai_service.recommend(
+        request,
+    )
+
+
+@router.post("/rag")
+async def rag(
+    request: AIChatRequest,
+):
+
+    return await ai_service.rag(
+        request.message,
     )

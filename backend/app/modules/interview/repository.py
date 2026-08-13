@@ -1,224 +1,68 @@
-from typing import Optional
+"""
+=========================================================
 
-from sqlalchemy.orm import (
-    Session,
-    joinedload,
-)
+Interview Repository
 
-from app.models.interview import (
-    InterviewSession,
-    InterviewQuestion,
-    InterviewAnswer,
-)
+=========================================================
+"""
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.modules.interview.model import Interview
 
 
 class InterviewRepository:
-    """
-    Repository responsible for all Interview database operations.
-    """
 
-    # ==========================================================
-    # SESSION
-    # ==========================================================
+    async def create(
 
-    def create_session(
         self,
-        db: Session,
-        session: InterviewSession,
-    ) -> InterviewSession:
 
-        db.add(session)
-        db.flush()
+        db: AsyncSession,
 
-        return session
+        interview: Interview,
 
-    def get_session(
-        self,
-        db: Session,
-        session_id: int,
-    ) -> Optional[InterviewSession]:
-
-        return (
-            db.query(InterviewSession)
-            .options(
-                joinedload(
-                    InterviewSession.questions
-                ).joinedload(
-                    InterviewQuestion.answers
-                )
-            )
-            .filter(
-                InterviewSession.id == session_id
-            )
-            .first()
-        )
-
-    def get_active_session(
-        self,
-        db: Session,
-        user_id: str,
-    ) -> Optional[InterviewSession]:
-
-        return (
-            db.query(InterviewSession)
-            .options(
-                joinedload(
-                    InterviewSession.questions
-                ).joinedload(
-                    InterviewQuestion.answers
-                )
-            )
-            .filter(
-                InterviewSession.user_id == user_id,
-                InterviewSession.status == "IN_PROGRESS",
-            )
-            .first()
-        )
-
-    # ==========================================================
-    # QUESTION
-    # ==========================================================
-
-    def create_question(
-        self,
-        db: Session,
-        question: InterviewQuestion,
-    ) -> InterviewQuestion:
-
-        db.add(question)
-        db.flush()
-
-        return question
-
-    def get_question(
-        self,
-        db: Session,
-        question_id: int,
-    ) -> Optional[InterviewQuestion]:
-
-        return (
-            db.query(InterviewQuestion)
-            .filter(
-                InterviewQuestion.id == question_id
-            )
-            .first()
-        )
-
-    def get_next_question(
-        self,
-        db: Session,
-        session_id: int,
-    ) -> Optional[InterviewQuestion]:
-
-        questions = (
-            db.query(InterviewQuestion)
-            .options(
-                joinedload(
-                    InterviewQuestion.answers
-                )
-            )
-            .filter(
-                InterviewQuestion.session_id == session_id
-            )
-            .order_by(
-                InterviewQuestion.sequence.asc()
-            )
-            .all()
-        )
-
-        for question in questions:
-
-            if len(question.answers) == 0:
-                return question
-
-        return None
-
-    # ==========================================================
-    # ANSWER
-    # ==========================================================
-
-    def create_answer(
-        self,
-        db: Session,
-        answer: InterviewAnswer,
-    ) -> InterviewAnswer:
-
-        db.add(answer)
-        db.flush()
-
-        return answer
-
-    # ==========================================================
-    # HISTORY
-    # ==========================================================
-
-    def get_history(
-        self,
-        db: Session,
-        user_id: str,
     ):
 
-        return (
-            db.query(InterviewSession)
-            .filter(
-                InterviewSession.user_id == user_id
+        db.add(interview)
+
+        await db.flush()
+
+        await db.refresh(interview)
+
+        return interview
+
+    async def get(
+
+        self,
+
+        db: AsyncSession,
+
+        interview_id: str,
+
+    ):
+
+        result = await db.execute(
+
+            select(Interview).where(
+
+                Interview.id == interview_id,
+
             )
-            .order_by(
-                InterviewSession.started_at.desc()
-            )
-            .all()
+
         )
 
-    # ==========================================================
-    # SCORING
-    # ==========================================================
+        return result.scalar_one_or_none()
 
-    def calculate_score(
+    async def commit(
+
         self,
-        session: InterviewSession,
-    ) -> float:
 
-        scores = []
+        db: AsyncSession,
 
-        for question in session.questions:
-
-            for answer in question.answers:
-
-                scores.append(answer.score)
-
-        if len(scores) == 0:
-            return 0
-
-        return round(
-            sum(scores) / len(scores),
-            2,
-        )
-
-    # ==========================================================
-    # SAVE
-    # ==========================================================
-
-    def commit(
-        self,
-        db: Session,
     ):
 
-        db.commit()
-
-    def rollback(
-        self,
-        db: Session,
-    ):
-
-        db.rollback()
-
-    def refresh(
-        self,
-        db: Session,
-        obj,
-    ):
-
-        db.refresh(obj)
+        await db.commit()
 
 
 interview_repository = InterviewRepository()

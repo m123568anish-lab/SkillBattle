@@ -1,73 +1,136 @@
-from typing import Optional
+"""
+=========================================================
 
-from sqlalchemy.orm import Session
+SkillBattle
+
+Profile Repository
+
+Production Async Version
+
+=========================================================
+"""
+
+from __future__ import annotations
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.profile import Profile
 
 
 class ProfileRepository:
 
-    def get_by_user_id(
-        self,
-        db: Session,
-        user_id: str,
-    ) -> Optional[Profile]:
+    # =====================================================
+    # Get By User
+    # =====================================================
 
-        return (
-            db.query(Profile)
-            .filter(Profile.user_id == user_id)
-            .first()
+    async def get_by_user_id(
+        self,
+        db: AsyncSession,
+        user_id: str,
+    ) -> Profile | None:
+
+        result = await db.execute(
+
+            select(Profile).where(
+
+                Profile.user_id == user_id,
+
+            )
+
         )
 
-    def exists(
+        return result.scalar_one_or_none()
+
+    # =====================================================
+    # Exists
+    # =====================================================
+
+    async def exists(
         self,
-        db: Session,
+        db: AsyncSession,
         user_id: str,
     ) -> bool:
 
-        return (
-            self.get_by_user_id(
-                db,
-                user_id,
-            )
-            is not None
+        profile = await self.get_by_user_id(
+
+            db,
+
+            user_id,
+
         )
 
-    def create(
+        return profile is not None
+
+    # =====================================================
+    # Create
+    # =====================================================
+
+    async def create(
         self,
-        db: Session,
+        db: AsyncSession,
         profile: Profile,
     ) -> Profile:
 
         db.add(profile)
 
-        db.commit()
+        await db.flush()
 
-        db.refresh(profile)
+        await db.refresh(profile)
 
         return profile
 
-    def update(
+    # =====================================================
+    # Update
+    # =====================================================
+
+    async def update(
         self,
-        db: Session,
+        db: AsyncSession,
         profile: Profile,
     ) -> Profile:
 
-        db.commit()
+        db.add(profile)
 
-        db.refresh(profile)
+        await db.flush()
+
+        await db.refresh(profile)
 
         return profile
 
-    def delete(
+    # =====================================================
+    # Delete
+    # =====================================================
+
+    async def delete(
         self,
-        db: Session,
+        db: AsyncSession,
         profile: Profile,
     ):
 
-        db.delete(profile)
+        await db.delete(profile)
 
-        db.commit()
+    # =====================================================
+    # Commit
+    # =====================================================
+
+    async def commit(
+        self,
+        db: AsyncSession,
+    ):
+
+        await db.commit()
+
+    # =====================================================
+    # Rollback
+    # =====================================================
+
+    async def rollback(
+        self,
+        db: AsyncSession,
+    ):
+
+        await db.rollback()
 
 
 profile_repository = ProfileRepository()

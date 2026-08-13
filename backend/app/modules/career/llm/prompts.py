@@ -6,13 +6,12 @@ SkillBattle Career Platform
 Central Prompt Library
 
 Shared by:
-- Resume AI
+- Resume Screening
 - Career Mentor
 - ATS Optimizer
 - Job Matcher
 - Interview Coach
 - Cover Letter Generator
-- Resume Builder
 
 =========================================================
 """

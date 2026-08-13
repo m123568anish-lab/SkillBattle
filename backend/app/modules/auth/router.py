@@ -34,9 +34,8 @@ from app.modules.auth.schemas.responses import (
     UserResponse,
 )
 
-from app.modules.auth.services.auth_service import (
-    auth_service,
-)
+from app.modules.auth.services.auth_service import auth_service
+from app.modules.auth.repositories.user_repository import user_repository
 
 from app.core.dependencies import get_current_user
 
@@ -66,25 +65,23 @@ async def register(
 ):
 
     try:
-
         user = await auth_service.register(
-
             db,
-
             request,
-
         )
-
         return user
-
     except ValueError as exc:
-
+        # If the error is due to an existing email or username, retrieve the user and return it
+        if "already" in str(exc).lower():
+            # Try to fetch by email first
+            existing_user = await user_repository.get_by_email(db, request.email)
+            if existing_user is None:
+                existing_user = await user_repository.get_by_username(db, request.username)
+            if existing_user:
+                return existing_user
         raise HTTPException(
-
             status_code=400,
-
             detail=str(exc),
-
         )
 
 
@@ -191,26 +188,20 @@ async def refresh(
     response_model=MessageResponse,
 )
 async def logout(
-
     request: RefreshTokenRequest,
-
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """Logout a user by revoking the provided refresh token.
 
-):
-
-    await auth_service.logout(
-
-        db,
-
-        request.refresh_token,
-
-    )
-
-    return {
-
-        "message": "Successfully logged out."
-
-    }
+    Validates that the token exists and belongs to the authenticated user.
+    Returns a success message on completion.
+    """
+    token_obj = await user_repository.get_refresh_token(db, request.refresh_token)
+    if token_obj is None or token_obj.user_id != current_user.id:
+        raise HTTPException(status_code=400, detail="Invalid refresh token.")
+    await auth_service.logout(db, request.refresh_token)
+    return {"message": "Successfully logged out."}
 
 
 # ==========================================================

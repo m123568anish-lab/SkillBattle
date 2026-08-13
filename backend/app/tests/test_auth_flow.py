@@ -18,11 +18,12 @@ def test_register_and_login_flow(client):
         "password": "demo12345",
     }
 
-    register_response = client.post("/auth/register", json=payload)
+    register_response = client.post("/api/v1/auth/register", json=payload)
+
     assert register_response.status_code in {201, 400}
 
     login_response = client.post(
-        "/auth/login",
+        "/api/v1/auth/login",
         json={"email": payload["email"], "password": payload["password"]},
     )
     assert login_response.status_code in {200, 401}

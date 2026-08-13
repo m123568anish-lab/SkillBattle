@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from jose import JWTError, jwt
-from pwdlib import PasswordHash
+from passlib.context import CryptContext
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -26,17 +26,17 @@ from app.database.database import get_db
 from app.models.user import User
 
 # =========================================================
-# Password Hashing
+# Password Hashing (use Argon2 via passlib)
 # =========================================================
 
-password_hash = PasswordHash.recommended()
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 # =========================================================
 # OAuth2
 # =========================================================
 
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/auth/login",
+    tokenUrl="/api/v1/auth/login",
 )
 
 # =========================================================
@@ -45,17 +45,14 @@ oauth2_scheme = OAuth2PasswordBearer(
 
 
 def hash_password(password: str) -> str:
-    return password_hash.hash(password)
+    return pwd_context.hash(password)
 
 
 def verify_password(
     plain_password: str,
     hashed_password: str,
 ) -> bool:
-    return password_hash.verify(
-        plain_password,
-        hashed_password,
-    )
+    return pwd_context.verify(plain_password, hashed_password)
 
 
 # =========================================================

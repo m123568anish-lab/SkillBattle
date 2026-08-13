@@ -1,6 +1,19 @@
-from typing import Optional
+"""
+=========================================================
 
-from sqlalchemy.orm import Session
+SkillBattle
+
+Tournament Repository
+
+Production Async Version
+
+=========================================================
+"""
+
+from __future__ import annotations
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.tournament import (
     Tournament,
@@ -11,199 +24,245 @@ from app.models.tournament import (
 
 class TournamentRepository:
 
-    # ==========================================================
+    # =====================================================
     # Tournament
-    # ==========================================================
+    # =====================================================
 
-    def create_tournament(
+    async def create_tournament(
         self,
-        db: Session,
+        db: AsyncSession,
         tournament: Tournament,
-    ):
+    ) -> Tournament:
 
         db.add(tournament)
 
-        db.flush()
+        await db.flush()
+
+        await db.refresh(tournament)
 
         return tournament
 
-    def get_tournament(
+    async def update_tournament(
         self,
-        db: Session,
+        db: AsyncSession,
+        tournament: Tournament,
+    ) -> Tournament:
+
+        db.add(tournament)
+
+        await db.flush()
+
+        await db.refresh(tournament)
+
+        return tournament
+
+    async def get_tournament(
+        self,
+        db: AsyncSession,
         tournament_id: str,
-    ) -> Optional[Tournament]:
+    ) -> Tournament | None:
 
-        return (
-            db.query(Tournament)
-            .filter(
+        result = await db.execute(
+
+            select(Tournament).where(
+
                 Tournament.id == tournament_id
+
             )
-            .first()
+
         )
 
-    def get_all_tournaments(
+        return result.scalar_one_or_none()
+
+    async def list_tournaments(
         self,
-        db: Session,
+        db: AsyncSession,
     ):
 
-        return (
-            db.query(Tournament)
+        result = await db.execute(
+
+            select(Tournament)
+
             .order_by(
-                Tournament.created_at.desc()
+
+                Tournament.starts_at.asc()
+
             )
-            .all()
+
         )
 
-    def update_tournament(
-        self,
-        db: Session,
-        tournament: Tournament,
-    ):
+        return list(result.scalars().all())
 
-        db.add(tournament)
-
-        db.flush()
-
-        return tournament
-
-    # ==========================================================
+    # =====================================================
     # Participants
-    # ==========================================================
+    # =====================================================
 
-    def add_participant(
+    async def add_participant(
         self,
-        db: Session,
+        db: AsyncSession,
         participant: TournamentParticipant,
-    ):
+    ) -> TournamentParticipant:
 
         db.add(participant)
 
-        db.flush()
+        await db.flush()
+
+        await db.refresh(participant)
 
         return participant
 
-    def get_participant(
+    async def get_participant(
         self,
-        db: Session,
+        db: AsyncSession,
         tournament_id: str,
         user_id: str,
     ):
 
-        return (
-            db.query(TournamentParticipant)
-            .filter(
+        result = await db.execute(
+
+            select(TournamentParticipant)
+
+            .where(
+
                 TournamentParticipant.tournament_id == tournament_id,
+
                 TournamentParticipant.user_id == user_id,
+
             )
-            .first()
+
         )
 
-    def get_participants(
+        return result.scalar_one_or_none()
+
+    async def get_participants(
         self,
-        db: Session,
+        db: AsyncSession,
         tournament_id: str,
     ):
 
-        return (
-            db.query(TournamentParticipant)
-            .filter(
+        result = await db.execute(
+
+            select(TournamentParticipant)
+
+            .where(
+
                 TournamentParticipant.tournament_id == tournament_id
+
             )
-            .all()
+
+            .order_by(
+
+                TournamentParticipant.seed.asc()
+
+            )
+
         )
 
-    def remove_participant(
+        return list(result.scalars().all())
+
+    async def remove_participant(
         self,
-        db: Session,
+        db: AsyncSession,
         participant: TournamentParticipant,
     ):
 
-        db.delete(participant)
+        await db.delete(participant)
 
-    # ==========================================================
+    # =====================================================
     # Matches
-    # ==========================================================
+    # =====================================================
 
-    def create_match(
+    async def create_match(
         self,
-        db: Session,
+        db: AsyncSession,
         match: TournamentMatch,
-    ):
+    ) -> TournamentMatch:
 
         db.add(match)
 
-        db.flush()
+        await db.flush()
+
+        await db.refresh(match)
 
         return match
 
-    def get_match(
+    async def update_match(
         self,
-        db: Session,
+        db: AsyncSession,
+        match: TournamentMatch,
+    ) -> TournamentMatch:
+
+        db.add(match)
+
+        await db.flush()
+
+        await db.refresh(match)
+
+        return match
+
+    async def get_match(
+        self,
+        db: AsyncSession,
         match_id: str,
     ):
 
-        return (
-            db.query(TournamentMatch)
-            .filter(
+        result = await db.execute(
+
+            select(TournamentMatch)
+
+            .where(
+
                 TournamentMatch.id == match_id
+
             )
-            .first()
+
         )
 
-    def get_matches(
+        return result.scalar_one_or_none()
+
+    async def get_matches(
         self,
-        db: Session,
+        db: AsyncSession,
         tournament_id: str,
     ):
 
-        return (
-            db.query(TournamentMatch)
-            .filter(
+        result = await db.execute(
+
+            select(TournamentMatch)
+
+            .where(
+
                 TournamentMatch.tournament_id == tournament_id
+
             )
+
             .order_by(
+
                 TournamentMatch.round_number.asc()
+
             )
-            .all()
+
         )
 
-    def update_match(
-        self,
-        db: Session,
-        match: TournamentMatch,
-    ):
+        return list(result.scalars().all())
 
-        db.add(match)
-
-        db.flush()
-
-        return match
-
-    # ==========================================================
+    # =====================================================
     # Helpers
-    # ==========================================================
+    # =====================================================
 
-    def commit(
+    async def commit(
         self,
-        db: Session,
+        db: AsyncSession,
     ):
 
-        db.commit()
+        await db.commit()
 
-    def rollback(
+    async def rollback(
         self,
-        db: Session,
+        db: AsyncSession,
     ):
 
-        db.rollback()
-
-    def refresh(
-        self,
-        db: Session,
-        obj,
-    ):
-
-        db.refresh(obj)
+        await db.rollback()
 
 
 tournament_repository = TournamentRepository()

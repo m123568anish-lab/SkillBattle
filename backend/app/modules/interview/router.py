@@ -1,14 +1,30 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+"""
+=========================================================
 
-from app.database.database import get_db
+Interview Router
+
+=========================================================
+"""
+
+from __future__ import annotations
+
+from fastapi import (
+    APIRouter,
+    Depends,
+)
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database.session import get_db
+
 from app.models.user import User
 
-from app.api.auth.dependency import get_current_user
+from app.core.dependencies import (
+    get_current_user,
+)
 
 from app.modules.interview.schemas import (
-    StartInterviewRequest,
-    SubmitAnswerRequest,
+    InterviewCreate,
 )
 
 from app.modules.interview.service import (
@@ -16,101 +32,75 @@ from app.modules.interview.service import (
 )
 
 router = APIRouter(
+
     prefix="/interview",
+
     tags=["Interview"],
+
 )
 
 
 @router.get("/health")
-async def health() -> dict[str, str]:
-    return {"module": "interview", "status": "healthy"}
+async def health():
+
+    return {
+
+        "module": "interview",
+
+        "status": "healthy",
+
+    }
 
 
-@router.post("/start")
-def start_interview(
-    request: StartInterviewRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+@router.post("/create")
+async def create(
+
+    payload: InterviewCreate,
+
+    db: AsyncSession = Depends(get_db),
+
+    current_user: User = Depends(
+        get_current_user,
+    ),
+
 ):
 
-    return interview_service.start_interview(
+    return await interview_service.create_interview(
+
         db,
+
         current_user,
-        request,
+
+        payload,
+
     )
 
 
-@router.get("/active")
-def active_interview(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+@router.post("/{interview_id}/start")
+async def start(
+
+    interview_id: str,
+
+    db: AsyncSession = Depends(get_db),
+
 ):
 
-    return interview_service.get_active_interview(
+    interview = await interview_service.start(
+
         db,
-        current_user,
+
+        interview_id,
+
     )
 
-
-@router.get("/next")
-def next_question(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-
-    return interview_service.get_next_question(
-        db,
-        current_user,
+    question = await interview_service.first_question(
+        interview,
     )
 
+    return {
 
-@router.post("/answer")
-def submit_answer(
-    request: SubmitAnswerRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
+        "interview": interview,
 
-    return interview_service.submit_answer(
-        db,
-        current_user,
-        request.question_id,
-        request.answer,
-    )
+        "question": question,
 
-
-@router.post("/finish")
-def finish_interview(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-
-    return interview_service.finish_interview(
-        db,
-        current_user,
-    )
-
-
-@router.get("/history")
-def history(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-
-    return interview_service.get_history(
-        db,
-        current_user,
-    )
-
-
-@router.get("/report/{session_id}")
-def report(
-    session_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-
-    return interview_service.get_report(
-        db,
-        session_id,
-    )
+    }

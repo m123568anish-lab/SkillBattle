@@ -8,3 +8,8 @@ class CreateTournamentRequest(BaseModel):
     tournament_type: str
 
     max_players: int
+
+
+class JoinTournamentRequest(BaseModel):
+
+    tournament_id: str

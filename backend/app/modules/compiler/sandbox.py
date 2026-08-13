@@ -199,11 +199,15 @@ class Sandbox:
                     stdin,
 
                 )
-
-            raise NotImplementedError(
-
-                f"{language} not implemented."
-
+            # For unsupported languages return a structured ExecutionResult
+            # with an explanatory error instead of raising. This keeps callers
+            # from crashing and provides a clear message.
+            return ExecutionResult(
+                stdout="",
+                stderr=f"Language not implemented: {language}",
+                return_code=1,
+                execution_time=0,
+                memory_used=0,
             )
 
         finally:

@@ -1,3 +1,17 @@
+"""
+=========================================================
+
+SkillBattle
+
+Tournament Model
+
+Production Version
+
+=========================================================
+"""
+
+from __future__ import annotations
+
 import uuid
 from datetime import datetime
 
@@ -35,6 +49,12 @@ class Tournament(Base):
 
     difficulty: Mapped[str] = mapped_column(
         String(30),
+        default="Medium",
+    )
+
+    tournament_type: Mapped[str] = mapped_column(
+        String(40),
+        default="single_elimination",
     )
 
     max_players: Mapped[int] = mapped_column(
@@ -45,6 +65,14 @@ class Tournament(Base):
     status: Mapped[str] = mapped_column(
         String(30),
         default="registration",
+    )
+
+    registration_end: Mapped[datetime] = mapped_column(
+        DateTime,
+    )
+
+    starts_at: Mapped[datetime] = mapped_column(
+        DateTime,
     )
 
     created_at: Mapped[datetime] = mapped_column(

@@ -1,195 +1,122 @@
-from typing import Optional
+"""
+=========================================================
 
-from sqlalchemy.orm import (
-    Session,
-    joinedload,
-)
+SkillBattle
 
-from app.models.compiler import (
-    Problem,
-    TestCase,
-    CodeSubmission,
-)
+Compiler Repository
+
+Production Async Repository
+
+=========================================================
+"""
+
+from __future__ import annotations
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.compiler import CodeSubmission
 
 
 class CompilerRepository:
-    """
-    Repository responsible for all compiler database operations.
-    """
 
-    # ==========================================================
-    # Problems
-    # ==========================================================
-
-    def get_all_problems(
+    async def create_submission(
         self,
-        db: Session,
-    ):
-
-        return (
-            db.query(Problem)
-            .order_by(
-                Problem.id.asc()
-            )
-            .all()
-        )
-
-    def get_problem(
-        self,
-        db: Session,
-        problem_id: int,
-    ) -> Optional[Problem]:
-
-        return (
-            db.query(Problem)
-            .options(
-                joinedload(Problem.test_cases)
-            )
-            .filter(
-                Problem.id == problem_id
-            )
-            .first()
-        )
-
-    def get_problem_by_slug(
-        self,
-        db: Session,
-        slug: str,
-    ) -> Optional[Problem]:
-
-        return (
-            db.query(Problem)
-            .options(
-                joinedload(Problem.test_cases)
-            )
-            .filter(
-                Problem.slug == slug
-            )
-            .first()
-        )
-
-    # ==========================================================
-    # Test Cases
-    # ==========================================================
-
-    def get_test_cases(
-        self,
-        db: Session,
-        problem_id: int,
-    ):
-
-        return (
-            db.query(TestCase)
-            .filter(
-                TestCase.problem_id == problem_id
-            )
-            .all()
-        )
-
-    def get_hidden_test_cases(
-        self,
-        db: Session,
-        problem_id: int,
-    ):
-
-        return (
-            db.query(TestCase)
-            .filter(
-                TestCase.problem_id == problem_id,
-                TestCase.is_sample == False,
-            )
-            .all()
-        )
-
-    # ==========================================================
-    # Submission
-    # ==========================================================
-
-    def create_submission(
-        self,
-        db: Session,
+        db: AsyncSession,
         submission: CodeSubmission,
     ) -> CodeSubmission:
 
         db.add(submission)
-        db.flush()
+
+        await db.flush()
+
+        await db.refresh(submission)
 
         return submission
 
-    def get_submission(
+    async def update_submission(
         self,
-        db: Session,
-        submission_id: int,
-    ) -> Optional[CodeSubmission]:
-
-        return (
-            db.query(CodeSubmission)
-            .options(
-                joinedload(CodeSubmission.problem)
-            )
-            .filter(
-                CodeSubmission.id == submission_id
-            )
-            .first()
-        )
-
-    def get_user_submissions(
-        self,
-        db: Session,
-        user_id: str,
-    ):
-
-        return (
-            db.query(CodeSubmission)
-            .options(
-                joinedload(CodeSubmission.problem)
-            )
-            .filter(
-                CodeSubmission.user_id == user_id
-            )
-            .order_by(
-                CodeSubmission.submitted_at.desc()
-            )
-            .all()
-        )
-
-    def update_submission(
-        self,
-        db: Session,
+        db: AsyncSession,
         submission: CodeSubmission,
-    ):
+    ) -> CodeSubmission:
 
         db.add(submission)
 
-        db.flush()
+        await db.flush()
+
+        await db.refresh(submission)
 
         return submission
 
-    # ==========================================================
-    # Database Helpers
-    # ==========================================================
-
-    def commit(
+    async def get_submission(
         self,
-        db: Session,
+        db: AsyncSession,
+        submission_id: int,
+    ) -> CodeSubmission | None:
+
+        result = await db.execute(
+
+            select(CodeSubmission).where(
+
+                CodeSubmission.id == submission_id
+
+            )
+
+        )
+
+        return result.scalar_one_or_none()
+
+    async def get_user_submissions(
+        self,
+        db: AsyncSession,
+        user_id: str,
     ):
 
-        db.commit()
+        result = await db.execute(
 
-    def rollback(
+            select(CodeSubmission)
+
+            .where(
+
+                CodeSubmission.user_id == user_id
+
+            )
+
+            .order_by(
+
+                CodeSubmission.submitted_at.desc()
+
+            )
+
+        )
+
+        return list(result.scalars().all())
+
+    async def get_problem_submissions(
         self,
-        db: Session,
+        db: AsyncSession,
+        problem_id: int,
     ):
 
-        db.rollback()
+        result = await db.execute(
 
-    def refresh(
-        self,
-        db: Session,
-        obj,
-    ):
+            select(CodeSubmission)
 
-        db.refresh(obj)
+            .where(
+
+                CodeSubmission.problem_id == problem_id
+
+            )
+
+            .order_by(
+
+                CodeSubmission.submitted_at.desc()
+
+            )
+
+        )
+
+        return list(result.scalars().all())
 
 
 compiler_repository = CompilerRepository()

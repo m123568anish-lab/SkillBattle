@@ -1,120 +1,163 @@
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    WebSocket,
-    WebSocketDisconnect,
-)
-from app.modules.battle.replay import (
-    battle_replay_service,
-)
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+
+from sqlalchemy.ext.asyncio import AsyncSession
 import json
-
-from app.modules.battle.websocket import (
-    battle_ws,
-    BattleEvent,
-)
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-)
-
 from sqlalchemy.orm import Session
 
-from app.database.database import get_db
-from app.core.security import get_current_user
+from app.database.session import get_db
+
 from app.models.user import User
+
+from app.core.dependencies import (
+    get_current_user,
+)
 
 from app.modules.battle.schemas import (
     CreateBattleRequest,
     JoinBattleRequest,
     LeaveBattleRequest,
+    BattleResponse,
+    BattleParticipantResponse,
+    MatchmakingRequest,
+    SoloFinishRequest,
 )
 
 from app.modules.battle.service import (
     battle_service,
 )
 
-router = APIRouter(
-    prefix="/battle",
-    tags=["Battle Arena"],
+from app.modules.battle.websocket import (
+    battle_ws,
+    BattleEvent,
 )
 
+from app.modules.battle.replay import (
+    battle_replay_service,
+)
+
+from app.modules.battle.timer import (
+    battle_timer,
+)
+
+router = APIRouter(
+    prefix="/battle",
+    tags=["Battle"],
+)
 
 @router.get("/health")
-async def health() -> dict[str, str]:
-    return {"module": "battle", "status": "healthy"}
+async def health():
 
+    return {
+        "module": "Battle",
+        "status": "healthy",
+    }
 # ==========================================================
 # Create Battle
 # ==========================================================
 
-@router.post("/create")
-def create_battle(
+@router.post(
+    "/create",
+    response_model=BattleResponse,
+)
+async def create_battle(
+
     request: CreateBattleRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+
+    db: AsyncSession = Depends(get_db),
+
+    current_user: User = Depends(
+        get_current_user,
+    ),
+
 ):
 
     try:
 
-        return battle_service.create_battle(
+        return await battle_service.create_battle(
+
             db,
+
             current_user,
+
             request,
+
         )
 
-    except Exception as e:
+    except ValueError as exc:
 
         raise HTTPException(
+
             status_code=400,
-            detail=str(e),
+
+            detail=str(exc),
+
         )
-
-
 # ==========================================================
 # Join Battle
 # ==========================================================
 
-@router.post("/join")
-def join_battle(
+@router.post(
+    "/join",
+    response_model=BattleResponse,
+)
+async def join_battle(
+
     request: JoinBattleRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+
+    db: AsyncSession = Depends(get_db),
+
+    current_user: User = Depends(
+        get_current_user,
+    ),
+
 ):
 
     try:
 
-        return battle_service.join_battle(
+        return await battle_service.join_battle(
+
             db,
+
             request.battle_id,
+
             current_user,
+
         )
 
-    except Exception as e:
+    except ValueError as exc:
 
         raise HTTPException(
+
             status_code=400,
-            detail=str(e),
+
+            detail=str(exc),
+
         )
-
-
 # ==========================================================
 # Leave Battle
 # ==========================================================
 
 @router.post("/leave")
-def leave_battle(
+async def leave_battle(
+
     request: LeaveBattleRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+
+    db: AsyncSession = Depends(get_db),
+
+    current_user: User = Depends(
+        get_current_user,
+    ),
+
 ):
 
-    battle_service.leave_battle(
+    await battle_service.leave_battle(
+
         db,
+
         request.battle_id,
+
         current_user,
+
     )
 
     return {
@@ -122,60 +165,77 @@ def leave_battle(
         "message": "Battle left successfully."
 
     }
-
-
 # ==========================================================
 # Waiting Battles
 # ==========================================================
+@router.get(
+    "/waiting",
+    response_model=list[BattleResponse],
+)
+async def waiting_battles(
 
-@router.get("/waiting")
-def waiting_battles(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
+
 ):
 
-    return battle_service.waiting_battles(db)
-
-
+    return await battle_service.waiting_battles(db)
 # ==========================================================
 # Battle Details
 # ==========================================================
+@router.get(
+    "/{battle_id}",
+    response_model=BattleResponse,
+)
+async def battle_details(
 
-@router.get("/{battle_id}")
-def battle_details(
     battle_id: str,
-    db: Session = Depends(get_db),
+
+    db: AsyncSession = Depends(get_db),
+
 ):
 
-    battle = battle_service.get_battle(
+    battle = await battle_service.get_battle(
+
         db,
+
         battle_id,
+
     )
 
     if battle is None:
 
         raise HTTPException(
+
             status_code=404,
+
             detail="Battle not found.",
+
         )
 
     return battle
-
-
 # ==========================================================
 # Participants
 # ==========================================================
 
-@router.get("/{battle_id}/participants")
-def participants(
+@router.get(
+    "/{battle_id}/participants",
+    response_model=list[BattleParticipantResponse],
+)
+async def participants(
+
     battle_id: str,
-    db: Session = Depends(get_db),
+
+    db: AsyncSession = Depends(get_db),
+
 ):
 
-    return battle_service.participants(
-        db,
-        battle_id,
-    )
+    return await battle_service.participants(
 
+        db,
+
+        battle_id,
+
+    )
 # ==========================================================
 # Battle WebSocket
 # ==========================================================
@@ -260,34 +320,68 @@ async def battle_socket(
 # ==========================================================
 
 @router.post("/queue/join")
-def join_queue(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+async def join_queue(
+
+    request: MatchmakingRequest | None = None,
+
+    db: AsyncSession = Depends(get_db),
+
+    current_user: User = Depends(
+        get_current_user,
+    ),
+
 ):
 
-    return battle_service.join_queue(
+    return await battle_service.join_queue(
+
         db,
+
         current_user,
+
+        request,
+
     )
 
+
+@router.get("/queue/status")
+async def queue_status(
+
+    db: AsyncSession = Depends(get_db),
+
+    current_user: User = Depends(
+        get_current_user,
+    ),
+
+):
+    from app.modules.battle.matchmaking.engine import matchmaking_engine
+
+    active = await battle_repository.get_active_battle_for_user(db, current_user.id)
+    status = {
+        "matched": active is not None,
+        "queue_size": matchmaking_engine.queue_size(),
+    }
+    if active is not None:
+        status["battle_id"] = active.battle_id
+    return status
 
 # ==========================================================
 # Leave Queue
 # ==========================================================
 
 @router.post("/queue/leave")
-def leave_queue(
-    current_user: User = Depends(get_current_user),
+async def leave_queue(
+
+    current_user: User = Depends(
+        get_current_user,
+    ),
+
 ):
 
-    return battle_service.leave_queue(
+    return await battle_service.leave_queue(
+
         current_user,
+
     )
-
-from app.modules.battle.timer import (
-    battle_timer,
-)
-
 # ==========================================================
 # Remaining Time
 # ==========================================================
@@ -334,3 +428,46 @@ def replay(
         battle_id,
 
     )
+from sqlalchemy import select
+from app.models.user_skill_stat import UserSkillStat
+from app.models.xp import XP
+
+@router.post("/solo/finish")
+async def solo_finish(
+    request: SoloFinishRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Add XP
+    result = await db.execute(select(XP).where(XP.user_id == current_user.id))
+    xp_record = result.scalar_one_or_none()
+    if not xp_record:
+        xp_record = XP(user_id=current_user.id, total_xp=0, weekly_xp=0)
+        db.add(xp_record)
+    
+    xp_record.total_xp += request.xp_earned
+    xp_record.weekly_xp += request.xp_earned
+    
+    # Track Skills
+    for res in request.mcq_results:
+        stmt = select(UserSkillStat).where(
+            UserSkillStat.user_id == current_user.id,
+            UserSkillStat.subject == res.category
+        )
+        stat = (await db.execute(stmt)).scalar_one_or_none()
+        
+        if not stat:
+            stat = UserSkillStat(
+                user_id=current_user.id,
+                subject=res.category,
+                correct_attempts=0,
+                total_attempts=0
+            )
+            db.add(stat)
+            
+        stat.total_attempts += 1
+        if res.correct:
+            stat.correct_attempts += 1
+            
+    await db.commit()
+    return {"status": "success", "xp_added": request.xp_earned}

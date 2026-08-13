@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
 from app.models.battle import (
@@ -35,7 +35,7 @@ class BattleJudgeService:
 
         self,
 
-        db: Session,
+        db: AsyncSession,
 
         battle,
 
@@ -113,7 +113,7 @@ class BattleJudgeService:
 
         )
 
-        battle_repository.create_submission(
+        await battle_repository.create_submission(
 
             db,
 
@@ -121,9 +121,9 @@ class BattleJudgeService:
 
         )
 
-        battle_repository.commit(db)
+        await db.commit()
 
-        participant = battle_repository.get_participant(
+        participant = await battle_repository.get_participant(
 
             db,
 
@@ -141,7 +141,7 @@ class BattleJudgeService:
 
             )
 
-            battle_repository.update_participant(
+            await battle_repository.update_participant(
 
                 db,
 
@@ -149,7 +149,7 @@ class BattleJudgeService:
 
             )
 
-            battle_repository.commit(db)
+            await db.commit()
 
         await battle_leaderboard_service.update(
 

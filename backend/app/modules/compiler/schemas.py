@@ -12,10 +12,13 @@ class RunCodeRequest(BaseModel):
 
     language: str
 
+    language_version: str | None = None
+
     source_code: str
 
     stdin: str = ""
 
+    custom_input: bool = True
 
 class RunCodeResponse(BaseModel):
 
@@ -41,6 +44,10 @@ class SubmitCodeRequest(BaseModel):
     language: str
 
     source_code: str
+
+    battle_id: str | None = None
+
+    contest_id: str | None = None
 
 
 class SubmitCodeResponse(BaseModel):
@@ -149,7 +156,13 @@ class JudgeResult(BaseModel):
 
     memory_used: int
 
-    failed_test: int | None = None
+    failed_test_index: int | None = None
+
+    runtime_ms: float
+
+    memory_mb: float
+
+    score: int
 
 
 # ==========================================================
@@ -182,3 +195,41 @@ class ExecutionResult(BaseModel):
     execution_time: int
 
     memory_used: int
+
+# ==========================================================
+# Compiler Error
+# ==========================================================
+
+class CompilerError(BaseModel):
+
+    message: str
+
+    line: int | None = None
+
+    column: int | None = None
+
+# ==========================================================
+# Execution Limits
+# ==========================================================
+
+class ExecutionLimits(BaseModel):
+
+    cpu_seconds: int
+
+    memory_mb: int
+
+    timeout_seconds: int
+
+# ==========================================================
+# Language
+# ==========================================================
+
+class LanguageInfo(BaseModel):
+
+    id: str
+
+    name: str
+
+    version: str
+
+    extension: str

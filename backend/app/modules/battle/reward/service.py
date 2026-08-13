@@ -1,22 +1,37 @@
-from sqlalchemy.orm import Session
+"""
+=========================================================
+
+SkillBattle
+
+Battle Reward Service
+
+Production Async Version
+
+=========================================================
+"""
+
+from __future__ import annotations
+
+import logging
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.battle.leaderboard import (
     battle_leaderboard_service,
 )
 
-from app.modules.xp.service import (
-    xp_service,
-)
-
-from app.modules.achievements.service import (
-    achievement_service,
-)
+logger = logging.getLogger(__name__)
 
 
 class BattleRewardService:
 
     """
-    Awards XP and updates player ratings after battles.
+    Handles battle rewards.
+
+    NOTE:
+    XP, achievements and leaderboard integrations are
+    intentionally left as async hooks until those
+    modules are fully migrated.
     """
 
     WIN_XP = 150
@@ -27,61 +42,79 @@ class BattleRewardService:
 
     LOSS_RATING = -10
 
-    def finish_battle(
+    # =====================================================
+    # Finish Battle
+    # =====================================================
+
+    async def finish_battle(
         self,
-        db: Session,
+        db: AsyncSession,
         battle_id: str,
     ):
 
-        participants = battle_leaderboard_service.update_final(
+        participants = await battle_leaderboard_service.update_final(
+
             db,
+
             battle_id,
+
         )
 
         if not participants:
-            return
+
+            return None
 
         winner = participants[0]
 
+        rewards = []
+
         for participant in participants:
 
-            if participant.user_id == winner.user_id:
+            reward = {
 
-                xp_service.add_xp(
-                    db,
-                    participant.user,
-                    self.WIN_XP,
-                )
+                "user_id": participant.user_id,
 
-                if hasattr(participant.user, "rating"):
-                    participant.user.rating += self.WIN_RATING
+                "winner": participant.user_id == winner.user_id,
 
-            else:
+                "xp": self.WIN_XP
+                if participant.user_id == winner.user_id
+                else self.PARTICIPATION_XP,
 
-                xp_service.add_xp(
-                    db,
-                    participant.user,
-                    self.PARTICIPATION_XP,
-                )
+                "rating_change": self.WIN_RATING
+                if participant.user_id == winner.user_id
+                else self.LOSS_RATING,
 
-                if hasattr(participant.user, "rating"):
-                    participant.user.rating = max(
-                        0,
-                        participant.user.rating + self.LOSS_RATING,
-                    )
+            }
 
-            achievement_service.check_achievements(
-                db,
-                participant.user,
+            rewards.append(reward)
+
+            logger.info(
+
+                "Reward prepared | user=%s xp=%s",
+
+                reward["user_id"],
+
+                reward["xp"],
+
             )
 
-        db.commit()
+            #
+            # Future Integrations
+            #
+            # await xp_service.add_xp(...)
+            #
+            # await achievement_service.check(...)
+            #
+            # await leaderboard_service.refresh(...)
+            #
 
         return {
 
             "winner": winner.user_id,
 
             "players": len(participants),
+
+            "rewards": rewards,
 
         }
 

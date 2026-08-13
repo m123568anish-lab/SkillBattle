@@ -68,6 +68,12 @@ class MatchmakingEngine:
 
     # =========================================
 
+    def queue_size(self):
+
+        return battle_queue.size()
+
+    # =========================================
+
     def find_match(self):
 
         players = battle_queue.all()

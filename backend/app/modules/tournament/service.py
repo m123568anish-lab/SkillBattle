@@ -1,6 +1,20 @@
-from sqlalchemy.orm import Session
+"""
+=========================================================
 
-from app.models.user import User
+SkillBattle
+
+Tournament Service
+
+Production Version
+
+=========================================================
+"""
+
+from __future__ import annotations
+
+import logging
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.tournament import (
     Tournament,
@@ -11,25 +25,26 @@ from app.modules.tournament.repository import (
     tournament_repository,
 )
 
-from app.modules.tournament.schemas import (
-    CreateTournamentRequest,
-)
-from app.modules.tournament.bracket import (
-    tournament_bracket_generator,
-)
 from app.modules.tournament.scheduler import (
     tournament_scheduler,
 )
+
+from app.modules.tournament.schemas import (
+    CreateTournamentRequest,
+)
+
+logger = logging.getLogger(__name__)
+
+
 class TournamentService:
 
-    # ==========================================================
+    # =====================================================
     # Create Tournament
-    # ==========================================================
+    # =====================================================
 
-    def create_tournament(
+    async def create_tournament(
         self,
-        db: Session,
-        current_user: User,
+        db: AsyncSession,
         request: CreateTournamentRequest,
     ):
 
@@ -39,53 +54,85 @@ class TournamentService:
 
             description=request.description,
 
-            difficulty=request.difficulty,
+            difficulty="Medium",
+
+            tournament_type=request.tournament_type,
 
             max_players=request.max_players,
+
+            registration_end=request.registration_end,
+
+            starts_at=request.starts_at,
 
             status="registration",
 
         )
 
-        tournament_repository.create_tournament(
+        tournament = await tournament_repository.create_tournament(
+
             db,
+
             tournament,
-        )
-
-        creator = TournamentParticipant(
-
-            tournament_id=tournament.id,
-
-            user_id=current_user.id,
 
         )
 
-        tournament_repository.add_participant(
+        await tournament_repository.commit(
             db,
-            creator,
         )
 
-        tournament_repository.commit(db)
+        logger.info(
 
-        tournament_repository.refresh(
-            db,
-            tournament,
+            "Tournament created: %s",
+
+            tournament.id,
+
         )
 
         return tournament
 
-    # ==========================================================
-    # Join Tournament
-    # ==========================================================
+    # =====================================================
+    # Get Tournament
+    # =====================================================
 
-    def join_tournament(
+    async def get_tournament(
         self,
-        db: Session,
+        db: AsyncSession,
         tournament_id: str,
-        current_user: User,
     ):
 
-        tournament = tournament_repository.get_tournament(
+        return await tournament_repository.get_tournament(
+
+            db,
+
+            tournament_id,
+
+        )
+
+    # =====================================================
+    # List Tournaments
+    # =====================================================
+
+    async def list_tournaments(
+        self,
+        db: AsyncSession,
+    ):
+
+        return await tournament_repository.list_tournaments(
+            db,
+        )
+
+        # =====================================================
+    # Join Tournament
+    # =====================================================
+
+    async def join_tournament(
+        self,
+        db: AsyncSession,
+        tournament_id: str,
+        current_user,
+    ):
+
+        tournament = await tournament_repository.get_tournament(
             db,
             tournament_id,
         )
@@ -99,10 +146,10 @@ class TournamentService:
         if tournament.status != "registration":
 
             raise ValueError(
-                "Registration is closed."
+                "Tournament registration is closed."
             )
 
-        participant = tournament_repository.get_participant(
+        participant = await tournament_repository.get_participant(
             db,
             tournament_id,
             current_user.id,
@@ -110,14 +157,14 @@ class TournamentService:
 
         if participant:
 
-            return tournament
+            return participant
 
-        players = tournament_repository.get_participants(
+        participants = await tournament_repository.get_participants(
             db,
             tournament_id,
         )
 
-        if len(players) >= tournament.max_players:
+        if len(participants) >= tournament.max_players:
 
             raise ValueError(
                 "Tournament is full."
@@ -129,99 +176,142 @@ class TournamentService:
 
             user_id=current_user.id,
 
+            seed=len(participants) + 1,
+
+            eliminated=False,
+
         )
 
-        tournament_repository.add_participant(
+        participant = await tournament_repository.add_participant(
+
             db,
+
             participant,
+
         )
 
-        tournament_repository.commit(db)
+        await tournament_repository.commit(
+            db,
+        )
 
-        return tournament
+        logger.info(
 
-    # ==========================================================
+            "User %s joined tournament %s",
+
+            current_user.id,
+
+            tournament.id,
+
+        )
+
+        return participant
+
+    # =====================================================
     # Leave Tournament
-    # ==========================================================
+    # =====================================================
 
-    def leave_tournament(
+    async def leave_tournament(
         self,
-        db: Session,
+        db: AsyncSession,
         tournament_id: str,
-        current_user: User,
+        current_user,
     ):
 
-        participant = tournament_repository.get_participant(
+        participant = await tournament_repository.get_participant(
+
             db,
+
             tournament_id,
+
             current_user.id,
+
         )
 
         if participant is None:
 
-            return
+            return {
 
-        tournament_repository.remove_participant(
+                "message": "Participant not found."
+
+            }
+
+        await tournament_repository.remove_participant(
+
             db,
+
             participant,
+
         )
 
-        tournament_repository.commit(db)
+        await tournament_repository.commit(
+            db,
+        )
 
-    # ==========================================================
-    # Tournament Details
-    # ==========================================================
+        logger.info(
 
-    def get_tournament(
+            "User %s left tournament %s",
+
+            current_user.id,
+
+            tournament_id,
+
+        )
+
+        return {
+
+            "message": "Tournament left successfully."
+
+        }
+
+    # =====================================================
+    # Tournament Participants
+    # =====================================================
+
+    async def participants(
         self,
-        db: Session,
+        db: AsyncSession,
         tournament_id: str,
     ):
 
-        return tournament_repository.get_tournament(
+        return await tournament_repository.get_participants(
+
             db,
+
             tournament_id,
+
         )
 
-    # ==========================================================
-    # List Tournaments
-    # ==========================================================
+    # =====================================================
+    # Registration Count
+    # =====================================================
 
-    def list_tournaments(
+    async def participant_count(
         self,
-        db: Session,
-    ):
-
-        return tournament_repository.get_all_tournaments(
-            db,
-        )
-
-    # ==========================================================
-    # Participants
-    # ==========================================================
-
-    def participants(
-        self,
-        db: Session,
+        db: AsyncSession,
         tournament_id: str,
-    ):
+    ) -> int:
 
-        return tournament_repository.get_participants(
+        participants = await tournament_repository.get_participants(
+
             db,
+
             tournament_id,
+
         )
 
-    # ==========================================================
+        return len(participants)
+
+        # =====================================================
     # Start Tournament
-    # ==========================================================
+    # =====================================================
 
-    def start_tournament(
+    async def start_tournament(
         self,
-        db: Session,
+        db: AsyncSession,
         tournament_id: str,
     ):
 
-        tournament = tournament_repository.get_tournament(
+        tournament = await tournament_repository.get_tournament(
             db,
             tournament_id,
         )
@@ -232,7 +322,7 @@ class TournamentService:
                 "Tournament not found."
             )
 
-        participants = tournament_repository.get_participants(
+        participants = await tournament_repository.get_participants(
             db,
             tournament_id,
         )
@@ -243,36 +333,167 @@ class TournamentService:
                 "At least two participants are required."
             )
 
-        participants = tournament_repository.get_participants(
-         db,
-         tournament.id,
-)
-
         tournament.status = "running"
 
-        tournament_bracket_generator.generate(
+        await tournament_repository.update_tournament(
+            db,
+            tournament,
+        )
 
-         db,
+        matches = await tournament_scheduler.create_first_round(
+            db,
+            tournament,
+            participants,
+        )
 
-        tournament.id,
+        await tournament_repository.commit(
+            db,
+        )
 
-        participants,
+        logger.info(
+            "Tournament %s started.",
+            tournament.id,
+        )
 
-)
+        return {
 
-        tournament_repository.update_tournament(
-         db,
-         tournament,
-)
+            "status": "running",
 
-        tournament_repository.commit(db)
+            "matches_created": len(matches),
 
-        tournament_scheduler.start(
-    db,
-    tournament,
-)
+            "round": 1,
 
-        return tournament
+        }
+
+    # =====================================================
+    # Advance Round
+    # =====================================================
+
+    async def advance_round(
+        self,
+        db: AsyncSession,
+        tournament_id: str,
+    ):
+
+        tournament = await tournament_repository.get_tournament(
+            db,
+            tournament_id,
+        )
+
+        if tournament is None:
+
+            raise ValueError(
+                "Tournament not found."
+            )
+
+        current_round = await tournament_scheduler.current_round(
+            db,
+            tournament_id,
+        )
+
+        finished = await tournament_scheduler.round_finished(
+            db,
+            tournament_id,
+            current_round,
+        )
+
+        if not finished:
+
+            return {
+
+                "status": "waiting",
+
+                "message": "Current round still in progress.",
+
+            }
+
+        winners = await tournament_scheduler.winners(
+            db,
+            tournament_id,
+            current_round,
+        )
+
+        # Champion
+        if len(winners) == 1:
+
+            tournament.status = "finished"
+
+            await tournament_repository.update_tournament(
+                db,
+                tournament,
+            )
+
+            await tournament_repository.commit(
+                db,
+            )
+
+            return {
+
+                "status": "finished",
+
+                "champion": winners[0],
+
+            }
+
+        matches = await tournament_scheduler.create_next_round(
+            db,
+            tournament,
+            winners,
+            current_round + 1,
+        )
+
+        return {
+
+            "status": "running",
+
+            "round": current_round + 1,
+
+            "matches_created": len(matches),
+
+        }
+
+    # =====================================================
+    # Finish Tournament
+    # =====================================================
+
+    async def finish_tournament(
+        self,
+        db: AsyncSession,
+        tournament_id: str,
+    ):
+
+        tournament = await tournament_repository.get_tournament(
+            db,
+            tournament_id,
+        )
+
+        if tournament is None:
+
+            raise ValueError(
+                "Tournament not found."
+            )
+
+        tournament.status = "finished"
+
+        await tournament_repository.update_tournament(
+            db,
+            tournament,
+        )
+
+        await tournament_repository.commit(
+            db,
+        )
+
+        logger.info(
+            "Tournament %s finished.",
+            tournament.id,
+        )
+
+        return {
+
+            "status": "finished",
+
+        }
 
 
 tournament_service = TournamentService()

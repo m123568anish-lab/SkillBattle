@@ -1,7 +1,6 @@
 from fastapi import APIRouter, FastAPI
 
 from app.modules.auth.router import router as auth_router
-from app.api.dashboard.router import router as dashboard_router
 from app.api.v1.router import api_router
 from app.modules.achievements.router import router as achievements_router
 from app.modules.ai.router import router as ai_router
@@ -11,10 +10,9 @@ from app.modules.battle.router import router as battle_router
 from app.modules.battle_coach.router import router as battle_coach_router
 from app.modules.code_review.router import router as code_review_router
 from app.modules.compiler.router import router as compiler_router
+from app.modules.campaign.router import router as campaign_router
 from app.modules.career.router import router as career_router
 from app.modules.dashboard.router import router as dashboard_router_module
-from app.modules.developer.router import router as developer_router
-from app.modules.developer_portal.router import router as developer_portal_router
 from app.modules.interview.router import router as interview_router
 from app.modules.learning_engine.router import router as learning_engine_router
 from app.modules.matchmaking.router import router as matchmaking_router
@@ -25,13 +23,15 @@ from app.modules.roadmap.router import router as roadmap_router
 from app.modules.streak.router import router as streak_router
 from app.modules.tournament.router import router as tournament_router
 from app.modules.xp.router import router as xp_router
+from app.modules.admin.router import router as admin_router
 
 
 ROUTERS: list[tuple[str, APIRouter]] = [
     ("achievements", achievements_router),
-    ("auth", auth_router),
-    ("profile", profile_router),
+    ("auth", auth_router),  # Auth routes are now included at root
+    # ("profile", profile_router),  # Profile routes are included via API v1 router
     ("dashboard", dashboard_router_module),
+    ("admin", admin_router),
     ("xp", xp_router),
     ("streak", streak_router),
     ("ai", ai_router),
@@ -46,11 +46,10 @@ ROUTERS: list[tuple[str, APIRouter]] = [
     ("learning_engine", learning_engine_router),
     ("anti_cheat", anti_cheat_router),
     ("recruiter", recruiter_router),
-    ("developer", developer_router),
     ("analytics", analytics_router),
-    ("developer_portal", developer_portal_router),
     ("matchmaking", matchmaking_router),
     ("career", career_router),
+    ("campaign", campaign_router),
     ("api_v1", api_router),
 ]
 

@@ -11,8 +11,8 @@ from app.database.database import get_db
 from app.modules.developer.repository import (
     developer_repository,
 )
-from app.middleware.rate_limit import (
-    check_limit,
+from app.core.redis.rate_limiter import (
+    rate_limiter,
 )
 
 async def verify_api_key(
@@ -41,19 +41,21 @@ async def verify_api_key(
 
         )
 
-    if not check_limit(
-
-    key.api_key,
-
-):
-
-     raise HTTPException(
-
-        status_code=429,
-
-        detail="Rate limit exceeded",
-
+    allowed = await rate_limiter.allow(
+        key.api_key,
+        120,
+        60,
     )
+
+    if not allowed:
+
+        raise HTTPException(
+
+            status_code=429,
+
+            detail="Rate limit exceeded",
+
+        )
 
     return key
 def verify_scope(

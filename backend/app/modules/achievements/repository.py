@@ -1,41 +1,106 @@
-from sqlalchemy.orm import Session
+"""
+=========================================================
+
+SkillBattle
+
+Achievement Repository
+
+Production Async Version
+
+=========================================================
+"""
+
+from __future__ import annotations
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.achievement import Achievement
 
 
 class AchievementRepository:
 
-    def get_all(
+    # =====================================================
+    # Get All
+    # =====================================================
+
+    async def get_all(
         self,
-        db: Session,
+        db: AsyncSession,
         user_id: str,
-    ):
-        return (
-            db.query(Achievement)
-            .filter(Achievement.user_id == user_id)
-            .all()
+    ) -> list[Achievement]:
+
+        result = await db.execute(
+
+            select(Achievement)
+
+            .where(
+
+                Achievement.user_id == user_id,
+
+            )
+
         )
 
-    def create(
+        return list(result.scalars().all())
+
+    # =====================================================
+    # Create
+    # =====================================================
+
+    async def create(
         self,
-        db: Session,
+        db: AsyncSession,
         achievement: Achievement,
-    ):
+    ) -> Achievement:
+
         db.add(achievement)
-        db.commit()
-        db.refresh(achievement)
+
+        await db.flush()
+
+        await db.refresh(achievement)
 
         return achievement
 
-    def update(
+    # =====================================================
+    # Update
+    # =====================================================
+
+    async def update(
         self,
-        db: Session,
+        db: AsyncSession,
         achievement: Achievement,
-    ):
-        db.commit()
-        db.refresh(achievement)
+    ) -> Achievement:
+
+        db.add(achievement)
+
+        await db.flush()
+
+        await db.refresh(achievement)
 
         return achievement
+
+    # =====================================================
+    # Commit
+    # =====================================================
+
+    async def commit(
+        self,
+        db: AsyncSession,
+    ):
+
+        await db.commit()
+
+    # =====================================================
+    # Rollback
+    # =====================================================
+
+    async def rollback(
+        self,
+        db: AsyncSession,
+    ):
+
+        await db.rollback()
 
 
 achievement_repository = AchievementRepository()

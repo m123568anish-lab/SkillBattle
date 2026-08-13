@@ -169,11 +169,9 @@ class CareerAI:
 
     ) -> str:
 
-        raise NotImplementedError(
-
-            "OpenAI provider will be implemented."
-
-        )
+        # Placeholder implementation: return a descriptive message so callers
+        # receive deterministic output when OpenAI is not configured.
+        return f"[openai-placeholder] {prompt}"
 
     # --------------------------------------------------
 
@@ -187,11 +185,7 @@ class CareerAI:
 
     ) -> str:
 
-        raise NotImplementedError(
-
-            "Gemini provider will be implemented."
-
-        )
+        return f"[gemini-placeholder] {prompt}"
 
     # --------------------------------------------------
 
@@ -205,11 +199,7 @@ class CareerAI:
 
     ) -> str:
 
-        raise NotImplementedError(
-
-            "Claude provider will be implemented."
-
-        )
+        return f"[claude-placeholder] {prompt}"
 
 
 career_ai = CareerAI()

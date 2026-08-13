@@ -1,3 +1,15 @@
+"""
+=========================================================
+
+SkillBattle
+
+Tournament Match
+
+=========================================================
+"""
+
+from __future__ import annotations
+
 import uuid
 
 from sqlalchemy import (
@@ -33,20 +45,22 @@ class TournamentMatch(Base):
         Integer,
     )
 
-    battle_id: Mapped[str] = mapped_column(
+    battle_id: Mapped[str | None] = mapped_column(
         String(36),
         nullable=True,
     )
 
-    player_one_id: Mapped[str] = mapped_column(
+    player_one_id: Mapped[str | None] = mapped_column(
         String(36),
+        nullable=True,
     )
 
-    player_two_id: Mapped[str] = mapped_column(
+    player_two_id: Mapped[str | None] = mapped_column(
         String(36),
+        nullable=True,
     )
 
-    winner_id: Mapped[str] = mapped_column(
+    winner_id: Mapped[str | None] = mapped_column(
         String(36),
         nullable=True,
     )

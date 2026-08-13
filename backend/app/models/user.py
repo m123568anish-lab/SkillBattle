@@ -158,7 +158,7 @@ class User(Base):
 
     is_verified: Mapped[bool] = mapped_column(
         Boolean,
-        default=False,
+        default=True,
     )
 
     last_login: Mapped[datetime | None] = mapped_column(

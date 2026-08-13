@@ -151,7 +151,7 @@ async def get_current_admin(
 
 ) -> User:
 
-    if not current_user.is_superuser:
+    if not (current_user.is_superuser or getattr(current_user, "role", None) == "admin"):
 
         raise HTTPException(
 

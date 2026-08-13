@@ -1,194 +1,197 @@
+"""
+=========================================================
+
+SkillBattle
+
+Compiler Router
+
+Production Version
+
+=========================================================
+"""
+
+from __future__ import annotations
+
 from fastapi import (
     APIRouter,
     Depends,
+    HTTPException,
+    status,
 )
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.database import get_db
+from app.database.session import get_db
+
+from app.core.dependencies import (
+    get_current_user,
+)
 
 from app.models.user import User
 
-from app.core.security import get_current_user
-
 from app.modules.compiler.schemas import (
     RunCodeRequest,
+    RunCodeResponse,
     SubmitCodeRequest,
+    SubmitCodeResponse,
 )
-from app.modules.compiler.executors.diagnostics import (
-    compiler_diagnostics,
-)
-from app.modules.compiler.service import compiler_service
 
-from app.modules.compiler.executors.manager import (
-    execution_manager,
+from app.modules.compiler.service import (
+    compiler_service,
 )
 
 router = APIRouter(
+
     prefix="/compiler",
-    tags=["Compiler V2"],
+
+    tags=["Compiler"],
+
 )
 
-# ==========================================================
-# Health Check
-# ==========================================================
-
-@router.get("/health")
-def health():
-
-    return {
-
-        "status": "healthy",
-
-        "engine": "ExecutionManager",
-
-        "version": "2.0",
-
-        "diagnostics":
-
-            compiler_diagnostics.report(),
-
-    }
-
 
 # ==========================================================
-# Supported Languages
+# Health
 # ==========================================================
 
-@router.get("/languages")
-def supported_languages():
+@router.get(
+    "/health",
+)
+async def health():
 
-    diagnostics = compiler_diagnostics.report()
-
-    supported = []
-
-    if diagnostics["python"]["installed"]:
-        supported.append("python")
-
-    if diagnostics["gcc"]["installed"]:
-        supported.append("c")
-
-    if diagnostics["g++"]["installed"]:
-        supported.append("cpp")
-
-    if diagnostics["java"]["installed"]:
-        supported.append("java")
-
-    if diagnostics["node"]["installed"]:
-        supported.append("javascript")
-
-    return {
-
-        "languages": supported,
-
-        "diagnostics": diagnostics,
-
-    }
+    return await compiler_service.health()
 
 
 # ==========================================================
 # Run Code
 # ==========================================================
 
-@router.post("/run")
-def run_code(
+@router.post(
+    "/run",
+    response_model=RunCodeResponse,
+)
+async def run_code(
+
     request: RunCodeRequest,
+
 ):
 
-    return compiler_service.run_code(
-        request,
-    )
+    try:
+
+        return await compiler_service.run_code(
+
+            request,
+
+        )
+
+    except Exception as exc:
+
+        raise HTTPException(
+
+            status_code=status.HTTP_400_BAD_REQUEST,
+
+            detail=str(exc),
+
+        )
 
 
 # ==========================================================
 # Submit Solution
 # ==========================================================
 
-@router.post("/submit")
-def submit_solution(
+@router.post(
+    "/submit",
+    response_model=SubmitCodeResponse,
+)
+async def submit_solution(
+
     request: SubmitCodeRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+
+    db: AsyncSession = Depends(get_db),
+
+    current_user: User = Depends(
+        get_current_user,
+    ),
+
 ):
 
-    return compiler_service.submit_solution(
+    try:
+
+        return await compiler_service.submit_solution(
+
+            db,
+
+            current_user,
+
+            request,
+
+        )
+
+    except ValueError as exc:
+
+        raise HTTPException(
+
+            status_code=status.HTTP_404_NOT_FOUND,
+
+            detail=str(exc),
+
+        )
+
+    except Exception as exc:
+
+        raise HTTPException(
+
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+
+            detail=str(exc),
+
+        )
+
+
+# ==========================================================
+# My Submissions
+# ==========================================================
+
+@router.get(
+    "/submissions/me",
+)
+async def my_submissions(
+
+    db: AsyncSession = Depends(get_db),
+
+    current_user: User = Depends(
+        get_current_user,
+    ),
+
+):
+
+    return await compiler_service.get_user_submissions(
+
         db,
+
         current_user,
-        request,
+
     )
 
 
 # ==========================================================
-# Problems
+# Problem Submissions
 # ==========================================================
 
-@router.get("/problems")
-def get_problems(
-    db: Session = Depends(get_db),
-):
+@router.get(
+    "/problem/{problem_id}/submissions",
+)
+async def problem_submissions(
 
-    return compiler_service.get_problems(db)
-
-
-# ==========================================================
-# Problem
-# ==========================================================
-
-@router.get("/problem/{problem_id}")
-def get_problem(
     problem_id: int,
-    db: Session = Depends(get_db),
+
+    db: AsyncSession = Depends(get_db),
+
 ):
 
-    return compiler_service.get_problem(
+    return await compiler_service.get_problem_submissions(
+
         db,
+
         problem_id,
-    )
 
-
-# ==========================================================
-# History
-# ==========================================================
-
-@router.get("/history")
-def history(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-
-    return compiler_service.get_submission_history(
-        db,
-        current_user,
-    )
-
-
-# ==========================================================
-# Submission
-# ==========================================================
-
-@router.get("/submission/{submission_id}")
-def submission(
-    submission_id: int,
-    db: Session = Depends(get_db),
-):
-
-    return compiler_service.get_submission(
-        db,
-        submission_id,
-    )
-
-
-# ==========================================================
-# Statistics
-# ==========================================================
-
-@router.get("/statistics")
-def statistics(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-
-    return compiler_service.get_statistics(
-        db,
-        current_user,
     )

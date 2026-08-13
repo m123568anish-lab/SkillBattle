@@ -108,4 +108,4 @@ class BaseExecutor(ABC):
 
         Must be implemented by every executor.
         """
-        pass
+        raise NotImplementedError("Executor must implement `execute()`")

@@ -1,7 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
@@ -10,7 +9,23 @@ from app.core.router_registry import register_routers
 from app.database.database import engine
 from app.database.init_db import init_db
 from app.core.exceptions import SkillBattleException
-
+from app.modules.battle.websocket.router import (
+    router as battle_ws_router,
+)
+from app.core.logging.middleware import (
+    LoggingMiddleware,
+)
+from app.core.monitoring.prometheus import router as metrics_router
+from app.core.monitoring.health import router as health_router
+from app.core.security.headers import (
+    SecurityHeadersMiddleware,
+)
+from app.middleware.cors import configure_cors
+from app.middleware.gzip import configure_gzip
+from app.middleware.maintenance import MaintenanceMiddleware
+from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.request_id import RequestIDMiddleware
+from app.middleware.timing import TimingMiddleware
 logger = logging.getLogger(__name__)
 
 
@@ -66,14 +81,21 @@ app = FastAPI(
 
 register_middleware(app)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+configure_cors(app)
 
+configure_gzip(app)
+
+app.add_middleware(RequestIDMiddleware)
+app.add_middleware(TimingMiddleware)
+app.add_middleware(MaintenanceMiddleware)
+app.add_middleware(RateLimitMiddleware)
+
+app.include_router(battle_ws_router)
+app.include_router(metrics_router)
+app.include_router(health_router)
+app.add_middleware(
+    SecurityHeadersMiddleware,
+)
 register_routers(app)
 
 
