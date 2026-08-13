@@ -1,43 +1,47 @@
-export interface DashboardData {
+export interface UserSummary {
+  id: string;
+  username: string;
+  full_name: string;
+  email: string;
+  avatar_url?: string | null;
+  role?: string;
+  is_superuser?: boolean;
+}
 
-    resume: {
+export interface DashboardStats {
+  xp: number;
+  level: number;
+  streak: number;
+  rating: number;
+  battles_played: number;
+  battles_won: number;
+}
 
-        id: string;
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+}
+export interface AIRecommendation {
+  title: string;
+  message: string;
+  progress: number;
+  action: string;
+}
 
-        filename: string;
+export interface DailyChallenge {
+  id: string;
+  title: string;
+  difficulty: string;
+  description: string;
+  xp_reward: number;
+}
 
-        uploaded_at: string;
-
-    };
-
-    analysis: {
-
-        summary: string;
-
-        strengths: string[];
-
-        weaknesses: string[];
-
-        resume_score: number;
-
-    };
-
-    ats: {
-
-        ats_score: number;
-
-    };
-
-    placement: {
-
-        placement_score: number;
-
-    };
-
-    portfolio: {
-
-        portfolio_score: number;
-
-    };
-
+export interface DashboardResponse {
+  user: UserSummary;
+  stats: DashboardStats;
+  achievements: Achievement[];
+  ai_recommendation: AIRecommendation;
+  daily_challenge: DailyChallenge;
 }

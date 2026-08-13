@@ -1,10 +1,33 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 
-const particles = Array.from({ length: 25 });
+interface Particle {
+  x: number;
+  y: number;
+  duration: number;
+  delay: number;
+}
+
+const PARTICLE_COUNT = 25;
+
+function createParticles(): Particle[] {
+  return Array.from({ length: PARTICLE_COUNT }, () => ({
+    x: Math.random() * 1600,
+    y: Math.random() * 900,
+    duration: 8 + Math.random() * 8,
+    delay: Math.random() * 8,
+  }));
+}
 
 export default function FloatingParticles() {
+  const [particles, setParticles] = useState<Particle[]>([]);
+
+  useEffect(() => {
+    setParticles(createParticles());
+  }, []);
+
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       {particles.map((_, index) => (

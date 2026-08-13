@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Sword,
@@ -10,6 +11,12 @@ import {
 import GradientButton from "@/components/ui/gradient-button";
 
 export default function BattleArenaCard() {
+  const router = useRouter();
+
+  const handleEnterBattle = () => {
+    router.push("/battle");
+  };
+
   return (
     <motion.div
       whileHover={{
@@ -75,19 +82,21 @@ export default function BattleArenaCard() {
 
       </div>
 
-      <div className="mt-8">
+      <div className="mt-8 flex flex-col sm:flex-row gap-3">
+        <button
+          onClick={() => router.push("/battle/solo")}
+          className="flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-5 py-3 font-bold text-white shadow-lg shadow-cyan-500/20 hover:opacity-90 transition flex items-center justify-center gap-2"
+        >
+          ⚡ Solo Battle (Coding & MCQs)
+        </button>
 
-        <GradientButton>
-
-          Enter Battle
-
+        <GradientButton onClick={handleEnterBattle}>
+          Multiplayer
           <ArrowRight
             size={18}
             className="ml-2"
           />
-
         </GradientButton>
-
       </div>
 
     </motion.div>

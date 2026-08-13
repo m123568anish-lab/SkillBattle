@@ -6,7 +6,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
+import { toast } from "react-hot-toast";
 
 import GradientButton from "@/components/ui/gradient-button";
 
@@ -49,7 +49,7 @@ export default function RegisterForm() {
         "Registration successful!"
       );
 
-      router.push("/verify-email");
+      router.push("/dashboard");
     } catch {
       toast.error(
         "Registration failed."

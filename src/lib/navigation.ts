@@ -5,18 +5,18 @@ export const navigation = [
   },
   {
     name: "Battles",
-    href: "#",
+    href: "/battle",
   },
   {
     name: "Leaderboard",
-    href: "#",
+    href: "/dashboard",
   },
   {
     name: "Tournament",
-    href: "#",
+    href: "/tournament",
   },
   {
     name: "Pricing",
-    href: "#",
+    href: "/pricing",
   },
 ];

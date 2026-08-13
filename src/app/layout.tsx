@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Toaster } from "sonner";
-import { AuthGuard } from "@/components/auth/AuthGuard";
+import { Toaster } from "react-hot-toast";
+
+import { AuthProvider } from "@/context/AuthContext";
+
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -27,15 +30,25 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full`}
+      data-scroll-behavior="smooth"
+      className={`${geistSans.variable} ${geistMono.variable} h-full scroll-smooth`}
     >
       <body className="min-h-screen bg-[#070B14] text-white">
-        <AuthGuard>{children}</AuthGuard>
+        <AuthProvider>
+          <div className="relative">
+            {children}
+          </div>
+        </AuthProvider>
 
         <Toaster
           position="top-right"
-          richColors
-          theme="dark"
+          toastOptions={{
+            style: {
+              background: "#111827",
+              color: "#fff",
+              border: "1px solid rgba(255,255,255,0.1)",
+            },
+          }}
         />
       </body>
     </html>

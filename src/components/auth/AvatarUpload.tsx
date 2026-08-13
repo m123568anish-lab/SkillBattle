@@ -4,20 +4,9 @@ import Image from "next/image";
 import { Camera } from "lucide-react";
 import { useRef, useState } from "react";
 
-const avatars = [
-  "/avatars/avatar1.png",
-  "/avatars/avatar2.png",
-  "/avatars/avatar3.png",
-  "/avatars/avatar4.png",
-  "/avatars/avatar5.png",
-  "/avatars/avatar6.png",
-  "/avatars/avatar7.png",
-  "/avatars/avatar8.png",
-  "/avatars/avatar9.png",
-  "/avatars/avatar10.png",
-  "/avatars/avatar11.png",
-  "/avatars/avatar12.png",
-];
+// Use existing placeholder in `public/` when avatar images are missing.
+const placeholder = "/file.svg";
+const avatars = Array.from({ length: 12 }, (_, i) => `${placeholder}?i=${i + 1}`);
 
 export default function AvatarUpload() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -62,6 +51,7 @@ export default function AvatarUpload() {
               fill
               className="object-cover"
               unoptimized
+              sizes="100vw"
             />
           ) : selectedAvatar ? (
             <Image
@@ -69,6 +59,7 @@ export default function AvatarUpload() {
               alt="avatar"
               fill
               className="object-cover"
+              sizes="100vw"
             />
           ) : (
             <div className="flex h-full items-center justify-center">
@@ -129,6 +120,8 @@ export default function AvatarUpload() {
               alt="avatar"
               fill
               className="object-cover"
+              sizes="100vw"
+              unoptimized
             />
           </button>
         ))}

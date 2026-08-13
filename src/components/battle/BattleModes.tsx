@@ -18,34 +18,22 @@ export default function BattleModes() {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
           viewport={{ once: true }}
-          className="mx-auto mb-20 max-w-3xl text-center"
+          className="mx-auto mb-16 max-w-3xl text-center"
         >
-          <span
-            className="
-              rounded-full
-              border
-              border-cyan-400/20
-              bg-cyan-500/10
-              px-5
-              py-2
-              text-sm
-              font-semibold
-              text-cyan-300
-            "
-          >
-            BATTLE MODES
+          <span className="inline-block rounded-full border border-cyan-400/30 bg-cyan-500/10 px-5 py-2 text-[10px] font-black tracking-[0.2em] text-cyan-300 uppercase shadow-inner mb-6">
+            Battle Modes
           </span>
 
-          <h2 className="mt-8 text-5xl font-black text-white md:text-6xl">
+          <h2 className="text-4xl font-black text-white md:text-5xl lg:text-6xl tracking-tight leading-[1.1]">
             Choose Your
-            <span className="block bg-gradient-to-r from-cyan-400 via-violet-400 to-pink-500 bg-clip-text text-transparent">
+            <span className="block mt-2 bg-gradient-to-r from-cyan-400 via-violet-400 to-fuchsia-500 bg-clip-text text-transparent">
               Battle Arena
             </span>
           </h2>
 
-          <p className="mt-8 text-lg leading-8 text-slate-400">
+          <p className="mt-6 text-base md:text-lg leading-relaxed text-slate-400 font-medium">
             Pick your favorite technology, compete against real players,
-            earn XP, unlock achievements and climb the global leaderboard.
+            earn XP, unlock achievements, and climb the global leaderboard.
           </p>
         </motion.div>
 

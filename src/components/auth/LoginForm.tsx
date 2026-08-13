@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -9,10 +10,12 @@ import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import { toast } from "sonner";
+import { toast } from "react-hot-toast";
 
 import GradientButton from "@/components/ui/gradient-button";
-import SocialLogin from "./SocialLogin";
+const SocialLogin = dynamic(() => import("./SocialLogin"), {
+  ssr: false,
+});
 
 import {
   loginSchema,
@@ -38,18 +41,27 @@ export default function LoginForm() {
   });
 
   async function onSubmit(data: LoginFormData) {
-    try {
-      await signIn(data);
+  try {
+    const result = await signIn(data);
 
-      toast.success("Login successful");
-
-      router.push("/dashboard");
-    } catch (error) {
-      console.error(error);
-
-      toast.error("Invalid email or password");
+    if (!result?.tokens?.access_token) {
+      throw new Error("No access token received.");
     }
+
+    toast.success("Welcome back!");
+
+    router.replace("/dashboard");
+  } catch (error: any) {
+    console.error(error);
+
+    const message =
+      error?.response?.data?.detail ||
+      error?.message ||
+      "Unable to login.";
+
+    toast.error(message);
   }
+}
 
   return (
     <>

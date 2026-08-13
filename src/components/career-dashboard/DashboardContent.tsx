@@ -4,7 +4,7 @@ import DashboardHome from "./DashboardHome";
 import ErrorCard from "./ErrorCard";
 import LoadingCard from "./LoadingCard";
 
-import { useDashboard } from "@/hooks/useDashboard";
+import { useDashboard } from "@/hooks/use-dashboard";
 
 interface DashboardContentProps {
     resumeId: string;
@@ -14,16 +14,17 @@ export default function DashboardContent({
     resumeId,
 }: DashboardContentProps) {
     const {
-        data,
-        isLoading,
-        isError,
+        dashboard,
+        loading,
+        error,
+        refresh,
     } = useDashboard(resumeId);
 
-    if (isLoading) {
+    if (loading) {
         return <LoadingCard />;
     }
 
-    if (isError || !data) {
+    if (error || !dashboard) {
         return (
             <ErrorCard message="Unable to load dashboard." />
         );
@@ -31,8 +32,8 @@ export default function DashboardContent({
 
     return (
         <DashboardHome
-            resume={data.resume}
-            analysis={data.analysis}
+            resume={dashboard}
+            analysis={dashboard}
         />
     );
 }

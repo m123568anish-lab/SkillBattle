@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "react-hot-toast";
 
 import GradientButton from "@/components/ui/gradient-button";
 import VerificationSuccess from "./VerificationSuccess";
