@@ -1,0 +1,1 @@
+from .service import battle_judge_service

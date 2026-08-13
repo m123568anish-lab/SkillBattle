@@ -1,0 +1,18 @@
+[Unit]
+Description=SkillBattle API
+
+After=docker.service
+
+[Service]
+
+WorkingDirectory=/opt/skillbattle
+
+ExecStart=/usr/bin/docker compose up
+
+ExecStop=/usr/bin/docker compose down
+
+Restart=always
+
+[Install]
+
+WantedBy=multi-user.target

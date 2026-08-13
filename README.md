@@ -1,36 +1,126 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BattleAI / SkillBattle
+
+BattleAI is a full-stack skill-battle application with a FastAPI backend and Next.js frontend. The repository includes local development support, Docker Compose orchestration, and production-ready configuration for PostgreSQL and Nginx.
+
+## Status
+
+- ✅ Backend FastAPI app with async lifespan and health endpoints
+- ✅ Frontend Next.js app with dashboard and auth flows
+- ✅ Docker Compose development and production configs
+- ✅ Smoke test script for API verification
+- ✅ Production environment examples under `.env.production.example`
 
 ## Getting Started
 
-First, run the development server:
+### 1) Install dependencies
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+#### Backend
+
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+#### Frontend
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```powershell
+cd frontend
+yarn install
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 2) Run locally
 
-## Learn More
+#### Backend
 
-To learn more about Next.js, take a look at the following resources:
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+#### Frontend
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```powershell
+cd frontend
+yarn dev
+```
 
-## Deploy on Vercel
+### 3) Environment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Copy the example env file and set secrets:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```powershell
+copy .env.example .env
+```
+
+Set `SECRET_KEY` and any other required values before running the application.
+
+## Docker Compose
+
+### Development
+
+```powershell
+docker compose up --build -d
+```
+
+Services started:
+- `postgres`
+- `backend`
+- `frontend`
+- `nginx`
+
+To inspect logs:
+
+```powershell
+docker compose logs -f backend
+```
+
+### Production
+
+Copy the production example and start with the production compose file:
+
+```powershell
+copy .env.production.example .env.production
+# update values
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
+## Smoke Test
+
+A smoke test is available at `scripts/smoke_test.py`.
+
+```powershell
+python scripts\smoke_test.py
+```
+
+The script performs:
+- backend healthcheck
+- register
+- login
+- dashboard access
+- token refresh
+
+## Important Files
+
+- `docker-compose.yml` - development compose setup
+- `docker-compose.prod.yml` - production compose setup
+- `backend/Dockerfile.prod` - production backend image
+- `backend/entrypoint.sh` - migration startup helper
+- `backend/app/main.py` - FastAPI application entrypoint
+- `backend/app/core/config.py` - environment config
+- `scripts/smoke_test.py` - API smoke test
+
+## Next Steps
+
+1. Verify the app locally with `uvicorn` and `yarn dev`
+2. Confirm Docker Compose startup
+3. Run `scripts/smoke_test.py`
+4. After verification, commit the final documentation and production config
+
+## Notes
+
+- For production, set `ENVIRONMENT=production` and use PostgreSQL.
+- `NEXT_PUBLIC_API_URL` must point to your deployed frontend domain.
+- If you want HTTPS, add Certbot and reverse proxy cert automation later.

@@ -1,0 +1,9 @@
+packageName: skillbattle_sdk
+
+projectName: SkillBattle SDK
+
+packageVersion: 1.0.0
+
+hideGenerationTimestamp: true
+
+generateSourceCodeOnly: false
