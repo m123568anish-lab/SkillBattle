@@ -1,0 +1,383 @@
+<!-- 
+  FRONTEND-BACKEND INTEGRATION - FILE INDEX
+  This file provides a quick reference for all created files
+-->
+
+# Integration Files Index
+
+## 📋 Quick Navigation
+
+### 🔐 Authentication
+- **Auth Service**: `services/auth.service.ts`
+- **Auth Types**: `types/auth.ts`
+
+### 👤 User Profiles  
+- **Profile Service**: `services/profile.service.ts`
+- **Profile Types**: `types/profile.ts`
+- **Profile Hooks**: `hooks/useProfile.ts`
+
+### 📊 Dashboard
+- **Dashboard Service**: `services/dashboard.service.ts`
+- **Dashboard Types**: `types/dashboard.ts`
+- **Dashboard Hooks**: `hooks/useDashboard.ts`
+
+### ⚔️ Battles
+- **Battle Service**: `services/battle.service.ts`
+- **Battle Types**: `types/battle.ts`
+- **Battle Hooks**: `hooks/useBattle.ts`
+
+### 🏆 Tournaments
+- **Tournament Service**: `services/tournament.service.ts`
+- **Tournament Types**: `types/tournament.ts`
+- **Tournament Hooks**: `hooks/useTournament.ts`
+
+### 🎯 Challenges
+- **Challenge Service**: `services/challenge.service.ts`
+- **Challenge Types**: `types/challenge.ts`
+- **Challenge Hooks**: `hooks/useChallenge.ts`
+
+### 🤖 AI Features
+- **AI Service**: `services/ai.service.ts`
+- *No separate hooks (used via service)*
+
+### 🎤 Interviews
+- **Interview Service**: `services/interview.service.ts`
+- **Interview Types**: `types/interview.ts`
+- *Hooks coming soon*
+
+### 📝 Code Reviews
+- **Code Review Service**: `services/code-review.service.ts`
+- **Code Review Types**: `types/code-review.ts`
+- *Hooks coming soon*
+
+### 🛣️ Roadmaps
+- **Roadmap Service**: `services/roadmap.service.ts`
+- **Roadmap Types**: `types/roadmap.ts`
+- **Roadmap Hooks**: `hooks/useRoadmap.ts`
+
+### 📚 Learning Engine
+- **Learning Service**: `services/learning-engine.service.ts`
+- *No separate types/hooks yet*
+
+### 🎓 Battle Coach
+- **Battle Coach Service**: `services/battle-coach.service.ts`
+- *No separate types/hooks yet*
+
+### 🔥 Streaks
+- **Streak Service**: `services/streak.service.ts`
+- **Streak Types**: `types/streak.ts`
+- **Streak Hooks**: `hooks/useStreak.ts`
+
+### 🏅 Achievements
+- **Achievement Service**: `services/achievements.service.ts`
+- **Achievement Types**: `types/achievement.ts`
+- **Achievement Hooks**: `hooks/useAchievements.ts`
+
+### 💼 Career
+- **Career Service**: `services/career.service.ts`
+- *No separate types/hooks yet*
+
+---
+
+## 🔧 Configuration & Utilities
+
+### Core Setup
+| File | Purpose |
+|------|---------|
+| `lib/api-constants.ts` | All API endpoints, status codes, error messages |
+| `lib/api-config.ts` | Configuration (base URL, timeout, retry) |
+| `lib/api-error.ts` | Error handler utility & error classification |
+| `lib/api-interceptors.ts` | Request/response interceptors, logging |
+| `lib/react-query-config.ts` | React Query cache strategies |
+| `lib/api-client.ts` | Centralized API client factory |
+
+### Exports
+| File | Purpose |
+|------|---------|
+| `services/index.ts` | Central export for all services |
+| `hooks/index.ts` | Central export for all hooks |
+
+---
+
+## 📖 Documentation Files
+
+| File | What It Contains |
+|------|-----------------|
+| `README-INTEGRATION.md` | Complete integration overview & quick start |
+| `QUICK_START.ts` | Step-by-step setup & common patterns |
+| `INTEGRATION_GUIDE.md` | Detailed usage guide with examples |
+| `INTEGRATION_CHECKLIST.md` | Complete checklist of features |
+| `lib/EXAMPLE_DASHBOARD.tsx` | Real-world component example |
+
+---
+
+## 📦 File Count Summary
+
+| Category | Count |
+|----------|-------|
+| **Services** | 14 |
+| **Type Files** | 11 |
+| **Hook Files** | 8 |
+| **Configuration** | 6 |
+| **Documentation** | 5 |
+| **Export Files** | 2 |
+| **Total** | **46** |
+
+---
+
+## 🚀 Getting Started
+
+### First Time Setup
+1. Read: `README-INTEGRATION.md`
+2. Setup: `QUICK_START.ts`
+3. Reference: `INTEGRATION_GUIDE.md`
+
+### Using in a Component
+```typescript
+// Import hook
+import { useCurrentUserProfile } from "@/hooks";
+
+// Use in component
+export function MyComponent() {
+  const { data: profile } = useCurrentUserProfile();
+  return <div>{profile?.full_name}</div>;
+}
+```
+
+### Direct Service Usage (non-React)
+```typescript
+// Import service
+import { ProfileService } from "@/services";
+
+// Use directly
+const profile = await ProfileService.getCurrentUserProfile();
+```
+
+### API Constants
+```typescript
+// Import constants
+import { API_ENDPOINTS } from "@/lib/api-constants";
+
+// Use endpoints
+const url = API_ENDPOINTS.PROFILE.ME; // "/api/v1/profile/me"
+```
+
+---
+
+## 📍 File Locations
+
+### Services
+```
+frontend/services/
+├── auth.service.ts
+├── profile.service.ts
+├── dashboard.service.ts
+├── battle.service.ts
+├── tournament.service.ts
+├── challenge.service.ts
+├── ai.service.ts
+├── interview.service.ts
+├── code-review.service.ts
+├── roadmap.service.ts
+├── learning-engine.service.ts
+├── battle-coach.service.ts
+├── streak.service.ts
+├── achievements.service.ts
+├── career.service.ts
+└── index.ts
+```
+
+### Types
+```
+frontend/types/
+├── auth.ts
+├── profile.ts
+├── dashboard.ts
+├── battle.ts
+├── tournament.ts
+├── challenge.ts
+├── interview.ts
+├── code-review.ts
+├── roadmap.ts
+├── streak.ts
+└── achievement.ts
+```
+
+### Hooks
+```
+frontend/hooks/
+├── useDashboard.ts
+├── useBattle.ts
+├── useProfile.ts
+├── useTournament.ts
+├── useChallenge.ts
+├── useStreak.ts
+├── useAchievements.ts
+├── useRoadmap.ts
+└── index.ts
+```
+
+### Configuration
+```
+frontend/lib/
+├── api.ts (existing - Axios instance)
+├── api-constants.ts
+├── api-config.ts
+├── api-error.ts
+├── api-interceptors.ts
+├── react-query-config.ts
+├── api-client.ts
+├── INTEGRATION_GUIDE.md
+└── EXAMPLE_DASHBOARD.tsx
+```
+
+### Documentation
+```
+frontend/
+├── README-INTEGRATION.md
+├── QUICK_START.ts
+├── INTEGRATION_CHECKLIST.md
+└── lib/
+    └── EXAMPLE_DASHBOARD.tsx
+```
+
+---
+
+## 🎯 Common Tasks
+
+### Task: Get User Profile
+**Files Involved:**
+- `services/profile.service.ts` - Contains logic
+- `hooks/useProfile.ts` - React hook
+- `types/profile.ts` - TypeScript types
+
+**Example:**
+```typescript
+import { useCurrentUserProfile } from "@/hooks";
+const { data: profile } = useCurrentUserProfile();
+```
+
+### Task: Create a Battle
+**Files Involved:**
+- `services/battle.service.ts` - Contains logic
+- `hooks/useBattle.ts` - React hook (useCreateBattle)
+- `types/battle.ts` - TypeScript types
+
+**Example:**
+```typescript
+import { useCreateBattle } from "@/hooks";
+const createBattle = useCreateBattle();
+await createBattle.mutateAsync({ title: "...", ... });
+```
+
+### Task: Add API Interceptor
+**Files Involved:**
+- `lib/api-interceptors.ts` - Contains setup functions
+- `lib/api-config.ts` - Configuration
+
+**Example:**
+```typescript
+import { setupAPIInterceptors } from "@/lib/api-interceptors";
+setupAPIInterceptors(() => {
+  // Handle auth failure
+});
+```
+
+### Task: Handle API Error
+**Files Involved:**
+- `lib/api-error.ts` - Error handler
+- `lib/api-constants.ts` - Error messages
+
+**Example:**
+```typescript
+import { APIErrorHandler } from "@/lib/api-error";
+const apiError = APIErrorHandler.handle(error);
+```
+
+---
+
+## ✅ Integration Checklist
+
+### Setup (do once)
+- [ ] Read `README-INTEGRATION.md`
+- [ ] Run setup code from `QUICK_START.ts`
+- [ ] Configure `.env.local` with `NEXT_PUBLIC_API_URL`
+- [ ] Install @tanstack/react-query if needed
+
+### Per Component
+- [ ] Import hooks from `@/hooks`
+- [ ] Use hooks in component
+- [ ] Handle loading states
+- [ ] Handle error states
+
+### Testing
+- [ ] Verify API calls in Network tab
+- [ ] Check React Query DevTools
+- [ ] Test error scenarios
+- [ ] Verify data caching
+
+---
+
+## 🔗 Dependencies
+
+### Required (usually pre-installed)
+- React
+- Next.js
+- axios
+- TypeScript
+
+### Need to Install
+```bash
+npm install @tanstack/react-query @tanstack/react-query-devtools
+```
+
+---
+
+## 📞 Quick Reference
+
+### Import Patterns
+
+```typescript
+// Services
+import { ProfileService, BattleService } from "@/services";
+
+// Hooks
+import { 
+  useCurrentUserProfile, 
+  useActiveBattles 
+} from "@/hooks";
+
+// Types
+import { 
+  UserProfile, 
+  Battle 
+} from "@/types";
+
+// Constants
+import { 
+  API_ENDPOINTS, 
+  HTTP_STATUS, 
+  ERROR_MESSAGES 
+} from "@/lib/api-constants";
+
+// Config
+import API from "@/lib/api";
+import apiClient from "@/lib/api-client";
+```
+
+---
+
+## 🎓 Learning Path
+
+1. **Start Here**: `README-INTEGRATION.md`
+2. **Setup**: `QUICK_START.ts`
+3. **Deep Dive**: `INTEGRATION_GUIDE.md`
+4. **See Example**: `lib/EXAMPLE_DASHBOARD.tsx`
+5. **Reference**: `INTEGRATION_CHECKLIST.md`
+6. **Advanced**: Individual service files
+
+---
+
+**Last Updated**: 2024
+**Status**: ✅ Complete
+**Ready to Use**: YES
