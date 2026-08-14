@@ -2,16 +2,16 @@ services:
   - type: web
     name: skillbattle-api
     runtime: python
-    pythonVersion: "3.11"
+    runtimeVersion: 3.11.9
     
     # Root directory where Render should look for the app
     rootDir: backend
     
-    # Build command - install dependencies
-    buildCommand: pip install -r requirements.txt
+    # Build command - install dependencies with upgraded build tools
+    buildCommand: pip install --upgrade pip setuptools wheel && pip install -r requirements.txt
     
-    # Start command - run FastAPI server
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    # Start command - run migrations before starting the server
+    startCommand: bash -c 'alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT'
     
     # Environment variables (set these in the Render dashboard)
     envVars:
