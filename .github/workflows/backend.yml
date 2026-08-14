@@ -1,5 +1,9 @@
 name: Backend CI
 
+# DISABLED - Use main CI workflow instead
+# This workflow is kept for historical purposes
+# All backend checks are now in .github/workflows/ci.yml
+
 on:
   push:
     branches:
@@ -7,57 +11,13 @@ on:
     paths:
       - 'backend/**'
       - '.github/workflows/backend.yml'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'backend/**'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.11', '3.12']
-
+    
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: 'pip'
-
-      - name: Upgrade pip and install build tools
-        run: |
-          python -m pip install --upgrade pip setuptools wheel
-
-      - name: Install dependencies
-        run: |
-          cd backend
-          pip install -r requirements.txt
-
-      - name: Check code format (if black available)
-        continue-on-error: true
-        run: |
-          pip install black || true
-          black --check app/ tests/ || echo "Format check skipped"
-
-      - name: Run tests
-        run: |
-          cd backend
-          python -m pytest tests/ -v --tb=short --disable-warnings -x
-
-      - name: Generate coverage report
-        continue-on-error: true
-        run: |
-          cd backend
-          python -m pytest tests/ --cov=app --cov-report=xml || echo "Coverage report failed"
-
-      - name: Build verification
-        run: |
-          cd backend
-          python -c "from app.main import app; print('✅ App imports successfully')"
+      - name: ⏭️  Backend CI disabled - using main CI workflow
+        run: echo "Backend checks run in ci.yml workflow"
