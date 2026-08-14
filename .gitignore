@@ -20,8 +20,10 @@ frontend/.turbo/
 # Environment
 # =========================
 .env
-.env.*
+.env.*.local
 !.env.example
+!.env.production.example
+!.env.*.example
 
 # =========================
 # Uploads
