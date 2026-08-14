@@ -61,7 +61,6 @@ export default function RegisterForm() {
     <form
       onSubmit={handleSubmit(onSubmit)}
       className="space-y-6"
-      suppressHydrationWarning
     >
       <AvatarUpload />
 

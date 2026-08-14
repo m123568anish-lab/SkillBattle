@@ -80,7 +80,6 @@ export default function LoginForm() {
       <form
         onSubmit={handleSubmit(onSubmit)}
         className="space-y-6"
-        suppressHydrationWarning
       >
         {/* Email */}
 
