@@ -1,0 +1,16 @@
+{
+  "name": "@skillbattle/sdk",
+  "version": "1.0.0",
+  "description": "Official SkillBattle TypeScript SDK",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "axios": "^1.8.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0"
+  }
+}

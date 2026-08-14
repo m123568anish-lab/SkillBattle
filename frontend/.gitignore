@@ -1,0 +1,70 @@
+# =========================
+# Python
+# =========================
+backend/.venv/
+backend/__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# =========================
+# Frontend
+# =========================
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+
+# =========================
+# Environment
+# =========================
+.env
+.env.*.local
+!.env.example
+!.env.production.example
+!.env.*.example
+
+# =========================
+# Uploads
+# =========================
+uploads/
+
+# =========================
+# Database
+# =========================
+*.db
+*.sqlite3
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+
+# =========================
+# IDE
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# OS
+# =========================
+Thumbs.db
+.DS_Store
+
+# =========================
+# Testing
+# =========================
+.pytest_cache/
+.coverage
+htmlcov/
+
+# =========================
+# Misc
+# =========================
+dist/
+build/
+coverage/
+node_modules
