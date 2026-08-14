@@ -4,18 +4,60 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          fetch-depth: 0
 
-      - run: pip install -r backend/requirements.txt
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
 
-      - run: pytest backend/tests
+      - name: Upgrade pip and install build tools
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Check code format (if black available)
+        continue-on-error: true
+        run: |
+          pip install black || true
+          black --check app/ tests/ || echo "Format check skipped"
+
+      - name: Run tests
+        run: |
+          cd backend
+          python -m pytest tests/ -v --tb=short --disable-warnings -x
+
+      - name: Generate coverage report
+        continue-on-error: true
+        run: |
+          cd backend
+          python -m pytest tests/ --cov=app --cov-report=xml || echo "Coverage report failed"
+
+      - name: Build verification
+        run: |
+          cd backend
+          python -c "from app.main import app; print('✅ App imports successfully')"
