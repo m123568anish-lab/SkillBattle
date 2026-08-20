@@ -10,8 +10,8 @@ services:
     # Build command - install dependencies with upgraded build tools
     buildCommand: python --version && python -c "from pathlib import Path; print('Psycopg requirement:', next(line for line in Path('requirements.txt').read_text().splitlines() if line.startswith('psycopg')))" && pip install --upgrade pip setuptools wheel && pip install --no-cache-dir -r requirements.txt
     
-    # Start command - run migrations using script then start uvicorn
-    startCommand: python run_migrations.py && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    # The FastAPI lifespan creates the current schema for a fresh Neon database.
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     
     # Environment variables (set these in the Render dashboard)
