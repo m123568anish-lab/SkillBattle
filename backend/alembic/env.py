@@ -55,6 +55,10 @@ database_url = database_url.replace(
     "",
 )
 
+# The backend installs Psycopg 3, not the legacy psycopg2 driver.
+if database_url.startswith("postgresql://"):
+    database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
 config.set_main_option(
     "sqlalchemy.url",
     database_url,

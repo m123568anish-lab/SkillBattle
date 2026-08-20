@@ -13,7 +13,6 @@ from __future__ import annotations
 import logging
 import os
 from functools import lru_cache
-from pathlib import Path
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
@@ -138,26 +137,6 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def populate_database_urls(self):
         """Build default DB URLs from the DB type when environment values are not set."""
-        if self.ENVIRONMENT.lower() == "production":
-            prod_file = Path(__file__).resolve().parents[2] / ".env.production"
-            if prod_file.exists():
-                for line in prod_file.read_text(encoding="utf-8").splitlines():
-                    if not line or line.strip().startswith("#") or "=" not in line:
-                        continue
-                    key, value = line.split("=", 1)
-                    key = key.strip()
-                    value = value.strip()
-                    if key == "DATABASE_URL" and value:
-                        self.DATABASE_URL = value
-                    elif key == "DATABASE_TYPE" and value:
-                        self.DATABASE_TYPE = value
-                    elif key == "SECRET_KEY" and value:
-                        self.SECRET_KEY = value
-                    elif key == "ALLOWED_ORIGINS" and value:
-                        self.ALLOWED_ORIGINS = value
-                    elif key == "ENVIRONMENT" and value:
-                        self.ENVIRONMENT = value
-
         if self.DATABASE_URL.startswith("postgresql") or self.DATABASE_TYPE.lower() == "postgresql":
             self.DATABASE_TYPE = "postgresql"
             if self.DATABASE_URL.startswith("sqlite") or not self.DATABASE_URL:

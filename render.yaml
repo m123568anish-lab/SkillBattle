@@ -2,7 +2,7 @@ services:
   - type: web
     name: skillbattle-api
     runtime: python
-    runtimeVersion: 3.11.9
+    pythonVersion: "3.11"
     
     # Root directory where Render should look for the app
     rootDir: backend
@@ -12,6 +12,7 @@ services:
     
     # Start command - run migrations using script then start uvicorn
     startCommand: python run_migrations.py && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
     
     # Environment variables (set these in the Render dashboard)
     envVars:
