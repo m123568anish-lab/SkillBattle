@@ -119,12 +119,13 @@ async def global_exception_handler(
     request: Request,
     exc: Exception,
 ):
-    print(exc)
+    logger.error(f"Global exception on {request.url.path}: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
         content={
             "success": False,
             "message": "Internal Server Error",
+            "detail": str(exc),
             "path": request.url.path,
         },
     )
