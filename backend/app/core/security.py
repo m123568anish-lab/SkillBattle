@@ -27,9 +27,9 @@ from app.models.user import User
 
 # =========================================================
 # Password Hashing (use Argon2 via passlib)
-# =========================================================
+import bcrypt
 
-pwd_context = CryptContext(schemes=["bcrypt", "argon2"], deprecated="auto")
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 # =========================================================
 # OAuth2
@@ -45,14 +45,26 @@ oauth2_scheme = OAuth2PasswordBearer(
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    pwd_bytes = password.encode('utf-8')[:72]
+    return bcrypt.hashpw(pwd_bytes, bcrypt.gensalt()).decode('utf-8')
 
 
 def verify_password(
     plain_password: str,
     hashed_password: str,
 ) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    if not plain_password or not hashed_password:
+        return False
+    try:
+        pwd_bytes = plain_password.encode('utf-8')[:72]
+        if hashed_password.startswith("$2b$") or hashed_password.startswith("$2a$"):
+            return bcrypt.checkpw(pwd_bytes, hashed_password.encode('utf-8'))
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception:
+        try:
+            return pwd_context.verify(plain_password, hashed_password)
+        except Exception:
+            return False
 
 
 # =========================================================

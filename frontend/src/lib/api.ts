@@ -13,7 +13,6 @@ const API_BASE_URL = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_URL);
 const api = axios.create({
     baseURL: `${API_BASE_URL}/api/v1`,
     headers: { "Content-Type": "application/json" },
-    withCredentials: true,
 });
 
 let isRefreshing = false;
