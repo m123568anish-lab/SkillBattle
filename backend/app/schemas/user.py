@@ -5,6 +5,7 @@ class UserRegister(BaseModel):
     full_name: str
     email: EmailStr
     password: str
+    avatar_url: str | None = None
 
 
 class UserLogin(BaseModel):
@@ -28,6 +29,7 @@ class UserResponse(BaseModel):
     email: EmailStr
     is_active: bool
     is_verified: bool
+    avatar_url: str | None = None
 
     model_config = {
         "from_attributes": True

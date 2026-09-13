@@ -19,6 +19,7 @@ import {
 } from "@/lib/validation";
 
 import { useRegister } from "@/hooks/use-register";
+import { AI_AVATARS } from "@/lib/avatars";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -27,6 +28,7 @@ export default function RegisterForm() {
 
   const [showPassword, setShowPassword] =
     useState(false);
+  const [avatar, setAvatar] = useState(AI_AVATARS[0].url);
 
   const {
     register,
@@ -43,7 +45,7 @@ export default function RegisterForm() {
     data: RegisterFormData
   ) {
     try {
-      await signUp(data);
+      await signUp({ ...data, avatar });
 
       toast.success(
         "Account created successfully!"
@@ -64,7 +66,7 @@ export default function RegisterForm() {
       onSubmit={handleSubmit(onSubmit)}
       className="space-y-6"
     >
-      <AvatarUpload />
+      <AvatarUpload value={avatar} onChange={setAvatar} />
 
       <input
         {...register("name")}

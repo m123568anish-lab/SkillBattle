@@ -3,17 +3,21 @@
 import Image from "next/image";
 import { Camera } from "lucide-react";
 import { useRef, useState } from "react";
+import { AI_AVATARS } from "@/lib/avatars";
 
-// Use existing placeholder in `public/` when avatar images are missing.
-const placeholder = "/file.svg";
-const avatars = Array.from({ length: 12 }, (_, i) => `${placeholder}?i=${i + 1}`);
+interface AvatarUploadProps {
+  value?: string;
+  onChange?: (avatarUrl: string) => void;
+}
 
-export default function AvatarUpload() {
+export default function AvatarUpload({ value, onChange }: AvatarUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [preview, setPreview] = useState<string | null>(null);
 
-  const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
+  const [selectedAvatar, setSelectedAvatar] = useState<string | null>(
+    value || AI_AVATARS[0].url
+  );
 
   function handleUpload(
     e: React.ChangeEvent<HTMLInputElement>
@@ -26,11 +30,13 @@ export default function AvatarUpload() {
 
     setPreview(url);
     setSelectedAvatar(null);
+    onChange?.(url);
   }
 
   function chooseAvatar(path: string) {
     setSelectedAvatar(path);
     setPreview(null);
+    onChange?.(path);
   }
 
   return (
@@ -104,20 +110,20 @@ export default function AvatarUpload() {
 
       <div className="grid grid-cols-4 gap-3">
 
-        {avatars.map((avatar) => (
+        {AI_AVATARS.map((avatar) => (
           <button
-            key={avatar}
+            key={avatar.id}
             type="button"
-            onClick={() => chooseAvatar(avatar)}
+            onClick={() => chooseAvatar(avatar.url)}
             className={`relative h-16 w-16 overflow-hidden rounded-full border transition ${
-              selectedAvatar === avatar
+              selectedAvatar === avatar.url
                 ? "border-cyan-500 ring-2 ring-cyan-500"
                 : "border-white/10"
             }`}
           >
             <Image
-              src={avatar}
-              alt="avatar"
+              src={avatar.url}
+              alt={avatar.name}
               fill
               className="object-cover"
               sizes="100vw"

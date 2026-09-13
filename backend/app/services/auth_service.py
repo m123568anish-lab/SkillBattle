@@ -36,6 +36,7 @@ class AuthService:
         user = User(
             full_name=data.full_name,
             email=data.email,
+            avatar_url=data.avatar_url,
             password_hash=hash_password(
                 data.password
             ),

@@ -9,6 +9,7 @@ interface RegisterFormData {
     password: string;
     confirmPassword: string;
     acceptTerms: boolean;
+    avatar: string;
 }
 
 export function useRegister() {
@@ -30,6 +31,8 @@ export function useRegister() {
                 email: data.email,
 
                 password: data.password,
+
+                avatar_url: data.avatar,
 
             };
 
