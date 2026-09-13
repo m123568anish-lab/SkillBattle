@@ -46,14 +46,16 @@ export default function RegisterForm() {
       await signUp(data);
 
       toast.success(
-        "Registration successful!"
+        "Account created successfully!"
       );
 
       router.push("/dashboard");
-    } catch {
-      toast.error(
-        "Registration failed."
-      );
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.detail ||
+        err?.message ||
+        "Registration failed. Please check your connection.";
+      toast.error(msg);
     }
   }
 

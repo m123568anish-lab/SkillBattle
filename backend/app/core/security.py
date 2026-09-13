@@ -29,7 +29,7 @@ from app.models.user import User
 # Password Hashing (use Argon2 via passlib)
 # =========================================================
 
-pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt", "argon2"], deprecated="auto")
 
 # =========================================================
 # OAuth2

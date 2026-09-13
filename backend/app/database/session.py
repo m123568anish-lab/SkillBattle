@@ -43,9 +43,11 @@ engine_kwargs = {
 
 # Optimize for different database types
 if "postgresql" in DATABASE_URL:
-    engine_kwargs["pool_size"] = 20
-    engine_kwargs["max_overflow"] = 10
-    logger.info("🐘 Async engine configured for PostgreSQL")
+    engine_kwargs["pool_size"] = 5
+    engine_kwargs["max_overflow"] = 5
+    engine_kwargs["pool_timeout"] = 10
+    engine_kwargs["pool_recycle"] = 300
+    logger.info("🐘 Async engine configured for PostgreSQL (pool_size=5)")
 else:
     logger.info("📁 Async engine configured for SQLite")
 

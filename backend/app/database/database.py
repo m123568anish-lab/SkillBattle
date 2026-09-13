@@ -38,9 +38,11 @@ if database_url.startswith("sqlite"):
     logger.info("📁 Using SQLite database at %s", database_url)
 else:
     # PostgreSQL configuration
-    engine_kwargs["pool_size"] = 20
-    engine_kwargs["max_overflow"] = 10
-    logger.info("🐘 Using PostgreSQL database")
+    engine_kwargs["pool_size"] = 5
+    engine_kwargs["max_overflow"] = 5
+    engine_kwargs["pool_timeout"] = 10
+    engine_kwargs["pool_recycle"] = 300
+    logger.info("🐘 Using PostgreSQL database (pool_size=5)")
 
 logger.info(f"Database URL: {database_url[:200]}")
 

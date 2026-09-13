@@ -35,12 +35,20 @@ export function useRegister() {
 
             console.log("Register Payload:", payload);
 
-            return await authService.register(payload);
+            const user = await authService.register(payload);
 
+            try {
+                await authService.login({
+                    email: data.email,
+                    password: data.password,
+                });
+            } catch (loginErr) {
+                console.warn("Auto-login post-registration warning:", loginErr);
+            }
+
+            return user;
         } finally {
-
             setLoading(false);
-
         }
 
     }
