@@ -10,6 +10,7 @@ import StatsGrid from "@/components/dashboard/StatsGrid";
 import AICoachCard from "@/components/dashboard/AICoachCard";
 import DailyChallenge from "@/components/dashboard/DailyChallenge";
 import BattleDock from "@/components/dashboard/BattleDock";
+import ServerStatus from "@/components/dashboard/ServerStatus";
 
 import { useDashboard } from "@/hooks/use-dashboard";
 
@@ -114,11 +115,14 @@ export default function DashboardPage() {
           />
         </motion.div>
 
-        {/* AI Coach Card */}
+        {/* AI Coach + Server Status Row */}
         <motion.div variants={itemVariants} className="mt-8">
-          <AICoachCard
-            recommendation={dashboard.ai_recommendation}
-          />
+          <div className="grid gap-6 lg:grid-cols-2">
+            <AICoachCard
+              recommendation={dashboard.ai_recommendation}
+            />
+            <ServerStatus />
+          </div>
         </motion.div>
 
         {/* Daily Challenge */}
