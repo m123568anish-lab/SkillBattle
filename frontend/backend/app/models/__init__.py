@@ -1,6 +1,7 @@
 from .achievement import Achievement
 from .api_request_log import ApiRequestLog
 from .campaign import UserCampaignProgress
+from .compiler import CodeSubmission
 from .challenge import Challenge
 from .conversation import Conversation
 from .developer_api_key import DeveloperApiKey
@@ -20,6 +21,7 @@ from .user import User
 __all__ = [
     "Achievement",
     "Challenge",
+    "CodeSubmission",
     "Conversation",
     "InterviewAnswer",
     "InterviewQuestion",

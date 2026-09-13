@@ -98,6 +98,8 @@ class AuthService:
 
             ),
 
+            avatar_url=request.avatar_url,
+
             role="user",
 
         )

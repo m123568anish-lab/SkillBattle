@@ -1,7 +1,10 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 
 const normalizeBaseUrl = (value: string | undefined) => {
-    const base = (value || "http://localhost:8000").trim().replace(/\/+$/, "");
+    const defaultUrl = process.env.NODE_ENV === "production"
+        ? "https://skillbattle-api-2026.onrender.com"
+        : "http://localhost:8000";
+    const base = (value || defaultUrl).trim().replace(/\/+$/, "");
     return base.replace(/\/api\/v1$/, "");
 };
 
