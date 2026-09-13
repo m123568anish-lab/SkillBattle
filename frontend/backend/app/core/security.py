@@ -40,19 +40,33 @@ oauth2_scheme = OAuth2PasswordBearer(
 )
 
 # =========================================================
+# Password Hashing
+import bcrypt
 # Password Helpers
 # =========================================================
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    pwd_bytes = password.encode("utf-8")[:72]
+    return bcrypt.hashpw(pwd_bytes, bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(
     plain_password: str,
     hashed_password: str,
 ) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    if not plain_password or not hashed_password:
+        return False
+    try:
+        pwd_bytes = plain_password.encode("utf-8")[:72]
+        if hashed_password.startswith(("$2b$", "$2a$")):
+            return bcrypt.checkpw(pwd_bytes, hashed_password.encode("utf-8"))
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception:
+        try:
+            return pwd_context.verify(plain_password, hashed_password)
+        except Exception:
+            return False
 
 
 # =========================================================
