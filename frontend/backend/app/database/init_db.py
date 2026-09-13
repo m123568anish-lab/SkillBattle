@@ -17,6 +17,8 @@ definitions are registered.
 import logging
 import os
 
+from sqlalchemy import inspect, text
+
 from app.database.base import Base
 from app.database.database import engine
 
@@ -99,6 +101,7 @@ def init_db() -> None:
 
         try:
             Base.metadata.create_all(bind=engine)
+            _repair_users_table()
             logger.info(f"✅ Tables created: {list(Base.metadata.tables.keys())}")
         except Exception as e:
             # Some DB backends may raise an OperationalError on concurrent create_all
@@ -114,3 +117,39 @@ def init_db() -> None:
     except Exception as e:
         logger.error(f"❌ Failed to create tables: {e}", exc_info=True)
         raise
+
+
+def _repair_users_table() -> None:
+    """Add columns missing from databases created by older app versions."""
+    inspector = inspect(engine)
+    if "users" not in inspector.get_table_names():
+        return
+
+    existing = {column["name"] for column in inspector.get_columns("users")}
+    missing_columns = {
+        "username": "VARCHAR(30) DEFAULT 'player'",
+        "role": "VARCHAR(50) DEFAULT 'user'",
+        "avatar_url": "VARCHAR(500)",
+        "bio": "VARCHAR(1000)",
+        "country": "VARCHAR(100)",
+        "city": "VARCHAR(100)",
+        "website": "VARCHAR(500)",
+        "github_url": "VARCHAR(500)",
+        "linkedin_url": "VARCHAR(500)",
+        "login_count": "INTEGER DEFAULT 0",
+        "coding_rating": "INTEGER DEFAULT 0",
+        "placement_score": "INTEGER DEFAULT 0",
+        "resume_score": "INTEGER DEFAULT 0",
+        "is_active": "BOOLEAN DEFAULT TRUE",
+        "is_verified": "BOOLEAN DEFAULT TRUE",
+        "last_login": "TIMESTAMP",
+        "is_superuser": "BOOLEAN DEFAULT FALSE",
+        "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+        "updated_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+    }
+
+    with engine.begin() as connection:
+        for name, definition in missing_columns.items():
+            if name not in existing:
+                connection.execute(text(f'ALTER TABLE "users" ADD COLUMN "{name}" {definition}'))
+                logger.info("Added missing users.%s column", name)
