@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { profileService, type Profile } from "@/services/profile.service";
 import { useAuthStore } from "@/store/authStore";
-import { toast } from "react-hot-toast";
 import { User, Sparkles, Building, Target, GraduationCap, Check, Camera, FileText, Link2, Award } from "lucide-react";
+import { AI_AVATARS } from "@/lib/avatars";
 
 const defaultProfile: Profile = {
   full_name: "",
@@ -213,33 +213,29 @@ export default function ProfileForm() {
                 </label>
                 <div className="space-y-4">
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
-                    {[
-                      "https://api.dicebear.com/7.x/bottts/svg?seed=CyberCoder",
-                      "https://api.dicebear.com/7.x/bottts/svg?seed=BattleKing",
-                      "https://api.dicebear.com/7.x/bottts/svg?seed=AlgoMaster",
-                      "https://api.dicebear.com/7.x/bottts/svg?seed=DevNinja",
-                      "https://api.dicebear.com/7.x/avataaars/svg?seed=Profile1",
-                      "https://api.dicebear.com/7.x/avataaars/svg?seed=Profile2",
-                    ].map((url, idx) => (
-                      <motion.button
-                        key={idx}
-                        onClick={() => setProfile({ ...profile, avatar: url })}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className={`relative rounded-2xl border-2 p-1 transition overflow-hidden ${
-                          profile.avatar === url
-                            ? "border-cyan-400 ring-2 ring-cyan-400/50"
-                            : "border-white/10 hover:border-white/30"
-                        }`}
-                      >
-                        <img src={url} alt={`Avatar ${idx}`} className="h-14 w-14 rounded-xl object-cover" />
-                        {profile.avatar === url && (
-                          <motion.div layoutId="avatar-check" className="absolute inset-0 bg-cyan-500/20 flex items-center justify-center rounded-xl">
-                            <Check className="h-5 w-5 text-cyan-300" />
-                          </motion.div>
-                        )}
-                      </motion.button>
-                    ))}
+                    {AI_AVATARS.map((avatarItem) => {
+                      const url = avatarItem.url;
+                      return (
+                        <motion.button
+                          key={avatarItem.id}
+                          onClick={() => setProfile({ ...profile, avatar: url })}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className={`relative rounded-2xl border-2 p-1 transition overflow-hidden ${
+                            profile.avatar === url
+                              ? "border-cyan-400 ring-2 ring-cyan-400/50"
+                              : "border-white/10 hover:border-white/30"
+                          }`}
+                        >
+                          <img src={url} alt={avatarItem.name} className="h-14 w-14 rounded-xl object-cover" />
+                          {profile.avatar === url && (
+                            <motion.div layoutId="avatar-check" className="absolute inset-0 bg-cyan-500/20 flex items-center justify-center rounded-xl">
+                              <Check className="h-5 w-5 text-cyan-300" />
+                            </motion.div>
+                          )}
+                        </motion.button>
+                      );
+                    })}
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-400 mb-2">Custom Avatar URL</label>
