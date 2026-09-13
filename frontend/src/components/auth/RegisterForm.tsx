@@ -53,10 +53,14 @@ export default function RegisterForm() {
 
       router.push("/dashboard");
     } catch (err: any) {
+      const detail = err?.response?.data?.detail;
       const msg =
-        err?.response?.data?.detail ||
-        err?.message ||
-        "Registration failed. Please check your connection.";
+        typeof detail === "string"
+          ? detail
+          : Array.isArray(detail)
+          ? detail.map((d: any) => d.msg || d.message || JSON.stringify(d)).join(", ")
+          : err?.message ||
+            "Registration failed. Please check your connection.";
       toast.error(msg);
     }
   }

@@ -23,8 +23,8 @@ export function useRegister() {
 
         try {
 
-            const emailPrefix = data.email.split("@")[0].replace(/[^a-zA-Z0-9]/g, "");
-            const username = (emailPrefix.length >= 3 ? emailPrefix : `${emailPrefix}user`).slice(0, 30);
+            const emailPrefix = data.email.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "") || "player";
+            const username = (emailPrefix.length >= 3 ? emailPrefix : `${emailPrefix}_usr`).slice(0, 30);
 
             const payload: RegisterRequest = {
 

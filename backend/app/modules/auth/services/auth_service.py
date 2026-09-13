@@ -69,20 +69,13 @@ class AuthService:
             )
 
         existing_username = await user_repository.get_by_username(
-
             db,
-
             request.username,
-
         )
 
         if existing_username:
-
-            raise ValueError(
-
-                "Username already exists."
-
-            )
+            import uuid
+            request.username = f"{request.username[:20]}_{uuid.uuid4().hex[:4]}"
 
         user = User(
 

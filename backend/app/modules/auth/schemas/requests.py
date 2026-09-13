@@ -19,8 +19,8 @@ from pydantic import Field
 class RegisterRequest(BaseModel):
 
     username: str = Field(
-        min_length=3,
-        max_length=30,
+        min_length=1,
+        max_length=50,
     )
 
     email: EmailStr
