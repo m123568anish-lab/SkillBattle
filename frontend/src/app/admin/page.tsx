@@ -50,7 +50,10 @@ export default function AdminPage() {
         )}
         {activeTab === "server" && (
           <div className="flex h-64 items-center justify-center rounded-2xl border border-dashed border-white/10">
-            <p className="text-slate-400">Advanced Server Monitoring coming soon.</p>
+            <div className="text-center">
+              <p className="font-semibold text-white">Server health data is unavailable</p>
+              <p className="mt-2 text-sm text-slate-400">Connect the monitoring service to view live infrastructure metrics.</p>
+            </div>
           </div>
         )}
       </div>

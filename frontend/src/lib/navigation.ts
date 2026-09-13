@@ -8,15 +8,15 @@ export const navigation = [
     href: "/battle",
   },
   {
-    name: "Leaderboard",
-    href: "/dashboard",
+    name: "Career",
+    href: "/career/dashboard",
   },
   {
     name: "Tournament",
     href: "/tournament",
   },
   {
-    name: "Pricing",
-    href: "/pricing",
+    name: "Profile",
+    href: "/profile",
   },
 ];

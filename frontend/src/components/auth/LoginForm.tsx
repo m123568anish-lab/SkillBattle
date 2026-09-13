@@ -179,12 +179,12 @@ export default function LoginForm() {
             Remember Me
           </label>
 
-          <Link
-            href="/forgot-password"
+          <a
+            href="mailto:support@skillbattle.app?subject=Password%20reset%20help"
             className="text-sm text-cyan-400 hover:underline"
           >
-            Forgot Password?
-          </Link>
+            Need password help?
+          </a>
         </div>
 
         {/* Login */}

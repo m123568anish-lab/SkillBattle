@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import api from "@/services/api";
 import { Trophy, Medal, Flame, Crown, ChevronUp, ChevronDown, Minus } from "lucide-react";
+import EmptyState from "@/components/common/EmptyState";
 
 function getRankIcon(rank: number) {
   if (rank === 1) return <Crown className="h-5 w-5 text-yellow-400" />;
@@ -126,7 +127,13 @@ export default function LeaderboardPage() {
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
           </div>
         ) : board.length === 0 ? (
-          <p className="py-12 text-center text-slate-400">No leaderboard data available yet.</p>
+          <EmptyState
+            icon={<Trophy className="h-7 w-7" />}
+            title="The leaderboard is waiting for its first battle"
+            description="Complete a challenge or battle to appear here."
+            actionHref="/battle"
+            actionLabel="Find a battle"
+          />
         ) : (
           <div className="divide-y divide-white/5">
             {board.map((player: any, idx: number) => (

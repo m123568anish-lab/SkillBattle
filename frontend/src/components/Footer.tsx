@@ -16,6 +16,7 @@ export default function Footer() {
           <Link href="#features" className="transition hover:text-white">Features</Link>
           <Link href="#battles" className="transition hover:text-white">Battles</Link>
           <Link href="/leaderboard" className="transition hover:text-white">Leaderboard</Link>
+          <a href="mailto:support@skillbattle.app" className="transition hover:text-white">support@skillbattle.app</a>
         </div>
 
         <p className="text-slate-400">© 2026 SkillBattle. Practice. Compete. Advance.</p>

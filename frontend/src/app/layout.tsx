@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 
 import { AuthProvider } from "@/context/AuthContext";
+import PageMetadata from "@/components/common/PageMetadata";
 
 
 import "./globals.css";
@@ -18,8 +19,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SkillBattle",
-  description: "Learn. Compete. Win.",
+  metadataBase: new URL("https://skillbattle.app"),
+  title: {
+    default: "SkillBattle | AI Coding Battles",
+    template: "%s | SkillBattle",
+  },
+  description: "Practice coding, compete in live battles, and build interview-ready skills with SkillBattle.",
+  applicationName: "SkillBattle",
+  keywords: ["coding practice", "coding battles", "interview preparation", "DSA", "AI coach"],
+  icons: { icon: "/icon.svg" },
+  openGraph: {
+    title: "SkillBattle | AI Coding Battles",
+    description: "Practice coding, compete in live battles, and build interview-ready skills.",
+    type: "website",
+    siteName: "SkillBattle",
+  },
 };
 
 export default function RootLayout({
@@ -36,6 +50,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-[#070B14] text-white">
         <AuthProvider>
           <div className="relative">
+            <PageMetadata />
             {children}
           </div>
         </AuthProvider>
