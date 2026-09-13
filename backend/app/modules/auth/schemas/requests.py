@@ -35,6 +35,8 @@ class RegisterRequest(BaseModel):
         max_length=128,
     )
 
+    avatar_url: str | None = None
+
     model_config = ConfigDict(
         extra="allow",
         str_strip_whitespace=True,

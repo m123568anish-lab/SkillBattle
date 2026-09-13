@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { authService } from "@/services/auth.service";
+import type { RegisterRequest } from "@/types/auth";
 
 interface RegisterFormData {
     name: string;
@@ -22,9 +23,12 @@ export function useRegister() {
 
         try {
 
-            const payload = {
+            const emailPrefix = data.email.split("@")[0].replace(/[^a-zA-Z0-9]/g, "");
+            const username = (emailPrefix.length >= 3 ? emailPrefix : `${emailPrefix}user`).slice(0, 30);
 
-                username: data.email.split("@")[0],
+            const payload: RegisterRequest = {
+
+                username,
 
                 full_name: data.name,
 

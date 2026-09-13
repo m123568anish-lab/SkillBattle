@@ -22,11 +22,15 @@ export interface LoginRequest {
 
 export interface RegisterRequest {
 
+    username: string;
+
     full_name: string;
 
     email: string;
 
     password: string;
+
+    avatar_url?: string | null;
 
 }
 
