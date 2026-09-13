@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { profileService, type Profile } from "@/services/profile.service";
 import { useAuthStore } from "@/store/authStore";
+import { toast } from "react-hot-toast";
 import { User, Sparkles, Building, Target, GraduationCap, Check, Camera, FileText, Link2, Award } from "lucide-react";
 import { AI_AVATARS } from "@/lib/avatars";
 
