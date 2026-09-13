@@ -61,7 +61,11 @@ export default function RegisterForm() {
           ? detail.map((d: any) => d.msg || d.message || JSON.stringify(d)).join(", ")
           : err?.message ||
             "Registration failed. Please check your connection.";
-      toast.error(msg);
+      toast.error(
+        msg.includes("Network Error")
+          ? "Registration service is unavailable. Please try again in a moment."
+          : msg
+      );
     }
   }
 
