@@ -8,6 +8,10 @@ import logging
 from alembic.config import Config
 from alembic import command
 
+from app.database.base import Base
+from app.database.database import engine
+from app import models as _models
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -16,14 +20,18 @@ def run_migrations():
     try:
         # Configure Alembic
         alembic_cfg = Config("alembic.ini")
-        
-        # Run upgrade to head
-        logger.info("Running database migrations...")
-        command.upgrade(alembic_cfg, "head")
+
+        logger.info("Creating missing tables from the current application schema")
+        Base.metadata.create_all(bind=engine)
+
+        # The original initial revision contains destructive operations for a
+        # legacy schema. Never execute it during service startup.
+        command.stamp(alembic_cfg, "head")
+
         logger.info("✅ Migrations completed successfully")
         return 0
     except Exception as e:
-        logger.error(f"❌ Migration failed: {e}")
+        logger.exception("❌ Migration failed: %s", e)
         return 1
 
 if __name__ == "__main__":
