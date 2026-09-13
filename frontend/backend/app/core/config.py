@@ -175,6 +175,13 @@ class Settings(BaseSettings):
             self.ASYNC_DATABASE_URL = self.ASYNC_DATABASE_URL.replace(
                 "sslmode=require", "ssl=require"
             )
+            self.ASYNC_DATABASE_URL = self.ASYNC_DATABASE_URL.replace(
+                "&channel_binding=require", ""
+            ).replace(
+                "?channel_binding=require&", "?"
+            ).replace(
+                "?channel_binding=require", ""
+            )
         else:
             self.DATABASE_TYPE = "sqlite"
             if not self.DATABASE_URL or self.DATABASE_URL.startswith("postgresql"):
