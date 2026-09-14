@@ -45,6 +45,7 @@ from app.modules.compiler.schemas import (
     RunCodeResponse,
     SubmitCodeResponse,
 )
+from app.modules.xp.service import xp_service
 
 logger = logging.getLogger(__name__)
 
@@ -284,10 +285,33 @@ class CompilerService:
         )
 
         # ------------------------------------------------------
-        # Commit
+        # Award XP once, inside the accepted submission flow
         # ------------------------------------------------------
 
-        await db.commit()
+        xp_earned = 0
+
+        if judge_result.verdict == "Accepted":
+            difficulty_xp = {
+                "easy": 100,
+                "medium": 250,
+                "hard": 500,
+            }
+            xp_earned = difficulty_xp.get(
+                str(problem.difficulty).lower(),
+                problem.xp_reward or 100,
+            )
+
+            if judge_result.runtime_ms <= 200:
+                xp_earned += 50
+
+            await xp_service.add_xp(
+                db,
+                current_user,
+                xp_earned,
+            )
+        else:
+            await db.commit()
+
         await self.notify_battle(
 
     getattr(request, "battle_id", None),
@@ -295,16 +319,6 @@ class CompilerService:
     submission.verdict,
 
 )
-
-        # ------------------------------------------------------
-        # XP Placeholder
-        # ------------------------------------------------------
-
-        xp_earned = 0
-
-        if judge_result.verdict == "Accepted":
-
-            xp_earned = problem.xp_reward
 
         # ------------------------------------------------------
         # Response

@@ -4,6 +4,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useDashboard } from "@/hooks/use-dashboard";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { Code2, FileText, Terminal } from "lucide-react";
 
 const STARTER_CODE: Record<string, string> = {
   python: `def solve_challenge(input_data):\n    # Write your solution here\n    return input_data\n\n# Example Test\nprint(solve_challenge("Hello SkillBattle"))\n`,
@@ -20,6 +21,8 @@ export default function DailyChallengePage() {
   const [running, setRunning] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [xpEarned, setXpEarned] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<"description" | "editor" | "terminal">("description");
+  const [submissionStats, setSubmissionStats] = useState({ executionTime: 0, memoryUsed: 0, passedTests: 0, totalTests: 0 });
   const router = useRouter();
 
   const handleLangChange = (lang: string) => {
@@ -29,6 +32,7 @@ export default function DailyChallengePage() {
 
   const handleRun = async () => {
     setRunning(true);
+    setActiveTab("terminal");
     setOutput("Executing code against sample inputs...");
     try {
       const res = await api.post("/compiler/run", {
@@ -46,6 +50,7 @@ export default function DailyChallengePage() {
 
   const handleSubmit = async () => {
     setSubmitting(true);
+    setActiveTab("terminal");
     setOutput("Submitting code for official evaluation...");
     try {
       const challengeId = dashboard?.daily_challenge?.id || "1";
@@ -56,12 +61,15 @@ export default function DailyChallengePage() {
       });
 
       const passed = Boolean(res.data?.verdict === "Accepted" || (res.data?.passed_tests ?? 0) > 0);
-      const xpAmount = dashboard?.daily_challenge?.xp_reward || 50;
+      setSubmissionStats({
+        executionTime: res.data?.execution_time || 0,
+        memoryUsed: res.data?.memory_used || 0,
+        passedTests: res.data?.passed_tests || 0,
+        totalTests: res.data?.total_tests || 0,
+      });
 
       if (passed) {
-        try {
-          await api.post("/xp/add", { amount: xpAmount, reason: "challenge" });
-        } catch {}
+        const xpAmount = res.data?.xp_earned || dashboard?.daily_challenge?.xp_reward || 100;
         setXpEarned(xpAmount);
         setOutput(`✅ VERDICT: ACCEPTED!\nPassed ${res.data.passed_tests || 1}/${res.data.total_tests || 1} Test Cases.\n🎉 +${xpAmount} XP Awarded!`);
       } else {
@@ -121,8 +129,23 @@ export default function DailyChallengePage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.05fr_1.6fr]">
-        <aside className="rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-[0_30px_80px_rgba(15,23,42,0.7)] backdrop-blur-xl">
+      <div className="mb-4 flex w-full items-center gap-1 rounded-xl border border-white/10 bg-slate-900 p-1 md:hidden">
+        {[
+          { id: "description", label: "Description", icon: FileText },
+          { id: "editor", label: "Code Editor", icon: Code2 },
+          { id: "terminal", label: "Terminal / Run", icon: Terminal },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id as typeof activeTab)} className={`flex flex-1 items-center justify-center gap-1 rounded-lg px-2 py-2 text-[10px] font-bold ${activeTab === tab.id ? "bg-cyan-500/15 text-cyan-300" : "text-slate-500"}`}>
+              <Icon size={14} /> {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
+        <aside className={`${activeTab === "description" ? "block" : "hidden md:block"} rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-[0_30px_80px_rgba(15,23,42,0.7)] backdrop-blur-xl md:col-span-5`}>
           <div className="mb-5 flex items-center justify-between">
             <h2 className="text-lg font-bold text-white">Problem Statement</h2>
             <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-violet-300">
@@ -148,7 +171,7 @@ export default function DailyChallengePage() {
           </div>
         </aside>
 
-        <section className="flex flex-col gap-4">
+        <section className={`${activeTab === "description" ? "hidden md:flex" : "flex"} flex-col gap-4 md:col-span-7`}>
           <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-4 shadow-[0_16px_60px_rgba(15,23,42,0.75)] backdrop-blur-xl">
             <div className="mb-3 flex flex-col gap-3 border-b border-white/10 pb-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
@@ -186,13 +209,13 @@ export default function DailyChallengePage() {
             <textarea
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              className="h-[420px] w-full resize-none rounded-2xl border border-white/5 bg-slate-950/90 p-4 font-mono text-sm text-cyan-200 outline-none transition focus:border-cyan-500/50"
+              className={`${activeTab === "editor" ? "block" : "hidden md:block"} h-[calc(100vh-140px)] w-full resize-none rounded-2xl border border-white/5 bg-slate-950/90 p-4 font-mono text-sm text-cyan-200 outline-none transition focus:border-cyan-500/50 md:h-[420px] focus:border-cyan-500/50`}
               placeholder="// Write your algorithm solution here..."
               spellCheck={false}
             />
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-slate-950/80 p-4 font-mono text-xs text-slate-300 shadow-inner shadow-slate-950/80">
+          <div className={`${activeTab === "terminal" ? "block" : "hidden md:block"} rounded-3xl border border-white/10 bg-slate-950/80 p-4 font-mono text-xs text-slate-300 shadow-inner shadow-slate-950/80`}>
             <div className="mb-2 flex items-center justify-between border-b border-white/5 pb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
               <span>Console</span>
               <span>UTF-8</span>
@@ -200,6 +223,11 @@ export default function DailyChallengePage() {
             <pre className="max-h-44 min-h-[90px] overflow-y-auto whitespace-pre-wrap text-emerald-400">
               {output || "Output will appear here after running or submitting..."}
             </pre>
+            <div className="mt-3 grid grid-cols-3 gap-2 text-[10px] text-slate-500">
+              <span>Passed: {submissionStats.passedTests}/{submissionStats.totalTests}</span>
+              <span>Time: {submissionStats.executionTime} ms</span>
+              <span>Memory: {submissionStats.memoryUsed} MB</span>
+            </div>
           </div>
         </section>
       </div>

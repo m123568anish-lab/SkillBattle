@@ -13,8 +13,6 @@ import {
   Send,
   CheckCircle2,
   Sparkles,
-  BookOpen,
-  Award,
   ChevronRight,
   RotateCcw,
   Copy,
@@ -28,7 +26,7 @@ const STARTER_CODE: Record<string, string> = {
   java: `class Solution {\n    public int[] twoSum(int[] nums, int target) {\n        Map<Integer, Integer> map = new HashMap<>();\n        for (int i = 0; i < nums.length; i++) {\n            int diff = target - nums[i];\n            if (map.containsKey(diff)) return new int[] { map.get(diff), i };\n            map.put(nums[i], i);\n        }\n        return new int[] {};\n    }\n}\n`,
 };
 
-type MobileTab = "description" | "editor" | "testcase" | "solutions";
+type MobileTab = "description" | "editor" | "terminal";
 
 export default function LeetCodeMobileChallengePage() {
   const { dashboard, loading } = useDashboard();
@@ -42,6 +40,12 @@ export default function LeetCodeMobileChallengePage() {
   const [running, setRunning] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [xpEarned, setXpEarned] = useState<number | null>(null);
+  const [submissionStats, setSubmissionStats] = useState({
+    executionTime: 0,
+    memoryUsed: 0,
+    passedTests: 0,
+    totalTests: 0,
+  });
 
   // Sample testcase state
   const [testInput, setTestInput] = useState<string>("nums = [2,7,11,15], target = 9");
@@ -53,7 +57,7 @@ export default function LeetCodeMobileChallengePage() {
 
   const handleRun = async () => {
     setRunning(true);
-    setActiveTab("testcase");
+    setActiveTab("terminal");
     setOutput("⏳ Running code against testcases...");
     try {
       const res = await api.post("/compiler/run", {
@@ -71,7 +75,7 @@ export default function LeetCodeMobileChallengePage() {
 
   const handleSubmit = async () => {
     setSubmitting(true);
-    setActiveTab("testcase");
+    setActiveTab("terminal");
     setOutput("⏳ Submitting solution for official evaluation...");
     try {
       const challengeId = dashboard?.daily_challenge?.id || "1";
@@ -82,14 +86,17 @@ export default function LeetCodeMobileChallengePage() {
       });
 
       const passed = Boolean(res.data?.verdict === "Accepted" || (res.data?.passed_tests ?? 0) > 0);
-      const xpAmount = dashboard?.daily_challenge?.xp_reward || 100;
+      setSubmissionStats({
+        executionTime: res.data?.execution_time || 0,
+        memoryUsed: res.data?.memory_used || 0,
+        passedTests: res.data?.passed_tests || 0,
+        totalTests: res.data?.total_tests || 0,
+      });
 
       if (passed) {
-        try {
-          await api.post("/xp/add", { amount: xpAmount, reason: "challenge" });
-        } catch {}
+        const xpAmount = res.data?.xp_earned || dashboard?.daily_challenge?.xp_reward || 100;
         setXpEarned(xpAmount);
-        setOutput(`✅ ACCEPTED\nRuntime: 42 ms (Beats 94.2%)\nMemory: 17.4 MB (Beats 88.6%)\n🎉 +${xpAmount} XP Awarded!`);
+        setOutput(`✅ ACCEPTED\nPassed ${res.data?.passed_tests || 0}/${res.data?.total_tests || 0} test cases.\n+${xpAmount} XP awarded by the compiler.`);
       } else {
         setOutput(`❌ VERDICT: ${res.data.verdict || "Wrong Answer"}\nPassed ${res.data.passed_tests || 0}/${res.data.total_tests || 3} Test Cases.`);
       }
@@ -162,8 +169,7 @@ export default function LeetCodeMobileChallengePage() {
             {[
               { id: "description", label: "Description", icon: FileText },
               { id: "editor", label: "Code", icon: Code2 },
-              { id: "testcase", label: "Testcase", icon: Terminal },
-              { id: "solutions", label: "Solutions", icon: BookOpen },
+              { id: "terminal", label: "Terminal", icon: Terminal },
             ].map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
@@ -256,8 +262,7 @@ export default function LeetCodeMobileChallengePage() {
             }`}
           >
             {/* ── Code Editor Component ── */}
-            {(activeTab === "editor" || typeof window !== "undefined") && (
-              <div className="rounded-2xl border border-white/10 bg-[#1e1e1e] p-4 flex flex-col gap-3">
+            <div className={`${activeTab === "editor" ? "flex" : "hidden lg:flex"} rounded-2xl border border-white/10 bg-[#1e1e1e] p-4 flex-col gap-3`}>
                 {/* Editor Header Toolbar */}
                 <div className="flex items-center justify-between border-b border-white/10 pb-3">
                   <div className="flex items-center gap-2">
@@ -292,7 +297,7 @@ export default function LeetCodeMobileChallengePage() {
                 </div>
 
                 {/* Editor Area with Monospaced Line Numbers */}
-                <div className="relative rounded-xl border border-white/5 bg-[#141414] font-mono text-xs flex overflow-hidden min-h-[280px]">
+                <div className="relative flex h-[calc(100vh-140px)] min-h-[280px] overflow-hidden rounded-xl border border-white/5 bg-[#141414] font-mono text-xs lg:h-[calc(100vh-260px)]">
                   {/* Line Numbers */}
                   <div className="select-none py-3 px-2 text-right bg-[#1a1a1a] text-slate-600 border-r border-white/5 font-mono text-[11px] leading-5 min-w-[32px]">
                     {lineNumbers.map((n) => (
@@ -309,11 +314,10 @@ export default function LeetCodeMobileChallengePage() {
                     spellCheck={false}
                   />
                 </div>
-              </div>
-            )}
+            </div>
 
             {/* ── Testcase & Console Output Panel (Visible when activeTab === "testcase" or output exists) ── */}
-            <div className="rounded-2xl border border-white/10 bg-[#1e1e1e] p-4 flex flex-col gap-3 font-mono text-xs">
+            <div className={`${activeTab === "terminal" ? "flex" : "hidden lg:flex"} rounded-2xl border border-white/10 bg-[#1e1e1e] p-4 flex-col gap-3 font-mono text-xs`}>
               <div className="flex items-center justify-between border-b border-white/10 pb-2 font-sans text-slate-400">
                 <span className="font-bold flex items-center gap-2">
                   <Terminal size={14} className="text-cyan-400" /> Console & Testcase
@@ -346,25 +350,14 @@ export default function LeetCodeMobileChallengePage() {
             </div>
 
             {/* ── Solutions Tab Content ── */}
-            {activeTab === "solutions" && (
-              <div className="rounded-2xl border border-white/10 bg-[#1e1e1e] p-5 space-y-3 font-sans text-xs">
-                <h4 className="text-sm font-bold text-cyan-300">Hash Map Optimal Solution — O(N) Time</h4>
-                <p className="text-slate-300 leading-relaxed">
-                  By iterating through the array once and storing each value's index in a Hash Map, we can check if the complement <code className="bg-[#2a2a2a] px-1 font-mono text-cyan-300">target - nums[i]</code> already exists in O(1) average time.
-                </p>
-                <div className="rounded-xl border border-white/5 bg-[#141414] p-3 font-mono text-xs text-slate-200">
-                  {STARTER_CODE[language] || STARTER_CODE.python}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
         {/* ── LeetCode Mobile Sticky Bottom Action Bar ── */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#1a1a1a]/95 border-t border-white/10 p-3 backdrop-blur-xl flex items-center justify-between max-w-screen-2xl mx-auto">
+        <div className="fixed bottom-0 left-0 right-0 z-40 mx-auto flex max-w-screen-2xl items-center justify-between border-t border-white/10 bg-[#1a1a1a]/95 p-3 backdrop-blur-xl lg:static lg:mt-4 lg:rounded-2xl lg:border lg:bg-[#1a1a1a]">
           {/* Left: Terminal Console Toggle */}
           <button
-            onClick={() => setActiveTab(activeTab === "testcase" ? "editor" : "testcase")}
+            onClick={() => setActiveTab(activeTab === "terminal" ? "editor" : "terminal")}
             className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#2a2a2a] px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white transition"
           >
             <Terminal size={15} className="text-cyan-400" />
@@ -404,7 +397,8 @@ export default function LeetCodeMobileChallengePage() {
           >
             <div className="text-6xl mb-4 animate-bounce">🏆</div>
             <h2 className="text-3xl font-black text-white">Accepted!</h2>
-            <p className="mt-2 text-slate-400 text-sm">Runtime: 38 ms (Beats 96.5% of users)</p>
+            <p className="mt-2 text-slate-400 text-sm">Runtime: {submissionStats.executionTime} ms · Memory: {submissionStats.memoryUsed} MB</p>
+            <p className="mt-1 text-xs text-slate-500">Passed {submissionStats.passedTests}/{submissionStats.totalTests} hidden test cases</p>
             <div className="my-6 rounded-2xl bg-gradient-to-r from-cyan-500/20 to-violet-500/20 border border-cyan-500/30 p-4 text-cyan-300 font-black text-3xl">
               +{xpEarned} XP
             </div>
