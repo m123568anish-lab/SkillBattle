@@ -81,6 +81,7 @@ export default function ProfileForm() {
 
     try {
       await profileService.updateProfile({
+        full_name: profile.full_name,
         avatar: profile.avatar,
         bio: profile.bio,
         college: profile.college,
@@ -95,7 +96,10 @@ export default function ProfileForm() {
       updateUserPartial({
         full_name: profile.full_name,
         avatar: profile.avatar,
+        avatar_url: profile.avatar,
       });
+
+
 
       toast.success("Profile updated successfully! ✨");
     } catch (err: any) {

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 from typing import Optional
 
 
@@ -16,22 +16,22 @@ class ProfileUpdateRequest(BaseModel):
 
 
 class ProfileResponse(BaseModel):
-    full_name: str
-    email: str
+    full_name: Optional[str] = ""
+    email: Optional[str] = ""
 
-    avatar: str
-    bio: str
+    avatar: Optional[str] = ""
+    bio: Optional[str] = ""
 
-    college: str
-    branch: str
-    graduation_year: int
+    college: Optional[str] = ""
+    branch: Optional[str] = ""
+    graduation_year: Optional[int] = 2027
 
-    target_company: str
-    target_package: str
+    target_company: Optional[str] = ""
+    target_package: Optional[str] = ""
 
-    github: Optional[str]
-    linkedin: Optional[str]
+    github: Optional[str] = ""
+    linkedin: Optional[str] = ""
 
     model_config = {
         "from_attributes": True
-    }
+    }

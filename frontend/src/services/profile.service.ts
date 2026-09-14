@@ -17,6 +17,7 @@ export interface Profile {
 }
 
 export interface ProfileUpdatePayload {
+  full_name?: string;
   avatar?: string;
   bio?: string;
   college?: string;
@@ -27,6 +28,7 @@ export interface ProfileUpdatePayload {
   github?: string;
   linkedin?: string;
 }
+
 
 class ProfileService {
   async getMyProfile(): Promise<Profile> {

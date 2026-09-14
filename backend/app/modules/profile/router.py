@@ -70,37 +70,22 @@ async def get_profile(
 ):
 
     profile = await profile_service.get_profile(
-
         db,
-
         current_user,
-
     )
 
     return ProfileResponse(
-
-        full_name=current_user.full_name,
-
-        email=current_user.email,
-
-        avatar=profile.avatar,
-
-        bio=profile.bio,
-
-        college=profile.college,
-
-        branch=profile.branch,
-
-        graduation_year=profile.graduation_year,
-
-        target_company=profile.target_company,
-
-        target_package=profile.target_package,
-
-        github=profile.github,
-
-        linkedin=profile.linkedin,
-
+        full_name=current_user.full_name or "",
+        email=current_user.email or "",
+        avatar=profile.avatar or current_user.avatar_url or "",
+        bio=profile.bio or current_user.bio or "",
+        college=profile.college or "",
+        branch=profile.branch or "",
+        graduation_year=profile.graduation_year or 2027,
+        target_company=profile.target_company or "",
+        target_package=profile.target_package or "",
+        github=profile.github or current_user.github_url or "",
+        linkedin=profile.linkedin or current_user.linkedin_url or "",
     )
 
 
@@ -109,63 +94,34 @@ async def get_profile(
     response_model=ProfileResponse,
 )
 async def update_profile(
-
     payload: ProfileUpdateRequest,
-
     db: AsyncSession = Depends(get_db),
-
-    current_user: User = Depends(
-        get_current_user,
-    ),
-
+    current_user: User = Depends(get_current_user),
 ):
-
     try:
-
         profile = await profile_service.update_profile(
-
             db,
-
             current_user,
-
             payload,
-
         )
 
         return ProfileResponse(
-
-            full_name=current_user.full_name,
-
-            email=current_user.email,
-
-            avatar=profile.avatar,
-
-            bio=profile.bio,
-
-            college=profile.college,
-
-            branch=profile.branch,
-
-            graduation_year=profile.graduation_year,
-
-            target_company=profile.target_company,
-
-            target_package=profile.target_package,
-
-            github=profile.github,
-
-            linkedin=profile.linkedin,
-
+            full_name=current_user.full_name or "",
+            email=current_user.email or "",
+            avatar=profile.avatar or current_user.avatar_url or "",
+            bio=profile.bio or current_user.bio or "",
+            college=profile.college or "",
+            branch=profile.branch or "",
+            graduation_year=profile.graduation_year or 2027,
+            target_company=profile.target_company or "",
+            target_package=profile.target_package or "",
+            github=profile.github or current_user.github_url or "",
+            linkedin=profile.linkedin or current_user.linkedin_url or "",
         )
-
     except Exception as exc:
-
         raise HTTPException(
-
             status_code=400,
-
             detail=str(exc),
-
         )
 
 
@@ -179,38 +135,32 @@ async def create_profile(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> ProfileResponse:
-    """Create a new profile for the authenticated user.
-
-    If a profile already exists, the existing one is returned.
-    """
-    # Check if profile exists
     existing = await profile_service.get_profile(db, current_user)
     if existing:
         return ProfileResponse(
-            full_name=current_user.full_name,
-            email=current_user.email,
-            avatar=existing.avatar,
-            bio=existing.bio,
-            college=existing.college,
-            branch=existing.branch,
-            graduation_year=existing.graduation_year,
-            target_company=existing.target_company,
-            target_package=existing.target_package,
-            github=existing.github,
-            linkedin=existing.linkedin,
+            full_name=current_user.full_name or "",
+            email=current_user.email or "",
+            avatar=existing.avatar or current_user.avatar_url or "",
+            bio=existing.bio or current_user.bio or "",
+            college=existing.college or "",
+            branch=existing.branch or "",
+            graduation_year=existing.graduation_year or 2027,
+            target_company=existing.target_company or "",
+            target_package=existing.target_package or "",
+            github=existing.github or current_user.github_url or "",
+            linkedin=existing.linkedin or current_user.linkedin_url or "",
         )
-    # Create via service using payload as update data
     profile = await profile_service.update_profile(db, current_user, payload)
     return ProfileResponse(
-        full_name=current_user.full_name,
-        email=current_user.email,
-        avatar=profile.avatar,
-        bio=profile.bio,
-        college=profile.college,
-        branch=profile.branch,
-        graduation_year=profile.graduation_year,
-        target_company=profile.target_company,
-        target_package=profile.target_package,
-        github=profile.github,
-        linkedin=profile.linkedin,
-    )
+        full_name=current_user.full_name or "",
+        email=current_user.email or "",
+        avatar=profile.avatar or current_user.avatar_url or "",
+        bio=profile.bio or current_user.bio or "",
+        college=profile.college or "",
+        branch=profile.branch or "",
+        graduation_year=profile.graduation_year or 2027,
+        target_company=profile.target_company or "",
+        target_package=profile.target_package or "",
+        github=profile.github or current_user.github_url or "",
+        linkedin=profile.linkedin or current_user.linkedin_url or "",
+    )

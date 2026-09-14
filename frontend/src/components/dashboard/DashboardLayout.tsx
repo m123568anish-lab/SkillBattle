@@ -9,6 +9,8 @@ import { sidebarItems } from "@/data/dashboard";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import MagicAppleNavbar from "./MagicAppleNavbar";
+
 interface Props {
   children: React.ReactNode;
 }
@@ -104,32 +106,8 @@ export default function DashboardLayout({
 
       </section>
 
-      {/* Mobile Sticky Bottom Navigation Dock */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 lg:hidden border-t border-white/10 bg-[#070B14]/90 p-3 backdrop-blur-lg flex justify-around items-center">
-        {[
-          { title: "Home", href: "/dashboard", icon: Home },
-          { title: "Battle", href: "/battle", icon: Sword },
-          { title: "Leaderboard", href: "/leaderboard", icon: Trophy },
-          { title: "Profile", href: "/profile", icon: User },
-        ].map((tab) => {
-          const Icon = tab.icon;
-          const active = pathname === tab.href;
-          return (
-            <Link
-              key={tab.title}
-              href={tab.href}
-              className={`flex flex-col items-center gap-1 text-[10px] font-bold tracking-wider uppercase transition ${
-                active ? "text-cyan-400 scale-105" : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              <Icon size={20} />
-              <span>{tab.title}</span>
-            </Link>
-          );
-        })}
-      </div>
-
-
+      {/* Floating Magic Apple Glassmorphic Mobile Navigation Bar */}
+      <MagicAppleNavbar />
     </main>
   );
-}
+}
