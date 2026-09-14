@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import dynamic from "next/dynamic";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { useDashboard } from "@/hooks/use-dashboard";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
@@ -19,6 +21,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
+
 const STARTER_CODE: Record<string, string> = {
   python: `class Solution:\n    def twoSum(self, nums: list[int], target: int) -> list[int]:\n        seen = {}\n        for i, num in enumerate(nums):\n            diff = target - num\n            if diff in seen:\n                return [seen[diff], i]\n            seen[num] = i\n        return []\n`,
   javascript: `/**\n * @param {number[]} nums\n * @param {number} target\n * @return {number[]}\n */\nvar twoSum = function(nums, target) {\n    const map = new Map();\n    for (let i = 0; i < nums.length; i++) {\n        const diff = target - nums[i];\n        if (map.has(diff)) return [map.get(diff), i];\n        map.set(nums[i], i);\n    }\n    return [];\n};\n`,
@@ -27,6 +31,7 @@ const STARTER_CODE: Record<string, string> = {
 };
 
 type MobileTab = "description" | "editor" | "terminal";
+type ConsoleTab = "testcases" | "results";
 
 export default function LeetCodeMobileChallengePage() {
   const { dashboard, loading } = useDashboard();
@@ -39,6 +44,14 @@ export default function LeetCodeMobileChallengePage() {
   const [output, setOutput] = useState<string>("");
   const [running, setRunning] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
+  const [descriptionWidth, setDescriptionWidth] = useState(42);
+  const [editorHeight, setEditorHeight] = useState(64);
+  const [consoleTab, setConsoleTab] = useState<ConsoleTab>("testcases");
+  const [selectedCase, setSelectedCase] = useState(0);
+  const [testCases, setTestCases] = useState([
+    "nums = [2,7,11,15], target = 9",
+    "nums = [3,2,4], target = 6",
+  ]);
   const [xpEarned, setXpEarned] = useState<number | null>(null);
   const [submissionStats, setSubmissionStats] = useState({
     executionTime: 0,
@@ -50,6 +63,38 @@ export default function LeetCodeMobileChallengePage() {
   // Sample testcase state
   const [testInput, setTestInput] = useState<string>("nums = [2,7,11,15], target = 9");
 
+  const resizeColumns = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const handleMove = (moveEvent: PointerEvent) => {
+      const bounds = event.currentTarget.parentElement?.getBoundingClientRect();
+      if (!bounds) return;
+      const percentage = ((moveEvent.clientX - bounds.left) / bounds.width) * 100;
+      setDescriptionWidth(Math.min(70, Math.max(30, percentage)));
+    };
+    const stop = () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", stop);
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", stop, { once: true });
+  };
+
+  const resizeEditor = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const handleMove = (moveEvent: PointerEvent) => {
+      const bounds = event.currentTarget.parentElement?.getBoundingClientRect();
+      if (!bounds) return;
+      const percentage = ((moveEvent.clientY - bounds.top) / bounds.height) * 100;
+      setEditorHeight(Math.min(78, Math.max(30, percentage)));
+    };
+    const stop = () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", stop);
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", stop, { once: true });
+  };
+
   const handleLangChange = (lang: string) => {
     setLanguage(lang);
     setCode(STARTER_CODE[lang] || STARTER_CODE.python);
@@ -58,6 +103,7 @@ export default function LeetCodeMobileChallengePage() {
   const handleRun = async () => {
     setRunning(true);
     setActiveTab("terminal");
+    setConsoleTab("results");
     setOutput("⏳ Running code against testcases...");
     try {
       const res = await api.post("/compiler/run", {
@@ -76,6 +122,7 @@ export default function LeetCodeMobileChallengePage() {
   const handleSubmit = async () => {
     setSubmitting(true);
     setActiveTab("terminal");
+    setConsoleTab("results");
     setOutput("⏳ Submitting solution for official evaluation...");
     try {
       const challengeId = dashboard?.daily_challenge?.id || "1";
@@ -124,9 +171,6 @@ export default function LeetCodeMobileChallengePage() {
       "Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`.\n\nYou may assume that each input would have exactly one solution, and you may not use the same element twice.\n\nYou can return the answer in any order.",
     xp_reward: 100,
   };
-
-  // Line numbers array for code editor
-  const lineNumbers = code.split("\n").map((_, i) => i + 1);
 
   return (
     <DashboardLayout>
@@ -192,15 +236,16 @@ export default function LeetCodeMobileChallengePage() {
         </div>
 
         {/* ── Dynamic Main Content Layout ── */}
-        <div className="grid min-h-0 grid-cols-1 gap-3 p-3 sm:p-5 lg:h-[calc(100vh-230px)] lg:grid-cols-12 lg:gap-3">
+        <div className="flex min-h-0 flex-col gap-3 p-3 sm:p-5 md:flex-row lg:h-[calc(100vh-230px)] lg:gap-0">
 
           {/* ── Left / Description Panel (Visible on Desktop OR when activeTab === "description") ── */}
           <div
-            className={`lg:col-span-5 flex-col gap-4 ${
-              activeTab === "description" ? "flex" : "hidden lg:flex"
+            className={`min-w-0 flex-col gap-4 md:pr-2 ${
+              activeTab === "description" ? "flex" : "hidden md:flex"
             }`}
+            style={{ width: `${descriptionWidth}%` }}
           >
-            <div className="min-h-0 overflow-y-auto rounded-xl border border-white/10 bg-[#202020] p-4 sm:p-5">
+            <div className="h-[calc(100vh-120px)] min-h-0 overflow-y-auto rounded-xl border border-white/10 bg-[#202020] p-4 sm:p-5">
               <h3 className="flex items-center gap-2 border-b border-white/10 pb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
                 <FileText size={16} className="text-cyan-400" /> Problem Statement
               </h3>
@@ -255,14 +300,27 @@ export default function LeetCodeMobileChallengePage() {
             </div>
           </div>
 
+          <button
+            type="button"
+            aria-label="Resize problem description and code editor"
+            onPointerDown={resizeColumns}
+            className="group hidden w-2 shrink-0 cursor-col-resize items-center justify-center md:flex"
+          >
+            <span className="h-full w-px bg-white/10 transition group-hover:bg-cyan-400 group-active:bg-cyan-300" />
+          </button>
+
           {/* ── Right / Editor & Testcase Panel (Visible on Desktop OR when activeTab === "editor" | "testcase" | "solutions") ── */}
           <div
-            className={`lg:col-span-7 flex-col gap-4 ${
-              activeTab !== "description" ? "flex" : "hidden lg:flex"
+            className={`min-w-0 flex-col gap-3 md:pl-2 ${
+              activeTab !== "description" ? "flex" : "hidden md:flex"
             }`}
+            style={{ width: `${100 - descriptionWidth}%` }}
           >
             {/* ── Code Editor Component ── */}
-            <div className={`${activeTab === "editor" ? "flex" : "hidden lg:flex"} min-h-0 flex-1 flex-col gap-3 rounded-xl border border-white/10 bg-[#202020] p-3`}>
+            <div
+              className={`${activeTab === "editor" ? "flex" : "hidden md:flex"} min-h-0 flex-col gap-3 rounded-xl border border-white/10 bg-[#202020] p-3`}
+              style={{ height: `${editorHeight}%` }}
+            >
                 {/* Editor Header Toolbar */}
                 <div className="flex items-center justify-between border-b border-white/10 pb-3">
                   <div className="flex items-center gap-2">
@@ -296,57 +354,81 @@ export default function LeetCodeMobileChallengePage() {
                   </div>
                 </div>
 
-                {/* Editor Area with Monospaced Line Numbers */}
-                <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-lg border border-white/5 bg-[#141414] font-mono text-xs lg:h-auto">
-                  {/* Line Numbers */}
-                  <div className="select-none py-3 px-2 text-right bg-[#1a1a1a] text-slate-600 border-r border-white/5 font-mono text-[11px] leading-5 min-w-[32px]">
-                    {lineNumbers.map((n) => (
-                      <div key={n}>{n}</div>
-                    ))}
-                  </div>
-
-                  {/* Textarea Code Input */}
-                  <textarea
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    className="w-full bg-transparent p-3 text-cyan-200 focus:outline-none resize-none font-mono text-xs leading-5 outline-none border-none"
-                    rows={Math.max(lineNumbers.length + 2, 14)}
-                    spellCheck={false}
-                  />
+                <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-white/5 bg-[#141414]">
+                  <ErrorBoundary label="Code editor">
+                    <MonacoEditor
+                      height="100%"
+                      language={language === "cpp" ? "cpp" : language}
+                      theme="vs-dark"
+                      value={code}
+                      onChange={(value) => setCode(value ?? "")}
+                      options={{
+                        automaticLayout: true,
+                        minimap: { enabled: false },
+                        fontSize: 13,
+                        padding: { top: 12 },
+                        scrollBeyondLastLine: false,
+                        tabSize: 4,
+                      }}
+                    />
+                  </ErrorBoundary>
                 </div>
             </div>
 
+            <button
+              type="button"
+              aria-label="Resize code editor and console"
+              onPointerDown={resizeEditor}
+              className="group hidden h-2 shrink-0 cursor-row-resize items-center justify-center md:flex"
+            >
+              <span className="h-px w-full bg-white/10 transition group-hover:bg-cyan-400 group-active:bg-cyan-300" />
+            </button>
+
             {/* ── Testcase & Console Output Panel (Visible when activeTab === "testcase" or output exists) ── */}
-            <div className={`${activeTab === "terminal" ? "flex" : "hidden lg:flex"} min-h-[220px] flex-col gap-3 rounded-xl border border-white/10 bg-[#202020] p-3 font-mono text-xs lg:h-56 lg:min-h-0`}>
-              <div className="flex items-center justify-between border-b border-white/10 pb-2 font-sans text-slate-400">
-                <span className="font-bold flex items-center gap-2">
-                  <Terminal size={14} className="text-cyan-400" /> Console & Testcase
-                </span>
-                <span className="text-[11px] text-slate-500">UTF-8</span>
+            <div className={`${activeTab === "terminal" ? "flex" : "hidden md:flex"} min-h-0 flex-1 flex-col rounded-xl border border-white/10 bg-[#202020] font-mono text-xs`}>
+              <div className="sticky top-0 z-10 flex shrink-0 items-center gap-5 border-b border-white/10 bg-[#222] px-4 py-3 font-sans text-xs font-semibold text-slate-400">
+                <button type="button" onClick={() => setConsoleTab("testcases")} className={consoleTab === "testcases" ? "border-b-2 border-cyan-400 pb-1 text-white" : "pb-1 hover:text-white"}>
+                  Testcases
+                </button>
+                <button type="button" onClick={() => setConsoleTab("results")} className={consoleTab === "results" ? "border-b-2 border-cyan-400 pb-1 text-white" : "pb-1 hover:text-white"}>
+                  Test Results
+                </button>
+                <span className="ml-auto text-[11px] text-slate-500">UTF-8</span>
               </div>
 
-              {/* Editable Testcase Input */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-sans">
-                  Testcase Input
-                </label>
-                <input
-                  type="text"
-                  value={testInput}
-                  onChange={(e) => setTestInput(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-[#141414] px-3 py-2 text-xs text-white font-mono outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              {/* Terminal Output Stream */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-sans">
-                  Output Result
-                </label>
-                <pre className="rounded-xl border border-white/5 bg-[#141414] p-3 text-emerald-400 font-mono whitespace-pre-wrap min-h-[90px] max-h-48 overflow-y-auto">
-                  {output || "Run code or submit to view testcase execution results..."}
-                </pre>
-              </div>
+              {consoleTab === "testcases" ? (
+                <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+                  <div className="flex flex-wrap gap-2">
+                    {testCases.map((_, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => { setSelectedCase(index); setTestInput(testCases[index]); }}
+                        className={`rounded-md border px-3 py-1.5 text-[11px] font-semibold ${selectedCase === index ? "border-cyan-400/50 bg-cyan-400/10 text-cyan-300" : "border-white/10 text-slate-400 hover:text-white"}`}
+                      >
+                        Case {index + 1}
+                      </button>
+                    ))}
+                  </div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="testcase-input">Custom input</label>
+                  <textarea
+                    id="testcase-input"
+                    value={testInput}
+                    onChange={(event) => {
+                      setTestInput(event.target.value);
+                      setTestCases((cases) => cases.map((item, index) => index === selectedCase ? event.target.value : item));
+                    }}
+                    className="min-h-24 w-full resize-y rounded-lg border border-white/10 bg-[#141414] px-3 py-2 text-xs text-white outline-none focus:border-cyan-500"
+                    placeholder="Enter a custom test matrix..."
+                  />
+                </div>
+              ) : (
+                <div className="min-h-0 flex-1 overflow-y-auto p-4">
+                  <pre className={`whitespace-pre-wrap ${output.includes("Error") ? "text-rose-400" : "text-emerald-400"}`}>
+                    {output || "Run code or submit to view testcase execution results..."}
+                  </pre>
+                </div>
+              )}
             </div>
 
             {/* ── Solutions Tab Content ── */}
@@ -354,7 +436,7 @@ export default function LeetCodeMobileChallengePage() {
         </div>
 
         {/* ── LeetCode Mobile Sticky Bottom Action Bar ── */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 mx-auto flex max-w-screen-2xl items-center justify-between border-t border-white/10 bg-[#1a1a1a]/95 p-3 backdrop-blur-xl lg:static lg:mt-3 lg:rounded-lg lg:border lg:bg-[#232323]">
+        <div className="fixed bottom-0 left-0 right-0 z-40 mx-auto flex max-w-screen-2xl items-center justify-between border-t border-white/10 bg-zinc-950 px-4 py-3 backdrop-blur-xl lg:sticky lg:bottom-0 lg:mt-3 lg:w-full lg:justify-end lg:gap-3 lg:rounded-lg lg:border lg:bg-[#232323]">
           {/* Left: Terminal Console Toggle */}
           <button
             onClick={() => setActiveTab(activeTab === "terminal" ? "editor" : "terminal")}
