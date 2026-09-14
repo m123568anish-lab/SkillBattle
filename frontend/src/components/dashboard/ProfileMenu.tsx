@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   ChevronDown,
@@ -29,12 +30,18 @@ export default function ProfileMenu() {
   useEffect(() => {
     if (!isMobileMenuOpen) return;
 
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") setIsMobileMenuOpen(false);
     };
 
     window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleEscape);
+    };
   }, [isMobileMenuOpen]);
 
   async function handleLogout() {
@@ -146,17 +153,18 @@ export default function ProfileMenu() {
           type="button"
           onClick={() => setIsMobileMenuOpen(true)}
           suppressHydrationWarning
-          className="relative rounded-full p-0.5 transition-transform active:scale-95"
+          className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#070B14] px-2.5 py-2 shadow-lg shadow-black/20 transition-transform active:scale-[.98]"
           aria-label="Open profile menu"
         >
-          <div className="absolute -inset-0.5 rounded-full bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-500 opacity-80" />
-          <div className="relative rounded-full border-2 border-[#070B14] bg-[#070B14] p-0.5">
+          <div className="relative rounded-full bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-500 p-0.5">
             <Image src={avatarUrl} alt="Profile" width={36} height={36} sizes="36px" className="h-9 w-9 rounded-full object-cover" />
           </div>
+          <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-cyan-300">Admin</span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-300">Level {(user as any)?.level ?? 1}</span>
         </button>
       </div>
 
-      {isMobileMenuOpen && (
+      {isMobileMenuOpen && typeof document !== "undefined" && createPortal(
         <>
           <button
             type="button"
@@ -218,7 +226,8 @@ export default function ProfileMenu() {
               Sign Out
             </button>
           </div>
-        </>
+        </>,
+        document.body
       )}
     </>
   );
