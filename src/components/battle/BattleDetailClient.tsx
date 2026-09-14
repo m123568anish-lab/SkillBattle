@@ -88,7 +88,7 @@ export default function BattleDetailClient({ id }: { id: string }) {
       setLastResult(resp.data);
       // Award XP for battle completion
       try {
-        await api.post("/xp/add", { amount: 100 });
+        await api.post("/xp/add", { amount: 100, reason: "battle" });
         toast.success("Solution Submitted! +100 XP Earned! 🏆");
       } catch {
         toast.success("Submitted successfully!");

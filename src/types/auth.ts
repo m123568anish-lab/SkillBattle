@@ -1,14 +1,14 @@
 export interface User {
 
     id: string;
-
+    username?: string;
     full_name: string;
-
     email: string;
-
     avatar?: string | null;
-
+    avatar_url?: string | null;
     role: string;
+    level?: number;
+    coding_rating?: number;
 
 }
 

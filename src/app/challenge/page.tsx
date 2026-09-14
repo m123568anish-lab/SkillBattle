@@ -34,7 +34,7 @@ export default function DailyChallengePage() {
       const res = await api.post("/compiler/run", {
         language,
         source_code: code,
-        input: "Sample Input Data",
+        stdin: "Sample Input Data",
       });
       setOutput(res.data.output || res.data.stdout || res.data.stderr || "Execution completed cleanly.");
     } catch (err: any) {
@@ -55,26 +55,20 @@ export default function DailyChallengePage() {
         source_code: code,
       });
 
-      const passed = res.data.passed_tests > 0 || res.data.verdict === "Accepted" || true;
+      const passed = Boolean(res.data?.verdict === "Accepted" || (res.data?.passed_tests ?? 0) > 0);
+      const xpAmount = dashboard?.daily_challenge?.xp_reward || 50;
+
       if (passed) {
-        // Award XP
-        const xpAmount = dashboard?.daily_challenge?.xp_reward || 50;
         try {
-          await api.post("/xp/add", { amount: xpAmount });
+          await api.post("/xp/add", { amount: xpAmount, reason: "challenge" });
         } catch {}
         setXpEarned(xpAmount);
-        setOutput(`✅ VERDICT: ACCEPTED!\nPassed ${res.data.passed_tests || 5}/${res.data.total_tests || 5} Test Cases.\n🎉 +${xpAmount} XP Awarded!`);
+        setOutput(`✅ VERDICT: ACCEPTED!\nPassed ${res.data.passed_tests || 1}/${res.data.total_tests || 1} Test Cases.\n🎉 +${xpAmount} XP Awarded!`);
       } else {
-        setOutput(`❌ VERDICT: ${res.data.verdict || "Wrong Answer"}\nPassed ${res.data.passed_tests || 0}/${res.data.total_tests || 5} Test Cases.`);
+        setOutput(`❌ VERDICT: ${res.data.verdict || "Wrong Answer"}\nPassed ${res.data.passed_tests || 0}/${res.data.total_tests || 1} Test Cases.`);
       }
     } catch (err: any) {
-      // Fallback successful evaluation for custom challenges
-      const xpAmount = dashboard?.daily_challenge?.xp_reward || 50;
-      try {
-        await api.post("/xp/add", { amount: xpAmount });
-      } catch {}
-      setXpEarned(xpAmount);
-      setOutput(`✅ VERDICT: ACCEPTED!\nPassed 5/5 Test Cases.\n🎉 +${xpAmount} XP Awarded!`);
+      setOutput(`❌ Submission failed: ${err?.response?.data?.detail || err.message}`);
     } finally {
       setSubmitting(false);
     }

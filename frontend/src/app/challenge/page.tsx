@@ -59,7 +59,7 @@ export default function LeetCodeMobileChallengePage() {
       const res = await api.post("/compiler/run", {
         language,
         source_code: code,
-        input: testInput,
+        stdin: testInput,
       });
       setOutput(res.data.output || res.data.stdout || res.data.stderr || "Execution completed successfully.\nOutput: [0, 1]");
     } catch (err: any) {
@@ -81,21 +81,20 @@ export default function LeetCodeMobileChallengePage() {
         source_code: code,
       });
 
-      const passed = res.data.passed_tests > 0 || res.data.verdict === "Accepted" || true;
+      const passed = Boolean(res.data?.verdict === "Accepted" || (res.data?.passed_tests ?? 0) > 0);
+      const xpAmount = dashboard?.daily_challenge?.xp_reward || 100;
+
       if (passed) {
-        const xpAmount = dashboard?.daily_challenge?.xp_reward || 100;
         try {
-          await api.post("/xp/add", { amount: xpAmount });
+          await api.post("/xp/add", { amount: xpAmount, reason: "challenge" });
         } catch {}
         setXpEarned(xpAmount);
         setOutput(`✅ ACCEPTED\nRuntime: 42 ms (Beats 94.2%)\nMemory: 17.4 MB (Beats 88.6%)\n🎉 +${xpAmount} XP Awarded!`);
       } else {
-        setOutput(`❌ VERDICT: ${res.data.verdict || "Wrong Answer"}\nPassed 0/3 Test Cases.`);
+        setOutput(`❌ VERDICT: ${res.data.verdict || "Wrong Answer"}\nPassed ${res.data.passed_tests || 0}/${res.data.total_tests || 3} Test Cases.`);
       }
-    } catch {
-      const xpAmount = dashboard?.daily_challenge?.xp_reward || 100;
-      setXpEarned(xpAmount);
-      setOutput(`✅ ACCEPTED\nRuntime: 38 ms (Beats 96.5%)\nMemory: 16.8 MB (Beats 91.2%)\n🎉 +${xpAmount} XP Awarded!`);
+    } catch (err: any) {
+      setOutput(`❌ Submission failed: ${err?.response?.data?.detail || err.message}`);
     } finally {
       setSubmitting(false);
     }

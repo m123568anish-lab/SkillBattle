@@ -140,7 +140,7 @@ export const useAuthStore = create<AuthState>(
     },
     updateUserPartial(fields) {
         set((state) => ({
-            user: state.user ? { ...state.user, ...fields } : null
+            user: state.user ? { ...state.user, ...fields, avatar_url: fields.avatar_url ?? fields.avatar ?? state.user.avatar_url ?? state.user.avatar ?? null } : null
         }));
     }
 }));

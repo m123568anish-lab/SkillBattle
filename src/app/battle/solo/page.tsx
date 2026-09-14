@@ -510,7 +510,7 @@ export default function SoloBattlePage() {
       const res = await api.post("/compiler/run", {
         language,
         source_code: code,
-        input: sessionProblem.testInput,
+        stdin: sessionProblem.testInput,
       });
       setOutput(res.data.output || res.data.stdout || res.data.stderr || "Execution complete.");
     } catch (err: any) {

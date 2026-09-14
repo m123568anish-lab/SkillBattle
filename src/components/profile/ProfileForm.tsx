@@ -95,6 +95,7 @@ export default function ProfileForm() {
       updateUserPartial({
         full_name: profile.full_name,
         avatar: profile.avatar,
+        avatar_url: profile.avatar,
       });
 
       toast.success("Profile updated successfully! ✨");
