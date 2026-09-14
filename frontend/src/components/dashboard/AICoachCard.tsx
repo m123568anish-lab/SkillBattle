@@ -21,14 +21,14 @@ export default function AICoachCard({ recommendation }: AICoachCardProps) {
     <motion.div
       whileHover={{ y: -4 }}
       className="
-        rounded-3xl
+        rounded-2xl sm:rounded-3xl
         border
         border-cyan-500/20
         bg-gradient-to-br
         from-cyan-500/5
         via-[#090D1A]
         to-violet-500/5
-        p-8
+        p-4 sm:p-8
         relative
         overflow-hidden
         shadow-2xl
@@ -43,7 +43,7 @@ export default function AICoachCard({ recommendation }: AICoachCardProps) {
             <Bot size={28} className="text-cyan-400 animate-pulse" />
           </div>
           <div>
-            <h2 className="text-2xl font-black text-white">AI Placement Coach</h2>
+            <h2 className="text-lg font-black text-white sm:text-2xl">AI Placement Coach</h2>
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-0.5">Real-time analysis & recommendations</p>
           </div>
         </div>
@@ -52,7 +52,7 @@ export default function AICoachCard({ recommendation }: AICoachCardProps) {
         </div>
       </div>
 
-      <div className="relative z-10 mt-8 rounded-2xl border border-white/5 bg-[#0D1226]/50 p-6 backdrop-blur-md">
+      <div className="relative z-10 mt-5 rounded-2xl border border-white/5 bg-[#0D1226]/50 p-4 backdrop-blur-md sm:mt-8 sm:p-6">
         <div className="flex items-center gap-3">
           <Brain className="text-cyan-400" size={20} />
           <span className="font-bold text-white text-base">
@@ -60,7 +60,7 @@ export default function AICoachCard({ recommendation }: AICoachCardProps) {
           </span>
         </div>
 
-        <p className="mt-4 text-sm leading-relaxed text-slate-400 font-medium">
+        <p className="mt-3 text-sm font-medium leading-relaxed text-slate-400 sm:mt-4">
           {recommendation.message}
         </p>
 
@@ -81,7 +81,7 @@ export default function AICoachCard({ recommendation }: AICoachCardProps) {
         </div>
       </div>
 
-      <div className="relative z-10 mt-8">
+      <div className="relative z-10 mt-5 sm:mt-8">
         <GradientButton onClick={handleClick}>
           <span className="font-bold flex items-center gap-2">
             {recommendation.action}

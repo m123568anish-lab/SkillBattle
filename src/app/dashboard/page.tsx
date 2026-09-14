@@ -97,7 +97,7 @@ export default function DashboardPage() {
         initial={false}
         variants={containerVariants}
         animate="visible"
-        className="space-y-8"
+        className="space-y-5 md:space-y-8"
       >
         {/* Hero Section */}
         <motion.div variants={itemVariants}>

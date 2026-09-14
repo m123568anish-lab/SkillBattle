@@ -50,15 +50,15 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="rounded-3xl border border-cyan-500/10 bg-gradient-to-br from-[#070B14] via-[#0F172A]/90 to-[#020617] p-6 sm:p-8 relative overflow-hidden shadow-2xl shadow-black/70"
+        className="relative overflow-hidden rounded-2xl border border-cyan-500/10 bg-gradient-to-br from-[#070B14] via-[#0F172A]/90 to-[#020617] p-4 shadow-2xl shadow-black/70 sm:rounded-3xl sm:p-8"
       >
         <div className="absolute top-0 right-0 h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl animate-pulse pointer-events-none" />
         <div className="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-violet-500/10 blur-3xl animate-pulse pointer-events-none" />
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f293710_1px,transparent_1px),linear-gradient(to_bottom,#1f293710_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-30 pointer-events-none" />
 
-        <div className="relative z-10 grid grid-cols-1 xl:grid-cols-12 gap-8 items-center">
+        <div className="relative z-10 grid grid-cols-1 items-center gap-5 xl:grid-cols-12 xl:gap-8">
           {/* Left: Avatar + Info */}
-          <div className="xl:col-span-6 flex flex-col sm:flex-row items-center gap-6">
+          <div className="flex min-w-0 flex-row items-center gap-3 sm:gap-6 xl:col-span-6">
             <div className="relative flex-shrink-0">
               <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 opacity-70 blur-md animate-pulse" />
               <div className="relative rounded-3xl border border-white/20 bg-slate-950 p-1">
@@ -68,7 +68,7 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
                   width={112}
                   height={112}
                   sizes="112px"
-                  className="h-28 w-28 rounded-2xl object-cover"
+                  className="h-20 w-20 rounded-2xl object-cover sm:h-28 sm:w-28"
                 />
               </div>
               <span className="absolute -bottom-3 -right-2 flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-xs font-black text-white shadow-lg border border-cyan-400/40">
@@ -76,29 +76,29 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
               </span>
             </div>
 
-            <div className="text-center sm:text-left space-y-2.5 min-w-0 flex-1">
+            <div className="min-w-0 flex-1 space-y-1.5 text-left sm:space-y-2.5">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-center sm:justify-start">
-                <h1 className="text-3xl font-black text-white tracking-tight sm:text-4xl flex items-center gap-2 justify-center sm:justify-start truncate">
+                <h1 className="flex min-w-0 items-center gap-1.5 truncate text-xl font-black tracking-tight text-white sm:gap-2 sm:text-4xl">
                   {user.full_name}
                   <Sparkles size={20} className="text-cyan-400 animate-pulse flex-shrink-0" />
                 </h1>
-                <span className="self-center rounded-full bg-cyan-500/10 border border-cyan-500/20 px-3.5 py-1 text-xs font-bold text-cyan-400 uppercase tracking-widest flex-shrink-0">
+                <span className="hidden self-center rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3.5 py-1 text-xs font-bold uppercase tracking-widest text-cyan-400 sm:inline-flex">
                   Lv.{level} Player
                 </span>
               </div>
-              <p className="text-sm font-semibold text-slate-400 truncate">
-                @{user.username} · <span className="text-slate-500">{user.email}</span>
+              <p className="truncate text-xs font-semibold text-slate-400 sm:text-sm">
+                @{user.username} <span className="hidden text-slate-500 sm:inline">· {user.email}</span>
               </p>
 
               {/* Quick stat row */}
-              <div className="flex flex-wrap gap-3 justify-center sm:justify-start mt-3">
+              <div className="mt-2 flex max-w-full gap-2 overflow-x-auto pb-1 sm:mt-3 sm:flex-wrap sm:justify-start sm:gap-3 sm:overflow-visible sm:pb-0">
                 {[
                   { icon: Trophy, label: `${stats.battles_won} Wins`, color: "text-yellow-400" },
                   { icon: Target, label: `${winRate}% Win Rate`, color: "text-emerald-400" },
                   { icon: Shield, label: `${stats.rating} Rating`, color: "text-cyan-400" },
                   { icon: Clock, label: `${stats.streak} Day Streak`, color: "text-orange-400" },
                 ].map(({ icon: Icon, label, color }) => (
-                  <div key={label} className="flex items-center gap-1.5 rounded-xl border border-white/5 bg-white/5 px-3 py-1.5 text-xs font-semibold">
+                  <div key={label} className="flex shrink-0 items-center gap-1.5 rounded-xl border border-white/5 bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold sm:px-3 sm:text-xs">
                     <Icon size={12} className={color} />
                     <span className="text-slate-300">{label}</span>
                   </div>
@@ -108,11 +108,11 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
           </div>
 
           {/* Right: XP + Stats */}
-          <div className="xl:col-span-6 flex flex-col sm:flex-row items-center gap-6 justify-center xl:justify-end w-full">
+          <div className="flex w-full flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-center xl:col-span-6 xl:justify-end">
             <div className="w-full sm:w-auto flex-shrink-0">
               <XPProgress currentXP={stats.xp} nextLevelXP={nextLevelXP} />
             </div>
-            <div className="grid grid-cols-2 gap-3.5 w-full sm:w-56 flex-shrink-0">
+            <div className="grid w-full flex-shrink-0 grid-cols-2 gap-2.5 sm:w-56 sm:gap-3.5">
               {[
                 { label: "XP Points", val: stats.xp.toLocaleString(), icon: Zap, color: "text-violet-400", border: "border-violet-500/20", glow: "hover:shadow-[0_0_15px_rgba(139,92,246,0.2)] hover:border-violet-500/40" },
                 { label: "Rating", val: stats.rating, icon: Trophy, color: "text-yellow-400", border: "border-yellow-500/20", glow: "hover:shadow-[0_0_15px_rgba(250,204,21,0.2)] hover:border-yellow-500/40" },
@@ -121,7 +121,7 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
               ].map((card) => {
                 const Icon = card.icon;
                 return (
-                  <div key={card.label} className={`rounded-2xl border ${card.border} bg-[#070B14]/40 p-3.5 flex flex-col items-start backdrop-blur-xl transition-all duration-300 ${card.glow}`}>
+                  <div key={card.label} className={`rounded-2xl border ${card.border} bg-[#070B14]/40 p-3 backdrop-blur-xl transition-all duration-300 sm:p-3.5 ${card.glow}`}>
                     <Icon size={15} className={`${card.color} mb-1.5`} />
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{card.label}</span>
                     <span className="mt-0.5 text-base font-black text-white">{card.val}</span>
@@ -142,7 +142,7 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.15 }}
-          className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/5 to-[#090D1A]/40 p-6 backdrop-blur-xl"
+          className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/5 to-[#090D1A]/40 p-4 backdrop-blur-xl sm:rounded-3xl sm:p-6"
         >
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -160,7 +160,7 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
             {MOCK_LEADERBOARD.map((player) => (
               <div
                 key={player.rank}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition ${
+                className={`${player.rank > 4 ? "hidden sm:flex" : "flex"} items-center gap-3 rounded-xl border px-3 py-2.5 transition ${
                   player.username === user.username
                     ? "bg-cyan-500/10 border border-cyan-500/30"
                     : "bg-white/[0.03] border border-white/5 hover:bg-white/5"
@@ -187,7 +187,7 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.25 }}
-          className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/5 to-[#090D1A]/40 p-6 backdrop-blur-xl"
+          className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/5 to-[#090D1A]/40 p-4 backdrop-blur-xl sm:rounded-3xl sm:p-6"
         >
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -200,8 +200,8 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
             </div>
           </div>
           <div className="space-y-4">
-            {STUDY_TOPICS.map(({ topic, progress, color }) => (
-              <div key={topic}>
+            {STUDY_TOPICS.map(({ topic, progress, color }, index) => (
+              <div key={topic} className={index > 2 ? "hidden sm:block" : ""}>
                 <div className="flex items-center justify-between text-xs mb-1.5">
                   <span className="font-semibold text-slate-300">{topic}</span>
                   <span className="font-black text-white">{progress}%</span>

@@ -24,27 +24,30 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
     <header
       suppressHydrationWarning
       className="
-        mb-8
+        mb-5
         flex
-        flex-col
-        gap-4
+        flex-row
+        items-center
+        gap-2
         rounded-2xl
         border
         border-white/10
         bg-[#070B14]/80
-        p-4
+        p-3
         backdrop-blur-xl
         sm:flex-row
         sm:items-center
         sm:justify-between
+        sm:gap-4
+        sm:p-4
         relative
         z-20
       "
     >
-      <div className="flex items-center gap-4">
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
         <button
           onClick={onMenuClick}
-          className="lg:hidden rounded-xl border border-white/10 bg-white/5 p-2.5 text-white hover:bg-white/10 transition"
+          className="shrink-0 rounded-xl border border-white/10 bg-white/5 p-2.5 text-white transition hover:bg-white/10 lg:hidden"
         >
           <Menu size={20} />
         </button>
@@ -55,17 +58,20 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
             flex
             flex-1
             items-center
-            gap-3
+            min-w-0
+            flex-1
+            gap-2.5
             rounded-xl
             border
             border-white/10
             bg-[#0F172A]
-            px-4
+            px-3
             py-2.5
             transition
             focus-within:border-cyan-400
             w-full
-            max-w-xs
+            max-w-none
+            sm:max-w-xs
           "
         >
           <Search
@@ -88,7 +94,7 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
       </div>
 
       {/* Profile & Live Rating Ribbon */}
-      <div className="flex flex-wrap items-center gap-3.5 sm:gap-5 justify-end">
+      <div className="flex shrink-0 items-center justify-end gap-2 sm:gap-5">
         {user && (
           <div className="hidden md:flex items-center gap-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-cyan-300">
             <div className="flex items-center gap-1.5">
@@ -108,7 +114,7 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
           </div>
         )}
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <NotificationMenu />
           <ProfileMenu />
         </div>

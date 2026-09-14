@@ -94,7 +94,7 @@ export default function DashboardLayout({
         className="
           flex-1
           overflow-auto
-          p-4
+          p-3
           sm:p-8
           pb-24
           lg:pb-8
@@ -110,4 +110,4 @@ export default function DashboardLayout({
       <MagicAppleNavbar />
     </main>
   );
-}
+}
