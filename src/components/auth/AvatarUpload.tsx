@@ -1,8 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { Camera } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AI_AVATARS } from "@/lib/avatars";
 
 interface AvatarUploadProps {
@@ -18,6 +17,10 @@ export default function AvatarUpload({ value, onChange }: AvatarUploadProps) {
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(
     value || AI_AVATARS[0].url
   );
+
+  useEffect(() => {
+    if (value) setSelectedAvatar(value);
+  }, [value]);
 
   function handleUpload(
     e: React.ChangeEvent<HTMLInputElement>
@@ -51,21 +54,16 @@ export default function AvatarUpload({ value, onChange }: AvatarUploadProps) {
           className="relative h-28 w-28 cursor-pointer overflow-hidden rounded-full border-2 border-cyan-500 bg-white/5"
         >
           {preview ? (
-            <Image
+            <img
               src={preview}
               alt="avatar"
-              fill
-              className="object-cover"
-              unoptimized
-              sizes="100vw"
+              className="h-full w-full object-cover"
             />
           ) : selectedAvatar ? (
-            <Image
+            <img
               src={selectedAvatar}
               alt="avatar"
-              fill
-              className="object-cover"
-              sizes="100vw"
+              className="h-full w-full object-cover"
             />
           ) : (
             <div className="flex h-full items-center justify-center">
@@ -121,13 +119,10 @@ export default function AvatarUpload({ value, onChange }: AvatarUploadProps) {
                 : "border-white/10"
             }`}
           >
-            <Image
+            <img
               src={avatar.url}
               alt={avatar.name}
-              fill
-              className="object-cover"
-              sizes="100vw"
-              unoptimized
+              className="h-full w-full object-cover"
             />
           </button>
         ))}

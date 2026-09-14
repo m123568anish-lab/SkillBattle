@@ -1,8 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { Camera, Check, Sparkles } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AI_AVATARS } from "@/lib/avatars";
 
 interface AvatarUploadProps {
@@ -16,6 +15,10 @@ export default function AvatarUpload({ value, onChange }: AvatarUploadProps) {
   const [selectedAvatar, setSelectedAvatar] = useState<string>(
     value || AI_AVATARS[0].url
   );
+
+  useEffect(() => {
+    if (value) setSelectedAvatar(value);
+  }, [value]);
 
   function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];

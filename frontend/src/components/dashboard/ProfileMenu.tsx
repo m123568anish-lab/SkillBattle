@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronDown,
+  ChevronRight,
   User,
   Settings,
   LogOut,
   Shield,
+  X,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import Image from "next/image";
@@ -144,23 +146,13 @@ export default function ProfileMenu() {
           type="button"
           onClick={() => setIsMobileMenuOpen(true)}
           suppressHydrationWarning
-          className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#070B14] px-2.5 py-2 shadow-lg shadow-black/20"
+          className="relative rounded-full p-0.5 transition-transform active:scale-95"
           aria-label="Open profile menu"
         >
-          <div className="relative">
-            <Image
-              src={avatarUrl}
-              alt="Profile"
-              width={32}
-              height={32}
-              sizes="32px"
-              className="h-8 w-8 rounded-full border border-white/20"
-            />
+          <div className="absolute -inset-0.5 rounded-full bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-500 opacity-80" />
+          <div className="relative rounded-full border-2 border-[#070B14] bg-[#070B14] p-0.5">
+            <Image src={avatarUrl} alt="Profile" width={36} height={36} sizes="36px" className="h-9 w-9 rounded-full object-cover" />
           </div>
-          <div className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-300">
-            Admin
-          </div>
-          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-300">Level 1</span>
         </button>
       </div>
 
@@ -170,46 +162,58 @@ export default function ProfileMenu() {
             type="button"
             aria-label="Close profile menu"
             onClick={() => setIsMobileMenuOpen(false)}
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+            className="fixed inset-0 z-40 animate-[profile-fade-in_180ms_ease-out] bg-black/70 backdrop-blur-md md:hidden"
           />
 
-          <div className="fixed inset-x-0 bottom-0 z-50 w-full rounded-t-3xl border-t border-white/10 bg-zinc-950 p-6 pb-8 shadow-2xl md:hidden">
-            <div className="mx-auto mb-4 h-1 w-12 rounded-full bg-zinc-700" />
+          <div className="fixed inset-x-0 bottom-0 z-50 max-h-[88dvh] w-full animate-[profile-sheet-in_240ms_cubic-bezier(0.22,1,0.36,1)] overflow-y-auto rounded-t-[2rem] border-t border-white/10 bg-[#080b14]/[.98] px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-20px_80px_rgba(0,0,0,.55)] md:hidden">
+            <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-white/15" />
 
-            <div className="mb-5 rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="flex items-center gap-3">
-                <Image
-                  src={avatarUrl}
-                  alt="Profile"
-                  width={44}
-                  height={44}
-                  sizes="44px"
-                  className="h-11 w-11 rounded-full border border-white/20"
-                />
-                <div className="flex-1">
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-cyan-300">Account</p>
+                <h2 className="mt-1 text-xl font-bold tracking-tight text-white">Your profile</h2>
+              </div>
+              <button type="button" onClick={() => setIsMobileMenuOpen(false)} aria-label="Close profile menu" className="rounded-full border border-white/10 bg-white/5 p-2.5 text-slate-400 transition hover:bg-white/10 hover:text-white">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="relative mb-5 overflow-hidden rounded-3xl border border-cyan-400/20 bg-gradient-to-br from-cyan-400/15 via-blue-500/10 to-violet-500/15 p-4">
+              <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-cyan-400/10 blur-3xl" />
+              <div className="relative flex items-center gap-3.5">
+                <div className="rounded-full bg-gradient-to-br from-cyan-300 via-blue-500 to-violet-500 p-0.5 shadow-lg shadow-cyan-500/20">
+                  <Image src={avatarUrl} alt="Profile" width={56} height={56} sizes="56px" className="h-14 w-14 rounded-full border-2 border-[#101522] object-cover" />
+                </div>
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <Shield className="h-3.5 w-3.5 text-cyan-400" />
-                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300">Admin</span>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-violet-300">Level 1</span>
+                    <p className="truncate text-base font-bold text-white">{user?.full_name || (user as any)?.username || "User"}</p>
+                    <Shield className="h-3.5 w-3.5 shrink-0 text-cyan-300" />
                   </div>
-                  <p className="mt-1 text-xs text-slate-400">{(user as any)?.email || user?.full_name}</p>
+                  <p className="mt-0.5 truncate text-xs text-slate-400">{(user as any)?.email || user?.full_name}</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-cyan-200">Admin</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-200">Level {(user as any)?.level ?? 1}</span>
+                  </div>
                 </div>
               </div>
             </div>
 
+            <div className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Manage</div>
             <div className="space-y-2">
-              <button onClick={() => { setIsMobileMenuOpen(false); router.push("/profile"); }} className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-base font-semibold text-white transition hover:bg-white/10">
-                <User size={18} className="text-cyan-300" />
-                My Profile
+              <button onClick={() => { setIsMobileMenuOpen(false); router.push("/profile"); }} className="group flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[.045] px-4 py-3.5 text-left transition hover:border-cyan-400/30 hover:bg-cyan-400/10">
+                <span className="rounded-xl bg-cyan-400/10 p-2.5 text-cyan-300"><User size={18} /></span>
+                <span className="flex-1 text-sm font-semibold text-white">My Profile<span className="mt-0.5 block text-xs font-normal text-slate-500">View and edit your profile</span></span>
+                <ChevronRight size={17} className="text-slate-600 transition group-hover:translate-x-0.5 group-hover:text-cyan-300" />
               </button>
 
-              <button onClick={() => { setIsMobileMenuOpen(false); router.push("/settings"); }} className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-base font-semibold text-white transition hover:bg-white/10">
-                <Settings size={18} className="text-violet-300" />
-                Settings
+              <button onClick={() => { setIsMobileMenuOpen(false); router.push("/settings"); }} className="group flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[.045] px-4 py-3.5 text-left transition hover:border-violet-400/30 hover:bg-violet-400/10">
+                <span className="rounded-xl bg-violet-400/10 p-2.5 text-violet-300"><Settings size={18} /></span>
+                <span className="flex-1 text-sm font-semibold text-white">Settings<span className="mt-0.5 block text-xs font-normal text-slate-500">Preferences and security</span></span>
+                <ChevronRight size={17} className="text-slate-600 transition group-hover:translate-x-0.5 group-hover:text-violet-300" />
               </button>
             </div>
 
-            <button onClick={handleLogout} className="mt-4 flex w-full items-center justify-center gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-4 text-base font-bold text-rose-300 transition hover:bg-rose-500 hover:text-white">
+            <button onClick={handleLogout} className="mt-5 flex w-full items-center justify-center gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3.5 text-sm font-bold text-rose-300 transition hover:bg-rose-500 hover:text-white">
               <LogOut size={18} />
               Sign Out
             </button>
