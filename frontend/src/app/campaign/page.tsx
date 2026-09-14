@@ -194,18 +194,14 @@ export default function CampaignPage() {
             <div className="grid grid-cols-12 gap-4 border-b border-white/5 bg-[#1F1F1F] px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-400">
               <div className="col-span-1 text-center">Status</div>
               <div className="col-span-7">Title</div>
-              <div className="col-span-2 text-center">Difficulty</div>
+              <div className="col-span-2 text-center">Progress</div>
               <div className="col-span-2 text-center">Action</div>
             </div>
             
             <div className="divide-y divide-white/5">
-              {currentTrack?.levels.map((lvl, index) => {
+              {currentTrack?.levels.map((lvl) => {
                 const isUnlocked = lvl.unlocked;
                 const isSolved = lvl.stars > 0;
-                
-                // Mocking difficulty for visual variety
-                const diff = index % 3 === 0 ? "Hard" : index % 2 === 0 ? "Medium" : "Easy";
-                const diffColor = diff === "Easy" ? "text-emerald-400" : diff === "Medium" ? "text-yellow-400" : "text-rose-400";
 
                 return (
                   <div 
@@ -236,8 +232,8 @@ export default function CampaignPage() {
                     </div>
 
                     <div className="col-span-2 text-center">
-                      <span className={`text-xs font-medium ${isUnlocked ? diffColor : "text-slate-600"}`}>
-                        {diff}
+                        <span className={`text-xs font-medium ${isSolved ? "text-emerald-400" : isUnlocked ? "text-cyan-400" : "text-slate-600"}`}>
+                          {isSolved ? "Completed" : isUnlocked ? "Available" : "Locked"}
                       </span>
                     </div>
 

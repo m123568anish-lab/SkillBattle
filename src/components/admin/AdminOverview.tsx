@@ -3,54 +3,53 @@
 import { Users, Sword, Trophy, Server, Activity, ArrowUpRight, ArrowDownRight, Database } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
-
-// Simulated Data
-const trafficData = [
-  { time: "00:00", users: 120 },
-  { time: "04:00", users: 80 },
-  { time: "08:00", users: 450 },
-  { time: "12:00", users: 890 },
-  { time: "16:00", users: 1050 },
-  { time: "20:00", users: 780 },
-  { time: "24:00", users: 300 },
-];
+import { adminService } from "@/services/admin.service";
 
 export default function AdminOverview() {
   const [mounted, setMounted] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const [logs, setLogs] = useState<any[]>([]);
 
   useEffect(() => {
     setMounted(true);
+    Promise.all([
+      adminService.listUsers(100, 0).catch(() => []),
+      adminService.getBattleLogs(100).catch(() => []),
+    ]).then(([userRows, logRows]) => {
+      setUsers(userRows);
+      setLogs(logRows);
+    });
   }, []);
 
   const stats = [
     {
       title: "Total Registered Users",
-      value: "14,209",
-      change: "+12.5%",
+      value: users.length.toLocaleString(),
+      change: "Loaded",
       trend: "up",
       icon: Users,
       color: "from-blue-500 to-cyan-500",
     },
     {
       title: "Active Battles",
-      value: "342",
-      change: "+5.2%",
+      value: logs.filter((log) => log.status === "active" || log.status === "running").length.toLocaleString(),
+      change: "Live logs",
       trend: "up",
       icon: Sword,
       color: "from-rose-500 to-orange-500",
     },
     {
       title: "Challenges Solved (24h)",
-      value: "8,941",
-      change: "-2.1%",
-      trend: "down",
+      value: logs.filter((log) => log.status === "completed" || log.status === "accepted").length.toLocaleString(),
+      change: "Recorded",
+      trend: "up",
       icon: Trophy,
       color: "from-amber-400 to-yellow-600",
     },
     {
       title: "System Uptime",
-      value: "99.99%",
-      change: "Stable",
+      value: "Unavailable",
+      change: "Connect monitoring",
       trend: "up",
       icon: Server,
       color: "from-emerald-400 to-teal-500",
@@ -106,7 +105,7 @@ export default function AdminOverview() {
           <div className="h-72 w-full">
             {mounted && (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trafficData}>
+                <AreaChart data={[]}>
                   <defs>
                     <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
@@ -146,7 +145,7 @@ export default function AdminOverview() {
               <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
                 <div className="h-full w-[45%] bg-emerald-500 rounded-full" />
               </div>
-              <p className="mt-1 text-xs text-slate-500">45% Load (802 req/s)</p>
+              <p className="mt-1 text-xs text-slate-500">Monitoring data is not connected.</p>
             </div>
 
             {/* Database */}
@@ -158,7 +157,7 @@ export default function AdminOverview() {
               <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
                 <div className="h-full w-[60%] bg-emerald-500 rounded-full" />
               </div>
-              <p className="mt-1 text-xs text-slate-500">60% CPU (Replication Active)</p>
+              <p className="mt-1 text-xs text-slate-500">Monitoring data is not connected.</p>
             </div>
 
             {/* Redis Cache */}
@@ -170,7 +169,7 @@ export default function AdminOverview() {
               <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
                 <div className="h-full w-[85%] bg-amber-500 rounded-full" />
               </div>
-              <p className="mt-1 text-xs text-slate-500">85% Memory (Eviction soon)</p>
+              <p className="mt-1 text-xs text-slate-500">Monitoring data is not connected.</p>
             </div>
             
             {/* Code Execution Engine */}

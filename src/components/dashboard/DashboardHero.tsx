@@ -1,46 +1,39 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import { Trophy, Target, Shield, Zap, Sparkles, TrendingUp, Clock, Star, Medal, BookOpen, Award, ChevronRight } from "lucide-react";
 import XPProgress from "./XPProgress";
 import type { UserSummary, DashboardStats } from "@/types/dashboard";
 import { useRouter } from "next/navigation";
+import { leaderboardService, type LeaderboardEntry } from "@/services/leaderboard.service";
 
 interface DashboardHeroProps {
   user: UserSummary;
   stats: DashboardStats;
 }
 
-// Fake top-10 leaderboard (in production this would come from /leaderboard API)
-const MOCK_LEADERBOARD = [
-  { rank: 1, username: "AlgoMaster", rating: 2850, winRate: 94 },
-  { rank: 2, username: "CodeKing", rating: 2780, winRate: 91 },
-  { rank: 3, username: "ByteWizard", rating: 2700, winRate: 88 },
-  { rank: 4, username: "NullPointer", rating: 2640, winRate: 85 },
-  { rank: 5, username: "RecurseX", rating: 2580, winRate: 83 },
-  { rank: 6, username: "HashSet", rating: 2520, winRate: 80 },
-  { rank: 7, username: "BitFlip", rating: 2460, winRate: 78 },
-  { rank: 8, username: "StackBot", rating: 2390, winRate: 75 },
-  { rank: 9, username: "TreeWalker", rating: 2340, winRate: 72 },
-  { rank: 10, username: "DPGod", rating: 2280, winRate: 70 },
-];
-
-// Study topics progress (simulated)
-const STUDY_TOPICS = [
-  { topic: "Arrays & Strings", progress: 82, color: "bg-cyan-500" },
-  { topic: "Trees & Graphs", progress: 65, color: "bg-violet-500" },
-  { topic: "Dynamic Programming", progress: 48, color: "bg-amber-500" },
-  { topic: "System Design", progress: 31, color: "bg-rose-500" },
-  { topic: "SQL & DBMS", progress: 71, color: "bg-emerald-500" },
-];
-
 export default function DashboardHero({ user, stats }: DashboardHeroProps) {
   const router = useRouter();
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const level = stats.level;
   const nextLevelXP = (level + 1) * 2500;
   const winRate = stats.battles_played === 0
     ? 0
     : Math.round((stats.battles_won / stats.battles_played) * 100);
+
+  useEffect(() => {
+    leaderboardService.getLeaderboard()
+      .then((response) => setLeaderboard(response.leaderboard.slice(0, 10)))
+      .catch(() => setLeaderboard([]));
+  }, []);
+
+  const progressMetrics = [
+    { topic: "Battles completed", progress: Math.min(stats.battles_played, 100), color: "bg-cyan-500" },
+    { topic: "Win rate", progress: winRate, color: "bg-emerald-500" },
+    { topic: "30-day streak", progress: Math.min(Math.round((stats.streak / 30) * 100), 100), color: "bg-orange-500" },
+    { topic: "XP to next level", progress: Math.min(Math.round((stats.xp / nextLevelXP) * 100), 100), color: "bg-violet-500" },
+  ];
 
   return (
     <div className="space-y-6">
@@ -152,7 +145,11 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
             </button>
           </div>
           <div className="space-y-2">
-            {MOCK_LEADERBOARD.map((player) => (
+            {leaderboard.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-slate-500">
+                Leaderboard data is not available yet.
+              </div>
+            ) : leaderboard.map((player) => (
               <div
                 key={player.rank}
                 className={`${player.rank > 4 ? "hidden sm:flex" : "flex"} items-center gap-3 rounded-xl border px-3 py-2.5 transition ${
@@ -170,8 +167,8 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
                   {player.rank === 1 ? "🥇" : player.rank === 2 ? "🥈" : player.rank === 3 ? "🥉" : `#${player.rank}`}
                 </span>
                 <span className="flex-1 text-sm font-bold text-white truncate">{player.username}</span>
-                <span className="text-xs font-semibold text-slate-400">{player.winRate}%</span>
-                <span className="text-xs font-black text-cyan-300 ml-2">{player.rating.toLocaleString()}</span>
+                <span className="text-xs font-semibold text-slate-400">{player.solved} solved</span>
+                <span className="ml-2 text-xs font-black text-cyan-300">{player.xp.toLocaleString()} XP</span>
               </div>
             ))}
           </div>
@@ -187,7 +184,7 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-lg font-black text-white">Study Activity</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Your topic mastery progress</p>
+              <p className="text-xs text-slate-400 mt-0.5">Based on your live account activity</p>
             </div>
             <div className="rounded-xl bg-violet-500/10 border border-violet-500/20 px-3 py-1.5 text-xs font-bold text-violet-400">
               <BookOpen size={12} className="inline mr-1" />
@@ -195,7 +192,7 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
             </div>
           </div>
           <div className="space-y-4">
-            {STUDY_TOPICS.map(({ topic, progress, color }, index) => (
+            {progressMetrics.map(({ topic, progress, color }, index) => (
               <div key={topic} className={index > 2 ? "hidden sm:block" : ""}>
                 <div className="flex items-center justify-between text-xs mb-1.5">
                   <span className="font-semibold text-slate-300">{topic}</span>

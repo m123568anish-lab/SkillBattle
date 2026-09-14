@@ -2,11 +2,26 @@
 
 import { motion } from "framer-motion";
 import { Crown, Search, Globe } from "lucide-react";
-import { leaderboard } from "@/data/leaderboard";
+import { useEffect, useState } from "react";
+import { leaderboardService } from "@/services/leaderboard.service";
+import type { LeaderboardUser } from "@/data/leaderboard";
 import LeaderboardRow from "./LeaderboardRow";
 import { Input } from "@/components/ui/input";
 
 export default function Leaderboard() {
+  const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
+
+  useEffect(() => {
+    leaderboardService.getLeaderboard()
+      .then(({ leaderboard: entries }) => setLeaderboard(entries.map((entry, index) => ({
+        id: index + 1,
+        name: entry.full_name || entry.username,
+        level: entry.level,
+        xp: entry.xp,
+        streak: entry.streak,
+      }))))
+      .catch(() => setLeaderboard([]));
+  }, []);
   return (
     <section className="relative py-24 lg:py-32">
       {/* Background Glow */}
@@ -78,7 +93,11 @@ export default function Leaderboard() {
 
         {/* Players List */}
         <div className="space-y-4">
-          {leaderboard.map((player, index) => (
+          {leaderboard.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-white/10 px-6 py-10 text-center text-sm text-slate-500">
+              Live rankings are not available yet.
+            </div>
+          ) : leaderboard.map((player, index) => (
             <motion.div
               key={player.id}
               initial={{ opacity: 0, y: 20 }}

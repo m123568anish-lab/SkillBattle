@@ -33,15 +33,8 @@ export default function CalendarPage() {
   const [streak, setStreak] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Simulate some activity data
   const today = new Date().toISOString().split("T")[0];
   const activityMap: Record<string, number> = {};
-  for (let i = 0; i < 84; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().split("T")[0];
-    activityMap[key] = Math.random() > 0.45 ? Math.floor(Math.random() * 4) + 1 : 0;
-  }
   const heatmapDays = generateHeatmapDays(activityMap);
 
   // Group into weeks
@@ -148,27 +141,8 @@ export default function CalendarPage() {
       {/* Recent Activity List */}
       <div className="mt-8 rounded-3xl border border-white/10 bg-slate-900/40 p-6 backdrop-blur-xl">
         <h3 className="mb-4 text-lg font-bold text-white">Recent Activity</h3>
-        <div className="space-y-3">
-          {[
-            { label: "Completed Daily Challenge", time: "Today, 09:14 AM", xp: "+50 XP", icon: "🎯" },
-            { label: "Won Multiplayer Battle vs AlgoKing", time: "Yesterday, 11:30 PM", xp: "+120 XP", icon: "⚔️" },
-            { label: "Solved 'Maximum Subarray' (Hard)", time: "2 days ago", xp: "+100 XP", icon: "💻" },
-            { label: "Completed Week 1 Roadmap Tasks", time: "3 days ago", xp: "+75 XP", icon: "🗺️" },
-            { label: "Mock Interview: Google SWE", time: "4 days ago", xp: "+150 XP", icon: "🎙️" },
-          ].map((act, i) => (
-            <div key={i} className="flex items-center justify-between rounded-xl border border-white/5 bg-slate-800/40 px-4 py-3">
-              <div className="flex items-center gap-3">
-                <span className="text-xl">{act.icon}</span>
-                <div>
-                  <p className="text-sm font-semibold text-white">{act.label}</p>
-                  <p className="text-xs text-slate-500">{act.time}</p>
-                </div>
-              </div>
-              <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-400">
-                {act.xp}
-              </span>
-            </div>
-          ))}
+        <div className="rounded-xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-slate-500">
+          Recent activity will appear here after you complete a challenge or battle.
         </div>
       </div>
     </DashboardLayout>

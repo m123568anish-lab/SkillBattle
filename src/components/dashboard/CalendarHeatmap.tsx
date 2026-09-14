@@ -5,10 +5,6 @@ import { motion } from "framer-motion";
 const weeks = 12;
 const days = 7;
 
-function randomLevel() {
-  return Math.floor(Math.random() * 5);
-}
-
 export default function CalendarHeatmap() {
   return (
     <motion.div
@@ -42,7 +38,7 @@ export default function CalendarHeatmap() {
 
               {Array.from({ length: days }).map((__, day) => {
 
-                const level = randomLevel();
+                const level = 0;
 
                 const colors = [
                   "bg-white/10",

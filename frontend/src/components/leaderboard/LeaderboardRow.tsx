@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowUp, ArrowDown, Minus, Flame, Trophy } from "lucide-react";
+import { Flame, Trophy } from "lucide-react";
 import type { LeaderboardUser } from "@/data/leaderboard";
 
 interface Props {
@@ -11,10 +11,7 @@ interface Props {
 
 export default function LeaderboardRow({ player, index }: Props) {
   const rank = index + 1;
-  const change = index % 3 === 0 ? "up" : index % 4 === 0 ? "down" : "same";
-  const online = index < 3 || index % 2 === 0;
-  const country = "Global";
-  const streak = 15 - index; // simulated streak
+  const streak = player.streak ?? 0;
 
   const getRankStyle = () => {
     switch (rank) {
@@ -26,17 +23,6 @@ export default function LeaderboardRow({ player, index }: Props) {
         return "from-orange-400 to-orange-700 shadow-[0_0_20px_rgba(251,146,60,0.4)] border-orange-400/50";
       default:
         return "from-[#0f172a] to-[#1e293b] border-white/10 shadow-inner";
-    }
-  };
-
-  const RankIcon = () => {
-    switch (change) {
-      case "up":
-        return <ArrowUp className="h-3.5 w-3.5 text-green-400" />;
-      case "down":
-        return <ArrowDown className="h-3.5 w-3.5 text-red-400" />;
-      default:
-        return <Minus className="h-3.5 w-3.5 text-slate-500" />;
     }
   };
 
@@ -59,9 +45,6 @@ export default function LeaderboardRow({ player, index }: Props) {
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-violet-600 text-lg font-bold text-white shadow-lg">
             {player.name.charAt(0)}
           </div>
-          {online && (
-            <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-[#070B14] bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.6)]" />
-          )}
         </div>
 
         {/* Player Details */}
@@ -72,12 +55,6 @@ export default function LeaderboardRow({ player, index }: Props) {
           </div>
           <div className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-400">
             <span className="font-semibold text-slate-300 uppercase tracking-widest text-[9px]">LVL {player.level}</span>
-            <span className="h-1 w-1 rounded-full bg-slate-600" />
-            <span className="uppercase tracking-widest text-[9px]">{country}</span>
-            <span className="h-1 w-1 rounded-full bg-slate-600" />
-            <div className="flex items-center gap-0.5">
-              <RankIcon />
-            </div>
           </div>
         </div>
       </div>

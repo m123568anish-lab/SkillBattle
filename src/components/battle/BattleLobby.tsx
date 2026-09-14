@@ -155,13 +155,9 @@ export default function BattleLobby() {
               </div>
               
               <div className="divide-y divide-white/5">
-                {currentTrack?.levels.map((lvl, index) => {
+                {currentTrack?.levels.map((lvl) => {
                   const isUnlocked = lvl.unlocked;
                   const isSolved = lvl.stars > 0;
-                  
-                  // Mocking difficulty for visual variety
-                  const diff = index % 3 === 0 ? "Hard" : index % 2 === 0 ? "Medium" : "Easy";
-                  const diffColor = diff === "Easy" ? "text-emerald-400" : diff === "Medium" ? "text-yellow-400" : "text-rose-400";
 
                   return (
                     <div 
@@ -192,8 +188,8 @@ export default function BattleLobby() {
                       </div>
 
                       <div className="col-span-2 text-center">
-                        <span className={`text-xs font-medium ${isUnlocked ? diffColor : "text-slate-600"}`}>
-                          {diff}
+                        <span className={`text-xs font-medium ${isSolved ? "text-emerald-400" : isUnlocked ? "text-cyan-400" : "text-slate-600"}`}>
+                          {isSolved ? "Completed" : isUnlocked ? "Available" : "Locked"}
                         </span>
                       </div>
 
