@@ -153,3 +153,7 @@ def _repair_users_table() -> None:
             if name not in existing:
                 connection.execute(text(f'ALTER TABLE "users" ADD COLUMN "{name}" {definition}'))
                 logger.info("Added missing users.%s column", name)
+
+        if "xp" in inspector.get_table_names():
+            connection.execute(text('CREATE INDEX IF NOT EXISTS "ix_xp_user_id" ON "xp" ("user_id")'))
+            connection.execute(text('CREATE INDEX IF NOT EXISTS "ix_xp_total_xp" ON "xp" ("total_xp")'))

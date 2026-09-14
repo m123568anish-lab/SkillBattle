@@ -5,6 +5,7 @@ import { Trophy, Target, Shield, Zap, Sparkles, TrendingUp, Clock, Star, Medal, 
 import XPProgress from "./XPProgress";
 import type { UserSummary, DashboardStats } from "@/types/dashboard";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface DashboardHeroProps {
   user: UserSummary;
@@ -61,9 +62,12 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
             <div className="relative flex-shrink-0">
               <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 opacity-70 blur-md animate-pulse" />
               <div className="relative rounded-3xl border border-white/20 bg-slate-950 p-1">
-                <img
+                <Image
                   src={user.avatar_url || `https://ui-avatars.com/api/?name=${user.username}&background=0F172A&color=06b6d4&size=128&bold=true`}
                   alt={user.full_name}
+                  width={112}
+                  height={112}
+                  sizes="112px"
                   className="h-28 w-28 rounded-2xl object-cover"
                 />
               </div>

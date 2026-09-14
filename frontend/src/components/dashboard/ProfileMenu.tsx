@@ -8,6 +8,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import Image from "next/image";
 
 export default function ProfileMenu() {
   const router = useRouter();
@@ -48,9 +49,12 @@ export default function ProfileMenu() {
       >
         <div className="relative">
           <div className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 opacity-70 blur-sm group-hover:opacity-100 transition duration-300"></div>
-          <img
+          <Image
             src={(user as any)?.avatar_url || `https://ui-avatars.com/api/?name=${(user as any)?.username || user?.full_name || 'User'}&background=070B14&color=06b6d4&bold=true`}
             alt="Profile"
+            width={36}
+            height={36}
+            sizes="36px"
             className="relative h-9 w-9 rounded-full border border-white/20"
           />
         </div>

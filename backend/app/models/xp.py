@@ -15,11 +15,12 @@ class XP(Base):
         autoincrement=True,
     )
 
-    user_id: Mapped[str]
+    user_id: Mapped[str] = mapped_column(index=True)
 
     total_xp: Mapped[int] = mapped_column(
         Integer,
         default=0,
+        index=True,
     )
 
     weekly_xp: Mapped[int] = mapped_column(
