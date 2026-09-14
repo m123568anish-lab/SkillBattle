@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import os
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from functools import lru_cache
 from pathlib import Path
 
@@ -20,6 +21,19 @@ from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
 logger = logging.getLogger(__name__)
+
+
+def normalize_async_database_url(url: str) -> str:
+    """Convert libpq SSL options to parameters supported by asyncpg."""
+    parts = urlsplit(url)
+    query = []
+    for key, value in parse_qsl(parts.query, keep_blank_values=True):
+        if key == "channel_binding":
+            continue
+        if key == "sslmode":
+            key, value = "ssl", value or "require"
+        query.append((key, value))
+    return urlunsplit(parts._replace(query=urlencode(query)))
 
 
 class Settings(BaseSettings):
@@ -172,15 +186,8 @@ class Settings(BaseSettings):
                 self.ASYNC_DATABASE_URL = self.DATABASE_URL.replace(
                     "postgresql://", "postgresql+asyncpg://", 1
                 )
-            self.ASYNC_DATABASE_URL = self.ASYNC_DATABASE_URL.replace(
-                "sslmode=require", "ssl=require"
-            )
-            self.ASYNC_DATABASE_URL = self.ASYNC_DATABASE_URL.replace(
-                "&channel_binding=require", ""
-            ).replace(
-                "?channel_binding=require&", "?"
-            ).replace(
-                "?channel_binding=require", ""
+            self.ASYNC_DATABASE_URL = normalize_async_database_url(
+                self.ASYNC_DATABASE_URL
             )
         else:
             self.DATABASE_TYPE = "sqlite"
