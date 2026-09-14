@@ -12,6 +12,8 @@ Business logic for authentication.
 
 from __future__ import annotations
 
+import logging
+import uuid
 from datetime import datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,73 +39,38 @@ from app.modules.auth.schemas.requests import (
     RegisterRequest,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class AuthService:
 
     # --------------------------------------------------
+    async def register(self, db: AsyncSession, request: RegisterRequest) -> User:
+        logger.info("Registration attempt: email=%s username=%s", request.email, request.username)
 
-    async def register(
-
-        self,
-
-        db: AsyncSession,
-
-        request: RegisterRequest,
-
-    ) -> User:
-
-        existing_email = await user_repository.get_by_email(
-
-            db,
-
-            request.email,
-
-        )
-
+        existing_email = await user_repository.get_by_email(db, request.email)
         if existing_email:
+            logger.warning("Registration rejected: email already exists email=%s", request.email)
+            raise ValueError("Email already registered.")
 
-            raise ValueError(
-
-                "Email already registered."
-
-            )
-
-        existing_username = await user_repository.get_by_username(
-            db,
-            request.username,
-        )
-
+        existing_username = await user_repository.get_by_username(db, request.username)
         if existing_username:
-            import uuid
-            request.username = f"{request.username[:20]}_{uuid.uuid4().hex[:4]}"
+            suffix = uuid.uuid4().hex[:4]
+            request.username = f"{request.username[:20]}_{suffix}"
+            logger.info("Username collision — assigned new username=%s", request.username)
 
         user = User(
-
             username=request.username,
-
             email=request.email,
-
             full_name=request.full_name,
-
-            password_hash=hash_password(
-
-                request.password,
-
-            ),
-
+            password_hash=hash_password(request.password),
             avatar_url=request.avatar_url,
-
             role="user",
-
         )
 
-        return await user_repository.create_user(
-
-            db,
-
-            user,
-
-        )
+        created = await user_repository.create_user(db, user)
+        logger.info("User created successfully: user_id=%s email=%s", created.id, created.email)
+        return created
 
     # --------------------------------------------------
 

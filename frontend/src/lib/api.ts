@@ -1,9 +1,13 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 
-const normalizeBaseUrl = (value: string | undefined) => {
-    const defaultUrl = process.env.NODE_ENV === "production"
-        ? "https://skillbattle-api-2026.onrender.com"
-        : "http://localhost:8000";
+// Shared API types — import from here for typed responses
+export type { ApiResponse, ApiValidationError, PaginatedResponse } from "@/types/api";
+
+const normalizeBaseUrl = (value: string | undefined): string => {
+    const defaultUrl =
+        process.env.NODE_ENV === "production"
+            ? "https://skillbattle-api-2026.onrender.com"
+            : "http://localhost:8000";
     const base = (value || defaultUrl).trim().replace(/\/+$/, "");
     return base.replace(/\/api\/v1$/, "");
 };
@@ -12,7 +16,11 @@ const API_BASE_URL = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_URL);
 
 const api = axios.create({
     baseURL: `${API_BASE_URL}/api/v1`,
-    headers: { "Content-Type": "application/json" },
+    timeout: 15_000,                  // 15 s — prevent hanging on sleeping Render instance
+    headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    },
 });
 
 let isRefreshing = false;

@@ -26,6 +26,7 @@ from app.middleware.maintenance import MaintenanceMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.request_id import RequestIDMiddleware
 from app.middleware.timing import TimingMiddleware
+from app.middleware.xss_guard import XSSGuardMiddleware
 logger = logging.getLogger(__name__)
 
 
@@ -89,6 +90,7 @@ app.add_middleware(RequestIDMiddleware)
 app.add_middleware(TimingMiddleware)
 app.add_middleware(MaintenanceMiddleware)
 app.add_middleware(RateLimitMiddleware)
+app.add_middleware(XSSGuardMiddleware)
 
 app.include_router(battle_ws_router)
 app.include_router(metrics_router)
@@ -119,13 +121,18 @@ async def global_exception_handler(
     request: Request,
     exc: Exception,
 ):
-    logger.error(f"Global exception on {request.url.path}: {exc}", exc_info=True)
+    logger.error(
+        "Unhandled exception on %s %s: %s",
+        request.method,
+        request.url.path,
+        exc,
+        exc_info=True,
+    )
     return JSONResponse(
         status_code=500,
         content={
             "success": False,
             "message": "Internal Server Error",
-            "detail": str(exc),
             "path": request.url.path,
         },
     )
