@@ -43,39 +43,39 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative overflow-hidden rounded-2xl border border-cyan-500/10 bg-gradient-to-br from-[#070B14] via-[#0F172A]/90 to-[#020617] p-4 shadow-2xl shadow-black/70 sm:rounded-3xl sm:p-8"
+        className="relative overflow-hidden rounded-2xl border border-cyan-500/10 bg-gradient-to-br from-[#070B14] via-[#0F172A]/90 to-[#020617] p-3 shadow-2xl shadow-black/70 sm:rounded-2xl sm:p-5"
       >
         <div className="absolute top-0 right-0 h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl animate-pulse pointer-events-none" />
         <div className="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-violet-500/10 blur-3xl animate-pulse pointer-events-none" />
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f293710_1px,transparent_1px),linear-gradient(to_bottom,#1f293710_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-30 pointer-events-none" />
 
-        <div className="relative z-10 grid grid-cols-1 items-center gap-5 xl:grid-cols-12 xl:gap-8">
+        <div className="relative z-10 grid grid-cols-1 items-center gap-4 xl:grid-cols-12 xl:gap-5">
           {/* Left: Avatar + Info */}
-          <div className="flex min-w-0 flex-row items-center gap-3 sm:gap-6 xl:col-span-6">
+          <div className="flex min-w-0 flex-row items-center gap-3 sm:gap-4 xl:col-span-6">
             <div className="relative flex-shrink-0">
               <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 opacity-70 blur-md animate-pulse" />
               <div className="relative rounded-3xl border border-white/20 bg-slate-950 p-1">
                 <Image
                   src={user.avatar_url || `https://ui-avatars.com/api/?name=${user.username}&background=0F172A&color=06b6d4&size=128&bold=true`}
                   alt={user.full_name}
-                  width={112}
-                  height={112}
-                  sizes="112px"
-                  className="h-20 w-20 rounded-2xl object-cover sm:h-28 sm:w-28"
+                  width={88}
+                  height={88}
+                  sizes="88px"
+                  className="h-16 w-16 rounded-xl object-cover sm:h-20 sm:w-20"
                 />
               </div>
-              <span className="absolute -bottom-3 -right-2 flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-xs font-black text-white shadow-lg border border-cyan-400/40">
+              <span className="absolute -bottom-2 -right-1 flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 text-[10px] font-black text-white shadow-lg border border-cyan-400/40">
                 {level}
               </span>
             </div>
 
-            <div className="min-w-0 flex-1 space-y-1.5 text-left sm:space-y-2.5">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-center sm:justify-start">
-                <h1 className="flex min-w-0 items-center gap-1.5 truncate text-xl font-black tracking-tight text-white sm:gap-2 sm:text-4xl">
+            <div className="min-w-0 flex-1 space-y-1 text-left sm:space-y-1.5">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-center sm:justify-start">
+                <h1 className="flex min-w-0 items-center gap-1.5 truncate text-lg font-black tracking-tight text-white sm:gap-2 sm:text-2xl">
                   {user.full_name}
                   <Sparkles size={20} className="text-cyan-400 animate-pulse flex-shrink-0" />
                 </h1>
-                <span className="hidden self-center rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3.5 py-1 text-xs font-bold uppercase tracking-widest text-cyan-400 sm:inline-flex">
+                <span className="hidden self-center rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-cyan-400 sm:inline-flex">
                   Lv.{level} Player
                 </span>
               </div>
@@ -84,14 +84,14 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
               </p>
 
               {/* Quick stat row */}
-              <div className="mt-2 flex max-w-full gap-2 overflow-x-auto pb-1 sm:mt-3 sm:flex-wrap sm:justify-start sm:gap-3 sm:overflow-visible sm:pb-0">
+              <div className="mt-1.5 flex max-w-full gap-1.5 overflow-x-auto pb-1 sm:mt-2 sm:flex-wrap sm:justify-start sm:gap-2 sm:overflow-visible sm:pb-0">
                 {[
                   { icon: Trophy, label: `${stats.battles_won} Wins`, color: "text-yellow-400" },
                   { icon: Target, label: `${winRate}% Win Rate`, color: "text-emerald-400" },
                   { icon: Shield, label: `${stats.rating} Rating`, color: "text-cyan-400" },
                   { icon: Clock, label: `${stats.streak} Day Streak`, color: "text-orange-400" },
                 ].map(({ icon: Icon, label, color }) => (
-                  <div key={label} className="flex shrink-0 items-center gap-1.5 rounded-xl border border-white/5 bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold sm:px-3 sm:text-xs">
+                  <div key={label} className="flex shrink-0 items-center gap-1 rounded-lg border border-white/5 bg-white/5 px-2 py-1 text-[10px] font-semibold sm:px-2.5 sm:text-[11px]">
                     <Icon size={12} className={color} />
                     <span className="text-slate-300">{label}</span>
                   </div>
@@ -101,11 +101,11 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
           </div>
 
           {/* Right: XP + Stats */}
-          <div className="flex w-full flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-center xl:col-span-6 xl:justify-end">
+          <div className="flex w-full flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-center xl:col-span-6 xl:justify-end">
             <div className="w-full sm:w-auto flex-shrink-0">
               <XPProgress currentXP={stats.xp} nextLevelXP={nextLevelXP} />
             </div>
-            <div className="grid w-full flex-shrink-0 grid-cols-2 gap-2.5 sm:w-56 sm:gap-3.5">
+            <div className="grid w-full flex-shrink-0 grid-cols-2 gap-2 sm:w-52 sm:gap-2.5">
               {[
                 { label: "XP Points", val: stats.xp.toLocaleString(), icon: Zap, color: "text-violet-400", border: "border-violet-500/20", glow: "hover:shadow-[0_0_15px_rgba(139,92,246,0.2)] hover:border-violet-500/40" },
                 { label: "Rating", val: stats.rating, icon: Trophy, color: "text-yellow-400", border: "border-yellow-500/20", glow: "hover:shadow-[0_0_15px_rgba(250,204,21,0.2)] hover:border-yellow-500/40" },
@@ -114,8 +114,8 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
               ].map((card) => {
                 const Icon = card.icon;
                 return (
-                  <div key={card.label} className={`rounded-2xl border ${card.border} bg-[#070B14]/40 p-3 backdrop-blur-xl transition-all duration-300 sm:p-3.5 ${card.glow}`}>
-                    <Icon size={15} className={`${card.color} mb-1.5`} />
+                  <div key={card.label} className={`rounded-xl border ${card.border} bg-[#070B14]/40 p-2.5 backdrop-blur-xl transition-all duration-300 sm:p-3 ${card.glow}`}>
+                    <Icon size={14} className={`${card.color} mb-1`} />
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{card.label}</span>
                     <span className="mt-0.5 text-base font-black text-white">{card.val}</span>
                   </div>
