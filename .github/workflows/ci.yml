@@ -15,7 +15,7 @@ jobs:
 
       # Backend build verification only (no tests)
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -27,6 +27,12 @@ jobs:
           echo "✅ Backend dependencies OK"
 
       - name: Verify backend imports
+        env:
+          DATABASE_TYPE: sqlite
+          DATABASE_URL: sqlite:///./ci.db
+          ASYNC_DATABASE_URL: sqlite+aiosqlite:///./ci.db
+          ENVIRONMENT: development
+          PYTHONPATH: ${{ github.workspace }}/backend
         run: |
           cd backend
           python -c "from app.main import app; print('✅ Backend app imports successfully')"

@@ -25,6 +25,8 @@ logger = logging.getLogger(__name__)
 
 def normalize_async_database_url(url: str) -> str:
     """Convert libpq SSL options to parameters supported by asyncpg."""
+    if not url.startswith("postgresql"):
+        return url
     parts = urlsplit(url)
     query = []
     for key, value in parse_qsl(parts.query, keep_blank_values=True):
