@@ -101,7 +101,7 @@ export default function DailyChallengePage() {
 
   return (
     <DashboardLayout>
-      <div className="mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="mb-4 flex flex-col items-start justify-between gap-3 md:flex-row md:items-center">
         <div>
           <div className="flex items-center gap-3 flex-wrap">
             <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-300">
@@ -111,7 +111,7 @@ export default function DailyChallengePage() {
               {challenge.difficulty}
             </span>
           </div>
-          <h1 className="mt-3 text-3xl font-black tracking-tight text-white md:text-4xl">
+          <h1 className="mt-2 text-2xl font-black tracking-tight text-white md:text-4xl">
             {challenge.title}
           </h1>
         </div>
@@ -144,8 +144,8 @@ export default function DailyChallengePage() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
-        <aside className={`${activeTab === "description" ? "block" : "hidden md:block"} rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-[0_30px_80px_rgba(15,23,42,0.7)] backdrop-blur-xl md:col-span-5`}>
+      <div className="grid min-h-0 grid-cols-1 gap-3 md:grid-cols-12 lg:h-[calc(100vh-230px)] lg:gap-3">
+        <aside className={`${activeTab === "description" ? "block" : "hidden md:block"} min-h-0 overflow-y-auto rounded-xl border border-white/10 bg-slate-900/70 p-5 shadow-[0_30px_80px_rgba(15,23,42,0.7)] backdrop-blur-xl md:col-span-5`}>
           <div className="mb-5 flex items-center justify-between">
             <h2 className="text-lg font-bold text-white">Problem Statement</h2>
             <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-violet-300">
@@ -171,8 +171,8 @@ export default function DailyChallengePage() {
           </div>
         </aside>
 
-        <section className={`${activeTab === "description" ? "hidden md:flex" : "flex"} flex-col gap-4 md:col-span-7`}>
-          <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-4 shadow-[0_16px_60px_rgba(15,23,42,0.75)] backdrop-blur-xl">
+        <section className={`${activeTab === "description" ? "hidden md:flex" : "flex"} min-h-0 flex-col gap-3 md:col-span-7`}>
+          <div className="min-h-0 flex-1 rounded-xl border border-white/10 bg-slate-900/80 p-3 shadow-[0_16px_60px_rgba(15,23,42,0.75)] backdrop-blur-xl">
             <div className="mb-3 flex flex-col gap-3 border-b border-white/10 pb-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Language</label>
@@ -209,13 +209,13 @@ export default function DailyChallengePage() {
             <textarea
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              className={`${activeTab === "editor" ? "block" : "hidden md:block"} h-[calc(100vh-140px)] w-full resize-none rounded-2xl border border-white/5 bg-slate-950/90 p-4 font-mono text-sm text-cyan-200 outline-none transition focus:border-cyan-500/50 md:h-[420px] focus:border-cyan-500/50`}
+              className={`${activeTab === "editor" ? "block" : "hidden md:block"} h-[calc(100vh-140px)] w-full resize-none rounded-lg border border-white/5 bg-slate-950/90 p-4 font-mono text-sm text-cyan-200 outline-none transition focus:border-cyan-500/50 md:h-full`}
               placeholder="// Write your algorithm solution here..."
               spellCheck={false}
             />
           </div>
 
-          <div className={`${activeTab === "terminal" ? "block" : "hidden md:block"} rounded-3xl border border-white/10 bg-slate-950/80 p-4 font-mono text-xs text-slate-300 shadow-inner shadow-slate-950/80`}>
+          <div className={`${activeTab === "terminal" ? "block" : "hidden md:block"} min-h-[220px] rounded-xl border border-white/10 bg-slate-950/80 p-3 font-mono text-xs text-slate-300 shadow-inner shadow-slate-950/80 lg:h-56`}>
             <div className="mb-2 flex items-center justify-between border-b border-white/5 pb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
               <span>Console</span>
               <span>UTF-8</span>
@@ -237,7 +237,7 @@ export default function DailyChallengePage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
           <div className="rounded-3xl border border-cyan-500/40 bg-slate-900 p-8 max-w-md text-center shadow-2xl shadow-cyan-500/30 transform animate-bounce">
             <div className="text-6xl mb-4">🏆</div>
-            <h2 className="text-3xl font-black text-white">Challenge Completed!</h2>
+            <h2 className="text-3xl font-black text-white">All Test Cases Passed!</h2>
             <p className="mt-2 text-slate-400">You've successfully solved today's daily mission!</p>
             <div className="my-6 rounded-2xl bg-gradient-to-r from-cyan-500/20 to-violet-500/20 border border-cyan-500/30 p-4 text-cyan-300 font-extrabold text-2xl">
               +{xpEarned} XP Earned

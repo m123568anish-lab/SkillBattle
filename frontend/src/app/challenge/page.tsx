@@ -131,17 +131,17 @@ export default function LeetCodeMobileChallengePage() {
   return (
     <DashboardLayout>
       {/* ── Main Mobile / Desktop LeetCode Arena Wrapper ── */}
-      <div className="min-h-[85vh] bg-[#141414] text-[#eff1f6] rounded-3xl border border-white/10 p-3 sm:p-6 shadow-2xl relative pb-28 lg:pb-6">
+      <div className="relative min-h-[calc(100vh-150px)] overflow-hidden rounded-2xl border border-white/10 bg-[#1a1a1a] text-[#eff1f6] shadow-2xl lg:min-h-[calc(100vh-128px)] lg:rounded-xl lg:pb-4">
         
         {/* ── Top Header / Segmented Navigation Bar ── */}
-        <div className="mb-4 flex flex-col gap-3 border-b border-white/10 pb-4">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+        <div className="border-b border-white/10 bg-[#1f1f1f] px-3 pb-3 pt-3 sm:px-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="flex min-w-0 items-center gap-2 truncate text-base font-bold tracking-tight text-white sm:text-xl">
                 <span className="text-cyan-400 font-mono">1.</span> Two Sum
               </span>
-              <span className="rounded-full bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-0.5 text-xs font-bold text-emerald-400">
-                Easy
+              <span className="rounded-md border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[11px] font-bold text-emerald-400">
+                {challenge.difficulty}
               </span>
               <span className="hidden sm:inline-flex rounded-full bg-white/5 border border-white/10 px-2.5 py-0.5 text-xs text-slate-400">
                 Topics
@@ -152,12 +152,12 @@ export default function LeetCodeMobileChallengePage() {
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="text-xs font-bold text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-3 py-1 rounded-xl">
+              <span className="hidden text-xs font-bold text-yellow-400 sm:inline-flex">
                 +100 XP
               </span>
               <button
                 onClick={() => router.push("/dashboard")}
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-300 hover:text-white transition"
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:text-white"
               >
                 ← Exit
               </button>
@@ -165,7 +165,7 @@ export default function LeetCodeMobileChallengePage() {
           </div>
 
           {/* ── Mobile Segmented Tab Bar (Description / Editor / Testcase / Solutions) ── */}
-          <div className="flex items-center gap-1 rounded-xl bg-[#262626] p-1 text-xs font-bold w-full max-w-md">
+          <div className="mt-3 flex w-full max-w-md items-center gap-1 rounded-lg bg-[#292929] p-1 text-[11px] font-bold md:hidden">
             {[
               { id: "description", label: "Description", icon: FileText },
               { id: "editor", label: "Code", icon: Code2 },
@@ -192,7 +192,7 @@ export default function LeetCodeMobileChallengePage() {
         </div>
 
         {/* ── Dynamic Main Content Layout ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid min-h-0 grid-cols-1 gap-3 p-3 sm:p-5 lg:h-[calc(100vh-230px)] lg:grid-cols-12 lg:gap-3">
 
           {/* ── Left / Description Panel (Visible on Desktop OR when activeTab === "description") ── */}
           <div
@@ -200,8 +200,8 @@ export default function LeetCodeMobileChallengePage() {
               activeTab === "description" ? "flex" : "hidden lg:flex"
             }`}
           >
-            <div className="rounded-2xl border border-white/10 bg-[#1e1e1e] p-5 space-y-4">
-              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+            <div className="min-h-0 overflow-y-auto rounded-xl border border-white/10 bg-[#202020] p-4 sm:p-5">
+              <h3 className="flex items-center gap-2 border-b border-white/10 pb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
                 <FileText size={16} className="text-cyan-400" /> Problem Statement
               </h3>
               <p className="text-sm leading-relaxed text-slate-200 font-sans">
@@ -262,7 +262,7 @@ export default function LeetCodeMobileChallengePage() {
             }`}
           >
             {/* ── Code Editor Component ── */}
-            <div className={`${activeTab === "editor" ? "flex" : "hidden lg:flex"} rounded-2xl border border-white/10 bg-[#1e1e1e] p-4 flex-col gap-3`}>
+            <div className={`${activeTab === "editor" ? "flex" : "hidden lg:flex"} min-h-0 flex-1 flex-col gap-3 rounded-xl border border-white/10 bg-[#202020] p-3`}>
                 {/* Editor Header Toolbar */}
                 <div className="flex items-center justify-between border-b border-white/10 pb-3">
                   <div className="flex items-center gap-2">
@@ -297,7 +297,7 @@ export default function LeetCodeMobileChallengePage() {
                 </div>
 
                 {/* Editor Area with Monospaced Line Numbers */}
-                <div className="relative flex h-[calc(100vh-140px)] min-h-[280px] overflow-hidden rounded-xl border border-white/5 bg-[#141414] font-mono text-xs lg:h-[calc(100vh-260px)]">
+                <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-lg border border-white/5 bg-[#141414] font-mono text-xs lg:h-auto">
                   {/* Line Numbers */}
                   <div className="select-none py-3 px-2 text-right bg-[#1a1a1a] text-slate-600 border-r border-white/5 font-mono text-[11px] leading-5 min-w-[32px]">
                     {lineNumbers.map((n) => (
@@ -317,7 +317,7 @@ export default function LeetCodeMobileChallengePage() {
             </div>
 
             {/* ── Testcase & Console Output Panel (Visible when activeTab === "testcase" or output exists) ── */}
-            <div className={`${activeTab === "terminal" ? "flex" : "hidden lg:flex"} rounded-2xl border border-white/10 bg-[#1e1e1e] p-4 flex-col gap-3 font-mono text-xs`}>
+            <div className={`${activeTab === "terminal" ? "flex" : "hidden lg:flex"} min-h-[220px] flex-col gap-3 rounded-xl border border-white/10 bg-[#202020] p-3 font-mono text-xs lg:h-56 lg:min-h-0`}>
               <div className="flex items-center justify-between border-b border-white/10 pb-2 font-sans text-slate-400">
                 <span className="font-bold flex items-center gap-2">
                   <Terminal size={14} className="text-cyan-400" /> Console & Testcase
@@ -354,7 +354,7 @@ export default function LeetCodeMobileChallengePage() {
         </div>
 
         {/* ── LeetCode Mobile Sticky Bottom Action Bar ── */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 mx-auto flex max-w-screen-2xl items-center justify-between border-t border-white/10 bg-[#1a1a1a]/95 p-3 backdrop-blur-xl lg:static lg:mt-4 lg:rounded-2xl lg:border lg:bg-[#1a1a1a]">
+        <div className="fixed bottom-0 left-0 right-0 z-40 mx-auto flex max-w-screen-2xl items-center justify-between border-t border-white/10 bg-[#1a1a1a]/95 p-3 backdrop-blur-xl lg:static lg:mt-3 lg:rounded-lg lg:border lg:bg-[#232323]">
           {/* Left: Terminal Console Toggle */}
           <button
             onClick={() => setActiveTab(activeTab === "terminal" ? "editor" : "terminal")}
@@ -396,7 +396,7 @@ export default function LeetCodeMobileChallengePage() {
             className="rounded-3xl border border-cyan-500/40 bg-[#181818] p-8 max-w-md text-center shadow-2xl shadow-cyan-500/30"
           >
             <div className="text-6xl mb-4 animate-bounce">🏆</div>
-            <h2 className="text-3xl font-black text-white">Accepted!</h2>
+            <h2 className="text-3xl font-black text-white">All Test Cases Passed!</h2>
             <p className="mt-2 text-slate-400 text-sm">Runtime: {submissionStats.executionTime} ms · Memory: {submissionStats.memoryUsed} MB</p>
             <p className="mt-1 text-xs text-slate-500">Passed {submissionStats.passedTests}/{submissionStats.totalTests} hidden test cases</p>
             <div className="my-6 rounded-2xl bg-gradient-to-r from-cyan-500/20 to-violet-500/20 border border-cyan-500/30 p-4 text-cyan-300 font-black text-3xl">
