@@ -111,15 +111,16 @@ class XPService:
 
         xp.level = (xp.total_xp // 500) + 1
 
+        current_user.coding_rating = (current_user.coding_rating or 1200) + (amount // 2)
+        db.add(current_user)
+
         xp = await xp_repository.update(
-
             db,
-
             xp,
-
         )
 
         await xp_repository.commit(db)
+
 
         logger.info(
 

@@ -49,19 +49,25 @@ class DashboardService:
             current_user.id,
         )
 
-        # Defensive defaults for fields that may be None for new users
-        xp = user.coding_rating or 0
+        from app.modules.xp.service import xp_service
 
-        level = max(1, xp // 1000)
+        user_xp = await xp_service.get_user_xp(db, current_user)
+        total_xp = user_xp.total_xp if user_xp else 0
+        user_level = user_xp.level if user_xp else max(1, (total_xp // 500) + 1)
+        
+        # Calculate live rating (defaulting to 1200 for new users + bonus from XP)
+        base_rating = user.coding_rating if (user.coding_rating and user.coding_rating > 0) else 1200
+        rating = base_rating + (total_xp // 10)
 
         stats = DashboardStats(
-            xp=xp,
-            level=level,
-            streak=user.login_count,
-            rating=user.coding_rating,
+            xp=total_xp,
+            level=user_level,
+            streak=max(1, user.login_count or 1),
+            rating=rating,
             battles_played=20,
             battles_won=14,
         )
+
 
         weekly = [
             WeeklyActivity(day="Mon", xp=120),

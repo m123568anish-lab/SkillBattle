@@ -56,9 +56,9 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
         <div className="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-violet-500/10 blur-3xl animate-pulse pointer-events-none" />
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f293710_1px,transparent_1px),linear-gradient(to_bottom,#1f293710_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-30 pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative z-10 grid grid-cols-1 xl:grid-cols-12 gap-8 items-center">
           {/* Left: Avatar + Info */}
-          <div className="flex flex-col sm:flex-row items-center gap-6 flex-1">
+          <div className="xl:col-span-6 flex flex-col sm:flex-row items-center gap-6">
             <div className="relative flex-shrink-0">
               <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 opacity-70 blur-md animate-pulse" />
               <div className="relative rounded-3xl border border-white/20 bg-slate-950 p-1">
@@ -76,17 +76,17 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
               </span>
             </div>
 
-            <div className="text-center sm:text-left space-y-2.5">
+            <div className="text-center sm:text-left space-y-2.5 min-w-0 flex-1">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-center sm:justify-start">
-                <h1 className="text-3xl font-black text-white tracking-tight sm:text-4xl flex items-center gap-2 justify-center sm:justify-start">
+                <h1 className="text-3xl font-black text-white tracking-tight sm:text-4xl flex items-center gap-2 justify-center sm:justify-start truncate">
                   {user.full_name}
-                  <Sparkles size={20} className="text-cyan-400 animate-pulse" />
+                  <Sparkles size={20} className="text-cyan-400 animate-pulse flex-shrink-0" />
                 </h1>
-                <span className="self-center rounded-full bg-cyan-500/10 border border-cyan-500/20 px-3.5 py-1 text-xs font-bold text-cyan-400 uppercase tracking-widest">
+                <span className="self-center rounded-full bg-cyan-500/10 border border-cyan-500/20 px-3.5 py-1 text-xs font-bold text-cyan-400 uppercase tracking-widest flex-shrink-0">
                   Lv.{level} Player
                 </span>
               </div>
-              <p className="text-sm font-semibold text-slate-400">
+              <p className="text-sm font-semibold text-slate-400 truncate">
                 @{user.username} · <span className="text-slate-500">{user.email}</span>
               </p>
 
@@ -108,11 +108,11 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
           </div>
 
           {/* Right: XP + Stats */}
-          <div className="flex flex-col md:flex-row items-center gap-6 justify-center lg:justify-end">
-            <div className="w-full sm:w-auto">
+          <div className="xl:col-span-6 flex flex-col sm:flex-row items-center gap-6 justify-center xl:justify-end w-full">
+            <div className="w-full sm:w-auto flex-shrink-0">
               <XPProgress currentXP={stats.xp} nextLevelXP={nextLevelXP} />
             </div>
-            <div className="grid grid-cols-2 gap-3.5 w-full md:w-64">
+            <div className="grid grid-cols-2 gap-3.5 w-full sm:w-56 flex-shrink-0">
               {[
                 { label: "XP Points", val: stats.xp.toLocaleString(), icon: Zap, color: "text-violet-400", border: "border-violet-500/20", glow: "hover:shadow-[0_0_15px_rgba(139,92,246,0.2)] hover:border-violet-500/40" },
                 { label: "Rating", val: stats.rating, icon: Trophy, color: "text-yellow-400", border: "border-yellow-500/20", glow: "hover:shadow-[0_0_15px_rgba(250,204,21,0.2)] hover:border-yellow-500/40" },
@@ -132,6 +132,7 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
           </div>
         </div>
       </motion.section>
+
 
       {/* ── Bottom Row: Leaderboard + Study Activity ── */}
       <div className="grid gap-6 lg:grid-cols-2">
