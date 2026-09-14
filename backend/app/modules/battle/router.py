@@ -39,6 +39,10 @@ from app.modules.battle.timer import (
     battle_timer,
 )
 
+from app.modules.xp.service import (
+    xp_service,
+)
+
 router = APIRouter(
     prefix="/battle",
     tags=["Battle"],
@@ -438,36 +442,32 @@ async def solo_finish(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Add XP
-    result = await db.execute(select(XP).where(XP.user_id == current_user.id))
-    xp_record = result.scalar_one_or_none()
-    if not xp_record:
-        xp_record = XP(user_id=current_user.id, total_xp=0, weekly_xp=0)
-        db.add(xp_record)
-    
-    xp_record.total_xp += request.xp_earned
-    xp_record.weekly_xp += request.xp_earned
-    
-    # Track Skills
-    for res in request.mcq_results:
+    if request.xp_earned:
+        await xp_service.add_xp(
+            db,
+            current_user,
+            request.xp_earned,
+        )
+
+    for res in request.mcq_results or []:
         stmt = select(UserSkillStat).where(
             UserSkillStat.user_id == current_user.id,
-            UserSkillStat.subject == res.category
+            UserSkillStat.subject == res.category,
         )
         stat = (await db.execute(stmt)).scalar_one_or_none()
-        
+
         if not stat:
             stat = UserSkillStat(
                 user_id=current_user.id,
                 subject=res.category,
                 correct_attempts=0,
-                total_attempts=0
+                total_attempts=0,
             )
             db.add(stat)
-            
+
         stat.total_attempts += 1
         if res.correct:
             stat.correct_attempts += 1
-            
+
     await db.commit()
     return {"status": "success", "xp_added": request.xp_earned}

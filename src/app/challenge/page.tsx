@@ -99,76 +99,74 @@ export default function DailyChallengePage() {
 
   return (
     <DashboardLayout>
-      {/* Header */}
       <div className="mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <span className="rounded-full bg-cyan-500/20 px-3 py-1 text-xs font-bold text-cyan-300 border border-cyan-500/30">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-300">
               ⚡ Daily Mission
             </span>
-            <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-300 border border-emerald-500/30">
+            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-300">
               {challenge.difficulty}
             </span>
           </div>
-          <h1 className="mt-2 text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="mt-3 text-3xl font-black tracking-tight text-white md:text-4xl">
             {challenge.title}
           </h1>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-yellow-300 font-bold text-sm flex items-center gap-2">
-            ⭐ Reward: +{challenge.xp_reward} XP
+        <div className="flex items-center gap-3">
+          <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-sm font-bold text-yellow-300">
+            ⭐ +{challenge.xp_reward} XP
           </div>
           <button
             onClick={() => router.push("/dashboard")}
-            className="rounded-xl border border-white/10 bg-slate-900/80 px-4 py-2 text-sm font-semibold text-slate-300 hover:text-white transition"
+            className="rounded-xl border border-white/10 bg-slate-900/80 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:text-white"
           >
             ← Exit
           </button>
         </div>
       </div>
 
-      {/* Main IDE Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Problem Description */}
-        <div className="lg:col-span-5 rounded-2xl border border-white/10 bg-slate-900/70 p-6 backdrop-blur-xl flex flex-col justify-between">
-          <div>
-            <h3 className="text-lg font-bold text-white mb-3">Problem Description</h3>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              {challenge.description}
-            </p>
-
-            <div className="mt-6 rounded-xl border border-white/5 bg-slate-800/40 p-4">
-              <h4 className="text-xs uppercase font-bold text-slate-400 mb-2">Constraints</h4>
-              <ul className="text-xs text-slate-300 space-y-1 font-mono">
-                <li>• 1 ≤ N ≤ 10^5</li>
-                <li>• Time Limit: 2.0 seconds</li>
-                <li>• Memory Limit: 256 MB</li>
-              </ul>
-            </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.05fr_1.6fr]">
+        <aside className="rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-[0_30px_80px_rgba(15,23,42,0.7)] backdrop-blur-xl">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-white">Problem Statement</h2>
+            <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-violet-300">
+              {challenge.difficulty}
+            </span>
           </div>
 
-          <div className="mt-6 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4 text-xs text-cyan-300">
-            💡 <strong>Pro Tip:</strong> Submitting your first solution of the day doubles your streak multiplier!
-          </div>
-        </div>
+          <p className="text-sm leading-7 text-slate-300">
+            {challenge.description}
+          </p>
 
-        {/* Right: Code Editor & Terminal */}
-        <div className="lg:col-span-7 flex flex-col gap-4">
-          {/* Editor Container */}
-          <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 backdrop-blur-xl">
-            {/* Toolbar */}
-            <div className="mb-3 flex items-center justify-between border-b border-white/10 pb-3">
+          <div className="mt-6 rounded-2xl border border-white/5 bg-slate-800/50 p-4">
+            <h3 className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Constraints</h3>
+            <ul className="space-y-2 text-xs text-slate-200">
+              <li>• 1 ≤ N ≤ 10^5</li>
+              <li>• Time Limit: 2.0s</li>
+              <li>• Memory Limit: 256 MB</li>
+            </ul>
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4 text-xs leading-6 text-cyan-200">
+            💡 <strong>Pro Tip:</strong> Submit a correct solution to claim the daily streak bonus and keep your rating climbing.
+          </div>
+        </aside>
+
+        <section className="flex flex-col gap-4">
+          <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-4 shadow-[0_16px_60px_rgba(15,23,42,0.75)] backdrop-blur-xl">
+            <div className="mb-3 flex flex-col gap-3 border-b border-white/10 pb-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
-                <label className="text-xs font-semibold text-slate-400">Language:</label>
+                <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Language</label>
                 <select
                   value={language}
                   onChange={(e) => handleLangChange(e.target.value)}
-                  className="rounded-lg border border-white/10 bg-slate-800 px-3 py-1 text-xs text-white focus:outline-none focus:border-cyan-500 font-medium"
+                  className="rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-medium text-white outline-none transition focus:border-cyan-500"
                 >
                   <option value="python">Python 3</option>
-                  <option value="javascript">JavaScript (Node)</option>
-                  <option value="cpp">C++ (GCC)</option>
+                  <option value="javascript">JavaScript</option>
+                  <option value="cpp">C++</option>
                   <option value="java">Java 17</option>
                 </select>
               </div>
@@ -177,41 +175,39 @@ export default function DailyChallengePage() {
                 <button
                   onClick={handleRun}
                   disabled={running || submitting}
-                  className="rounded-xl border border-white/10 bg-slate-800 px-4 py-1.5 text-xs font-semibold text-white hover:bg-slate-700 transition disabled:opacity-50"
+                  className="rounded-xl border border-white/10 bg-slate-800 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {running ? "Executing..." : "▶ Run Code"}
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={running || submitting}
-                  className="rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-5 py-1.5 text-xs font-bold text-slate-950 shadow-lg shadow-emerald-500/20 hover:opacity-90 transition disabled:opacity-50"
+                  className="rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-5 py-2 text-xs font-bold text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {submitting ? "Evaluating..." : "🚀 Submit Solution"}
+                  {submitting ? "Evaluating..." : "🚀 Submit"}
                 </button>
               </div>
             </div>
 
-            {/* Code Input Area */}
             <textarea
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              className="w-full h-80 rounded-xl border border-white/5 bg-slate-950/90 p-4 font-mono text-sm text-cyan-200 focus:outline-none focus:border-cyan-500/50 resize-none"
+              className="h-[420px] w-full resize-none rounded-2xl border border-white/5 bg-slate-950/90 p-4 font-mono text-sm text-cyan-200 outline-none transition focus:border-cyan-500/50"
               placeholder="// Write your algorithm solution here..."
               spellCheck={false}
             />
           </div>
 
-          {/* Terminal / Output Box */}
-          <div className="rounded-2xl border border-white/10 bg-slate-950 p-4 font-mono text-xs text-slate-300">
-            <div className="mb-2 flex items-center justify-between text-slate-500 font-sans border-b border-white/5 pb-2">
-              <span>Terminal & Verdict Output</span>
+          <div className="rounded-3xl border border-white/10 bg-slate-950/80 p-4 font-mono text-xs text-slate-300 shadow-inner shadow-slate-950/80">
+            <div className="mb-2 flex items-center justify-between border-b border-white/5 pb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
+              <span>Console</span>
               <span>UTF-8</span>
             </div>
-            <pre className="whitespace-pre-wrap min-h-[80px] max-h-40 overflow-y-auto font-mono text-emerald-400">
+            <pre className="max-h-44 min-h-[90px] overflow-y-auto whitespace-pre-wrap text-emerald-400">
               {output || "Output will appear here after running or submitting..."}
             </pre>
           </div>
-        </div>
+        </section>
       </div>
 
       {/* Celebratory XP Modal */}

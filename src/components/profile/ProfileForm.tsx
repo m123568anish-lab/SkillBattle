@@ -80,6 +80,7 @@ export default function ProfileForm() {
 
     try {
       await profileService.updateProfile({
+        full_name: profile.full_name,
         avatar: profile.avatar,
         bio: profile.bio,
         college: profile.college,

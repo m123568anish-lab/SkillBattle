@@ -94,7 +94,7 @@ export default function DashboardLayout({
           overflow-auto
           p-4
           sm:p-8
-          pb-24
+          pb-28
           lg:pb-8
         "
       >
@@ -104,28 +104,33 @@ export default function DashboardLayout({
 
       </section>
 
-      {/* Mobile Sticky Bottom Navigation Dock */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 lg:hidden border-t border-white/10 bg-[#070B14]/90 p-3 backdrop-blur-lg flex justify-around items-center">
-        {[
-          { title: "Home", href: "/dashboard", icon: sidebarItems[0].icon },
-          { title: "Battle", href: "/battle", icon: sidebarItems[2].icon },
-          { title: "Leaderboard", href: "/leaderboard", icon: sidebarItems[7].icon },
-          { title: "Profile", href: "/profile", icon: sidebarItems[12].icon },
-        ].map((tab) => {
-          const active = pathname === tab.href;
-          return (
-            <Link
-              key={tab.title}
-              href={tab.href}
-              className={`flex flex-col items-center gap-1 text-[10px] font-bold tracking-wider uppercase transition ${
-                active ? "text-cyan-400 scale-105" : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              <tab.icon size={20} />
-              <span>{tab.title}</span>
-            </Link>
-          );
-        })}
+      {/* Mobile glass-floating bottom navigation */}
+      <div className="fixed inset-x-0 bottom-3 z-30 flex justify-center px-3 lg:hidden">
+        <nav className="flex w-full max-w-md items-center justify-between rounded-full border border-white/10 bg-slate-950/75 p-2 shadow-[0_20px_60px_rgba(8,145,178,0.25)] backdrop-blur-xl">
+          {[
+            { title: "Home", href: "/dashboard", icon: sidebarItems[0].icon },
+            { title: "Battle", href: "/battle", icon: sidebarItems[1].icon },
+            { title: "Rank", href: "/leaderboard", icon: sidebarItems[3].icon },
+            { title: "Profile", href: "/profile", icon: sidebarItems[10].icon },
+          ].map((tab) => {
+            const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+            const Icon = tab.icon;
+            return (
+              <Link
+                key={tab.title}
+                href={tab.href}
+                className={`flex w-1/4 flex-col items-center justify-center gap-1 rounded-full px-2 py-2 text-[10px] font-bold uppercase tracking-[0.14em] transition ${
+                  active
+                    ? "bg-gradient-to-b from-cyan-500/25 to-violet-500/20 text-cyan-300 shadow-lg shadow-cyan-500/20"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <Icon size={18} />
+                <span>{tab.title}</span>
+              </Link>
+            );
+          })}
+        </nav>
       </div>
     </main>
   );

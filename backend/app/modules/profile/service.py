@@ -120,15 +120,15 @@ class ProfileService:
                 setattr(profile, key, value)
 
         # Sync key profile fields back to the User model so Auth / Navbar see them immediately
-        if data.full_name:
+        if data.full_name is not None:
             current_user.full_name = data.full_name
-        if data.avatar:
+        if data.avatar is not None:
             current_user.avatar_url = data.avatar
-        if data.bio:
+        if data.bio is not None:
             current_user.bio = data.bio
-        if data.github:
+        if data.github is not None:
             current_user.github_url = data.github
-        if data.linkedin:
+        if data.linkedin is not None:
             current_user.linkedin_url = data.linkedin
 
         db.add(current_user)
