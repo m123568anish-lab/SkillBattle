@@ -18,11 +18,8 @@ database_url = str(settings.DATABASE_URL)
 if database_url.startswith("postgresql://"):
     database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
 
-# If using SQLite file DB with a relative path, convert to absolute path inside
-# the backend folder so the DB file is created in the repository and persists.
+# If using SQLite file DB with a relative path, convert to absolute path inside backend folder
 if database_url.startswith("sqlite"):
-    # Expect formats like: sqlite:///./skillbattle.db or sqlite:///skillbattle.db
-    # Extract the path part after 'sqlite:///' and make it absolute under backend.
     try:
         url_path = database_url.split("sqlite:///", 1)[1]
     except Exception:
@@ -38,13 +35,14 @@ if database_url.startswith("sqlite"):
     logger.info("📁 Using SQLite database at %s", database_url)
 else:
     # PostgreSQL configuration
-    engine_kwargs["pool_size"] = 5
-    engine_kwargs["max_overflow"] = 5
-    engine_kwargs["pool_timeout"] = 10
-    engine_kwargs["pool_recycle"] = 300
-    logger.info("🐘 Using PostgreSQL database (pool_size=5)")
-
-logger.info(f"Database URL: {database_url[:200]}")
+    engine_kwargs.update({
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_timeout": 30,
+        "pool_recycle": 1800,
+        "pool_pre_ping": True,
+    })
+    logger.info("🐘 Enterprise Sync engine configured for PostgreSQL (pool_size=10, max_overflow=20)")
 
 # Create engine
 engine = create_engine(database_url, **engine_kwargs)
@@ -61,4 +59,4 @@ def get_db():
     try:
         yield db
     finally:
-        db.close()
+        db.close()

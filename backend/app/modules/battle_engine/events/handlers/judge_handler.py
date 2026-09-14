@@ -1,21 +1,17 @@
-from app.modules.battle_engine.events.event import (
-    BattleEvent,
-)
+import logging
+from app.modules.battle_event import BattleEvent if False else object
+from app.modules.battle_engine.events.event import BattleEvent
+
+logger = logging.getLogger(__name__)
 
 
 class JudgeHandler:
 
     async def handle(
-
         self,
-
         event: BattleEvent,
-
     ):
-
-        print(
-            f"[Judge] {event.name}"
-        )
+        logger.info("[Judge] Handling event: %s", event.name)
 
 
-judge_handler = JudgeHandler()
+judge_handler = JudgeHandler()

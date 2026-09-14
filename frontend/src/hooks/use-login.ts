@@ -12,29 +12,10 @@ export function useLogin() {
     const [loading, setLoading] = useState(false);
 
     async function signIn(data: LoginRequest) {
-
-        console.log("=================================");
-        console.log("🚀 Login button clicked");
-        console.log("Login Data:", data);
-        console.log("=================================");
-
         setLoading(true);
 
         try {
-
             await login(data);
-
-            console.log("✅ Login Success");
-
-            console.log(
-                "Access Token:",
-                localStorage.getItem("access_token")
-            );
-
-            console.log(
-                "Refresh Token:",
-                localStorage.getItem("refresh_token")
-            );
 
             return {
                 success: true,
@@ -42,24 +23,15 @@ export function useLogin() {
                     access_token: localStorage.getItem("access_token"),
                 },
             };
-
         } catch (error: any) {
-
-            console.error("❌ Login Failed");
-            console.error(error);
-
             const msg = error?.response?.data?.detail || error?.message || "Login failed";
-            toast.error(msg);
-
+            toast.error(typeof msg === "string" ? msg : "Login failed. Please check your credentials.");
             throw error;
-
         } finally {
-
             setLoading(false);
-
         }
-
     }
+
 
     return {
 

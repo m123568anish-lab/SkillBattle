@@ -23,13 +23,10 @@ export default function ResumeUploader() {
     ] = useState<File>();
 
     async function submit() {
-
         if (!file) return;
-
-        const result = await upload(file);
-
-        console.log(result);
+        await upload(file);
     }
+
 
     return (
 

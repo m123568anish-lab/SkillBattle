@@ -5,7 +5,7 @@ SkillBattle
 
 Database Session
 
-Production SQLAlchemy 2.x Async Session
+Production SQLAlchemy 2.x Async Session & Context Manager
 
 =========================================================
 """
@@ -13,7 +13,8 @@ Production SQLAlchemy 2.x Async Session
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from collections.abc import AsyncGenerator, AsyncIterator
 
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -41,13 +42,16 @@ engine_kwargs = {
     "pool_pre_ping": True,
 }
 
-# Optimize for different database types
+# Optimize for PostgreSQL in production environment
 if "postgresql" in DATABASE_URL:
-    engine_kwargs["pool_size"] = 5
-    engine_kwargs["max_overflow"] = 5
-    engine_kwargs["pool_timeout"] = 10
-    engine_kwargs["pool_recycle"] = 300
-    logger.info("🐘 Async engine configured for PostgreSQL (pool_size=5)")
+    engine_kwargs.update({
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_timeout": 30,
+        "pool_recycle": 1800,
+        "pool_pre_ping": True,
+    })
+    logger.info("🐘 Enterprise Async engine configured for PostgreSQL (pool_size=10, max_overflow=20)")
 else:
     logger.info("📁 Async engine configured for SQLite")
 
@@ -73,31 +77,43 @@ engine = create_async_engine(DATABASE_URL, **engine_kwargs)
 # ---------------------------------------------------------
 
 AsyncSessionLocal = async_sessionmaker(
-
     bind=engine,
-
     class_=AsyncSession,
-
     expire_on_commit=False,
-
     autoflush=False,
-
     autocommit=False,
-
 )
 
 # ---------------------------------------------------------
-# Dependency
+# Async Context Manager for Service & Repository Layers
+# ---------------------------------------------------------
+
+@asynccontextmanager
+async def async_session_ctx() -> AsyncIterator[AsyncSession]:
+    """
+    Transactional Async Session Context Manager.
+    Guarantees clean release and commit/rollback handling for all DB operations.
+    Usage:
+        async with async_session_ctx() as session:
+            ...
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+# ---------------------------------------------------------
+# FastAPI Dependency
 # ---------------------------------------------------------
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-
     async with AsyncSessionLocal() as session:
-
         try:
-
             yield session
-
         finally:
-
-            await session.close()
+            await session.close()

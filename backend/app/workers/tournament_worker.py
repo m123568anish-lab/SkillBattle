@@ -8,7 +8,10 @@ Tournament Worker
 
 from __future__ import annotations
 
+import logging
 from app.workers.worker import Worker
+
+logger = logging.getLogger(__name__)
 
 
 class TournamentWorker(Worker):
@@ -19,14 +22,7 @@ class TournamentWorker(Worker):
         self,
         payload: dict,
     ):
-
-        print(
-
-            "Tournament Job",
-
-            payload,
-
-        )
+        logger.info("Tournament Job processed: %s", payload)
 
 
-tournament_worker = TournamentWorker()
+tournament_worker = TournamentWorker()

@@ -9,10 +9,11 @@ Base Worker
 from __future__ import annotations
 
 import asyncio
+import logging
 
-from app.core.redis.queue import (
-    queue_service,
-)
+from app.core.redis.queue import queue_service
+
+logger = logging.getLogger(__name__)
 
 
 class Worker:
@@ -41,8 +42,8 @@ class Worker:
 
                 except Exception as exc:
 
-                    print(exc)
+                    logger.error(f"Error processing job in queue {self.QUEUE}: {exc}", exc_info=True)
 
             else:
 
-                await asyncio.sleep(1)
+                await asyncio.sleep(1)

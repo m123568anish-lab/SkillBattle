@@ -8,11 +8,11 @@ AI Worker
 
 from __future__ import annotations
 
+import logging
 from app.workers.worker import Worker
+from app.modules.ai.provider import ai_provider
 
-from app.modules.ai.provider import (
-    ai_provider,
-)
+logger = logging.getLogger(__name__)
 
 
 class AIWorker(Worker):
@@ -23,20 +23,9 @@ class AIWorker(Worker):
         self,
         payload: dict,
     ):
-
         prompt = payload["prompt"]
-
-        response = await ai_provider.generate(
-            prompt,
-        )
-
-        print(
-
-            "AI Completed",
-
-            response[:100],
-
-        )
+        response = await ai_provider.generate(prompt)
+        logger.info("AI Completed job response prefix: %s", response[:100])
 
 
-ai_worker = AIWorker()
+ai_worker = AIWorker()

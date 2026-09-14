@@ -8,7 +8,10 @@ Battle Worker
 
 from __future__ import annotations
 
+import logging
 from app.workers.worker import Worker
+
+logger = logging.getLogger(__name__)
 
 
 class BattleWorker(Worker):
@@ -19,14 +22,7 @@ class BattleWorker(Worker):
         self,
         payload: dict,
     ):
-
-        print(
-
-            "Battle Job",
-
-            payload,
-
-        )
+        logger.info("Battle Job processed: %s", payload)
 
 
-battle_worker = BattleWorker()
+battle_worker = BattleWorker()

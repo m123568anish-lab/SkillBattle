@@ -33,23 +33,14 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         });
 
         try {
-
-            console.log("📤 Loading Dashboard...");
-
             const data = await dashboardService.getDashboard();
-
-            console.log("📥 Dashboard Response:", data);
 
             set({
                 dashboard: data,
                 loading: false,
                 error: null,
             });
-
         } catch (err: any) {
-
-            console.error("❌ Dashboard Error:", err);
-
             set({
                 loading: false,
                 dashboard: null,
@@ -58,8 +49,8 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
                     err?.message ||
                     "Unable to load dashboard.",
             });
-
         }
+
 
     },
 

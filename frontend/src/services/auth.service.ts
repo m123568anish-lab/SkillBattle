@@ -19,42 +19,27 @@ class AuthService {
     // =========================
 
     async login(data: LoginRequest) {
-
-        console.log("📤 Login Request:", data);
-
         try {
             const response = await api.post(
                 "/auth/login",
                 data,
             );
 
-            console.log("📥 Backend Response:", response.data);
-
             const result = response.data;
 
-            localStorage.setItem(
-                "access_token",
-                result.tokens.access_token
-            );
-
-            localStorage.setItem(
-                "refresh_token",
-                result.tokens.refresh_token
-            );
-
-            console.log("✅ Tokens Saved");
+            if (result?.tokens?.access_token) {
+                localStorage.setItem("access_token", result.tokens.access_token);
+            }
+            if (result?.tokens?.refresh_token) {
+                localStorage.setItem("refresh_token", result.tokens.refresh_token);
+            }
 
             return result.user;
         } catch (err: any) {
-            if (err.response) {
-                console.error("Login failed - response status:", err.response.status);
-                console.error("Login failed - response data:", err.response.data);
-            } else {
-                console.error("Login failed - no response:", err.message || err);
-            }
             throw err;
         }
     }
+
 
     // =========================
 

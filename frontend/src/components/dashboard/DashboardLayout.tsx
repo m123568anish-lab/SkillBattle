@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
-import { X } from "lucide-react";
+import { X, Home, Sword, Trophy, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sidebarItems } from "@/data/dashboard";
 import Link from "next/link";
@@ -107,11 +107,12 @@ export default function DashboardLayout({
       {/* Mobile Sticky Bottom Navigation Dock */}
       <div className="fixed bottom-0 left-0 right-0 z-30 lg:hidden border-t border-white/10 bg-[#070B14]/90 p-3 backdrop-blur-lg flex justify-around items-center">
         {[
-          { title: "Home", href: "/dashboard", icon: sidebarItems[0].icon },
-          { title: "Battle", href: "/battle", icon: sidebarItems[2].icon },
-          { title: "Leaderboard", href: "/leaderboard", icon: sidebarItems[7].icon },
-          { title: "Profile", href: "/profile", icon: sidebarItems[12].icon },
+          { title: "Home", href: "/dashboard", icon: Home },
+          { title: "Battle", href: "/battle", icon: Sword },
+          { title: "Leaderboard", href: "/leaderboard", icon: Trophy },
+          { title: "Profile", href: "/profile", icon: User },
         ].map((tab) => {
+          const Icon = tab.icon;
           const active = pathname === tab.href;
           return (
             <Link
@@ -121,12 +122,14 @@ export default function DashboardLayout({
                 active ? "text-cyan-400 scale-105" : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              <tab.icon size={20} />
+              <Icon size={20} />
               <span>{tab.title}</span>
             </Link>
           );
         })}
       </div>
+
+
     </main>
   );
 }

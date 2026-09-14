@@ -1,14 +1,16 @@
-from fastapi import WebSocket
-from fastapi import WebSocketDisconnect
+import logging
+from fastapi import WebSocket, WebSocketDisconnect
 
 from app.modules.battle_engine.managers.connection_manager import (
     connection_manager,
 )
-
 from app.modules.battle_engine.events import dispatcher
+
+logger = logging.getLogger(__name__)
 
 
 class BattleGateway:
+
 
     async def handle(
         self,
@@ -83,11 +85,12 @@ class BattleGateway:
 
         except Exception as exc:
 
-            print(f"[BattleGateway] {exc}")
+            logger.error("[BattleGateway] Error in connection loop for user %s room %s: %s", user_id, room_id, exc, exc_info=True)
 
             connection_manager.disconnect(
                 user_id,
             )
+
 
             await connection_manager.broadcast(
                 room_id,

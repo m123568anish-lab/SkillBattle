@@ -40,8 +40,6 @@ export function useRegister() {
 
             };
 
-            console.log("Register Payload:", payload);
-
             const user = await authService.register(payload);
 
             try {
@@ -50,13 +48,14 @@ export function useRegister() {
                     password: data.password,
                 });
             } catch (loginErr) {
-                console.warn("Auto-login post-registration warning:", loginErr);
+                // Auto-login fallback if user registration succeeds but immediate login requires verification
             }
 
             return user;
         } finally {
             setLoading(false);
         }
+
 
     }
 

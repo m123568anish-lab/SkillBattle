@@ -8,7 +8,10 @@ Notification Worker
 
 from __future__ import annotations
 
+import logging
 from app.workers.worker import Worker
+
+logger = logging.getLogger(__name__)
 
 
 class NotificationWorker(Worker):
@@ -19,14 +22,7 @@ class NotificationWorker(Worker):
         self,
         payload: dict,
     ):
-
-        print(
-
-            "Notification",
-
-            payload,
-
-        )
+        logger.info("Notification Job processed: %s", payload)
 
 
-notification_worker = NotificationWorker()
+notification_worker = NotificationWorker()
