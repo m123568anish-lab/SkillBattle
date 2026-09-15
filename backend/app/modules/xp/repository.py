@@ -12,7 +12,7 @@ Production Async Version
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.xp import XP
@@ -77,6 +77,25 @@ class XPRepository:
         await db.refresh(xp)
 
         return xp
+
+    async def increment(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        amount: int,
+    ) -> XP | None:
+        result = await db.execute(
+            update(XP)
+            .where(XP.user_id == user_id)
+            .values(
+                total_xp=XP.total_xp + amount,
+                weekly_xp=XP.weekly_xp + amount,
+                daily_xp=XP.daily_xp + amount,
+                level=((XP.total_xp + amount) // 500) + 1,
+            )
+            .returning(XP)
+        )
+        return result.scalar_one_or_none()
 
     # =====================================================
     # Commit

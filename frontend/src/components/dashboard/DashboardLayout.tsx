@@ -42,14 +42,14 @@ export default function DashboardLayout({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileMenuOpen(false)}
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
             />
             <motion.aside
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed bottom-0 left-0 top-0 z-50 w-72 bg-[#070B14] p-6 border-r border-white/10 lg:hidden flex flex-col justify-between"
+              className="fixed bottom-0 left-0 top-0 z-50 w-72 bg-[#070B14] p-6 border-r border-white/10 md:hidden flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between border-b border-white/5 pb-6">
@@ -96,8 +96,8 @@ export default function DashboardLayout({
           overflow-auto
           p-3
           sm:p-8
-          pb-24
-          lg:pb-8
+          pb-[calc(6rem+env(safe-area-inset-bottom))]
+          md:pb-8
         "
       >
         <TopNavbar onMenuClick={() => setMobileMenuOpen(true)} />
@@ -106,7 +106,7 @@ export default function DashboardLayout({
 
       </section>
 
-      {/* Floating Magic Apple Glassmorphic Mobile Navigation Bar */}
+      {/* Mobile navigation stays fixed while content receives matching bottom space. */}
       <MagicAppleNavbar />
     </main>
   );

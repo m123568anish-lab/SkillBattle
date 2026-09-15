@@ -97,27 +97,15 @@ class XPService:
         amount: int,
     ) -> XP:
 
-        xp = await self.get_user_xp(
-
-            db,
-
-            current_user,
-
-        )
-
-        xp.total_xp += amount
-        xp.weekly_xp += amount
-        xp.daily_xp += amount
-
-        xp.level = (xp.total_xp // 500) + 1
+        xp = await xp_repository.increment(db, current_user.id, amount)
+        if xp is None:
+            await self.get_user_xp(db, current_user)
+            xp = await xp_repository.increment(db, current_user.id, amount)
+        if xp is None:
+            raise RuntimeError("Unable to update XP profile")
 
         current_user.coding_rating = (current_user.coding_rating or 1200) + (amount // 2)
         db.add(current_user)
-
-        xp = await xp_repository.update(
-            db,
-            xp,
-        )
 
         await xp_repository.commit(db)
 

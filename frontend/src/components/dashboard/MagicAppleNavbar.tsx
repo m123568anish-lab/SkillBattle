@@ -3,79 +3,46 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Home, Sword, Trophy, User, Zap, Sparkles } from "lucide-react";
+import { Home, Compass, List, Users, MoreHorizontal } from "lucide-react";
 
 const NAV_ITEMS = [
   { title: "Home", href: "/dashboard", icon: Home },
-  { title: "Battle", href: "/battle", icon: Sword },
-  { title: "Quick Match", href: "/battle/queue", icon: Zap, isSpecial: true },
-  { title: "Rankings", href: "/leaderboard", icon: Trophy },
-  { title: "Profile", href: "/profile", icon: User },
+  { title: "Explore", href: "/explore", icon: Compass },
+  { title: "My List", href: "/my-list", icon: List },
+  { title: "Social", href: "/social", icon: Users },
+  { title: "More", href: "/profile", icon: MoreHorizontal },
 ];
 
 export default function MagicAppleNavbar() {
   const pathname = usePathname();
 
   return (
-    <div className="fixed bottom-4 left-3 right-3 z-50 lg:hidden pointer-events-none flex justify-center">
+    <div className="fixed inset-x-0 bottom-0 z-50 pointer-events-none flex justify-center md:hidden">
       <nav
+        aria-label="Mobile navigation"
         className="
           pointer-events-auto
           w-full
-          max-w-md
+          max-w-lg
           flex
           items-center
           justify-between
-          rounded-full
+          rounded-t-2xl
           border
           border-white/20
           bg-[#070B14]/85
           px-3
-          py-2
+          pb-[calc(0.5rem+env(safe-area-inset-bottom))]
+          pt-2
           backdrop-blur-2xl
           shadow-[0_12px_40px_rgba(0,0,0,0.85),0_0_20px_rgba(6,182,212,0.15)]
           relative
           overflow-hidden
         "
       >
-        {/* Subtle Ambient Apple Glow */}
-        <div className="absolute -top-10 left-1/2 -translate-x-1/2 h-16 w-32 bg-gradient-to-r from-cyan-500/20 to-violet-500/20 blur-xl pointer-events-none" />
-
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
-          const active = pathname === item.href;
-
-          if (item.isSpecial) {
-            return (
-              <Link key={item.title} href={item.href} className="relative group">
-                <motion.div
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="
-                    flex
-                    h-11
-                    w-11
-                    items-center
-                    justify-center
-                    rounded-full
-                    bg-gradient-to-tr
-                    from-cyan-500
-                    via-blue-600
-                    to-violet-600
-                    text-white
-                    shadow-lg
-                    shadow-cyan-500/30
-                    border
-                    border-cyan-300/40
-                    relative
-                  "
-                >
-                  <Icon size={20} className="animate-pulse" />
-                  <Sparkles className="absolute -top-1 -right-1 h-3.5 w-3.5 text-cyan-300 animate-spin" style={{ animationDuration: '4s' }} />
-                </motion.div>
-              </Link>
-            );
-          }
+          const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
 
           return (
             <Link key={item.title} href={item.href} className="relative flex-1">

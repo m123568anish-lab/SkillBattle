@@ -28,6 +28,11 @@ class XP(Base):
         default=0,
     )
 
+    daily_xp: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+    )
+
     level: Mapped[int] = mapped_column(
         Integer,
         default=1,
@@ -37,3 +42,7 @@ class XP(Base):
         Integer,
         default=99999,
     )
+
+    @property
+    def next_level_xp(self) -> int:
+        return self.level * 500
