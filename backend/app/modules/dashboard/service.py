@@ -48,6 +48,10 @@ class DashboardService:
             db,
             current_user.id,
         )
+        battles_played, battles_won = await dashboard_repository.get_battle_stats(
+            db,
+            current_user.id,
+        )
 
         from app.modules.xp.service import xp_service
 
@@ -62,21 +66,21 @@ class DashboardService:
         stats = DashboardStats(
             xp=total_xp,
             level=user_level,
-            streak=max(1, user.login_count or 1),
+            streak=max(0, user.login_count or 0),
             rating=rating,
-            battles_played=20,
-            battles_won=14,
+            battles_played=battles_played,
+            battles_won=battles_won,
         )
 
 
+        # XP history is not tracked per day yet. Keep the response honest by
+        # exposing the persisted weekly total only on the current day.
+        from datetime import datetime
+
+        today = datetime.utcnow().strftime("%a")
         weekly = [
-            WeeklyActivity(day="Mon", xp=120),
-            WeeklyActivity(day="Tue", xp=300),
-            WeeklyActivity(day="Wed", xp=450),
-            WeeklyActivity(day="Thu", xp=280),
-            WeeklyActivity(day="Fri", xp=390),
-            WeeklyActivity(day="Sat", xp=520),
-            WeeklyActivity(day="Sun", xp=310),
+            WeeklyActivity(day=day, xp=user_xp.weekly_xp if day == today else 0)
+            for day in ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
         ]
 
         achievement_list = [

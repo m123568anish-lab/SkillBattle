@@ -41,6 +41,7 @@ export interface DailyChallenge {
 export interface DashboardResponse {
   user: UserSummary;
   stats: DashboardStats;
+  weekly_activity: Array<{ day: string; xp: number }>;
   achievements: Achievement[];
   ai_recommendation: AIRecommendation;
   daily_challenge: DailyChallenge;

@@ -10,12 +10,13 @@ Handles all database access for the dashboard.
 =========================================================
 """
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
 from app.models.challenge import Challenge
 from app.models.achievement import Achievement
+from app.models.battle import BattleParticipant, BattleResult, BattleRoom
 
 
 class DashboardRepository:
@@ -67,6 +68,26 @@ class DashboardRepository:
         )
 
         return result.scalars().all()
+
+    async def get_battle_stats(
+        self,
+        db: AsyncSession,
+        user_id: str,
+    ) -> tuple[int, int]:
+        played_result = await db.execute(
+            select(func.count(BattleParticipant.id))
+            .join(BattleRoom, BattleRoom.id == BattleParticipant.battle_id)
+            .where(
+                BattleParticipant.user_id == user_id,
+                BattleRoom.status == "finished",
+            )
+        )
+        won_result = await db.execute(
+            select(func.count(BattleResult.id)).where(
+                BattleResult.winner_id == user_id,
+            )
+        )
+        return played_result.scalar_one(), won_result.scalar_one()
 
 
 dashboard_repository = DashboardRepository()

@@ -16,7 +16,7 @@ export function useDashboard(resumeId?: string) {
 
         }
 
-    }, []);
+    }, [store.dashboard, store.loading, store.loadDashboard]);
 
     return {
 
