@@ -32,11 +32,14 @@ class XPRepository:
 
         result = await db.execute(
 
-            select(XP).where(
+            select(XP)
+            .where(
 
                 XP.user_id == user_id
 
             )
+            .order_by(XP.id.desc())
+            .limit(1)
 
         )
 

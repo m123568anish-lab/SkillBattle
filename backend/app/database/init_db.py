@@ -43,6 +43,14 @@ from app.models import (
     RefreshToken,
     Streak,
 )
+from app.models.battle import (
+    BattleParticipant,
+    BattleResult,
+    BattleRoom,
+    BattleSubmission,
+)
+from app.models.user_skill_stat import UserSkillStat
+from app.models.xp import XP
 
 # Silence unused import warnings
 __all__ = [
@@ -61,6 +69,12 @@ __all__ = [
     "Resume",
     "RefreshToken",
     "Streak",
+    "BattleParticipant",
+    "BattleResult",
+    "BattleRoom",
+    "BattleSubmission",
+    "UserSkillStat",
+    "XP",
 ]
 
 

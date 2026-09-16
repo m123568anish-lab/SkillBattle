@@ -114,7 +114,10 @@ class DashboardRepository:
         user_id: str,
     ) -> int:
         result = await db.execute(
-            select(Streak.current_streak).where(Streak.user_id == user_id)
+            select(Streak.current_streak)
+            .where(Streak.user_id == user_id)
+            .order_by(Streak.id.desc())
+            .limit(1)
         )
         return result.scalar_one_or_none() or 0
 
