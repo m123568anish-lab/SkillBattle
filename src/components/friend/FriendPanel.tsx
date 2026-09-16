@@ -69,7 +69,7 @@ export default function FriendPanel() {
       );
       await friendService.removeFriend(friendUserId);
       toast.success("Friend removed.");
-    } catch (err: unknown) {
+    } catch {
       await friendService.listFriends().then((response) => setFriends(response.friends)).catch(() => undefined);
       toast.error("Failed to remove friend.");
     }
