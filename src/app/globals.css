@@ -4,6 +4,14 @@
   color-scheme: dark;
 }
 
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -92,6 +100,88 @@ html[data-theme="light"] .skillbattle-shell [class*="bg-slate-900"] {
 
 html[data-theme="light"] .skillbattle-shell [class*="border-white"] {
   border-color: #dbe3ef;
+}
+
+html[data-theme="light"] .skillbattle-shell aside {
+  background: #ffffff;
+  background-image: none;
+  border-color: #dbe3ef;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme="light"] .skillbattle-shell header {
+  background: #ffffff;
+  border-color: #dbe3ef;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+}
+
+html[data-theme="light"] .skillbattle-shell input {
+  background: #f8fafc;
+  border-color: #dbe3ef;
+  color: #1f2937;
+}
+
+html[data-theme="light"] .skillbattle-shell input::placeholder {
+  color: #94a3b8;
+}
+
+html[data-theme="light"] .skillbattle-shell [class*="bg-gradient-to-"] {
+  background-image: none;
+}
+
+html[data-theme="light"] .skillbattle-shell [class*="bg-white/"] {
+  background-color: #ffffff;
+}
+
+html[data-theme="light"] .skillbattle-shell [class*="bg-black/"] {
+  background-color: #f8fafc;
+}
+
+html[data-theme="light"] .skillbattle-shell [class*="border-slate-"] {
+  border-color: #dbe3ef;
+}
+
+html[data-theme="light"] .skillbattle-shell .text-cyan-300,
+html[data-theme="light"] .skillbattle-shell .text-cyan-400 {
+  color: #0891b2;
+}
+
+html[data-theme="light"] .skillbattle-shell .text-violet-300,
+html[data-theme="light"] .skillbattle-shell .text-violet-400 {
+  color: #6d28d9;
+}
+
+html[data-theme="light"] .skillbattle-shell .text-yellow-300,
+html[data-theme="light"] .skillbattle-shell .text-yellow-400 {
+  color: #a16207;
+}
+
+html[data-theme="light"] .skillbattle-shell .text-emerald-300,
+html[data-theme="light"] .skillbattle-shell .text-emerald-400 {
+  color: #047857;
+}
+
+html[data-theme="light"] .skillbattle-shell .text-orange-300,
+html[data-theme="light"] .skillbattle-shell .text-orange-400 {
+  color: #c2410c;
+}
+
+html[data-theme="light"] .skillbattle-shell .text-pink-300,
+html[data-theme="light"] .skillbattle-shell .text-pink-400 {
+  color: #be185d;
+}
+
+html[data-theme="light"] .skillbattle-shell [class*="from-white/"],
+html[data-theme="light"] .skillbattle-shell [class*="to-[#"] {
+  background-image: none;
+}
+
+html[data-theme="light"] body > div [class*="bg-[#0d1626]"],
+html[data-theme="light"] body > div [class*="bg-[#0A0E1A]"] {
+  background: #ffffff;
+  border-color: #dbe3ef;
+  color: #1f2937;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
 }
 
 * {
