@@ -14,7 +14,6 @@ interface TopNavbarProps {
 export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
   const user = useAuthStore((s) => s.user);
   const dashboard = useDashboardStore((s) => s.dashboard);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [lightMode, setLightMode] = useState(false);
 
   useEffect(() => {
@@ -68,69 +67,32 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
           <ProfileMenu />
         </div>
       </div>
-      <div className="relative flex min-h-[68px] items-center gap-2 px-2.5 py-2 sm:min-h-[112px] sm:gap-3 sm:px-6 sm:py-3 lg:px-8 md:hidden">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_40%,rgba(168,85,247,.12),transparent_28%),radial-gradient(circle_at_90%_0%,rgba(79,70,229,.10),transparent_30%)]" />
+      <div className="relative flex min-h-[74px] items-center justify-between gap-3 px-4 py-3 md:hidden">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_40%,rgba(34,211,238,.12),transparent_35%),radial-gradient(circle_at_90%_0%,rgba(127,0,255,.15),transparent_35%)]" />
 
-        <div className="relative flex min-w-0 flex-1 items-center gap-3 sm:gap-6">
+        <div className="relative flex min-w-0 items-center">
           <button
             type="button"
             onClick={onMenuClick}
-            className="group relative flex min-w-0 shrink-0 items-center gap-2 sm:gap-3"
+            className="group relative flex min-w-0 shrink-0 items-center"
             aria-label="Open navigation menu"
           >
-            <span className="relative grid h-8 w-8 place-items-center rounded-full bg-[conic-gradient(from_210deg,#ec0bb8,#7c3aed,#2563eb,#ec0bb8)] p-1 shadow-[0_0_20px_rgba(168,85,247,.35)] sm:h-16 sm:w-16">
-              <span className="grid h-full w-full place-items-center rounded-full bg-[#0c0a12] text-fuchsia-200">
-                <Trophy size={14} className="transition group-hover:scale-110 sm:h-7 sm:w-7" />
-              </span>
-            </span>
-            <span className="text-left">
-              <span className="block text-xs font-black tracking-tight text-white sm:text-2xl">SkillBattle</span>
-              <span className="block text-[8px] font-bold uppercase tracking-[0.22em] text-violet-300 sm:text-[10px] sm:tracking-[0.3em]">Arena</span>
+            <span className="bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-400 bg-clip-text text-[24px] font-black tracking-tight text-transparent">
+              SkillBattle
             </span>
           </button>
-
-          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <div className="hidden items-center gap-1.5 rounded-full border border-white/[0.07] bg-black/20 px-2.5 py-2 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-300 sm:flex sm:gap-3 sm:px-7 sm:py-3 sm:text-sm sm:tracking-[0.16em]">
-              <span className="h-2 w-2 rounded-full bg-violet-400 shadow-[0_0_14px_rgba(167,139,250,.9)] sm:h-3 sm:w-3" />
-              Active
-            </div>
-            <div className="hidden items-center gap-4 rounded-full border border-white/[0.07] px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 xl:flex">
-              <span className="text-cyan-300">LVL {level}</span>
-              <span>{rating} rating</span>
-              <span className="text-violet-300">{xp} XP</span>
-            </div>
-          </div>
         </div>
 
-        <div className="relative z-10 flex shrink-0 items-center gap-2 sm:gap-3">
-          {searchOpen && (
-            <input
-              autoFocus
-              aria-label="Search battles and users"
-              placeholder="Search..."
-              className="absolute right-0 top-14 z-50 w-52 rounded-full border border-violet-400/30 bg-[#171329] px-4 py-3 text-sm text-white outline-none ring-violet-400/20 placeholder:text-slate-500 focus:ring-4 sm:static sm:top-auto sm:w-48"
-              onKeyDown={(event) => {
-                if (event.key === "Escape") setSearchOpen(false);
-              }}
-            />
-          )}
-          <button
-            type="button"
-            aria-label="Search"
-            onClick={() => setSearchOpen((open) => !open)}
-            className="grid h-9 w-9 place-items-center rounded-xl border border-white/[0.08] bg-black/20 text-slate-200 transition hover:border-violet-400/60 hover:bg-violet-500/15 hover:text-white sm:h-14 sm:w-14"
-          >
-            <Search size={17} className="sm:h-[25px] sm:w-[25px]" />
-          </button>
+        <div className="relative z-10 flex shrink-0 items-center gap-2">
           <NotificationMenu />
           <button
             type="button"
             aria-label="Toggle theme"
             aria-pressed={lightMode}
             onClick={toggleTheme}
-            className="grid h-9 w-9 place-items-center rounded-xl border border-white/[0.08] bg-black/20 text-slate-200 transition hover:border-fuchsia-400/60 hover:bg-fuchsia-500/15 hover:text-white sm:h-14 sm:w-14"
+            className="grid h-10 w-10 place-items-center rounded-xl border border-white/[0.1] bg-white/[0.06] text-slate-200 transition hover:border-fuchsia-400/60 hover:bg-fuchsia-500/15 hover:text-white"
           >
-            {lightMode ? <Moon size={17} className="sm:h-[25px] sm:w-[25px]" /> : <Sun size={17} className="sm:h-[25px] sm:w-[25px]" />}
+            {lightMode ? <Moon size={19} /> : <Sun size={19} />}
           </button>
           <ProfileMenu />
         </div>
