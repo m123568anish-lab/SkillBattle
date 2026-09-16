@@ -71,14 +71,14 @@ export default function DashboardLayout({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileMenuOpen(false)}
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm md:hidden"
             />
             <motion.aside
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[88dvh] w-full max-w-2xl flex-col rounded-t-3xl border border-slate-800 bg-[#161B22] p-5 shadow-[0_-24px_80px_rgba(0,0,0,.6)] md:hidden"
+              className="fixed inset-x-0 bottom-0 z-[90] mx-auto flex max-h-[88dvh] w-full max-w-2xl flex-col rounded-t-3xl border border-slate-800 bg-[#161B22] p-5 shadow-[0_-24px_80px_rgba(0,0,0,.6)] md:hidden"
             >
               <div className="min-h-0 overflow-y-auto">
                 <div className="mb-6 flex items-center justify-between border-b border-white/5 pb-5">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Bell, CheckCheck, X } from "lucide-react";
 import api from "@/services/api";
 
@@ -65,10 +66,10 @@ export default function NotificationMenu() {
         )}
       </button>
 
-      {open && (
+      {open && typeof document !== "undefined" && createPortal(
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-14 z-50 w-80 rounded-2xl border border-white/10 bg-slate-900/95 shadow-2xl shadow-black/50 backdrop-blur-2xl">
+          <div className="fixed inset-0 z-[100] bg-black/20" onClick={() => setOpen(false)} />
+          <div className="fixed right-3 top-20 z-[101] w-[calc(100vw-1.5rem)] max-w-80 rounded-2xl border border-cyan-400/20 bg-[#0d1626] shadow-2xl shadow-black/60 md:right-8 md:top-24">
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
               <span className="font-bold text-white text-sm">Notifications {unreadCount > 0 && <span className="text-violet-400">({unreadCount})</span>}</span>
               <div className="flex items-center gap-2">
@@ -103,7 +104,8 @@ export default function NotificationMenu() {
               )}
             </div>
           </div>
-        </>
+        </>,
+        document.body,
       )}
     </div>
   );
