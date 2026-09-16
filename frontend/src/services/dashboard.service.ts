@@ -22,6 +22,8 @@ export interface DashboardResponse {
 
     achievements: any[];
 
+    weekly_activity?: any[];
+
     ai_recommendation: any;
 
     daily_challenge: any;

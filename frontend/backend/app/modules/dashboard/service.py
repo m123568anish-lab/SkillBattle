@@ -35,10 +35,13 @@ class DashboardService:
         current_user: User,
     ) -> DashboardResponse:
 
-        user = await dashboard_repository.get_user(
-            db,
-            current_user.id,
-        )
+        try:
+            user = await dashboard_repository.get_user(db, current_user.id)
+        except Exception:
+            user = None
+
+        if user is None:
+            user = current_user
 
         # Fetch queries with defensive error handling so dashboard never throws HTTP 500
         try:
