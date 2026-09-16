@@ -71,6 +71,29 @@ html[data-theme="light"] .skillbattle-profile-sheet {
   color: #1f2937;
 }
 
+html[data-theme="light"] .skillbattle-shell .text-white {
+  color: #1f2937;
+}
+
+html[data-theme="light"] .skillbattle-shell .text-slate-300 {
+  color: #475569;
+}
+
+html[data-theme="light"] .skillbattle-shell .text-slate-400,
+html[data-theme="light"] .skillbattle-shell .text-slate-500 {
+  color: #64748b;
+}
+
+html[data-theme="light"] .skillbattle-shell [class*="bg-[#"],
+html[data-theme="light"] .skillbattle-shell [class*="bg-slate-950"],
+html[data-theme="light"] .skillbattle-shell [class*="bg-slate-900"] {
+  background-color: #ffffff;
+}
+
+html[data-theme="light"] .skillbattle-shell [class*="border-white"] {
+  border-color: #dbe3ef;
+}
+
 * {
   box-sizing: border-box;
 }

@@ -69,8 +69,6 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
         </div>
       </div>
       <div className="mobile-skillbattle-navbar relative flex min-h-[64px] w-full items-center justify-between gap-2 border-0 px-3 py-2 md:hidden">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_40%,rgba(34,211,238,.12),transparent_35%),radial-gradient(circle_at_90%_0%,rgba(127,0,255,.15),transparent_35%)]" />
-
         <div className="relative flex min-w-0 items-center">
           <button
             type="button"
