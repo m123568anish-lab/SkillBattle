@@ -27,12 +27,19 @@ async def list_friends(
 ):
     """Return the current user's friends list."""
     friendships = await friend_service.get_friends(db, current_user)
-    # Map Friendship rows to FriendResponse (simple representation)
     friends = []
     for f in friendships:
-        # Determine the opposite user ID
         friend_id = f.friend_id if f.user_id == current_user.id else f.user_id
-        friends.append(FriendResponse(user_id=friend_id, created_at=str(f.created_at)))
+        friend = f.friend if f.user_id == current_user.id else f.user
+        friends.append(
+            FriendResponse(
+                user_id=friend_id,
+                username=friend.username,
+                full_name=friend.full_name,
+                avatar_url=friend.avatar_url,
+                created_at=str(f.created_at),
+            )
+        )
     return FriendListResponse(friends=friends)
 
 @router.post("/", response_model=FriendResponse, status_code=status.HTTP_201_CREATED)
@@ -50,4 +57,10 @@ async def add_friend(
     friendship = await friend_service.add_friend(db, current_user, friend_user)
     if friendship is None:
         raise HTTPException(status_code=400, detail="Friendship already exists")
-    return FriendResponse(user_id=friend_user.id, created_at=str(friendship.created_at))
+    return FriendResponse(
+        user_id=friend_user.id,
+        username=friend_user.username,
+        full_name=friend_user.full_name,
+        avatar_url=friend_user.avatar_url,
+        created_at=str(friendship.created_at),
+    )

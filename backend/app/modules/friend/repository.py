@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, exists, delete
+from sqlalchemy.orm import selectinload
 from app.models.friend import Friendship
 
 
@@ -10,6 +11,9 @@ class FriendRepository:
         """Return a list of Friendship objects where the user participates."""
         stmt = select(Friendship).where(
             (Friendship.user_id == user_id) | (Friendship.friend_id == user_id)
+        ).options(
+            selectinload(Friendship.user),
+            selectinload(Friendship.friend),
         )
         result = await db.execute(stmt)
         return result.scalars().all()

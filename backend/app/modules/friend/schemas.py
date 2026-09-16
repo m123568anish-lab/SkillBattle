@@ -13,6 +13,9 @@ class AddFriendRequest(BaseModel):
 class FriendResponse(BaseModel):
     """Simple friend information returned by the API."""
     user_id: str = Field(..., description="User ID of the friend")
+    username: str = Field(..., description="Username of the friend")
+    full_name: str = Field(..., description="Display name of the friend")
+    avatar_url: str | None = Field(default=None, description="Avatar URL of the friend")
     created_at: str = Field(..., description="Timestamp when the friendship was created")
 
 class FriendListResponse(BaseModel):

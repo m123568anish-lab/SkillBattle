@@ -9,12 +9,9 @@ import {
   Plus,
   Trash2,
   UserPlus,
-  Check,
   X,
   Trophy,
-  Zap,
   MessageSquare,
-  MoreVertical,
 } from "lucide-react";
 
 export default function FriendPanel() {
@@ -31,8 +28,8 @@ export default function FriendPanel() {
       try {
         const response = await friendService.listFriends();
         if (active) setFriends(response.friends);
-      } catch (err: any) {
-        console.error(err);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Unable to load friends.");
       } finally {
         if (active) setLoading(false);
       }
@@ -56,8 +53,9 @@ export default function FriendPanel() {
       setFriends((current) => [...current, newFriend]);
       setFriendId("");
       toast.success("Friend added! 🎮");
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || "Failed to add friend.");
+    } catch (err: unknown) {
+      const responseError = err as { response?: { data?: { detail?: string } } };
+      setError(responseError.response?.data?.detail || "Failed to add friend.");
       toast.error("Failed to add friend.");
     } finally {
       setAddingFriend(false);
@@ -70,7 +68,7 @@ export default function FriendPanel() {
         current.filter((f) => f.user_id !== friendUserId)
       );
       toast.success("Friend removed.");
-    } catch (err: any) {
+    } catch {
       toast.error("Failed to remove friend.");
     }
   }
@@ -213,7 +211,7 @@ export default function FriendPanel() {
             className="space-y-3"
           >
             <AnimatePresence>
-              {friends.map((friend, index) => (
+              {friends.map((friend) => (
                 <motion.div
                   key={friend.user_id}
                   variants={itemVariants}
@@ -231,23 +229,17 @@ export default function FriendPanel() {
                         className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-violet-500"
                       >
                         <span className="text-sm font-bold text-white">
-                          {friend.user_id[0].toUpperCase()}
+                          {(friend.full_name || friend.username || friend.user_id)[0].toUpperCase()}
                         </span>
                       </motion.div>
 
                       {/* Info */}
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-white">{friend.user_id}</span>
-                          {index === 0 && (
-                            <span className="inline-flex items-center rounded-full bg-yellow-500/20 border border-yellow-500/30 px-2 py-0.5 text-xs font-bold text-yellow-300">
-                              <Trophy className="h-3 w-3 mr-1" />
-                              Leader
-                            </span>
-                          )}
+                          <span className="font-semibold text-white">{friend.full_name || friend.username}</span>
                         </div>
                         <div className="text-xs text-slate-400">
-                          Joined {new Date(friend.created_at).toLocaleDateString()}
+                          @{friend.username} · Connected {new Date(friend.created_at).toLocaleDateString()}
                         </div>
                       </div>
                     </div>
@@ -282,27 +274,6 @@ export default function FriendPanel() {
                     </motion.div>
                   </div>
 
-                  {/* Stats Bar */}
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{
-                      opacity: hoveredFriend === friend.user_id ? 1 : 0,
-                    }}
-                    className="mt-3 grid grid-cols-3 gap-2 pt-3 border-t border-white/5"
-                  >
-                    <div className="text-center">
-                      <Zap className="h-4 w-4 text-yellow-400 mx-auto mb-1" />
-                      <div className="text-xs text-slate-400">Active</div>
-                    </div>
-                    <div className="text-center">
-                      <Trophy className="h-4 w-4 text-cyan-400 mx-auto mb-1" />
-                      <div className="text-xs text-slate-400">5 Wins</div>
-                    </div>
-                    <div className="text-center">
-                      <Check className="h-4 w-4 text-emerald-400 mx-auto mb-1" />
-                      <div className="text-xs text-slate-400">Online</div>
-                    </div>
-                  </motion.div>
                 </motion.div>
               ))}
             </AnimatePresence>

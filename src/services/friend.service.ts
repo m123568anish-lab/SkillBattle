@@ -3,6 +3,9 @@ import { API_ENDPOINTS } from "@/lib/api-constants";
 
 export interface FriendResponse {
   user_id: string;
+  username: string;
+  full_name: string;
+  avatar_url?: string | null;
   created_at: string;
 }
 
