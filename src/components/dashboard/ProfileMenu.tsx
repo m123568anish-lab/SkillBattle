@@ -151,7 +151,7 @@ export default function ProfileMenu() {
           type="button"
           onClick={() => setIsMobileMenuOpen(true)}
           suppressHydrationWarning
-          className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#070B14] px-2 py-1.5 shadow-lg shadow-black/20 transition-transform active:scale-[.98]"
+          className="flex items-center rounded-full border border-white/10 bg-[#1A2035] p-1 shadow-lg shadow-black/20 transition-transform active:scale-[.98]"
           aria-label="Open profile menu"
         >
           <div className="relative rounded-full bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-500 p-0.5">
@@ -164,15 +164,6 @@ export default function ProfileMenu() {
               className="h-9 w-9 rounded-full object-cover"
             />
           </div>
-          <span className="hidden text-left min-[360px]:block">
-            <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-cyan-300">
-              {user?.role || "Admin"} {user?.level ?? 1}
-            </span>
-            <span className="block text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">
-              Level {user?.level ?? 1}
-            </span>
-          </span>
-          <ChevronDown className="hidden h-3.5 w-3.5 text-slate-400 min-[360px]:block" />
         </button>
       </div>
 

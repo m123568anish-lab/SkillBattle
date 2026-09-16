@@ -55,8 +55,9 @@ export default function NotificationMenu() {
     <div className="relative">
       <button
         suppressHydrationWarning
+        aria-label="Open notifications"
         onClick={() => setOpen((p) => !p)}
-        className="relative grid h-10 w-10 place-items-center rounded-full border border-white/[0.08] bg-black/20 p-0 transition hover:border-cyan-400 hover:bg-cyan-500/10 sm:h-14 sm:w-14"
+        className="relative grid h-9 w-9 place-items-center rounded-lg border border-transparent bg-transparent p-0 transition hover:border-cyan-400 hover:bg-cyan-500/10 sm:h-14 sm:w-14 sm:rounded-full sm:border-white/[0.08] sm:bg-black/20"
       >
         <Bell className="text-white" size={20} />
         {unreadCount > 0 && (

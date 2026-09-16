@@ -27,6 +27,23 @@ html[data-theme="light"] .bg-\[\#0c0a12\] {
   background-color: #ffffff;
 }
 
+html[data-theme="light"] .mobile-skillbattle-navbar {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: #e5e7eb;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme="light"] .mobile-skillbattle-navbar button[aria-label="Toggle theme"],
+html[data-theme="light"] .mobile-skillbattle-navbar button[aria-label="Open profile menu"],
+html[data-theme="light"] .mobile-skillbattle-navbar button[aria-label="Open notifications"] {
+  color: #1f2937;
+}
+
+html[data-theme="light"] .mobile-skillbattle-navbar button[aria-label="Open profile menu"] {
+  background: #f1f5f9;
+  border-color: #e5e7eb;
+}
+
 body {
   min-height: 100vh;
   background:

@@ -67,7 +67,7 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
           <ProfileMenu />
         </div>
       </div>
-      <div className="relative flex min-h-[74px] items-center justify-between gap-3 px-4 py-3 md:hidden">
+      <div className="mobile-skillbattle-navbar relative flex min-h-[64px] w-full items-center justify-between gap-2 px-3 py-2 md:hidden">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_40%,rgba(34,211,238,.12),transparent_35%),radial-gradient(circle_at_90%_0%,rgba(127,0,255,.15),transparent_35%)]" />
 
         <div className="relative flex min-w-0 items-center">
@@ -77,7 +77,7 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
             className="group relative flex min-w-0 shrink-0 items-center"
             aria-label="Open navigation menu"
           >
-            <span className="bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-400 bg-clip-text text-[24px] font-black tracking-tight text-transparent">
+            <span className="bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-400 bg-clip-text text-[21px] font-black tracking-tight text-transparent">
               SkillBattle
             </span>
           </button>
@@ -90,9 +90,9 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
             aria-label="Toggle theme"
             aria-pressed={lightMode}
             onClick={toggleTheme}
-            className="grid h-10 w-10 place-items-center rounded-xl border border-white/[0.1] bg-white/[0.06] text-slate-200 transition hover:border-fuchsia-400/60 hover:bg-fuchsia-500/15 hover:text-white"
+            className="grid h-9 w-9 place-items-center rounded-lg border border-transparent bg-transparent text-slate-200 transition hover:border-cyan-400/30 hover:bg-cyan-400/10 hover:text-white"
           >
-            {lightMode ? <Moon size={19} /> : <Sun size={19} />}
+            {lightMode ? <Moon size={18} /> : <Sun size={18} />}
           </button>
           <ProfileMenu />
         </div>
