@@ -7,11 +7,12 @@ import { Home, Compass, List, Users, MoreHorizontal } from "lucide-react";
 
 const NAV_ITEMS = [
   { title: "Home", href: "/dashboard", icon: Home },
-  { title: "Explore", href: "/explore", icon: Compass },
-  { title: "My List", href: "/my-list", icon: List },
-  { title: "Social", href: "/social", icon: Users },
+  { title: "Explore", href: "/battle", icon: Compass },
+  { title: "My List", href: "/challenge", icon: List },
+  { title: "Social", href: "/leaderboard", icon: Users },
   { title: "More", href: "/profile", icon: MoreHorizontal },
 ];
+
 
 export default function MagicAppleNavbar() {
   const pathname = usePathname();

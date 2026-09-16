@@ -1,6 +1,4 @@
-from sqlalchemy import (
-    String,
-)
+from sqlalchemy import Integer, String
 
 from sqlalchemy.orm import (
     mapped_column,
@@ -28,4 +26,10 @@ class Challenge(Base):
 
     category: Mapped[str] = mapped_column(
         String(100),
+    )
+
+    xp_reward: Mapped[int] = mapped_column(
+        Integer,
+        default=50,
+        nullable=False,
     )

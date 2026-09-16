@@ -32,6 +32,8 @@ from app.models.user import User
 from app.models.resume import Resume
 from app.models.refresh_token import RefreshToken
 from app.models.xp import XP
+from app.models.challenge import Challenge
+from app.models.streak import Streak
 
 # ---------------------------------------------------------
 

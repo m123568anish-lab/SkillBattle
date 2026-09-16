@@ -164,13 +164,20 @@ export default function LeetCodeMobileChallengePage() {
     );
   }
 
-  const challenge = dashboard?.daily_challenge || {
-    title: "1. Two Sum",
-    difficulty: "Easy",
-    description:
-      "Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`.\n\nYou may assume that each input would have exactly one solution, and you may not use the same element twice.\n\nYou can return the answer in any order.",
-    xp_reward: 100,
-  };
+  const challenge = dashboard?.daily_challenge;
+
+  if (!challenge || challenge.id === "0") {
+    return (
+      <DashboardLayout>
+        <div className="flex min-h-[60vh] items-center justify-center rounded-2xl border border-white/10 bg-[#070B14] p-8 text-center">
+          <div>
+            <h1 className="text-2xl font-black text-white">No challenge available</h1>
+            <p className="mt-2 text-sm text-slate-400">A challenge will appear here when one is published.</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

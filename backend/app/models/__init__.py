@@ -16,6 +16,7 @@ from .profile import Profile
 from .refresh_token import RefreshToken
 from .resume import Resume
 from .roadmap import Roadmap, RoadmapTask, RoadmapWeek
+from .streak import Streak
 from .user import User
 
 __all__ = [
@@ -37,6 +38,7 @@ __all__ = [
     "Roadmap",
     "RoadmapTask",
     "RoadmapWeek",
+    "Streak",
     "User",
     "UserCampaignProgress",
 ]

@@ -9,6 +9,7 @@ Dashboard Service
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import HTTPException, status
 
 from app.models.user import User
 
@@ -40,6 +41,12 @@ class DashboardService:
             current_user.id,
         )
 
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User profile not found",
+            )
+
         challenge = await dashboard_repository.get_daily_challenge(
             db,
         )
@@ -52,6 +59,10 @@ class DashboardService:
             db,
             current_user.id,
         )
+        current_streak = await dashboard_repository.get_current_streak(
+            db,
+            current_user.id,
+        )
 
         from app.modules.xp.service import xp_service
 
@@ -59,14 +70,12 @@ class DashboardService:
         total_xp = user_xp.total_xp if user_xp else 0
         user_level = user_xp.level if user_xp else max(1, (total_xp // 500) + 1)
         
-        # Calculate live rating (defaulting to 1200 for new users + bonus from XP)
-        base_rating = user.coding_rating if (user.coding_rating and user.coding_rating > 0) else 1200
-        rating = base_rating + (total_xp // 10)
+        rating = max(0, user.coding_rating or 0)
 
         stats = DashboardStats(
             xp=total_xp,
             level=user_level,
-            streak=max(0, user.login_count or 0),
+            streak=current_streak,
             rating=rating,
             battles_played=battles_played,
             battles_won=battles_won,
@@ -97,10 +106,14 @@ class DashboardService:
         ]
 
         recommendation = AIRecommendation(
-            title="Continue Graph Preparation",
-            message="Graph algorithms are your weakest topic. Completing them can improve your interview readiness.",
-            progress=72,
-            action="Continue Learning",
+            title="Keep building your streak" if stats.streak == 0 else "Continue your practice",
+            message=(
+                "Complete your first battle to start building a measurable record."
+                if stats.battles_played == 0
+                else "Finish another battle to improve your live battle statistics."
+            ),
+            progress=min(stats.battles_played, 100),
+            action="Start Battle",
         )
 
         # If no daily challenge exists, provide a sensible default
@@ -117,8 +130,8 @@ class DashboardService:
                 id=str(challenge.id),
                 title=challenge.title,
                 difficulty=challenge.difficulty,
-                description="Solve today's coding challenge to maintain your streak.",
-                xp_reward=50,
+                description=f"Solve today's {challenge.category} challenge to maintain your streak.",
+                xp_reward=challenge.xp_reward,
             )
 
         return DashboardResponse(

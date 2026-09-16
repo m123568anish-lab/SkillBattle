@@ -17,6 +17,7 @@ from app.models.user import User
 from app.models.challenge import Challenge
 from app.models.achievement import Achievement
 from app.models.battle import BattleParticipant, BattleResult, BattleRoom
+from app.models.streak import Streak
 
 
 class DashboardRepository:
@@ -79,15 +80,43 @@ class DashboardRepository:
             .join(BattleRoom, BattleRoom.id == BattleParticipant.battle_id)
             .where(
                 BattleParticipant.user_id == user_id,
-                BattleRoom.status == "finished",
             )
         )
+        played = played_result.scalar_one_or_none() or 0
+
         won_result = await db.execute(
             select(func.count(BattleResult.id)).where(
                 BattleResult.winner_id == user_id,
             )
         )
-        return played_result.scalar_one(), won_result.scalar_one()
+        won = won_result.scalar_one_or_none() or 0
+
+        # Fallback to UserSkillStat if no formal multiplayer battles found
+        if played == 0:
+            from app.models.user_skill_stat import UserSkillStat
+            attempts_result = await db.execute(
+                select(func.sum(UserSkillStat.total_attempts)).where(UserSkillStat.user_id == user_id)
+            )
+            attempts = attempts_result.scalar_one_or_none() or 0
+            if attempts > 0:
+                played = attempts
+                correct_result = await db.execute(
+                    select(func.sum(UserSkillStat.correct_attempts)).where(UserSkillStat.user_id == user_id)
+                )
+                won = correct_result.scalar_one_or_none() or 0
+
+        return played, won
+
+
+    async def get_current_streak(
+        self,
+        db: AsyncSession,
+        user_id: str,
+    ) -> int:
+        result = await db.execute(
+            select(Streak.current_streak).where(Streak.user_id == user_id)
+        )
+        return result.scalar_one_or_none() or 0
 
 
 dashboard_repository = DashboardRepository()

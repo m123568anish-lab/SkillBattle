@@ -318,6 +318,7 @@ class BattleService:
     # ==========================================================
 
     async def finish_battle(self, db: AsyncSession, battle_id: str):
+        from app.modules.battle.reward.service import battle_reward_service
 
         battle = await battle_repository.get_battle(db, battle_id)
 
@@ -336,12 +337,16 @@ class BattleService:
 
         await db.commit()
 
+        # Distribute XP and ratings atomically
+        reward_res = await battle_reward_service.finish_battle(db, battle_id)
+
         await battle_ws.broadcast(
             battle_id,
             BattleEvent.BATTLE_FINISHED.value,
             {
-                "winner": (None if draw else winner.user_id),
+                "winner": (None if draw else (winner.user_id if winner else None)),
                 "draw": draw,
+                "rewards": reward_res.get("rewards", []) if reward_res else [],
                 "leaderboard": [
                     {"user_id": player.user_id, "score": player.score, "rank": player.rank}
                     for player in players
@@ -349,7 +354,8 @@ class BattleService:
             },
         )
 
-        return {"winner": None if draw else winner, "draw": draw}
+        return {"winner": None if draw else (winner.user_id if winner else None), "draw": draw, "rewards": reward_res}
 
 
 battle_service = BattleService()
+

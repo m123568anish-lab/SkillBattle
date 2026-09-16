@@ -17,6 +17,7 @@ class DailyChallengeCreate(BaseModel):
     title: str = Field(..., max_length=200)
     difficulty: str = Field("Medium", max_length=50)
     category: str = Field("Algorithms", max_length=100)
+    xp_reward: int = Field(50, ge=0, le=100000)
 
 
 class DailyChallengeResponse(BaseModel):
@@ -24,6 +25,7 @@ class DailyChallengeResponse(BaseModel):
     title: str
     difficulty: str
     category: str
+    xp_reward: int
 
 
 class AdminUserUpdate(BaseModel):

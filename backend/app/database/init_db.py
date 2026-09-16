@@ -41,6 +41,7 @@ from app.models import (
     InterviewAnswer,
     Resume,
     RefreshToken,
+    Streak,
 )
 
 # Silence unused import warnings
@@ -59,6 +60,7 @@ __all__ = [
     "InterviewAnswer",
     "Resume",
     "RefreshToken",
+    "Streak",
 ]
 
 

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class XPResponse(BaseModel):
@@ -22,6 +22,6 @@ class XPResponse(BaseModel):
 
 class AddXPRequest(BaseModel):
 
-    amount: int
+    amount: int = Field(..., gt=0)
 
     reason: str

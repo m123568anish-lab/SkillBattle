@@ -48,12 +48,14 @@ class AdminService:
                 title=payload.title,
                 difficulty=payload.difficulty,
                 category=payload.category,
+                xp_reward=payload.xp_reward,
             )
             db.add(challenge)
         else:
             challenge.title = payload.title
             challenge.difficulty = payload.difficulty
             challenge.category = payload.category
+            challenge.xp_reward = payload.xp_reward
 
         await db.commit()
         await db.refresh(challenge)
@@ -63,6 +65,7 @@ class AdminService:
             title=challenge.title,
             difficulty=challenge.difficulty,
             category=challenge.category,
+            xp_reward=challenge.xp_reward,
         )
 
     async def list_users(
