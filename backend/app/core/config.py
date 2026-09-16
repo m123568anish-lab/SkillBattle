@@ -135,7 +135,7 @@ class Settings(BaseSettings):
     # --------------------------------------------------
 
     model_config = SettingsConfigDict(
-        env_file=(".env.production", ".env"),
+        env_file=(".env.local", ".env", ".env.production"),
         case_sensitive=True,
         extra="ignore",
     )
@@ -152,27 +152,52 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def populate_database_urls(self):
-        """Build default DB URLs from the DB type when environment values are not set."""
-        if self.DATABASE_URL.startswith("postgresql") or self.DATABASE_TYPE.lower() == "postgresql":
-            self.DATABASE_TYPE = "postgresql"
-            if self.DATABASE_URL.startswith("sqlite") or not self.DATABASE_URL:
-                self.DATABASE_URL = (
-                    f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
-                    f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-                )
-            if self.ASYNC_DATABASE_URL.startswith("sqlite") or not self.ASYNC_DATABASE_URL:
-                self.ASYNC_DATABASE_URL = self.DATABASE_URL.replace(
-                    "postgresql://", "postgresql+asyncpg://", 1
-                )
-            self.ASYNC_DATABASE_URL = normalize_async_database_url(
-                self.ASYNC_DATABASE_URL
-            )
-        else:
+        """Build default DB URLs from the DB type when environment values are not set.
+
+        Prefer local SQLite when running locally in development/testing mode unless
+        explicit valid production credentials are set for production environment.
+        """
+        import sys
+
+        database_url = (self.DATABASE_URL or "").strip()
+        async_database_url = (self.ASYNC_DATABASE_URL or "").strip()
+        database_type = (self.DATABASE_TYPE or "").strip().lower()
+        environment = (self.ENVIRONMENT or "").strip().lower()
+
+        is_testing = "pytest" in sys.modules or bool(os.getenv("PYTEST_CURRENT_TEST"))
+        is_placeholder_pg = "ep-xxx" in database_url or "user:password" in database_url or "ep-xxx" in async_database_url
+
+        # Override remote postgres defaults during test / local dev runs
+        if is_testing or (environment in ("development", "dev", "test") and (is_placeholder_pg or not os.getenv("DATABASE_URL"))):
             self.DATABASE_TYPE = "sqlite"
-            if not self.DATABASE_URL or self.DATABASE_URL.startswith("postgresql"):
+            self.DATABASE_URL = self.SQLITE_DATABASE_URL
+            self.ASYNC_DATABASE_URL = self.SQLITE_ASYNC_DATABASE_URL
+            return self
+
+        is_sqlite = database_url.startswith("sqlite") or async_database_url.startswith("sqlite") or database_type == "sqlite"
+        is_postgres = database_url.startswith("postgresql") or async_database_url.startswith("postgresql") or database_type == "postgresql"
+
+        if is_sqlite and not is_postgres:
+            self.DATABASE_TYPE = "sqlite"
+            if not database_url or database_url.startswith("postgresql"):
                 self.DATABASE_URL = self.SQLITE_DATABASE_URL
-            if not self.ASYNC_DATABASE_URL or self.ASYNC_DATABASE_URL.startswith("postgresql"):
+            if not async_database_url or async_database_url.startswith("postgresql"):
                 self.ASYNC_DATABASE_URL = self.SQLITE_ASYNC_DATABASE_URL
+            return self
+
+        self.DATABASE_TYPE = "postgresql"
+        if database_url.startswith("sqlite") or not database_url:
+            self.DATABASE_URL = (
+                f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
+                f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+            )
+        if async_database_url.startswith("sqlite") or not async_database_url:
+            self.ASYNC_DATABASE_URL = self.DATABASE_URL.replace(
+                "postgresql://", "postgresql+asyncpg://", 1
+            )
+        self.ASYNC_DATABASE_URL = normalize_async_database_url(
+            self.ASYNC_DATABASE_URL
+        )
         return self
 
 
