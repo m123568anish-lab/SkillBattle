@@ -151,7 +151,7 @@ export default function ProfileMenu() {
           type="button"
           onClick={() => setIsMobileMenuOpen(true)}
           suppressHydrationWarning
-          className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#070B14] px-2.5 py-2 shadow-lg shadow-black/20 transition-transform active:scale-[.98]"
+          className="flex items-center gap-0 rounded-full border border-white/10 bg-[#070B14] p-1 shadow-lg shadow-black/20 transition-transform active:scale-[.98] sm:gap-2 sm:rounded-xl sm:px-2.5 sm:py-2"
           aria-label="Open profile menu"
         >
           <div className="relative rounded-full bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-500 p-0.5">
@@ -164,8 +164,8 @@ export default function ProfileMenu() {
               className="h-9 w-9 rounded-full object-cover"
             />
           </div>
-          <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-cyan-300">Admin</span>
-          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-300">Level {user?.level ?? 1}</span>
+          <span className="hidden rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-cyan-300 sm:inline-flex">{user?.role || "Player"}</span>
+          <span className="hidden text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-300 sm:inline">Level {user?.level ?? 1}</span>
         </button>
       </div>
 

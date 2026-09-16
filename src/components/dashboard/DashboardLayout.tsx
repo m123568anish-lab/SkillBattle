@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
-import { X, Home, Sword, Trophy, Users, MoreHorizontal, ChevronRight, Sparkles } from "lucide-react";
+import { X, Home, Sword, Trophy, Users, MoreHorizontal, ChevronRight, Search, Sparkles, Bot, Flame } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sidebarCategories } from "@/data/dashboard";
 import Link from "next/link";
@@ -17,7 +17,19 @@ export default function DashboardLayout({
   children,
 }: Props) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [menuSearch, setMenuSearch] = useState("");
   const pathname = usePathname();
+  const filteredCategories = useMemo(() => {
+    const query = menuSearch.trim().toLowerCase();
+    if (!query) return sidebarCategories.filter((category) => category.id !== "main");
+    return sidebarCategories
+      .filter((category) => category.id !== "main")
+      .map((category) => ({
+        ...category,
+        items: category.items.filter((item) => item.title.toLowerCase().includes(query)),
+      }))
+      .filter((category) => category.items.length > 0);
+  }, [menuSearch]);
 
   return (
     <div
@@ -63,7 +75,7 @@ export default function DashboardLayout({
                     <X size={18} />
                   </button>
                 </div>
-                <div className="mb-5 rounded-2xl border border-cyan-400/15 bg-gradient-to-r from-cyan-400/10 to-violet-500/10 p-4">
+                <div className="mb-4 rounded-2xl border border-cyan-400/15 bg-gradient-to-r from-cyan-400/10 to-violet-500/10 p-4">
                   <div className="flex items-center gap-3">
                     <div className="rounded-xl bg-cyan-400/15 p-2 text-cyan-300"><Sparkles size={18} /></div>
                     <div>
@@ -72,8 +84,37 @@ export default function DashboardLayout({
                     </div>
                   </div>
                 </div>
+                <div className="mb-5 grid grid-cols-2 gap-2">
+                  <Link
+                    href="/battle"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="group rounded-2xl border border-fuchsia-400/20 bg-fuchsia-400/10 p-3 transition hover:border-fuchsia-300/50"
+                  >
+                    <Flame className="mb-3 text-fuchsia-300" size={19} />
+                    <span className="block text-xs font-bold text-white">Start a battle</span>
+                    <span className="mt-1 block text-[10px] text-slate-400">Enter the arena</span>
+                  </Link>
+                  <Link
+                    href="/coach"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="group rounded-2xl border border-violet-400/20 bg-violet-400/10 p-3 transition hover:border-violet-300/50"
+                  >
+                    <Bot className="mb-3 text-violet-300" size={19} />
+                    <span className="block text-xs font-bold text-white">Ask AI Coach</span>
+                    <span className="mt-1 block text-[10px] text-slate-400">Improve your skills</span>
+                  </Link>
+                </div>
+                <label className="mb-5 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.04] px-4 py-3 text-slate-400 focus-within:border-violet-400/50">
+                  <Search size={17} />
+                  <input
+                    value={menuSearch}
+                    onChange={(event) => setMenuSearch(event.target.value)}
+                    placeholder="Jump to a feature..."
+                    className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
+                  />
+                </label>
                 <nav aria-label="More navigation" className="space-y-5">
-                  {sidebarCategories.filter((category) => category.id !== "main").map((category) => (
+                  {filteredCategories.map((category) => (
                     <section key={category.id}>
                       <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">{category.label}</p>
                       <div className="grid grid-cols-2 gap-2">
@@ -103,6 +144,11 @@ export default function DashboardLayout({
                     </section>
                   ))}
                 </nav>
+                {filteredCategories.length === 0 && (
+                  <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-slate-500">
+                    No matching feature found.
+                  </div>
+                )}
               </div>
               <div className="border-t border-white/5 pt-4 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">SkillBattle Arena</div>
             </motion.aside>

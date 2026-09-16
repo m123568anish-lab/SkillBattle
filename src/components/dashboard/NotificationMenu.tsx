@@ -4,8 +4,16 @@ import { useEffect, useState } from "react";
 import { Bell, CheckCheck, X } from "lucide-react";
 import api from "@/services/api";
 
+interface NotificationItem {
+  id: string;
+  is_read: boolean;
+  notification_type: string;
+  title: string;
+  message: string;
+}
+
 export default function NotificationMenu() {
-  const [notifs, setNotifs] = useState<any[]>([]);
+  const [notifs, setNotifs] = useState<NotificationItem[]>([]);
   const [open, setOpen] = useState(false);
 
   const fetchNotifs = async () => {
@@ -16,9 +24,14 @@ export default function NotificationMenu() {
   };
 
   useEffect(() => {
-    fetchNotifs();
+    const initialFetch = window.setTimeout(() => {
+      void fetchNotifs();
+    }, 0);
     const interval = setInterval(fetchNotifs, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      window.clearTimeout(initialFetch);
+      clearInterval(interval);
+    };
   }, []);
 
   const unreadCount = notifs.filter((n) => !n.is_read).length;
@@ -42,9 +55,9 @@ export default function NotificationMenu() {
       <button
         suppressHydrationWarning
         onClick={() => setOpen((p) => !p)}
-        className="relative rounded-xl border border-white/10 bg-white/5 p-3 transition hover:border-cyan-400"
+        className="relative grid h-10 w-10 place-items-center rounded-full border border-white/[0.08] bg-black/20 p-0 transition hover:border-cyan-400 hover:bg-cyan-500/10 sm:h-14 sm:w-14"
       >
-        <Bell className="text-white" size={22} />
+        <Bell className="text-white" size={20} />
         {unreadCount > 0 && (
           <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white shadow-lg shadow-rose-500/40">
             {unreadCount > 9 ? "9+" : unreadCount}
