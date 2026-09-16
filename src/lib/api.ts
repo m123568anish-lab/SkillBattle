@@ -8,7 +8,12 @@ const normalizeBaseUrl = (value: string | undefined) => {
     return base.replace(/\/api\/v1$/, "");
 };
 
-const API_BASE_URL = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_URL);
+// Browser requests stay same-origin and are proxied by Next. This avoids
+// production CORS failures when the API deployment has an outdated allowlist.
+const API_BASE_URL =
+    typeof window === "undefined"
+        ? normalizeBaseUrl(process.env.NEXT_PUBLIC_API_URL)
+        : "";
 
 const api = axios.create({
     baseURL: `${API_BASE_URL}/api/v1`,

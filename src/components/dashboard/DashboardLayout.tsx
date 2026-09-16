@@ -3,9 +3,9 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
-import { X, Home, Sword, Trophy, Users, MoreHorizontal } from "lucide-react";
+import { X, Home, Sword, Trophy, Users, MoreHorizontal, ChevronRight, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { sidebarItems } from "@/data/dashboard";
+import { sidebarCategories } from "@/data/dashboard";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -47,42 +47,64 @@ export default function DashboardLayout({
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed bottom-0 left-0 top-0 z-50 w-72 bg-[#070B14] p-6 border-r border-white/10 md:hidden flex flex-col justify-between"
+              className="fixed bottom-0 right-0 top-0 z-50 flex w-[min(92vw,390px)] flex-col border-l border-white/10 bg-[#070B14]/[.98] p-5 shadow-[-24px_0_80px_rgba(0,0,0,.5)] backdrop-blur-2xl md:hidden"
             >
-              <div>
-                <div className="flex items-center justify-between border-b border-white/5 pb-6">
-                  <span className="text-xl font-black bg-gradient-to-r from-cyan-400 to-violet-500 bg-clip-text text-transparent">
-                    SkillBattle
-                  </span>
+              <div className="min-h-0 overflow-y-auto">
+                <div className="mb-6 flex items-center justify-between border-b border-white/5 pb-5">
+                  <div>
+                    <span className="block text-[10px] font-bold uppercase tracking-[0.25em] text-cyan-300">Quick access</span>
+                    <span className="mt-1 block text-xl font-black text-white">More tools</span>
+                  </div>
                   <button
                     onClick={() => setMobileMenuOpen(false)}
-                    className="rounded-lg border border-white/10 p-1 text-slate-400 hover:text-white"
+                    aria-label="Close more menu"
+                    className="rounded-full border border-white/10 bg-white/5 p-2 text-slate-400 transition hover:bg-white/10 hover:text-white"
                   >
                     <X size={18} />
                   </button>
                 </div>
-                <nav className="mt-6 space-y-1.5">
-                  {sidebarItems.map((item) => {
-                    const Icon = item.icon;
-                    const active = pathname === item.href;
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                          active
-                            ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
-                            : "text-slate-400 hover:text-white hover:bg-white/5"
-                        }`}
-                      >
-                        <Icon size={18} />
-                        {item.title}
-                      </Link>
-                    );
-                  })}
+                <div className="mb-5 rounded-2xl border border-cyan-400/15 bg-gradient-to-r from-cyan-400/10 to-violet-500/10 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-xl bg-cyan-400/15 p-2 text-cyan-300"><Sparkles size={18} /></div>
+                    <div>
+                      <p className="text-sm font-bold text-white">Keep progressing</p>
+                      <p className="mt-0.5 text-xs text-slate-400">Jump into your next challenge.</p>
+                    </div>
+                  </div>
+                </div>
+                <nav aria-label="More navigation" className="space-y-5">
+                  {sidebarCategories.filter((category) => category.id !== "main").map((category) => (
+                    <section key={category.id}>
+                      <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">{category.label}</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {category.items.map((item) => {
+                          const Icon = item.icon;
+                          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                          return (
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              onClick={() => setMobileMenuOpen(false)}
+                              className={`group flex min-h-[76px] flex-col justify-between rounded-2xl border p-3 transition ${
+                                active
+                                  ? "border-cyan-400/35 bg-cyan-400/10 text-cyan-300"
+                                  : "border-white/8 bg-white/[.035] text-slate-300 hover:border-white/20 hover:bg-white/[.07]"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <Icon size={18} />
+                                <ChevronRight size={14} className="opacity-40 transition group-hover:translate-x-0.5 group-hover:opacity-100" />
+                              </div>
+                              <span className="text-xs font-semibold leading-tight">{item.title}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  ))}
                 </nav>
               </div>
+              <div className="border-t border-white/5 pt-4 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">SkillBattle Arena</div>
             </motion.aside>
           </>
         )}
