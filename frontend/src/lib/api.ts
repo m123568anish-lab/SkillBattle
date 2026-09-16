@@ -44,18 +44,35 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 api.interceptors.response.use(
     (response) => response,
     async (error: AxiosError & { config?: InternalAxiosRequestConfig }) => {
-        const originalRequest = error.config as InternalAxiosRequestConfig | undefined;
+        const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean; _fallbackRetry?: boolean }) | undefined;
         const url = originalRequest?.url ?? "";
+
+        // Fallback retry for network errors / connection refused when target is localhost
+        if (
+            originalRequest &&
+            !error.response &&
+            !originalRequest._fallbackRetry &&
+            (api.defaults.baseURL?.includes("localhost") || originalRequest.baseURL?.includes("localhost") || originalRequest.url?.includes("localhost"))
+        ) {
+            originalRequest._fallbackRetry = true;
+            originalRequest.baseURL = "https://skillbattle-api-2026.onrender.com/api/v1";
+            originalRequest.timeout = 30_000; // Allow 30s for Render cold start
+            try {
+                return await axios(originalRequest);
+            } catch (fallbackErr) {
+                return Promise.reject(fallbackErr);
+            }
+        }
 
         if (
             originalRequest &&
             error.response?.status === 401 &&
-            !(originalRequest as any)._retry &&
+            !originalRequest._retry &&
             !url.includes("/auth/login") &&
             !url.includes("/auth/register") &&
             !url.includes("/auth/refresh")
         ) {
-            (originalRequest as any)._retry = true;
+            originalRequest._retry = true;
 
             if (isRefreshing) {
                 return new Promise((resolve) => {

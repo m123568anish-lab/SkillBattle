@@ -11,7 +11,12 @@ logger = logging.getLogger(__name__)
 _BUILTIN_ORIGINS: list[str] = [
     "http://localhost:3000",
     "http://localhost:3001",
+    "http://localhost:3002",
     "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+    "http://127.0.0.1:3002",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
     "https://skill-battle-one.vercel.app",
     "https://skill-battle-z2fa.vercel.app",
     "https://skill-battle.vercel.app",
@@ -30,11 +35,11 @@ def configure_cors(app) -> None:
 
     app.add_middleware(
         CORSMiddleware,
-        # Explicit list — no wildcard "*" or open regexes in production.
         allow_origins=origins,
-        allow_credentials=False,
-        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
-        expose_headers=["X-Request-ID"],
+        allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|.*\.vercel\.app|.*\.onrender\.com)(:\d+)?",
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"],
         max_age=600,
     )

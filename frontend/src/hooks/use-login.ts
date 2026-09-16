@@ -24,8 +24,22 @@ export function useLogin() {
                 },
             };
         } catch (error: any) {
-            const msg = error?.response?.data?.detail || error?.message || "Login failed";
-            toast.error(typeof msg === "string" ? msg : "Login failed. Please check your credentials.");
+            const detail = error?.response?.data?.detail;
+            const msg =
+                typeof detail === "string"
+                    ? detail
+                    : Array.isArray(detail)
+                    ? detail.map((d: any) => d.msg || d.message || JSON.stringify(d)).join(", ")
+                    : error?.message || "Login failed";
+
+            const userFacingMsg =
+                msg.includes("Network Error") || msg.includes("ECONNREFUSED") || error?.code === "ERR_NETWORK"
+                    ? "Network Error: Unable to reach SkillBattle backend server. Please check your internet connection."
+                    : typeof msg === "string"
+                    ? msg
+                    : "Login failed. Please check your credentials.";
+
+            toast.error(userFacingMsg);
             throw error;
         } finally {
             setLoading(false);

@@ -41,27 +41,20 @@ export default function LoginForm() {
   });
 
   async function onSubmit(data: LoginFormData) {
-  try {
-    const result = await signIn(data);
+    try {
+      const result = await signIn(data);
 
-    if (!result?.tokens?.access_token) {
-      throw new Error("No access token received.");
+      if (!result?.tokens?.access_token) {
+        throw new Error("No access token received.");
+      }
+
+      toast.success("Welcome back!");
+
+      router.replace("/dashboard");
+    } catch (error: any) {
+      console.error("Login submission error:", error);
     }
-
-    toast.success("Welcome back!");
-
-    router.replace("/dashboard");
-  } catch (error: any) {
-    console.error(error);
-
-    const message =
-      error?.response?.data?.detail ||
-      error?.message ||
-      "Unable to login.";
-
-    toast.error(message);
   }
-}
 
   return (
     <>

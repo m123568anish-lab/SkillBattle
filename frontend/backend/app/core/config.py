@@ -139,7 +139,7 @@ class Settings(BaseSettings):
     # --------------------------------------------------
 
     model_config = SettingsConfigDict(
-        env_file=(".env", ".env.production"),
+        env_file=(".env.production", ".env"),
         case_sensitive=True,
         extra="ignore",
     )

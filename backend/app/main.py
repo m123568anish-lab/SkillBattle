@@ -81,9 +81,6 @@ app = FastAPI(
 )
 
 register_middleware(app)
-
-configure_cors(app)
-
 configure_gzip(app)
 
 app.add_middleware(RequestIDMiddleware)
@@ -91,13 +88,14 @@ app.add_middleware(TimingMiddleware)
 app.add_middleware(MaintenanceMiddleware)
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(XSSGuardMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
+
+# CORS must be added LAST so it wraps all inner middlewares and exception responses
+configure_cors(app)
 
 app.include_router(battle_ws_router)
 app.include_router(metrics_router)
 app.include_router(health_router)
-app.add_middleware(
-    SecurityHeadersMiddleware,
-)
 register_routers(app)
 
 

@@ -59,8 +59,13 @@ class RegisterRequest(BaseModel):
     @field_validator("avatar_url")
     @classmethod
     def validate_avatar_url(cls, v: str | None) -> str | None:
-        if v is not None and not _HTTP_URL.match(v):
-            raise ValueError("avatar_url must be a valid http/https URL.")
+        if v is not None:
+            v_str = v.strip()
+            if not v_str:
+                return None
+            if not (v_str.startswith("http://") or v_str.startswith("https://") or v_str.startswith("data:image/") or v_str.startswith("blob:")):
+                # If invalid URL, fallback to default dicebear avatar instead of rejecting registration
+                return "https://api.dicebear.com/7.x/bottts/svg?seed=CyberCoder"
         return v
 
     @field_validator("password")
