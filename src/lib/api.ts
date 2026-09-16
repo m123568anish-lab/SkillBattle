@@ -1,10 +1,10 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 
+const FALLBACK_API_BASE_URL = "https://skillbattle-api-2026.onrender.com";
+
 const normalizeBaseUrl = (value: string | undefined) => {
-    const defaultUrl = process.env.NODE_ENV === "production"
-        ? "https://skillbattle-api-2026.onrender.com"
-        : "http://localhost:8000";
-    const base = (value || defaultUrl).trim().replace(/\/+$/, "");
+    const configured = (value || FALLBACK_API_BASE_URL).trim();
+    const base = configured.replace(/\/+$/, "");
     return base.replace(/\/api\/v1$/, "");
 };
 
@@ -12,6 +12,7 @@ const API_BASE_URL = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_URL);
 
 const api = axios.create({
     baseURL: `${API_BASE_URL}/api/v1`,
+    timeout: 20_000,
     headers: { "Content-Type": "application/json" },
     withCredentials: true,
 });
@@ -37,18 +38,33 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 api.interceptors.response.use(
     (response) => response,
     async (error: AxiosError & { config?: InternalAxiosRequestConfig }) => {
-        const originalRequest = error.config as InternalAxiosRequestConfig | undefined;
+        const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean; _fallbackRetry?: boolean }) | undefined;
         const url = originalRequest?.url ?? "";
 
         if (
             originalRequest &&
+            !error.response &&
+            !originalRequest._fallbackRetry &&
+            (API_BASE_URL.includes("localhost") || API_BASE_URL.includes("127.0.0.1"))
+        ) {
+            originalRequest._fallbackRetry = true;
+            originalRequest.baseURL = `${FALLBACK_API_BASE_URL}/api/v1`;
+            try {
+                return await axios(originalRequest);
+            } catch (fallbackErr) {
+                return Promise.reject(fallbackErr);
+            }
+        }
+
+        if (
+            originalRequest &&
             error.response?.status === 401 &&
-            !(originalRequest as any)._retry &&
+            !originalRequest._retry &&
             !url.includes("/auth/login") &&
             !url.includes("/auth/register") &&
             !url.includes("/auth/refresh")
         ) {
-            (originalRequest as any)._retry = true;
+            originalRequest._retry = true;
 
             if (isRefreshing) {
                 return new Promise((resolve) => {
