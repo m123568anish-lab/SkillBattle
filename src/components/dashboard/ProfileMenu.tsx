@@ -164,8 +164,6 @@ export default function ProfileMenu() {
               className="h-9 w-9 rounded-full object-cover"
             />
           </div>
-          <span className="hidden rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-cyan-300 sm:inline-flex">{user?.role || "Player"}</span>
-          <span className="hidden text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-300 sm:inline">Level {user?.level ?? 1}</span>
         </button>
       </div>
 

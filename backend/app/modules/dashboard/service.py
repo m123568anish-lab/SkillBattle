@@ -67,8 +67,12 @@ class DashboardService:
         from app.modules.xp.service import xp_service
 
         user_xp = await xp_service.get_user_xp(db, current_user)
-        total_xp = user_xp.total_xp if user_xp else 0
-        user_level = user_xp.level if user_xp else max(1, (total_xp // 500) + 1)
+        total_xp = int(user_xp.total_xp or 0) if user_xp else 0
+        user_level = (
+            int(user_xp.level or 1)
+            if user_xp
+            else max(1, (total_xp // 500) + 1)
+        )
         
         rating = max(0, user.coding_rating or 0)
 
@@ -88,7 +92,10 @@ class DashboardService:
 
         today = datetime.utcnow().strftime("%a")
         weekly = [
-            WeeklyActivity(day=day, xp=user_xp.weekly_xp if day == today else 0)
+            WeeklyActivity(
+                day=day,
+                xp=int(user_xp.weekly_xp or 0) if day == today and user_xp else 0,
+            )
             for day in ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
         ]
 
@@ -96,9 +103,9 @@ class DashboardService:
 
             Achievement(
                 id=str(item.id),
-                title=item.title,
-                description=item.description,
-                icon=item.icon,
+                title=item.title or "Achievement",
+                description=item.description or "Keep practicing to unlock achievements.",
+                icon=item.icon or "trophy",
             )
 
             for item in achievements
@@ -128,10 +135,13 @@ class DashboardService:
         else:
             daily = DailyChallenge(
                 id=str(challenge.id),
-                title=challenge.title,
-                difficulty=challenge.difficulty,
-                description=f"Solve today's {challenge.category} challenge to maintain your streak.",
-                xp_reward=challenge.xp_reward,
+                title=challenge.title or "Daily challenge",
+                difficulty=challenge.difficulty or "Easy",
+                description=(
+                    f"Solve today's {challenge.category or 'coding'} challenge "
+                    "to maintain your streak."
+                ),
+                xp_reward=int(challenge.xp_reward or 0),
             )
 
         return DashboardResponse(
@@ -139,8 +149,8 @@ class DashboardService:
             user=UserSummary(
                 id=user.id,
                 username=user.username,
-                full_name=user.full_name,
-                email=user.email,
+                full_name=user.full_name or user.username or "SkillBattle player",
+                email=user.email or "",
                 avatar_url=user.avatar_url,
                 role=getattr(user, "role", "user"),
                 is_superuser=getattr(user, "is_superuser", False),

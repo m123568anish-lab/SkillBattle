@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Search, Sun, Trophy } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Moon, Search, Sun, Trophy } from "lucide-react";
 import NotificationMenu from "./NotificationMenu";
 import ProfileMenu from "./ProfileMenu";
 import { useAuthStore } from "@/store/authStore";
@@ -15,15 +15,32 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
   const user = useAuthStore((s) => s.user);
   const dashboard = useDashboardStore((s) => s.dashboard);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [lightMode, setLightMode] = useState(false);
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem("skillbattle-theme");
+    const enabled = savedTheme === "light";
+    setLightMode(enabled);
+    document.documentElement.dataset.theme = enabled ? "light" : "dark";
+  }, []);
+
+  function toggleTheme() {
+    setLightMode((enabled) => {
+      const next = !enabled;
+      document.documentElement.dataset.theme = next ? "light" : "dark";
+      window.localStorage.setItem("skillbattle-theme", next ? "light" : "dark");
+      return next;
+    });
+  }
 
   const level = dashboard?.stats?.level ?? user?.level ?? 1;
   const rating = dashboard?.stats?.rating ?? 1000;
   const xp = dashboard?.stats?.xp ?? 0;
 
   return (
-    <header className="relative z-30 mb-6 overflow-visible border-b border-white/[0.06] bg-[#0c0a12] shadow-[0_18px_55px_rgba(0,0,0,.28)]">
-      <div className="h-1 bg-gradient-to-r from-fuchsia-600 via-violet-500 to-indigo-500" />
-      <div className="relative flex min-h-[92px] items-center gap-3 px-3 py-3 sm:min-h-[112px] sm:px-6 lg:px-8">
+    <header className="relative z-30 mx-2 mb-4 overflow-visible rounded-2xl border border-white/[0.06] bg-[#0c0a12] shadow-[0_18px_55px_rgba(0,0,0,.28)] md:mx-0 md:mb-6 md:rounded-none md:border-x-0 md:border-t-0">
+      <div className="h-1 rounded-t-2xl bg-gradient-to-r from-fuchsia-600 via-violet-500 to-indigo-500 md:rounded-none" />
+      <div className="relative flex min-h-[68px] items-center gap-2 px-2.5 py-2 sm:min-h-[112px] sm:gap-3 sm:px-6 sm:py-3 lg:px-8">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_40%,rgba(168,85,247,.12),transparent_28%),radial-gradient(circle_at_90%_0%,rgba(79,70,229,.10),transparent_30%)]" />
 
         <div className="relative flex min-w-0 flex-1 items-center gap-3 sm:gap-6">
@@ -33,19 +50,19 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
             className="group relative flex min-w-0 shrink-0 items-center gap-2 sm:gap-3"
             aria-label="Open navigation menu"
           >
-            <span className="relative grid h-10 w-10 place-items-center rounded-full bg-[conic-gradient(from_210deg,#ec0bb8,#7c3aed,#2563eb,#ec0bb8)] p-1 shadow-[0_0_28px_rgba(168,85,247,.35)] sm:h-16 sm:w-16">
+            <span className="relative grid h-8 w-8 place-items-center rounded-full bg-[conic-gradient(from_210deg,#ec0bb8,#7c3aed,#2563eb,#ec0bb8)] p-1 shadow-[0_0_20px_rgba(168,85,247,.35)] sm:h-16 sm:w-16">
               <span className="grid h-full w-full place-items-center rounded-full bg-[#0c0a12] text-fuchsia-200">
-                <Trophy size={18} className="transition group-hover:scale-110 sm:h-7 sm:w-7" />
+                <Trophy size={14} className="transition group-hover:scale-110 sm:h-7 sm:w-7" />
               </span>
             </span>
             <span className="text-left">
-              <span className="block text-sm font-black tracking-tight text-white sm:text-2xl">SkillBattle</span>
-              <span className="block text-[10px] font-bold uppercase tracking-[0.3em] text-violet-300">Arena</span>
+              <span className="block text-xs font-black tracking-tight text-white sm:text-2xl">SkillBattle</span>
+              <span className="block text-[8px] font-bold uppercase tracking-[0.22em] text-violet-300 sm:text-[10px] sm:tracking-[0.3em]">Arena</span>
             </span>
           </button>
 
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <div className="flex items-center gap-1.5 rounded-full border border-white/[0.07] bg-black/20 px-2.5 py-2 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-300 sm:gap-3 sm:px-7 sm:py-3 sm:text-sm sm:tracking-[0.16em]">
+            <div className="hidden items-center gap-1.5 rounded-full border border-white/[0.07] bg-black/20 px-2.5 py-2 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-300 sm:flex sm:gap-3 sm:px-7 sm:py-3 sm:text-sm sm:tracking-[0.16em]">
               <span className="h-2 w-2 rounded-full bg-violet-400 shadow-[0_0_14px_rgba(167,139,250,.9)] sm:h-3 sm:w-3" />
               Active
             </div>
@@ -73,17 +90,19 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
             type="button"
             aria-label="Search"
             onClick={() => setSearchOpen((open) => !open)}
-            className="grid h-10 w-10 place-items-center rounded-full border border-white/[0.08] bg-black/20 text-slate-200 transition hover:border-violet-400/60 hover:bg-violet-500/15 hover:text-white sm:h-14 sm:w-14"
+            className="grid h-9 w-9 place-items-center rounded-xl border border-white/[0.08] bg-black/20 text-slate-200 transition hover:border-violet-400/60 hover:bg-violet-500/15 hover:text-white sm:h-14 sm:w-14"
           >
-            <Search size={20} className="sm:h-[25px] sm:w-[25px]" />
+            <Search size={17} className="sm:h-[25px] sm:w-[25px]" />
           </button>
           <NotificationMenu />
           <button
             type="button"
             aria-label="Toggle theme"
-            className="grid h-10 w-10 place-items-center rounded-full border border-white/[0.08] bg-black/20 text-slate-200 transition hover:border-fuchsia-400/60 hover:bg-fuchsia-500/15 hover:text-white sm:h-14 sm:w-14"
+            aria-pressed={lightMode}
+            onClick={toggleTheme}
+            className="grid h-9 w-9 place-items-center rounded-xl border border-white/[0.08] bg-black/20 text-slate-200 transition hover:border-fuchsia-400/60 hover:bg-fuchsia-500/15 hover:text-white sm:h-14 sm:w-14"
           >
-            <Sun size={20} className="sm:h-[25px] sm:w-[25px]" />
+            {lightMode ? <Moon size={17} className="sm:h-[25px] sm:w-[25px]" /> : <Sun size={17} className="sm:h-[25px] sm:w-[25px]" />}
           </button>
           <ProfileMenu />
         </div>

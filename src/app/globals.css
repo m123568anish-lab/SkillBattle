@@ -18,6 +18,15 @@ html[data-contrast="high"] body {
   filter: contrast(1.08) saturate(1.08);
 }
 
+html[data-theme="light"] body {
+  background: #eef4fb;
+  color: #0f172a;
+}
+
+html[data-theme="light"] .bg-\[\#0c0a12\] {
+  background-color: #ffffff;
+}
+
 body {
   min-height: 100vh;
   background:
