@@ -167,8 +167,8 @@ class Settings(BaseSettings):
         is_testing = "pytest" in sys.modules or bool(os.getenv("PYTEST_CURRENT_TEST"))
         is_placeholder_pg = "ep-xxx" in database_url or "user:password" in database_url or "ep-xxx" in async_database_url
 
-        # Override remote postgres defaults during test / local dev runs
-        if is_testing or (environment in ("development", "dev", "test") and (is_placeholder_pg or not os.getenv("DATABASE_URL"))):
+        # Override remote postgres placeholder/test defaults to prevent gaierror / connection failures
+        if is_testing or is_placeholder_pg or environment in ("development", "dev", "test") or not os.getenv("DATABASE_URL"):
             self.DATABASE_TYPE = "sqlite"
             self.DATABASE_URL = self.SQLITE_DATABASE_URL
             self.ASYNC_DATABASE_URL = self.SQLITE_ASYNC_DATABASE_URL
