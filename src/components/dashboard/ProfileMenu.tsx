@@ -176,7 +176,7 @@ export default function ProfileMenu() {
             className="fixed inset-0 z-40 animate-[profile-fade-in_180ms_ease-out] bg-black/70 backdrop-blur-md md:hidden"
           />
 
-          <div className="fixed inset-x-0 bottom-0 z-50 max-h-[88dvh] w-full animate-[profile-sheet-in_240ms_cubic-bezier(0.22,1,0.36,1)] overflow-y-auto rounded-t-[2rem] border-t border-white/10 bg-[#080b14]/[.98] px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-20px_80px_rgba(0,0,0,.55)] md:hidden">
+          <div className="skillbattle-profile-sheet fixed inset-x-0 bottom-0 z-50 max-h-[88dvh] w-full animate-[profile-sheet-in_240ms_cubic-bezier(0.22,1,0.36,1)] overflow-y-auto rounded-t-[2rem] border-t border-white/10 bg-[#080b14]/[.98] px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-20px_80px_rgba(0,0,0,.55)] md:hidden">
             <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-white/15" />
 
             <div className="mb-6 flex items-center justify-between">

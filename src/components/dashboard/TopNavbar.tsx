@@ -21,12 +21,14 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
     const enabled = savedTheme === "light";
     setLightMode(enabled);
     document.documentElement.dataset.theme = enabled ? "light" : "dark";
+    document.documentElement.style.colorScheme = enabled ? "light" : "dark";
   }, []);
 
   function toggleTheme() {
     setLightMode((enabled) => {
       const next = !enabled;
       document.documentElement.dataset.theme = next ? "light" : "dark";
+      document.documentElement.style.colorScheme = next ? "light" : "dark";
       window.localStorage.setItem("skillbattle-theme", next ? "light" : "dark");
       return next;
     });
@@ -37,8 +39,7 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
   const xp = dashboard?.stats?.xp ?? 0;
 
   return (
-    <header className="relative z-30 mx-2 mb-4 overflow-visible rounded-2xl border border-white/[0.06] bg-[#0c0a12] shadow-[0_18px_55px_rgba(0,0,0,.28)] md:mx-0 md:mb-6 md:rounded-2xl md:border-white/[0.06]">
-      <div className="h-1 rounded-t-2xl bg-gradient-to-r from-fuchsia-600 via-violet-500 to-indigo-500 md:hidden" />
+    <header className="relative z-30 mx-0 mb-3 overflow-visible border-0 bg-transparent shadow-none md:mx-0 md:mb-6 md:rounded-2xl md:border md:border-white/[0.06] md:bg-[#0c0a12] md:shadow-[0_18px_55px_rgba(0,0,0,.28)]">
       <div className="relative hidden min-h-[88px] items-center gap-5 px-4 py-4 md:flex lg:px-5">
         <label className="flex h-12 w-[285px] items-center gap-3 rounded-xl border border-white/10 bg-[#111827] px-4 text-slate-400 transition focus-within:border-cyan-400/40 focus-within:text-cyan-300">
           <Search size={19} />
@@ -67,7 +68,7 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
           <ProfileMenu />
         </div>
       </div>
-      <div className="mobile-skillbattle-navbar relative flex min-h-[64px] w-full items-center justify-between gap-2 px-3 py-2 md:hidden">
+      <div className="mobile-skillbattle-navbar relative flex min-h-[64px] w-full items-center justify-between gap-2 border-0 px-3 py-2 md:hidden">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_40%,rgba(34,211,238,.12),transparent_35%),radial-gradient(circle_at_90%_0%,rgba(127,0,255,.15),transparent_35%)]" />
 
         <div className="relative flex min-w-0 items-center">

@@ -56,6 +56,7 @@ export default function DashboardLayout({
       className="
         flex
         min-h-screen
+        skillbattle-shell
         bg-[#050816]
         text-white
       "
@@ -200,7 +201,7 @@ export default function DashboardLayout({
       <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center md:hidden">
         <nav
           aria-label="Mobile navigation"
-          className="flex w-full max-w-lg items-center justify-between rounded-t-2xl border border-white/10 bg-slate-950/90 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_20px_60px_rgba(8,145,178,0.25)] backdrop-blur-xl"
+          className="skillbattle-mobile-nav flex w-full max-w-lg items-center justify-between rounded-t-2xl border border-white/10 bg-slate-950/90 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_20px_60px_rgba(8,145,178,0.25)] backdrop-blur-xl"
         >
           {[
             { title: "Home", href: "/dashboard", icon: Home },

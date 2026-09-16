@@ -18,19 +18,14 @@ html[data-contrast="high"] body {
   filter: contrast(1.08) saturate(1.08);
 }
 
-html[data-theme="light"] body {
-  background: #eef4fb;
-  color: #0f172a;
-}
-
 html[data-theme="light"] .bg-\[\#0c0a12\] {
   background-color: #ffffff;
 }
 
 html[data-theme="light"] .mobile-skillbattle-navbar {
-  background: rgba(255, 255, 255, 0.92);
-  border-color: #e5e7eb;
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 html[data-theme="light"] .mobile-skillbattle-navbar button[aria-label="Toggle theme"],
@@ -52,6 +47,28 @@ body {
     #050816;
   color: white;
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+html[data-theme="light"] body {
+  background: #eef4fb;
+  color: #0f172a;
+}
+
+html[data-theme="light"] .skillbattle-shell {
+  background: #eef4fb;
+  color: #0f172a;
+}
+
+html[data-theme="light"] .skillbattle-mobile-nav {
+  border-color: #dbe3ef;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 -8px 28px rgba(15, 23, 42, 0.12);
+}
+
+html[data-theme="light"] .skillbattle-profile-sheet {
+  border-color: #dbe3ef;
+  background: rgba(255, 255, 255, 0.98);
+  color: #1f2937;
 }
 
 * {
