@@ -59,6 +59,7 @@ async def health():
     "/me",
     response_model=ProfileResponse,
 )
+@router.get("", response_model=ProfileResponse, include_in_schema=False)
 async def get_profile(
 
     db: AsyncSession = Depends(get_db),

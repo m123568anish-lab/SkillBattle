@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
-import { X } from "lucide-react";
+import { X, Home, Compass, List, Users, MoreHorizontal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sidebarItems } from "@/data/dashboard";
 import Link from "next/link";
@@ -20,7 +20,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
 
   return (
-    <main
+    <div
       suppressHydrationWarning
       className="
         flex
@@ -40,14 +40,14 @@ export default function DashboardLayout({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileMenuOpen(false)}
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
             />
             <motion.aside
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed bottom-0 left-0 top-0 z-50 w-72 bg-[#070B14] p-6 border-r border-white/10 lg:hidden flex flex-col justify-between"
+              className="fixed bottom-0 left-0 top-0 z-50 w-72 bg-[#070B14] p-6 border-r border-white/10 md:hidden flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between border-b border-white/5 pb-6">
@@ -88,30 +88,36 @@ export default function DashboardLayout({
         )}
       </AnimatePresence>
 
-      <section
+      <main
         className="
           flex-1
           overflow-auto
           p-3
           sm:p-8
-          pb-28
-          lg:pb-8
+          px-4
+          pb-[calc(6rem+env(safe-area-inset-bottom))]
+          md:p-8
+          md:pb-8
         "
       >
         <TopNavbar onMenuClick={() => setMobileMenuOpen(true)} />
 
         {children}
 
-      </section>
+      </main>
 
-      {/* Mobile glass-floating bottom navigation */}
-      <div className="fixed inset-x-0 bottom-3 z-30 flex justify-center px-3 lg:hidden">
-        <nav className="flex w-full max-w-md items-center justify-between rounded-full border border-white/10 bg-slate-950/75 p-2 shadow-[0_20px_60px_rgba(8,145,178,0.25)] backdrop-blur-xl">
+      {/* Mobile navigation stays fixed while the content reserves its height. */}
+      <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center md:hidden">
+        <nav
+          aria-label="Mobile navigation"
+          className="flex w-full max-w-lg items-center justify-between rounded-t-2xl border border-white/10 bg-slate-950/90 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_20px_60px_rgba(8,145,178,0.25)] backdrop-blur-xl"
+        >
           {[
-            { title: "Home", href: "/dashboard", icon: sidebarItems[0].icon },
-            { title: "Battle", href: "/battle", icon: sidebarItems[1].icon },
-            { title: "Rank", href: "/leaderboard", icon: sidebarItems[3].icon },
-            { title: "Profile", href: "/profile", icon: sidebarItems[10].icon },
+            { title: "Home", href: "/dashboard", icon: Home },
+            { title: "Explore", href: "/battle", icon: Compass },
+            { title: "My List", href: "/challenge", icon: List },
+            { title: "Social", href: "/leaderboard", icon: Users },
+            { title: "More", href: "/profile", icon: MoreHorizontal },
           ].map((tab) => {
             const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
             const Icon = tab.icon;
@@ -119,7 +125,7 @@ export default function DashboardLayout({
               <Link
                 key={tab.title}
                 href={tab.href}
-                className={`flex w-1/4 flex-col items-center justify-center gap-1 rounded-full px-2 py-2 text-[10px] font-bold uppercase tracking-[0.14em] transition ${
+                className={`relative flex flex-1 flex-col items-center justify-center gap-1 rounded-full px-2 py-2 text-[10px] font-bold uppercase tracking-[0.14em] transition ${
                   active
                     ? "bg-gradient-to-b from-cyan-500/25 to-violet-500/20 text-cyan-300 shadow-lg shadow-cyan-500/20"
                     : "text-slate-400 hover:text-slate-200"
@@ -132,6 +138,6 @@ export default function DashboardLayout({
           })}
         </nav>
       </div>
-    </main>
+    </div>
   );
 }

@@ -29,7 +29,7 @@ from app.modules.admin.router import router as admin_router
 ROUTERS: list[tuple[str, APIRouter]] = [
     ("achievements", achievements_router),
     ("auth", auth_router),  # Auth routes are now included at root
-    # ("profile", profile_router),  # Profile routes are included via API v1 router
+    ("profile", profile_router),
     ("dashboard", dashboard_router_module),
     ("admin", admin_router),
     ("xp", xp_router),

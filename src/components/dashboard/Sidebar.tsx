@@ -17,7 +17,7 @@ export default function Sidebar() {
       initial={false}
       animate={{ width: isCollapsed ? 88 : 280 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="hidden lg:flex flex-col my-6 ml-6 rounded-3xl border border-white/10 bg-gradient-to-b from-[#0F172A] via-[#070B14] to-[#050816] backdrop-blur-2xl shadow-2xl shadow-black/50 relative overflow-hidden"
+      className="hidden md:flex flex-col my-6 ml-6 rounded-3xl border border-white/10 bg-gradient-to-b from-[#0F172A] via-[#070B14] to-[#050816] backdrop-blur-2xl shadow-2xl shadow-black/50 relative overflow-hidden"
     >
       {/* Aurora Ambient Light */}
       <div className="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-cyan-500/10 blur-3xl" />

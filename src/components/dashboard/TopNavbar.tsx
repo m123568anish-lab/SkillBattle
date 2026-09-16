@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, Menu, Trophy, Shield, Zap } from "lucide-react";
+import { Search, Trophy, Shield, Zap, Sun } from "lucide-react";
 import NotificationMenu from "./NotificationMenu";
 import ProfileMenu from "./ProfileMenu";
 import { useAuthStore } from "@/store/authStore";
@@ -17,8 +17,6 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
   const level = dashboard?.stats?.level ?? 1;
   const rating = dashboard?.stats?.rating ?? 1000;
   const xp = dashboard?.stats?.xp ?? 0;
-  const nextLevelXp = (level + 1) * 2500;
-  const xpPercentage = Math.min((xp / nextLevelXp) * 100, 100);
 
   return (
     <header
@@ -47,11 +45,15 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
         <button
           onClick={onMenuClick}
-          className="shrink-0 rounded-xl border border-white/10 bg-white/5 p-2.5 text-white transition hover:bg-white/10 lg:hidden"
-        >
-          <Menu size={20} />
-        </button>
+          className="hidden"
+        />
 
+        <div className="flex shrink-0 items-center gap-2 md:hidden">
+          <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/10 p-2 text-cyan-400">
+            <Trophy size={18} />
+          </div>
+          <span className="text-sm font-black tracking-tight text-white">SkillBattle</span>
+        </div>
         <div
           suppressHydrationWarning
           className="
@@ -69,9 +71,10 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
             py-2.5
             transition
             focus-within:border-cyan-400
+            hidden
+            md:flex
             w-full
-            max-w-none
-            sm:max-w-xs
+            max-w-xs
           "
         >
           <Search
@@ -115,6 +118,20 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
         )}
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            aria-label="Search"
+            className="rounded-xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:bg-white/10 hover:text-white md:hidden"
+          >
+            <Search size={18} />
+          </button>
+          <button
+            type="button"
+            aria-label="Toggle theme"
+            className="rounded-xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:bg-white/10 hover:text-white md:hidden"
+          >
+            <Sun size={18} />
+          </button>
           <NotificationMenu />
           <ProfileMenu />
         </div>
