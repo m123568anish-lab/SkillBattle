@@ -108,7 +108,7 @@ export default function DashboardPage() {
         </motion.div>
 
         {/* Stats Grid */}
-        <motion.div variants={itemVariants} className="mt-8">
+        <motion.div variants={itemVariants} className="mt-8 md:hidden">
           <StatsGrid
             stats={dashboard.stats}
           />
