@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Trophy, Target, Flame, Gem } from "lucide-react";
+import Link from "next/link";
+import { Trophy, Target, Flame, Gem, ArrowUpRight } from "lucide-react";
 import type { DashboardStats } from "@/types/dashboard";
 
 interface StatsGridProps {
@@ -122,6 +123,14 @@ export default function StatsGrid({ stats }: StatsGridProps) {
                 <p className="hidden text-xs leading-snug text-slate-500 sm:block">
                   {card.desc}
                 </p>
+                {card.title === "Total XP" && (
+                  <Link
+                    href="/analytics/xp"
+                    className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-cyan-300 transition hover:text-white"
+                  >
+                    View details <ArrowUpRight size={12} />
+                  </Link>
+                )}
               </div>
 
               <div className="rounded-xl border border-white/5 bg-[#0D1226]/80 p-2.5 shadow-md shadow-black/20 transition-colors group-hover:border-white/15 sm:rounded-2xl sm:p-3.5">

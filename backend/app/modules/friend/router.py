@@ -11,6 +11,7 @@ from app.database.session import get_db
 from app.core.dependencies import get_current_user
 
 from app.models.user import User
+from app.modules.auth.services.auth_service import auth_service
 
 from .schemas import AddFriendRequest, FriendListResponse, FriendResponse
 from .service import friend_service
@@ -50,7 +51,6 @@ async def add_friend(
 ):
     """Create a friendship between the current user and the provided friend ID."""
     # Validate that the friend exists
-    from app.modules.auth.service import auth_service
     friend_user = await auth_service.get_user_by_id(db, request.friend_id)
     if not friend_user:
         raise HTTPException(status_code=404, detail="Friend user not found")
@@ -64,3 +64,16 @@ async def add_friend(
         avatar_url=friend_user.avatar_url,
         created_at=str(friendship.created_at),
     )
+
+
+@router.delete("/{friend_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_friend(
+    friend_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Remove an existing friendship."""
+    friend_user = await auth_service.get_user_by_id(db, friend_id)
+    if not friend_user:
+        raise HTTPException(status_code=404, detail="Friend user not found")
+    await friend_service.remove_friend(db, current_user, friend_user)

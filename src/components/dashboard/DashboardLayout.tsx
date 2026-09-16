@@ -5,7 +5,7 @@ import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
 import { X, Home, Sword, Trophy, Users, MoreHorizontal, ChevronRight, Search, Sparkles, Bot, Flame } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { sidebarCategories } from "@/data/dashboard";
+import { sidebarItems, type SidebarItem } from "@/data/dashboard";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -19,16 +19,35 @@ export default function DashboardLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [menuSearch, setMenuSearch] = useState("");
   const pathname = usePathname();
-  const filteredCategories = useMemo(() => {
+  const drawerTables = useMemo(() => {
     const query = menuSearch.trim().toLowerCase();
-    if (!query) return sidebarCategories.filter((category) => category.id !== "main");
-    return sidebarCategories
-      .filter((category) => category.id !== "main")
-      .map((category) => ({
-        ...category,
-        items: category.items.filter((item) => item.title.toLowerCase().includes(query)),
-      }))
-      .filter((category) => category.items.length > 0);
+    const byTitle = (title: string, href: string): SidebarItem | undefined =>
+      sidebarItems.find((item) => item.title === title) && {
+        ...(sidebarItems.find((item) => item.title === title) as SidebarItem),
+        href,
+      };
+    const core = [
+      byTitle("Dashboard", "/dashboard"),
+      byTitle("Battle Arena", "/battle"),
+      byTitle("Tournaments", "/tournaments"),
+      byTitle("Leaderboard", "/leaderboard"),
+      byTitle("Career Roadmap", "/roadmap"),
+      byTitle("Resume Screening", "/resume-screener"),
+    ].filter((item): item is SidebarItem => Boolean(item));
+    const ai = [
+      byTitle("AI Mock Interview", "/ai-interview"),
+      byTitle("AI Coach", "/ai-coach"),
+      byTitle("Achievements", "/achievements"),
+      byTitle("Analytics", "/analytics"),
+      byTitle("Calendar", "/calendar"),
+      byTitle("Profile", "/profile"),
+      byTitle("Settings", "/settings"),
+    ].filter((item): item is SidebarItem => Boolean(item));
+    if (!query) return { core, ai };
+    return {
+      core: core.filter((item) => item.title.toLowerCase().includes(query)),
+      ai: ai.filter((item) => item.title.toLowerCase().includes(query)),
+    };
   }, [menuSearch]);
 
   return (
@@ -59,7 +78,7 @@ export default function DashboardLayout({
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed bottom-0 right-0 top-0 z-50 flex w-[min(92vw,390px)] flex-col border-l border-white/10 bg-[#070B14]/[.98] p-5 shadow-[-24px_0_80px_rgba(0,0,0,.5)] backdrop-blur-2xl md:hidden"
+              className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[88dvh] w-full max-w-2xl flex-col rounded-t-3xl border border-slate-800 bg-[#161B22] p-5 shadow-[0_-24px_80px_rgba(0,0,0,.6)] md:hidden"
             >
               <div className="min-h-0 overflow-y-auto">
                 <div className="mb-6 flex items-center justify-between border-b border-white/5 pb-5">
@@ -114,9 +133,12 @@ export default function DashboardLayout({
                   />
                 </label>
                 <nav aria-label="More navigation" className="space-y-5">
-                  {filteredCategories.map((category) => (
-                    <section key={category.id}>
-                      <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">{category.label}</p>
+                  {[
+                    { label: "Core Tools", items: drawerTables.core },
+                    { label: "AI & Account", items: drawerTables.ai },
+                  ].map((category) => (
+                    <section key={category.label}>
+                      <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.22em] text-cyan-300">{category.label}</p>
                       <div className="grid grid-cols-2 gap-2">
                         {category.items.map((item) => {
                           const Icon = item.icon;
@@ -129,7 +151,7 @@ export default function DashboardLayout({
                               className={`group flex min-h-[76px] flex-col justify-between rounded-2xl border p-3 transition ${
                                 active
                                   ? "border-cyan-400/35 bg-cyan-400/10 text-cyan-300"
-                                  : "border-white/8 bg-white/[.035] text-slate-300 hover:border-white/20 hover:bg-white/[.07]"
+                                  : "border-slate-800 bg-[#0D1117] text-slate-300 hover:border-cyan-400/40 hover:bg-[#1d2632]"
                               }`}
                             >
                               <div className="flex items-center justify-between">
@@ -144,7 +166,7 @@ export default function DashboardLayout({
                     </section>
                   ))}
                 </nav>
-                {filteredCategories.length === 0 && (
+                {drawerTables.core.length === 0 && drawerTables.ai.length === 0 && (
                   <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-slate-500">
                     No matching feature found.
                   </div>

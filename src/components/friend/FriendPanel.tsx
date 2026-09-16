@@ -28,7 +28,7 @@ export default function FriendPanel() {
       try {
         const response = await friendService.listFriends();
         if (active) setFriends(response.friends);
-      } catch (err: unknown) {
+      } catch {
         setError(err instanceof Error ? err.message : "Unable to load friends.");
       } finally {
         if (active) setLoading(false);
@@ -53,7 +53,7 @@ export default function FriendPanel() {
       setFriends((current) => [...current, newFriend]);
       setFriendId("");
       toast.success("Friend added! 🎮");
-    } catch (err: unknown) {
+    } catch {
       const responseError = err as { response?: { data?: { detail?: string } } };
       setError(responseError.response?.data?.detail || "Failed to add friend.");
       toast.error("Failed to add friend.");
@@ -67,8 +67,10 @@ export default function FriendPanel() {
       setFriends((current) =>
         current.filter((f) => f.user_id !== friendUserId)
       );
+      await friendService.removeFriend(friendUserId);
       toast.success("Friend removed.");
-    } catch {
+    } catch (err: unknown) {
+      await friendService.listFriends().then((response) => setFriends(response.friends)).catch(() => undefined);
       toast.error("Failed to remove friend.");
     }
   }

@@ -23,6 +23,10 @@ class FriendService {
     const response = await api.post<FriendResponse>(API_ENDPOINTS.FRIEND.ADD, { friend_id: friendId });
     return response.data;
   }
+
+  async removeFriend(friendId: string) {
+    await api.delete(`${API_ENDPOINTS.FRIEND.LIST}${friendId}`);
+  }
 }
 
 export const friendService = new FriendService();
