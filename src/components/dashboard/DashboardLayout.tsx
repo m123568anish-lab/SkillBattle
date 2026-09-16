@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
-import { X, Home, Compass, List, Users, MoreHorizontal } from "lucide-react";
+import { X, Home, Sword, Trophy, Users, MoreHorizontal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sidebarItems } from "@/data/dashboard";
 import Link from "next/link";
@@ -114,23 +114,28 @@ export default function DashboardLayout({
         >
           {[
             { title: "Home", href: "/dashboard", icon: Home },
-            { title: "Explore", href: "/battle", icon: Compass },
-            { title: "My List", href: "/challenge", icon: List },
-            { title: "Social", href: "/leaderboard", icon: Users },
-            { title: "More", href: "/profile", icon: MoreHorizontal },
+            { title: "Battle", href: "/battle", icon: Sword },
+            { title: "Rank", href: "/leaderboard", icon: Trophy },
+            { title: "Friends", href: "/social", icon: Users },
+            { title: "More", href: "#more", icon: MoreHorizontal },
           ].map((tab) => {
             const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
             const Icon = tab.icon;
-            return (
-              <Link
-                key={tab.title}
-                href={tab.href}
-                className={`relative flex flex-1 flex-col items-center justify-center gap-1 rounded-full px-2 py-2 text-[10px] font-bold uppercase tracking-[0.14em] transition ${
+            const className = `relative flex flex-1 flex-col items-center justify-center gap-1 rounded-full px-2 py-2 text-[10px] font-bold uppercase tracking-[0.14em] transition ${
                   active
                     ? "bg-gradient-to-b from-cyan-500/25 to-violet-500/20 text-cyan-300 shadow-lg shadow-cyan-500/20"
                     : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
+                }`;
+            if (tab.title === "More") {
+              return (
+                <button key={tab.title} type="button" onClick={() => setMobileMenuOpen(true)} className={className}>
+                  <Icon size={18} />
+                  <span>{tab.title}</span>
+                </button>
+              );
+            }
+            return (
+              <Link key={tab.title} href={tab.href} className={className}>
                 <Icon size={18} />
                 <span>{tab.title}</span>
               </Link>

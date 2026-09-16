@@ -40,8 +40,14 @@ export function AuthProvider({
 
     if (token) {
         loadUser();
+    } else {
+        useAuthStore.setState({
+            loading: false,
+            user: null,
+            isAuthenticated: false,
+        });
     }
-}, []);
+}, [loadUser]);
 
     return (
 

@@ -15,6 +15,8 @@ interface DashboardState {
     loadDashboard: () => Promise<void>;
 
     refresh: () => Promise<void>;
+
+    reset: () => void;
 }
 
 export const useDashboardStore = create<DashboardState>((set, get) => ({
@@ -25,8 +27,12 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
 
     error: null,
 
-    async loadDashboard() {
+    reset() {
+        set({ dashboard: null, loading: false, error: null });
+    },
 
+    async loadDashboard() {
+        if (get().loading) return;
         set({
             loading: true,
             error: null,
@@ -41,25 +47,27 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
                 error: null,
             });
 
-        } catch (err: any) {
-
+        } catch (err: unknown) {
+            const error = err as {
+                response?: { data?: { detail?: string } };
+                message?: string;
+            };
             set({
-                loading: false,
                 dashboard: null,
                 error:
-                    err?.response?.data?.detail ||
-                    err?.message ||
+                    error.response?.data?.detail ||
+                    error.message ||
                     "Unable to load dashboard.",
             });
-
+        } finally {
+            set({ loading: false });
         }
 
     },
 
     async refresh() {
-
+        set({ error: null });
         await get().loadDashboard();
-
     },
 
 }));
