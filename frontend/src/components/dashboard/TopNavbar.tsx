@@ -1,7 +1,6 @@
 "use client";
 
-import { Search, Trophy, Shield, Zap, Sun, Moon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Search, Menu, Trophy, Shield, Zap } from "lucide-react";
 import NotificationMenu from "./NotificationMenu";
 import ProfileMenu from "./ProfileMenu";
 import { useAuthStore } from "@/store/authStore";
@@ -20,54 +19,35 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
   const xp = dashboard?.stats?.xp ?? 0;
   const nextLevelXp = (level + 1) * 2500;
   const xpPercentage = Math.min((xp / nextLevelXp) * 100, 100);
-  const [darkMode, setDarkMode] = useState(true);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("theme");
-    const isDark = stored ? stored === "dark" : true;
-    setDarkMode(isDark);
-    document.documentElement.classList.toggle("dark", isDark);
-  }, []);
-
-  const toggleTheme = () => {
-    const next = !darkMode;
-    setDarkMode(next);
-    localStorage.setItem("theme", next ? "dark" : "light");
-    document.documentElement.classList.toggle("dark", next);
-  };
 
   return (
     <header
       suppressHydrationWarning
       className="
-        mb-5
+        mb-8
         flex
-        flex-row
-        items-center
-        gap-2
+        flex-col
+        gap-4
         rounded-2xl
         border
         border-white/10
-        bg-white/90
-        dark:bg-[#070B14]/80
-        p-3
+        bg-[#070B14]/80
+        p-4
         backdrop-blur-xl
         sm:flex-row
         sm:items-center
         sm:justify-between
-        sm:gap-4
-        sm:p-4
         relative
         z-20
       "
     >
-      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
-        <div className="flex shrink-0 items-center gap-2 md:hidden">
-          <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/10 p-2 text-cyan-400">
-            <Trophy size={18} />
-          </div>
-          <span className="text-sm font-black tracking-tight text-white">SkillBattle</span>
-        </div>
+      <div className="flex items-center gap-4">
+        <button
+          onClick={onMenuClick}
+          className="lg:hidden rounded-xl border border-white/10 bg-white/5 p-2.5 text-white hover:bg-white/10 transition"
+        >
+          <Menu size={20} />
+        </button>
 
         <div
           suppressHydrationWarning
@@ -75,19 +55,15 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
             flex
             flex-1
             items-center
-            min-w-0
-            flex-1
-            gap-2.5
+            gap-3
             rounded-xl
             border
             border-white/10
             bg-[#0F172A]
-            px-3
+            px-4
             py-2.5
             transition
             focus-within:border-cyan-400
-            hidden
-            md:flex
             w-full
             max-w-xs
           "
@@ -112,7 +88,7 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
       </div>
 
       {/* Profile & Live Rating Ribbon */}
-      <div className="flex shrink-0 items-center justify-end gap-2 sm:gap-5">
+      <div className="flex flex-wrap items-center gap-3.5 sm:gap-5 justify-end">
         {user && (
           <div className="hidden md:flex items-center gap-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-cyan-300">
             <div className="flex items-center gap-1.5">
@@ -132,22 +108,7 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
           </div>
         )}
 
-        <div className="flex items-center gap-2 sm:gap-3">
-          <button
-            type="button"
-            aria-label="Search"
-            className="rounded-xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:bg-white/10 hover:text-white md:hidden"
-          >
-            <Search size={18} />
-          </button>
-          <button
-            type="button"
-            aria-label="Toggle theme"
-            onClick={toggleTheme}
-            className="rounded-xl border border-slate-200 bg-slate-100 p-2 text-slate-600 transition-colors duration-300 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
-          >
-            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
+        <div className="flex items-center gap-3">
           <NotificationMenu />
           <ProfileMenu />
         </div>

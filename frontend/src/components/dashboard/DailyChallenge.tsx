@@ -25,13 +25,13 @@ export default function DailyChallenge({ challenge }: DailyChallengeProps) {
     <motion.div
       whileHover={{ y: -2 }}
       className="
-        rounded-2xl sm:rounded-3xl
+        rounded-3xl
         border
         border-white/10
         bg-gradient-to-b
         from-white/5
         to-[#090D1A]/40
-        p-4 sm:p-8
+        p-8
         backdrop-blur-xl
         relative
         overflow-hidden
@@ -48,7 +48,7 @@ export default function DailyChallenge({ challenge }: DailyChallengeProps) {
             <Target size={28} className="text-orange-400" />
           </div>
           <div>
-            <h2 className="text-lg font-black text-white sm:text-2xl">Daily Coding Mission</h2>
+            <h2 className="text-2xl font-black text-white">Daily Coding Mission</h2>
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-0.5">Expires in 24 Hours</p>
           </div>
         </div>
@@ -58,7 +58,7 @@ export default function DailyChallenge({ challenge }: DailyChallengeProps) {
       </div>
 
       {/* Challenge Card */}
-      <div className="relative z-10 mt-5 rounded-2xl border border-white/5 bg-[#0D1226]/50 p-4 backdrop-blur-md sm:mt-8 sm:p-6">
+      <div className="mt-8 rounded-2xl border border-white/5 bg-[#0D1226]/50 p-6 backdrop-blur-md relative z-10">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-bold text-white tracking-tight">
             {challenge.title}
@@ -84,7 +84,7 @@ export default function DailyChallenge({ challenge }: DailyChallengeProps) {
       </div>
 
       {/* Action Button */}
-      <div className="relative z-10 mt-5 sm:mt-8">
+      <div className="mt-8 relative z-10">
         <GradientButton onClick={handleStartChallenge}>
           <span className="font-bold flex items-center gap-2">
             Accept Mission

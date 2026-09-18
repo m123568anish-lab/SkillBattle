@@ -107,7 +107,7 @@ export default memo(function BattleDock() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#0F172A]/40 via-[#070B14]/60 to-[#050816]/80 p-4 shadow-2xl sm:rounded-3xl sm:p-8"
+      className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#0F172A]/40 via-[#070B14]/60 to-[#050816]/80 p-6 sm:p-8 shadow-2xl relative overflow-hidden"
     >
       {/* Gradient overlays */}
       <div className="absolute bottom-0 left-1/4 h-32 w-64 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
@@ -118,7 +118,7 @@ export default memo(function BattleDock() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="relative z-10 mb-5 flex items-center gap-3 sm:mb-8"
+        className="mb-8 flex items-center gap-3 relative z-10"
       >
         <div className="p-3 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-violet-500/20 border border-cyan-500/30">
           <Sword size={20} className="text-cyan-400" />

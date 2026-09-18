@@ -3,13 +3,11 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
-import { X, Home, Sword, Trophy, User } from "lucide-react";
+import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sidebarItems } from "@/data/dashboard";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-import MagicAppleNavbar from "./MagicAppleNavbar";
 
 interface Props {
   children: React.ReactNode;
@@ -27,8 +25,8 @@ export default function DashboardLayout({
       className="
         flex
         min-h-screen
-        bg-[var(--app-bg)]
-        text-[var(--app-fg)]
+        bg-[#050816]
+        text-white
       "
     >
       <Sidebar />
@@ -42,14 +40,14 @@ export default function DashboardLayout({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileMenuOpen(false)}
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
             />
             <motion.aside
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed bottom-0 left-0 top-0 z-50 w-72 bg-[#070B14] p-6 border-r border-white/10 md:hidden flex flex-col justify-between"
+              className="fixed bottom-0 left-0 top-0 z-50 w-72 bg-[#070B14] p-6 border-r border-white/10 lg:hidden flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between border-b border-white/5 pb-6">
@@ -94,10 +92,10 @@ export default function DashboardLayout({
         className="
           flex-1
           overflow-auto
-          p-3
+          p-4
           sm:p-8
-          pb-[calc(6rem+env(safe-area-inset-bottom))]
-          md:pb-8
+          pb-24
+          lg:pb-8
         "
       >
         <TopNavbar onMenuClick={() => setMobileMenuOpen(true)} />
@@ -106,8 +104,29 @@ export default function DashboardLayout({
 
       </section>
 
-      {/* Mobile navigation stays fixed while content receives matching bottom space. */}
-      <MagicAppleNavbar />
+      {/* Mobile Sticky Bottom Navigation Dock */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 lg:hidden border-t border-white/10 bg-[#070B14]/90 p-3 backdrop-blur-lg flex justify-around items-center">
+        {[
+          { title: "Home", href: "/dashboard", icon: sidebarItems[0].icon },
+          { title: "Battle", href: "/battle", icon: sidebarItems[2].icon },
+          { title: "Leaderboard", href: "/leaderboard", icon: sidebarItems[7].icon },
+          { title: "Profile", href: "/profile", icon: sidebarItems[12].icon },
+        ].map((tab) => {
+          const active = pathname === tab.href;
+          return (
+            <Link
+              key={tab.title}
+              href={tab.href}
+              className={`flex flex-col items-center gap-1 text-[10px] font-bold tracking-wider uppercase transition ${
+                active ? "text-cyan-400 scale-105" : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <tab.icon size={20} />
+              <span>{tab.title}</span>
+            </Link>
+          );
+        })}
+      </div>
     </main>
   );
 }
