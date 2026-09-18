@@ -32,6 +32,14 @@ from app.modules.dashboard.schemas import (
 
 class DashboardService:
 
+    @staticmethod
+    async def _rollback_after_database_error(db: AsyncSession) -> None:
+        """Clear SQLAlchemy's failed transaction state before fallback queries."""
+        try:
+            await db.rollback()
+        except Exception:
+            pass
+
     async def get_dashboard(
         self,
         db: AsyncSession,
@@ -41,6 +49,7 @@ class DashboardService:
         try:
             user = await dashboard_repository.get_user(db, current_user.id)
         except Exception:
+            await self._rollback_after_database_error(db)
             user = None
 
         if user is None:
@@ -50,21 +59,25 @@ class DashboardService:
         try:
             challenge = await dashboard_repository.get_daily_challenge(db)
         except Exception:
+            await self._rollback_after_database_error(db)
             challenge = None
 
         try:
             achievements = await dashboard_repository.get_achievements(db, current_user.id)
         except Exception:
+            await self._rollback_after_database_error(db)
             achievements = []
 
         try:
             battles_played, battles_won = await dashboard_repository.get_battle_stats(db, current_user.id)
         except Exception:
+            await self._rollback_after_database_error(db)
             battles_played, battles_won = 0, 0
 
         try:
             current_streak = await dashboard_repository.get_current_streak(db, current_user.id)
         except Exception:
+            await self._rollback_after_database_error(db)
             current_streak = 0
 
         total_xp = 0
@@ -87,6 +100,7 @@ class DashboardService:
                 total_xp = int(user_xp.total_xp or 0) if user_xp else 0
                 user_level = int(user_xp.level or 1) if user_xp else max(1, (total_xp // 500) + 1)
         except Exception:
+            await self._rollback_after_database_error(db)
             total_xp = 0
             user_level = 1
             rating = 1000
@@ -154,10 +168,10 @@ class DashboardService:
 
         return DashboardResponse(
             user=UserSummary(
-                id=user.id,
-                username=user.username,
-                full_name=user.full_name or user.username or "SkillBattle player",
-                email=user.email or "",
+                id=str(user.id),
+                username=str(user.username or "player"),
+                full_name=str(user.full_name or user.username or "SkillBattle player"),
+                email=str(user.email or ""),
                 avatar_url=user.avatar_url,
                 role=str(getattr(user, "role", "user") or "user"),
                 is_superuser=bool(getattr(user, "is_superuser", False)),
