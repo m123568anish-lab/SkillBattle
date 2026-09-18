@@ -25,12 +25,14 @@ def _public_question(question: Question) -> dict:
         "constraints": question.constraints,
         "examples": question.examples or [],
         "company_tags": question.company_tags or [],
+        "topic_tags": question.topic_tags or [],
     }
 
 
 @router.get("/next-question")
 async def next_question(
     difficulty: str = Query(default="Easy", pattern="^(Easy|Medium|Hard)$"),
+    exclude_question_id: int | None = Query(default=None, ge=1),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
@@ -42,9 +44,12 @@ async def next_question(
                 UserSubmission.solved.is_(True),
             )
         )
+        base_filters = [Question.is_active.is_(True), Question.difficulty == difficulty, ~solved]
+        if exclude_question_id is not None:
+            base_filters.append(Question.id != exclude_question_id)
         query = (
             select(Question)
-            .where(Question.is_active.is_(True), Question.difficulty == difficulty, ~solved)
+            .where(*base_filters)
             .order_by(func.random())
             .limit(1)
         )
@@ -54,7 +59,7 @@ async def next_question(
             question = (
                 await db.execute(
                     select(Question)
-                    .where(Question.is_active.is_(True), ~solved)
+                    .where(Question.is_active.is_(True), ~solved, *( [Question.id != exclude_question_id] if exclude_question_id else [] ))
                     .order_by(func.random())
                     .limit(1)
                 )

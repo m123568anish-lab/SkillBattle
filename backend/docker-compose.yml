@@ -18,6 +18,11 @@ services:
 
       - .env
 
+    environment:
+      DATABASE_TYPE: postgresql
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/skillbattle
+      ASYNC_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/skillbattle
+
     depends_on:
 
       postgres:

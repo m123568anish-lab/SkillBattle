@@ -20,6 +20,7 @@ class Question(Base):
     examples: Mapped[list] = mapped_column(JSON, default=list)
     hidden_test_cases: Mapped[list] = mapped_column(JSON, default=list)
     company_tags: Mapped[list] = mapped_column(JSON, default=list)
+    topic_tags: Mapped[list] = mapped_column(JSON, default=list)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 

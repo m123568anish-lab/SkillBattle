@@ -43,6 +43,13 @@ export const API_ENDPOINTS = {
     QUEUE_LEAVE: "/battle/queue/leave",
     QUEUE_STATUS: "/battle/queue/status",
   },
+  MATCHMAKING: {
+    LOBBY: "/matchmaking/lobby",
+    QUEUE_JOIN: "/matchmaking/queue/join",
+    QUEUE_LEAVE: "/matchmaking/queue/leave",
+    QUEUE_STATUS: "/matchmaking/queue/status",
+    PLACEMENT_PREP: "/matchmaking/placement-prep",
+  },
 
   // Friend
   FRIEND: {

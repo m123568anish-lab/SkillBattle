@@ -36,6 +36,7 @@ from app.models.challenge import Challenge
 from app.models.streak import Streak
 from app.models.question import Question, UserSubmission
 from app.models.user_stats import UserStats, UserSettings
+from app.models.matchmaking import MatchmakingMatch, PlacementPrepSession
 
 # ---------------------------------------------------------
 

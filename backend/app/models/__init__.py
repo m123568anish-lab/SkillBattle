@@ -20,6 +20,7 @@ from .streak import Streak
 from .user import User
 from .question import Question, UserSubmission
 from .user_stats import UserSettings, UserStats
+from .matchmaking import MatchmakingMatch, PlacementPrepSession
 
 __all__ = [
     "Achievement",
@@ -47,6 +48,8 @@ __all__ = [
     "UserSubmission",
     "UserStats",
     "UserSettings",
+    "MatchmakingMatch",
+    "PlacementPrepSession",
 ]
 
 
