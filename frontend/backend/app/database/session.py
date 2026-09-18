@@ -92,10 +92,10 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
     async with AsyncSessionLocal() as session:
 
-        try:
-
-            yield session
-
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            logger.exception("Database transaction rolled back")
+            raise
         finally:
-
             await session.close()

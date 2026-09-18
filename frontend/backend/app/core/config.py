@@ -139,7 +139,9 @@ class Settings(BaseSettings):
     # --------------------------------------------------
 
     model_config = SettingsConfigDict(
-        env_file=(".env.local", ".env", ".env.production"),
+        # Production configuration must be supplied by the deployment
+        # environment, not loaded from a local placeholder file.
+        env_file=(".env.local", ".env"),
         case_sensitive=True,
         extra="ignore",
     )
@@ -169,7 +171,23 @@ class Settings(BaseSettings):
         environment = (self.ENVIRONMENT or "").strip().lower()
 
         is_testing = "pytest" in sys.modules or bool(os.getenv("PYTEST_CURRENT_TEST"))
-        is_placeholder_pg = "ep-xxx" in database_url or "user:password" in database_url or "ep-xxx" in async_database_url
+        is_placeholder_pg = (
+            "ep-xxx" in database_url
+            or "user:password" in database_url
+            or "ep-xxx" in async_database_url
+            or "******" in database_url
+            or "******" in async_database_url
+        )
+
+        if environment == "production" and (
+            not database_url
+            or is_placeholder_pg
+            or not database_url.startswith("postgresql")
+        ):
+            raise ValueError(
+                "Production requires a real PostgreSQL DATABASE_URL. "
+                "Configure DATABASE_URL and ASYNC_DATABASE_URL before starting the API."
+            )
 
         # Override remote postgres placeholder/test defaults to prevent gaierror / connection failures
         if is_testing or is_placeholder_pg or environment in ("development", "dev", "test") or not os.getenv("DATABASE_URL"):

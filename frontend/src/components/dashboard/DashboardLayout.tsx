@@ -27,8 +27,8 @@ export default function DashboardLayout({
       className="
         flex
         min-h-screen
-        bg-[#050816]
-        text-white
+        bg-[var(--app-bg)]
+        text-[var(--app-fg)]
       "
     >
       <Sidebar />

@@ -24,6 +24,8 @@ from app.modules.streak.router import router as streak_router
 from app.modules.tournament.router import router as tournament_router
 from app.modules.xp.router import router as xp_router
 from app.modules.admin.router import router as admin_router
+from app.api.questions import router as questions_router
+from app.api.execution import router as execution_router
 
 
 ROUTERS: list[tuple[str, APIRouter]] = [
@@ -50,6 +52,8 @@ ROUTERS: list[tuple[str, APIRouter]] = [
     ("matchmaking", matchmaking_router),
     ("career", career_router),
     ("campaign", campaign_router),
+    ("questions", questions_router),
+    ("execution", execution_router),
     ("api_v1", api_router),
 ]
 

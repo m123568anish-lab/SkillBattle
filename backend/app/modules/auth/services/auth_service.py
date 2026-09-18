@@ -28,6 +28,7 @@ from app.core.security import (
 
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
+from app.models.user_stats import UserSettings, UserStats
 
 from app.modules.auth.repositories.user_repository import (
     user_repository,
@@ -69,6 +70,10 @@ class AuthService:
         )
 
         created = await user_repository.create_user(db, user)
+        db.add(UserStats(user_id=created.id, level=1, rating=1000, xp=0))
+        db.add(UserSettings(user_id=created.id, theme="dark", language="python"))
+        await db.commit()
+        await db.refresh(created)
         logger.info("User created successfully: user_id=%s email=%s", created.id, created.email)
         return created
 

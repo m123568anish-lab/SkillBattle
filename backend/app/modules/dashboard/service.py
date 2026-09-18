@@ -8,10 +8,12 @@ Dashboard Service
 =========================================================
 """
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 
 from app.models.user import User
+from app.models.user_stats import UserStats
 
 from app.modules.dashboard.repository import (
     dashboard_repository,
@@ -67,20 +69,27 @@ class DashboardService:
 
         total_xp = 0
         user_level = 1
+        rating = 1000
         user_xp = None
         try:
+            stats = (
+                await db.execute(
+                    select(UserStats).where(UserStats.user_id == current_user.id)
+                )
+            ).scalar_one_or_none()
+            if stats:
+                total_xp = stats.xp or 0
+                user_level = stats.level or 1
+                rating = stats.rating or 1000
             from app.modules.xp.service import xp_service
             user_xp = await xp_service.get_user_xp(db, current_user)
-            total_xp = int(user_xp.total_xp or 0) if user_xp else 0
-            user_level = (
-                int(user_xp.level or 1)
-                if user_xp
-                else max(1, (total_xp // 500) + 1)
-            )
+            if not stats:
+                total_xp = int(user_xp.total_xp or 0) if user_xp else 0
+                user_level = int(user_xp.level or 1) if user_xp else max(1, (total_xp // 500) + 1)
         except Exception:
-            pass
-
-        rating = max(0, getattr(user, "coding_rating", 0) or 0)
+            total_xp = 0
+            user_level = 1
+            rating = 1000
 
         stats = DashboardStats(
             xp=total_xp,

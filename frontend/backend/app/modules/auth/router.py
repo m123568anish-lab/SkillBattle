@@ -15,6 +15,8 @@ from fastapi import Depends
 from fastapi import Header
 from fastapi import HTTPException
 from fastapi import status
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,6 +42,8 @@ from app.modules.auth.repositories.user_repository import user_repository
 from app.core.dependencies import get_current_user
 
 from app.models.user import User
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/auth",
@@ -71,17 +75,23 @@ async def register(
         )
         return user
     except ValueError as exc:
-        # If the error is due to an existing email or username, retrieve the user and return it
-        if "already" in str(exc).lower():
-            # Try to fetch by email first
-            existing_user = await user_repository.get_by_email(db, request.email)
-            if existing_user is None:
-                existing_user = await user_repository.get_by_username(db, request.username)
-            if existing_user:
-                return existing_user
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
+        )
+    except IntegrityError:
+        await db.rollback()
+        logger.exception("Registration write violated a database constraint")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with that email or username already exists.",
+        )
+    except SQLAlchemyError:
+        await db.rollback()
+        logger.exception("Registration database write failed")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The account could not be saved. Please try again.",
         )
 
 

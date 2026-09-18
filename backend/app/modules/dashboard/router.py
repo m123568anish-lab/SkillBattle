@@ -10,6 +10,8 @@ Dashboard Router
 
 from fastapi import APIRouter
 from fastapi import Depends
+from fastapi import HTTPException, status
+import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +29,7 @@ router = APIRouter(
     prefix="/dashboard",
     tags=["Dashboard"],
 )
+logger = logging.getLogger("uvicorn.error")
 
 
 @router.get(
@@ -43,7 +46,16 @@ async def get_dashboard(
 
 ):
 
-    return await dashboard_service.get_dashboard(
-        db,
-        current_user,
-    )
+    try:
+        return await dashboard_service.get_dashboard(db, current_user)
+    except HTTPException:
+        raise
+    except LookupError as exc:
+        logger.warning("Dashboard data not found for user_id=%s: %s", current_user.id, exc)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dashboard data not found.")
+    except Exception:
+        logger.exception("Dashboard request failed for user_id=%s", current_user.id)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Dashboard is temporarily unavailable.",
+        )

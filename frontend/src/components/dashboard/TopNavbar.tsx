@@ -1,6 +1,7 @@
 "use client";
 
-import { Search, Trophy, Shield, Zap, Sun } from "lucide-react";
+import { Search, Trophy, Shield, Zap, Sun, Moon } from "lucide-react";
+import { useEffect, useState } from "react";
 import NotificationMenu from "./NotificationMenu";
 import ProfileMenu from "./ProfileMenu";
 import { useAuthStore } from "@/store/authStore";
@@ -19,6 +20,21 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
   const xp = dashboard?.stats?.xp ?? 0;
   const nextLevelXp = (level + 1) * 2500;
   const xpPercentage = Math.min((xp / nextLevelXp) * 100, 100);
+  const [darkMode, setDarkMode] = useState(true);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("theme");
+    const isDark = stored ? stored === "dark" : true;
+    setDarkMode(isDark);
+    document.documentElement.classList.toggle("dark", isDark);
+  }, []);
+
+  const toggleTheme = () => {
+    const next = !darkMode;
+    setDarkMode(next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+    document.documentElement.classList.toggle("dark", next);
+  };
 
   return (
     <header
@@ -32,7 +48,8 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
         rounded-2xl
         border
         border-white/10
-        bg-[#070B14]/80
+        bg-white/90
+        dark:bg-[#070B14]/80
         p-3
         backdrop-blur-xl
         sm:flex-row
@@ -126,9 +143,10 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
           <button
             type="button"
             aria-label="Toggle theme"
-            className="rounded-xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:bg-white/10 hover:text-white md:hidden"
+            onClick={toggleTheme}
+            className="rounded-xl border border-slate-200 bg-slate-100 p-2 text-slate-600 transition-colors duration-300 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
           >
-            <Sun size={18} />
+            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           <NotificationMenu />
           <ProfileMenu />

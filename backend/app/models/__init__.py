@@ -18,6 +18,8 @@ from .resume import Resume
 from .roadmap import Roadmap, RoadmapTask, RoadmapWeek
 from .streak import Streak
 from .user import User
+from .question import Question, UserSubmission
+from .user_stats import UserSettings, UserStats
 
 __all__ = [
     "Achievement",
@@ -41,6 +43,10 @@ __all__ = [
     "Streak",
     "User",
     "UserCampaignProgress",
+    "Question",
+    "UserSubmission",
+    "UserStats",
+    "UserSettings",
 ]
 
 

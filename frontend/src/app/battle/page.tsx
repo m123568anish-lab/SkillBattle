@@ -1,5 +1,6 @@
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import BattleLobby from "@/components/battle/BattleLobby";
+import BattleArea from "@/components/BattleArea";
 
 export default function BattlePage() {
   return (
@@ -14,6 +15,7 @@ export default function BattlePage() {
         </section>
 
         <BattleLobby />
+        <BattleArea />
       </div>
     </DashboardLayout>
   );

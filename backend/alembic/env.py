@@ -34,6 +34,8 @@ from app.models.refresh_token import RefreshToken
 from app.models.xp import XP
 from app.models.challenge import Challenge
 from app.models.streak import Streak
+from app.models.question import Question, UserSubmission
+from app.models.user_stats import UserStats, UserSettings
 
 # ---------------------------------------------------------
 

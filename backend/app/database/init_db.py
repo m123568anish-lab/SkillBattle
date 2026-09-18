@@ -42,6 +42,10 @@ from app.models import (
     Resume,
     RefreshToken,
     Streak,
+    Question,
+    UserSubmission,
+    UserStats,
+    UserSettings,
 )
 from app.models.battle import (
     BattleParticipant,
@@ -75,6 +79,10 @@ __all__ = [
     "BattleSubmission",
     "UserSkillStat",
     "XP",
+    "Question",
+    "UserSubmission",
+    "UserStats",
+    "UserSettings",
 ]
 
 

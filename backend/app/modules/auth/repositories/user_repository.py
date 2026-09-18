@@ -42,7 +42,7 @@ class UserRepository:
 
         db.add(user)
 
-        await db.commit()
+        await db.flush()
 
         await db.refresh(user)
 
