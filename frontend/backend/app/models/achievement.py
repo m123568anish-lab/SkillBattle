@@ -1,14 +1,14 @@
-from datetime import datetime
+﻿from datetime import datetime
 
 from sqlalchemy import (
-    String,
     Boolean,
     DateTime,
+    ForeignKey,
+    String,
 )
-
 from sqlalchemy.orm import (
-    mapped_column,
     Mapped,
+    mapped_column,
 )
 
 from app.database.base import Base
@@ -22,30 +22,33 @@ class Achievement(Base):
         autoincrement=True,
     )
 
-from sqlalchemy import ForeignKey
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id"),
+        index=True,
+        nullable=False,
+    )
 
-user_id: Mapped[str] = mapped_column(
-    ForeignKey("users.id"),
-)
-
-title: Mapped[str] = mapped_column(
+    title: Mapped[str] = mapped_column(
         String(120),
+        nullable=False,
     )
 
-description: Mapped[str] = mapped_column(
+    description: Mapped[str] = mapped_column(
         String(300),
+        default="",
     )
 
-icon: Mapped[str] = mapped_column(
+    icon: Mapped[str] = mapped_column(
         String(50),
+        default="trophy",
     )
 
-unlocked: Mapped[bool] = mapped_column(
+    unlocked: Mapped[bool] = mapped_column(
         Boolean,
         default=False,
     )
 
-earned_at: Mapped[datetime] = mapped_column(
+    earned_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
     )

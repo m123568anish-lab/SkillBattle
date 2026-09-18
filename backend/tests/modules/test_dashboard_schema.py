@@ -13,3 +13,10 @@ def test_dashboard_dependencies_are_registered_for_startup_schema():
     }
 
     assert required_tables.issubset(Base.metadata.tables)
+
+
+def test_achievement_model_exposes_dashboard_fields():
+    achievement_table = Base.metadata.tables["achievements"]
+    required_columns = {"id", "user_id", "title", "description", "icon", "unlocked", "earned_at"}
+
+    assert required_columns.issubset(achievement_table.columns.keys())
