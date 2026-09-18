@@ -102,6 +102,7 @@ def init_db() -> None:
         try:
             Base.metadata.create_all(bind=engine)
             _repair_users_table()
+            _repair_achievements_table()
             logger.info(f"✅ Tables created: {list(Base.metadata.tables.keys())}")
         except Exception as e:
             # Some DB backends may raise an OperationalError on concurrent create_all
@@ -157,3 +158,28 @@ def _repair_users_table() -> None:
         if "xp" in inspector.get_table_names():
             connection.execute(text('CREATE INDEX IF NOT EXISTS "ix_xp_user_id" ON "xp" ("user_id")'))
             connection.execute(text('CREATE INDEX IF NOT EXISTS "ix_xp_total_xp" ON "xp" ("total_xp")'))
+
+
+def _repair_achievements_table() -> None:
+    """Repair stale installations where the achievements table was created with only an id column."""
+    inspector = inspect(engine)
+    if "achievements" not in inspector.get_table_names():
+        return
+
+    existing = {column["name"] for column in inspector.get_columns("achievements")}
+    required_columns = {
+        "user_id": "VARCHAR(36) NOT NULL DEFAULT ''",
+        "title": "VARCHAR(120) NOT NULL DEFAULT ''",
+        "description": "VARCHAR(300) DEFAULT ''",
+        "icon": "VARCHAR(50) DEFAULT 'trophy'",
+        "unlocked": "BOOLEAN DEFAULT FALSE",
+        "earned_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+    }
+
+    with engine.begin() as connection:
+        for name, definition in required_columns.items():
+            if name not in existing:
+                connection.execute(text(f'ALTER TABLE "achievements" ADD COLUMN "{name}" {definition}'))
+                logger.info("Added missing achievements.%s column", name)
+
+        connection.execute(text('CREATE INDEX IF NOT EXISTS "ix_achievements_user_id" ON "achievements" ("user_id")'))
