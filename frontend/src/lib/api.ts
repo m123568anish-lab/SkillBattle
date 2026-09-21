@@ -52,9 +52,11 @@ api.interceptors.response.use(
         if (originalRequest && isTimeout && !originalRequest._timeoutRetry) {
             originalRequest._timeoutRetry = true;
             originalRequest.timeout = 60_000;
-            return new Promise((resolve) => {
-                setTimeout(() => resolve(axios(originalRequest)), 2000);
-            });
+            try {
+                return await axios(originalRequest);
+            } catch (retryError) {
+                return Promise.reject(retryError);
+            }
         }
 
         // Fallback retry for network errors / connection refused when target is localhost
