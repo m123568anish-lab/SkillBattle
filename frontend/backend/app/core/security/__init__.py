@@ -8,7 +8,7 @@ Security Package
 =========================================================
 """
 
-from .password import hash_password, password_manager, verify_password
+from .password import hash_password, password_manager, verify_password, hash_password_async, verify_password_async
 from .jwt import JWTManager, jwt_manager
 
 # Token helpers
@@ -34,7 +34,9 @@ __all__ = [
     "create_refresh_token",
     "decode_token",
     "hash_password",
+    "hash_password_async",
     "password_manager",
     "jwt_manager",
     "verify_password",
+    "verify_password_async",
 ]

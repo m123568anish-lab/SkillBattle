@@ -69,9 +69,22 @@ class PasswordManager:
 password_manager = PasswordManager()
 
 
+import asyncio
+
+
 def hash_password(password: str) -> str:
     return password_manager.hash(password)
 
 
 def verify_password(password: str, hashed_password: str) -> bool:
     return password_manager.verify(password, hashed_password)
+
+
+async def hash_password_async(password: str) -> str:
+    """Non-blocking password hashing running on asyncio threadpool."""
+    return await asyncio.to_thread(hash_password, password)
+
+
+async def verify_password_async(password: str, hashed_password: str) -> bool:
+    """Non-blocking password verification running on asyncio threadpool."""
+    return await asyncio.to_thread(verify_password, password, hashed_password)
