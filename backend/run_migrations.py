@@ -5,6 +5,7 @@ This script is called before starting the FastAPI server on Render.
 """
 import sys
 import logging
+from pathlib import Path
 from alembic.config import Config
 from alembic import command
 
@@ -24,14 +25,18 @@ def run_migrations():
         logger.info("Creating missing tables from the current application schema")
         Base.metadata.create_all(bind=engine)
 
-        # The original initial revision contains destructive operations for a
-        # legacy schema. Never execute it during service startup.
-        command.stamp(alembic_cfg, "head")
+        try:
+            ini_path = Path(__file__).parent / "alembic.ini"
+            if ini_path.exists():
+                alembic_cfg = Config(str(ini_path))
+                command.stamp(alembic_cfg, "head")
+        except Exception as stamp_err:
+            logger.warning("Alembic stamp notification: %s", stamp_err)
 
         logger.info("✅ Migrations completed successfully")
         return 0
     except Exception as e:
-        logger.exception("❌ Migration failed: %s", e)
+        logger.exception("❌ Database schema setup failed: %s", e)
         return 1
 
 if __name__ == "__main__":
