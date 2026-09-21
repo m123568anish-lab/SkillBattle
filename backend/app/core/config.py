@@ -110,6 +110,22 @@ class Settings(BaseSettings):
     DEEPSEEK_API_KEY: str = ""
 
     # --------------------------------------------------
+    # Production Integrations (Email, Cloud, OAuth, Monitoring)
+    # --------------------------------------------------
+
+    RESEND_API_KEY: str = ""
+    EMAIL_FROM: str = "SkillBattle Verification <no-reply@skillbattle.com>"
+
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: str = ""
+
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+
+    SENTRY_DSN: str = ""
+
+    # --------------------------------------------------
     # Uploads
     # --------------------------------------------------
 

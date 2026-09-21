@@ -39,6 +39,20 @@ async def lifespan(app: FastAPI):
     """
     # Startup
     logger.info("🚀 SkillBattle API starting up...")
+    
+    # Initialize Sentry error tracking if configured
+    if settings.SENTRY_DSN and not settings.SENTRY_DSN.startswith("https://placeholder"):
+        try:
+            import sentry_sdk
+            sentry_sdk.init(
+                dsn=settings.SENTRY_DSN,
+                traces_sample_rate=0.2,
+                environment=settings.ENVIRONMENT,
+            )
+            logger.info("📡 Sentry error monitoring initialized")
+        except Exception as sentry_err:
+            logger.warning(f"⚠️ Could not initialize Sentry: {sentry_err}")
+
     try:
         logger.info("📦 Initializing database...")
         init_db()

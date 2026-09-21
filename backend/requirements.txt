@@ -63,3 +63,8 @@ pytest-cov==4.1.0
 coverage==7.15.0
 factory_boy==3.3.3
 Faker==40.28.1
+resend>=2.6.0,<3.0.0
+cloudinary>=1.41.0,<2.0.0
+sentry-sdk>=2.22.0,<3.0.0
+slowapi>=0.1.9,<0.2.0
+
