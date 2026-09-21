@@ -1,10 +1,10 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Activity, CheckCircle, XCircle, Clock, Wifi, RefreshCw, ExternalLink } from "lucide-react";
 
-const BACKEND_URL = "https://skillbattle-api-2026.onrender.com";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://skillbattle-api.onrender.com";
 const UPTIMEROBOT_API = "https://api.uptimerobot.com/v2/getMonitors";
 const API_KEY = process.env.NEXT_PUBLIC_UPTIMEROBOT_API_KEY ?? "";
 

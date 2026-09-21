@@ -38,11 +38,14 @@ else:
     engine_kwargs.update({
         "pool_size": 10,
         "max_overflow": 20,
-        "pool_timeout": 30,
-        "pool_recycle": 1800,
+        "pool_timeout": 10,
+        "pool_recycle": 300,
         "pool_pre_ping": True,
+        "connect_args": {
+            "connect_timeout": 10,
+        }
     })
-    logger.info("🐘 Enterprise Sync engine configured for PostgreSQL (pool_size=10, max_overflow=20)")
+    logger.info("🐘 Enterprise Sync engine configured for PostgreSQL (pool_size=10, timeout=10s)")
 
 # Create engine
 engine = create_engine(database_url, **engine_kwargs)

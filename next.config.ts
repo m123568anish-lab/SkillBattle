@@ -21,7 +21,7 @@ const nextConfig: NextConfig = {
     "192.168.7.2",
   ],
   async rewrites() {
-    const apiOrigin = (process.env.NEXT_PUBLIC_API_URL || "https://skillbattle-api-2026.onrender.com")
+    const apiOrigin = (process.env.NEXT_PUBLIC_API_URL || "https://skillbattle-api.onrender.com")
       .replace(/\/+$/, "")
       .replace(/\/api\/v1$/, "");
 

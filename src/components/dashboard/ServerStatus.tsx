@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Activity, CheckCircle2, RefreshCw, XCircle } from "lucide-react";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://skillbattle-api-2026.onrender.com";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://skillbattle-api.onrender.com";
 
 export default function ServerStatus() {
   const [checking, setChecking] = useState(true);

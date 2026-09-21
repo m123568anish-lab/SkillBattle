@@ -45,13 +45,17 @@ engine_kwargs = {
 # Optimize for PostgreSQL in production environment
 if "postgresql" in DATABASE_URL:
     engine_kwargs.update({
-        "pool_size": 20,
-        "max_overflow": 10,
-        "pool_timeout": 30,
-        "pool_recycle": 1800,
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_timeout": 10,
+        "pool_recycle": 300,
         "pool_pre_ping": True,
+        "connect_args": {
+            "timeout": 10,
+            "command_timeout": 10,
+        }
     })
-    logger.info("🐘 Enterprise Async engine configured for PostgreSQL (pool_size=10, max_overflow=20)")
+    logger.info("🐘 Enterprise Async engine configured for PostgreSQL (pool_size=10, timeout=10s)")
 else:
     logger.info("📁 Async engine configured for SQLite")
 

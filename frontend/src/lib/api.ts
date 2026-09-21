@@ -6,7 +6,7 @@ export type { ApiResponse, ApiValidationError, PaginatedResponse } from "@/types
 const normalizeBaseUrl = (value: string | undefined): string => {
     const defaultUrl =
         process.env.NODE_ENV === "production"
-            ? "https://skillbattle-api-2026.onrender.com"
+            ? "https://skillbattle-api.onrender.com"
             : "http://localhost:8000";
     const base = (value || defaultUrl).trim().replace(/\/+$/, "");
     return base.replace(/\/api\/v1$/, "");
@@ -70,7 +70,7 @@ api.interceptors.response.use(
             (api.defaults.baseURL?.includes("localhost") || originalRequest.baseURL?.includes("localhost") || originalRequest.url?.includes("localhost"))
         ) {
             originalRequest._fallbackRetry = true;
-            originalRequest.baseURL = "https://skillbattle-api-2026.onrender.com/api/v1";
+            originalRequest.baseURL = "https://skillbattle-api.onrender.com/api/v1";
             originalRequest.timeout = 60_000; // Allow 60s for Render cold start
             try {
                 return await axios(originalRequest);

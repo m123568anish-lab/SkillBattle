@@ -1,6 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 
-const FALLBACK_API_BASE_URL = "https://skillbattle-api-2026.onrender.com";
+const FALLBACK_API_BASE_URL = "https://skillbattle-api.onrender.com";
 
 const normalizeBaseUrl = (value: string | undefined) => {
     const configured = (value || FALLBACK_API_BASE_URL).trim();
