@@ -22,8 +22,8 @@ from app.core.config import settings
 from app.core.security import (
     create_access_token,
     create_refresh_token,
-    hash_password,
-    verify_password,
+    hash_password_async,
+    verify_password_async,
 )
 
 from app.models.refresh_token import RefreshToken
@@ -60,11 +60,12 @@ class AuthService:
             request.username = f"{request.username[:20]}_{suffix}"
             logger.info("Username collision — assigned new username=%s", request.username)
 
+        hashed = await hash_password_async(request.password)
         user = User(
             username=request.username,
             email=request.email,
             full_name=request.full_name,
-            password_hash=hash_password(request.password),
+            password_hash=hashed,
             avatar_url=request.avatar_url,
             role="user",
         )
@@ -115,13 +116,15 @@ class AuthService:
 
             )
 
-        if not verify_password(
+        is_valid = await verify_password_async(
 
             request.password,
 
             user.password_hash,
 
-        ):
+        )
+
+        if not is_valid:
 
             raise ValueError(
 

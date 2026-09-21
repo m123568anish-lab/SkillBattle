@@ -45,10 +45,13 @@ api.interceptors.response.use(
     async (error: AxiosError & { config?: InternalAxiosRequestConfig }) => {
         const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean; _fallbackRetry?: boolean; _timeoutRetry?: boolean }) | undefined;
         const url = originalRequest?.url ?? "";
+        const isAuthRequest = /\/auth\/(login|register|refresh)/i.test(url);
 
-        // Automatic retry for timeout / cold-start errors
+        // Automatic retry for timeout / cold-start errors. We intentionally avoid
+        // retrying auth calls because a browser-side 2s retry loop causes the fake
+        // "2000ms exceeded" login problem and masks the real backend response.
         const isTimeout = error.code === "ECONNABORTED" || error.message?.toLowerCase().includes("timeout");
-        if (originalRequest && isTimeout && !originalRequest._timeoutRetry) {
+        if (originalRequest && isTimeout && !originalRequest._timeoutRetry && !isAuthRequest) {
             originalRequest._timeoutRetry = true;
             originalRequest.timeout = 60_000;
             try {

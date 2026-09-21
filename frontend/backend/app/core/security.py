@@ -46,6 +46,9 @@ import bcrypt
 # =========================================================
 
 
+import asyncio
+
+
 def hash_password(password: str) -> str:
     pwd_bytes = password.encode("utf-8")[:72]
     return bcrypt.hashpw(pwd_bytes, bcrypt.gensalt()).decode("utf-8")
@@ -67,6 +70,16 @@ def verify_password(
             return pwd_context.verify(plain_password, hashed_password)
         except Exception:
             return False
+
+
+async def verify_password_async(plain_password: str, hashed_password: str) -> bool:
+    """Non-blocking password verification running on asyncio threadpool."""
+    return await asyncio.to_thread(verify_password, plain_password, hashed_password)
+
+
+async def hash_password_async(password: str) -> str:
+    """Non-blocking password hashing running on asyncio threadpool."""
+    return await asyncio.to_thread(hash_password, password)
 
 
 # =========================================================

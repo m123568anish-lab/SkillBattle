@@ -20,8 +20,8 @@ from app.core.config import settings
 from app.core.security import (
     create_access_token,
     create_refresh_token,
-    hash_password,
-    verify_password,
+    hash_password_async,
+    verify_password_async,
 )
 
 from app.models.refresh_token import RefreshToken
@@ -150,13 +150,15 @@ class AuthService:
 
             )
 
-        if not verify_password(
+        is_valid = await verify_password_async(
 
             request.password,
 
             user.password_hash,
 
-        ):
+        )
+
+        if not is_valid:
 
             raise ValueError(
 
