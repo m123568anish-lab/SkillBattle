@@ -168,69 +168,95 @@ class PlacementService:
         return mcq_list
 
     def evaluate_mcqs(self, battle_id: str, submissions: List[MCQSubmission]) -> MCQEvaluateResponse:
-        sub_map = {s.question_id: s.selected_option_id for s in submissions}
-        correct_count = 0
-        details = []
+        try:
+            sub_map = {s.question_id: s.selected_option_id for s in (submissions or [])}
+            correct_count = 0
+            details = []
 
-        for q in MCQ_BANK:
-            q_id = q["id"]
-            if q_id in sub_map:
-                user_choice = sub_map[q_id]
-                is_correct = (user_choice == q["correct_option_id"])
-                if is_correct:
-                    correct_count += 1
+            for q in MCQ_BANK:
+                q_id = q["id"]
+                if q_id in sub_map:
+                    user_choice = sub_map[q_id]
+                    is_correct = (user_choice == q["correct_option_id"])
+                    if is_correct:
+                        correct_count += 1
 
-                details.append({
-                    "question_id": q_id,
-                    "topic": q["topic"],
-                    "is_correct": is_correct,
-                    "user_selected": user_choice,
-                    "correct_option_id": q["correct_option_id"],
-                    "explanation": q["explanation"],
-                })
+                    details.append({
+                        "question_id": q_id,
+                        "topic": q["topic"],
+                        "is_correct": is_correct,
+                        "user_selected": user_choice,
+                        "correct_option_id": q["correct_option_id"],
+                        "explanation": q["explanation"],
+                    })
 
-        total = len(submissions) or len(MCQ_BANK)
-        score = int((correct_count / max(total, 1)) * 100)
+            total = len(submissions or []) or len(MCQ_BANK)
+            score = int((correct_count / max(total, 1)) * 100)
 
-        return MCQEvaluateResponse(
-            battle_id=battle_id,
-            score=score,
-            total_mcqs=total,
-            correct_count=correct_count,
-            details=details,
-        )
+            return MCQEvaluateResponse(
+                battle_id=battle_id or "placement_default",
+                score=score,
+                total_mcqs=total,
+                correct_count=correct_count,
+                details=details,
+            )
+        except Exception as e:
+            return MCQEvaluateResponse(
+                battle_id=battle_id or "placement_default",
+                score=0,
+                total_mcqs=0,
+                correct_count=0,
+                details=[],
+            )
 
     def generate_scorecard(self, user_id: str, total_xp: int = 1500, rating: int = 1350, battles_won: int = 12) -> PlacementScorecardResponse:
-        readiness = min(100, int((rating / 1800) * 100) + 15)
-        
-        if readiness >= 90:
-            grade = "S"
-            eligibility = ["Google", "Amazon", "Microsoft", "Uber", "Flipkart"]
-        elif readiness >= 75:
-            grade = "A+"
-            eligibility = ["Amazon", "Microsoft", "Paytm", "Swiggy", "TCS Digital"]
-        elif readiness >= 60:
-            grade = "A"
-            eligibility = ["Infosys Power Programmer", "Wipro Turbo", "Cognizant GenC Next"]
-        else:
-            grade = "B"
-            eligibility = ["TCS NQT", "Infosys System Engineer", "Capgemini"]
+        try:
+            safe_rating = max(0, rating or 1000)
+            safe_xp = max(0, total_xp or 0)
+            safe_won = max(0, battles_won or 0)
 
-        return PlacementScorecardResponse(
-            user_id=user_id,
-            overall_readiness_score=readiness,
-            grade=grade,
-            dsa_proficiency=min(100, readiness + 5),
-            system_design_grade="A",
-            core_cs_score=min(100, readiness - 3),
-            total_battles_won=battles_won,
-            top_company_eligibility=eligibility,
-            recommendations=[
-                "Focus on Dynamic Programming memoization speed in 1v1 battles.",
-                "Practice DBMS Isolation levels & SQL Join queries for technical rounds.",
-                "Maintain your 5+ daily battle streak to boost your Placement Ranking."
-            ]
-        )
+            readiness = min(100, max(15, int((safe_rating / 1800) * 100)))
+
+            if readiness >= 90:
+                grade = "S"
+                eligibility = ["Google", "Amazon", "Microsoft", "Uber", "Flipkart"]
+            elif readiness >= 75:
+                grade = "A+"
+                eligibility = ["Amazon", "Microsoft", "Paytm", "Swiggy", "TCS Digital"]
+            elif readiness >= 60:
+                grade = "A"
+                eligibility = ["Infosys Power Programmer", "Wipro Turbo", "Cognizant GenC Next"]
+            else:
+                grade = "B"
+                eligibility = ["TCS NQT", "Infosys System Engineer", "Capgemini"]
+
+            return PlacementScorecardResponse(
+                user_id=user_id or "anonymous",
+                overall_readiness_score=readiness,
+                grade=grade,
+                dsa_proficiency=min(100, readiness + 5),
+                system_design_grade="A",
+                core_cs_score=min(100, max(10, readiness - 3)),
+                total_battles_won=safe_won,
+                top_company_eligibility=eligibility,
+                recommendations=[
+                    "Focus on Dynamic Programming memoization speed in 1v1 battles.",
+                    "Practice DBMS Isolation levels & SQL Join queries for technical rounds.",
+                    "Maintain your 5+ daily battle streak to boost your Placement Ranking."
+                ]
+            )
+        except Exception:
+            return PlacementScorecardResponse(
+                user_id=user_id or "anonymous",
+                overall_readiness_score=50,
+                grade="B",
+                dsa_proficiency=50,
+                system_design_grade="B",
+                core_cs_score=50,
+                total_battles_won=0,
+                top_company_eligibility=["TCS NQT", "Infosys System Engineer"],
+                recommendations=["Complete your first Company OA Speedrun to unlock detailed metrics."]
+            )
 
 
 placement_service = PlacementService()

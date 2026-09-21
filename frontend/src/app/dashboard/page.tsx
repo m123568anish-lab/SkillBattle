@@ -10,6 +10,7 @@ import StatsGrid from "@/components/dashboard/StatsGrid";
 import AICoachCard from "@/components/dashboard/AICoachCard";
 import DailyChallenge from "@/components/dashboard/DailyChallenge";
 import BattleDock from "@/components/dashboard/BattleDock";
+import QuickSpeedrunWidget from "@/components/dashboard/QuickSpeedrunWidget";
 import ServerStatus from "@/components/dashboard/ServerStatus";
 
 import { useDashboard } from "@/hooks/use-dashboard";
@@ -128,6 +129,11 @@ export default function DashboardPage() {
         {/* Daily Challenge */}
         <motion.div variants={itemVariants} className="mt-8">
           <DailyChallenge challenge={dashboard.daily_challenge} />
+        </motion.div>
+
+        {/* Quick OA Placement Speedrun */}
+        <motion.div variants={itemVariants} className="mt-8">
+          <QuickSpeedrunWidget />
         </motion.div>
 
         {/* Battle Dock */}
