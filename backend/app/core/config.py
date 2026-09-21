@@ -191,15 +191,21 @@ class Settings(BaseSettings):
             or "******" in async_database_url
         )
 
-        if environment == "production" and (
-            not database_url
-            or is_placeholder_pg
-            or not database_url.startswith("postgresql")
-        ):
-            raise ValueError(
-                "Production requires a real PostgreSQL DATABASE_URL. "
-                "Configure DATABASE_URL and ASYNC_DATABASE_URL before starting the API."
-            )
+        if environment == "production":
+            if not self.SECRET_KEY or self.SECRET_KEY in ("CHANGE_ME", "secret", "default_secret") or len(self.SECRET_KEY) < 32:
+                raise ValueError(
+                    "Production requires a secure, random SECRET_KEY of at least 32 characters. "
+                    "Generate one using `openssl rand -hex 32`."
+                )
+            if (
+                not database_url
+                or is_placeholder_pg
+                or not database_url.startswith("postgresql")
+            ):
+                raise ValueError(
+                    "Production requires a real PostgreSQL DATABASE_URL. "
+                    "Configure DATABASE_URL and ASYNC_DATABASE_URL before starting the API."
+                )
 
         # Override remote postgres placeholder/test defaults to prevent gaierror / connection failures
         if is_testing or is_placeholder_pg or environment in ("development", "dev", "test") or not os.getenv("DATABASE_URL"):
