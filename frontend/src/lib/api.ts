@@ -16,7 +16,7 @@ const API_BASE_URL = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_URL);
 
 const api = axios.create({
     baseURL: `${API_BASE_URL}/api/v1`,
-    timeout: 15_000,                  // 15 s — prevent hanging on sleeping Render instance
+    timeout: 60_000,                  // 60 s — allow Render cold-starts ample time to spin up
     headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -44,8 +44,18 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 api.interceptors.response.use(
     (response) => response,
     async (error: AxiosError & { config?: InternalAxiosRequestConfig }) => {
-        const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean; _fallbackRetry?: boolean }) | undefined;
+        const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean; _fallbackRetry?: boolean; _timeoutRetry?: boolean }) | undefined;
         const url = originalRequest?.url ?? "";
+
+        // Automatic retry for timeout / cold-start errors
+        const isTimeout = error.code === "ECONNABORTED" || error.message?.toLowerCase().includes("timeout");
+        if (originalRequest && isTimeout && !originalRequest._timeoutRetry) {
+            originalRequest._timeoutRetry = true;
+            originalRequest.timeout = 60_000;
+            return new Promise((resolve) => {
+                setTimeout(() => resolve(axios(originalRequest)), 2000);
+            });
+        }
 
         // Fallback retry for network errors / connection refused when target is localhost
         if (
@@ -56,7 +66,7 @@ api.interceptors.response.use(
         ) {
             originalRequest._fallbackRetry = true;
             originalRequest.baseURL = "https://skillbattle-api-2026.onrender.com/api/v1";
-            originalRequest.timeout = 30_000; // Allow 30s for Render cold start
+            originalRequest.timeout = 60_000; // Allow 60s for Render cold start
             try {
                 return await axios(originalRequest);
             } catch (fallbackErr) {

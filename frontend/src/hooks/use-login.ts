@@ -32,12 +32,15 @@ export function useLogin() {
                     ? detail.map((d: any) => d.msg || d.message || JSON.stringify(d)).join(", ")
                     : error?.message || "Login failed";
 
-            const userFacingMsg =
-                msg.includes("Network Error") || msg.includes("ECONNREFUSED") || error?.code === "ERR_NETWORK"
-                    ? "Network Error: Unable to reach SkillBattle backend server. Please check your internet connection."
-                    : typeof msg === "string"
-                    ? msg
-                    : "Login failed. Please check your credentials.";
+            let userFacingMsg = "Login failed. Please check your credentials.";
+
+            if (msg.toLowerCase().includes("timeout") || error?.code === "ECONNABORTED") {
+                userFacingMsg = "Server is waking up (Render cold-start). Retrying automatically, please wait a few seconds...";
+            } else if (msg.includes("Network Error") || msg.includes("ECONNREFUSED") || error?.code === "ERR_NETWORK") {
+                userFacingMsg = "Network Error: Unable to reach SkillBattle backend server. Please check your connection.";
+            } else if (typeof msg === "string" && msg.trim()) {
+                userFacingMsg = msg;
+            }
 
             toast.error(userFacingMsg);
             throw error;

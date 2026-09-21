@@ -17,7 +17,7 @@ const API_BASE_URL =
 
 const api = axios.create({
     baseURL: `${API_BASE_URL}/api/v1`,
-    timeout: 20_000,
+    timeout: 60_000,
     headers: { "Content-Type": "application/json" },
     withCredentials: true,
 });
@@ -43,8 +43,18 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 api.interceptors.response.use(
     (response) => response,
     async (error: AxiosError & { config?: InternalAxiosRequestConfig }) => {
-        const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean; _fallbackRetry?: boolean }) | undefined;
+        const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean; _fallbackRetry?: boolean; _timeoutRetry?: boolean }) | undefined;
         const url = originalRequest?.url ?? "";
+
+        // Automatic retry for timeout / cold-start errors
+        const isTimeout = error.code === "ECONNABORTED" || error.message?.toLowerCase().includes("timeout");
+        if (originalRequest && isTimeout && !originalRequest._timeoutRetry) {
+            originalRequest._timeoutRetry = true;
+            originalRequest.timeout = 60_000;
+            return new Promise((resolve) => {
+                setTimeout(() => resolve(axios(originalRequest)), 2000);
+            });
+        }
 
         if (
             originalRequest &&
@@ -54,6 +64,7 @@ api.interceptors.response.use(
         ) {
             originalRequest._fallbackRetry = true;
             originalRequest.baseURL = `${FALLBACK_API_BASE_URL}/api/v1`;
+            originalRequest.timeout = 60_000;
             try {
                 return await axios(originalRequest);
             } catch (fallbackErr) {
