@@ -65,7 +65,7 @@ class DashboardRepository:
     ) -> list[Achievement]:
 
         result = await db.execute(
-            select(Achievement)
+            select(Achievement).where(Achievement.user_id == user_id)
         )
 
         return result.scalars().all()

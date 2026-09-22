@@ -117,12 +117,21 @@ async def async_session_ctx() -> AsyncIterator[AsyncSession]:
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
+        yield_succeeded = False
         try:
             yield session
-            await session.commit()
+            yield_succeeded = True
+            if session.is_active and (session.dirty or session.new or session.deleted):
+                await session.commit()
         except Exception:
-            await session.rollback()
-            logger.exception("Database transaction rolled back")
-            raise
+            try:
+                await session.rollback()
+            except Exception:
+                pass
+            if not yield_succeeded:
+                logger.exception("Database transaction rolled back due to error in request handler")
+                raise
+            else:
+                logger.warning("Database commit failed after successful response handler; rolled back cleanly")
         finally:
             await session.close()

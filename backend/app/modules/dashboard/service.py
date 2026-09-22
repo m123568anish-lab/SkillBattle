@@ -91,14 +91,15 @@ class DashboardService:
                 )
             ).scalar_one_or_none()
             if stats:
-                total_xp = stats.xp or 0
-                user_level = stats.level or 1
-                rating = stats.rating or 1000
-            from app.modules.xp.service import xp_service
-            user_xp = await xp_service.get_user_xp(db, current_user)
-            if not stats:
-                total_xp = int(user_xp.total_xp or 0) if user_xp else 0
-                user_level = int(user_xp.level or 1) if user_xp else max(1, (total_xp // 500) + 1)
+                total_xp = getattr(stats, "xp", 0) or 0
+                user_level = getattr(stats, "level", 1) or 1
+                rating = getattr(stats, "rating", 1000) or 1000
+
+            from app.modules.xp.repository import xp_repository
+            user_xp = await xp_repository.get_by_user(db, current_user.id)
+            if not stats and user_xp:
+                total_xp = int(getattr(user_xp, "total_xp", 0) or 0)
+                user_level = int(getattr(user_xp, "level", 1) or 1)
         except Exception:
             await self._rollback_after_database_error(db)
             total_xp = 0
@@ -120,17 +121,17 @@ class DashboardService:
         weekly = [
             WeeklyActivity(
                 day=day,
-                xp=int(user_xp.weekly_xp or 0) if day == today and user_xp else 0,
+                xp=int(getattr(user_xp, "weekly_xp", 0) or 0) if day == today and user_xp else 0,
             )
             for day in ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
         ]
 
         achievement_list = [
             Achievement(
-                id=str(item.id),
-                title=getattr(item, "title", "Achievement") or "Achievement",
-                description=getattr(item, "description", "Keep practicing to unlock achievements.") or "Keep practicing to unlock achievements.",
-                icon=getattr(item, "icon", "trophy") or "trophy",
+                id=str(getattr(item, "id", "0")),
+                title=str(getattr(item, "title", "Achievement") or "Achievement"),
+                description=str(getattr(item, "description", "Keep practicing to unlock achievements.") or "Keep practicing to unlock achievements."),
+                icon=str(getattr(item, "icon", "trophy") or "trophy"),
             )
             for item in achievements
         ]
@@ -156,10 +157,10 @@ class DashboardService:
             )
         else:
             daily = DailyChallenge(
-                id=str(challenge.id),
-                title=getattr(challenge, "title", "Daily challenge") or "Daily challenge",
-                difficulty=getattr(challenge, "difficulty", "Easy") or "Easy",
-                description=(
+                id=str(getattr(challenge, "id", 0)),
+                title=str(getattr(challenge, "title", "Daily challenge") or "Daily challenge"),
+                difficulty=str(getattr(challenge, "difficulty", "Easy") or "Easy"),
+                description=str(
                     f"Solve today's {getattr(challenge, 'category', 'coding') or 'coding'} challenge "
                     "to maintain your streak."
                 ),
@@ -169,10 +170,10 @@ class DashboardService:
         return DashboardResponse(
             user=UserSummary(
                 id=str(user.id),
-                username=str(user.username or "player"),
-                full_name=str(user.full_name or user.username or "SkillBattle player"),
-                email=str(user.email or ""),
-                avatar_url=user.avatar_url,
+                username=str(getattr(user, "username", None) or "player"),
+                full_name=str(getattr(user, "full_name", None) or getattr(user, "username", None) or "SkillBattle player"),
+                email=str(getattr(user, "email", None) or ""),
+                avatar_url=getattr(user, "avatar_url", None),
                 role=str(getattr(user, "role", "user") or "user"),
                 is_superuser=bool(getattr(user, "is_superuser", False)),
             ),
