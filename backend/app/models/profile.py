@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import (
     DateTime,
     ForeignKey,
+    JSON,
     String,
 )
 
@@ -60,6 +61,12 @@ class Profile(Base):
     target_package: Mapped[str] = mapped_column(
         String(50),
         default="",
+    )
+
+    onboarding_preferences: Mapped[dict] = mapped_column(
+        JSON,
+        default=dict,
+        nullable=False,
     )
 
     github: Mapped[str] = mapped_column(

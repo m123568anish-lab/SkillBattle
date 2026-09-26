@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { OnboardingData } from "@/types/onboarding";
 
 const initialData: OnboardingData = {
@@ -22,22 +22,22 @@ export function useOnboarding() {
   const [data, setData] =
     useState<OnboardingData>(initialData);
 
-  function nextStep() {
+  const nextStep = useCallback(() => {
     setStep((prev) => prev + 1);
-  }
+  }, []);
 
-  function previousStep() {
+  const previousStep = useCallback(() => {
     setStep((prev) => Math.max(prev - 1, 0));
-  }
+  }, []);
 
-  function updateData(
+  const updateData = useCallback((
     values: Partial<OnboardingData>
-  ) {
+  ) => {
     setData((prev) => ({
       ...prev,
       ...values,
     }));
-  }
+  }, []);
 
   return {
     step,

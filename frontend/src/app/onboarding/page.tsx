@@ -1,4 +1,5 @@
 "use client";
+import { useCallback, useState } from "react";
 import AchievementWidget from "@/components/dashboard/AchievementWidget";
 import CalendarHeatmap from "@/components/dashboard/CalendarHeatmap";
 import OnboardingLayout from "@/components/onboarding/OnboardingLayout";
@@ -15,7 +16,7 @@ import RoadmapPreview from "@/components/onboarding/RoadmapPreview";
 
 import { useOnboarding } from "@/hooks/use-onboarding";
 
-import { saveOnboarding } from "@/services/onboarding.service";
+import { OnboardingRoadmapResult, saveOnboarding } from "@/services/onboarding.service";
 
 export default function OnboardingPage() {
   const {
@@ -25,14 +26,17 @@ export default function OnboardingPage() {
     previousStep,
     updateData,
   } = useOnboarding();
-
-  async function handleFinish() {
-    try {
-      await saveOnboarding(data);
-    } catch (error) {
-      console.error(error);
-    }
-  }
+  const [roadmapResult, setRoadmapResult] = useState<OnboardingRoadmapResult | null>(null);
+  const generateRoadmap = useCallback(() => saveOnboarding(data), [data]);
+  const finishRoadmapStep = useCallback((result: OnboardingRoadmapResult | null) => {
+    setRoadmapResult(result);
+    nextStep();
+  }, [nextStep]);
+  const retryRoadmap = useCallback(async () => {
+    const result = await generateRoadmap();
+    setRoadmapResult(result);
+    return result;
+  }, [generateRoadmap]);
 
   return (
     <OnboardingLayout>
@@ -133,7 +137,8 @@ export default function OnboardingPage() {
 
       {step === 5 && (
         <RoadmapStep
-          onComplete={nextStep}
+          onGenerate={generateRoadmap}
+          onComplete={finishRoadmapStep}
         />
       )}
 
@@ -141,7 +146,10 @@ export default function OnboardingPage() {
 
       {step === 6 && (
         <RoadmapPreview
-          onContinue={handleFinish}
+          roadmap={roadmapResult?.roadmap ?? null}
+          generationStatus={roadmapResult?.generation_status ?? "pending"}
+          message={roadmapResult?.message}
+          onRetry={retryRoadmap}
         />
       )}
     </OnboardingLayout>

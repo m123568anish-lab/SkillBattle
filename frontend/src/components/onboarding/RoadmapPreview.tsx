@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Calendar,
@@ -10,27 +11,49 @@ import {
 } from "lucide-react";
 
 import GradientButton from "@/components/ui/gradient-button";
-import { roadmap } from "@/data/roadmap";
+import { Roadmap } from "@/services/career.service";
+import { OnboardingRoadmapResult } from "@/services/onboarding.service";
 
 interface Props {
-  onContinue?: () => Promise<void> | void;
+  roadmap: Roadmap | null;
+  generationStatus: "ready" | "pending";
+  message?: string | null;
+  onRetry: () => Promise<OnboardingRoadmapResult>;
 }
 
 export default function RoadmapPreview({
-  onContinue,
+  roadmap,
+  generationStatus,
+  message,
+  onRetry,
 }: Props) {
   const router = useRouter();
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
 
-  const totalXP = roadmap.reduce(
-    (sum, item) => sum + item.xp,
-    0
-  );
+  const totalXP = roadmap?.weeks.reduce(
+    (sum, week) => sum + week.tasks.reduce((weekXP, task) => weekXP + task.reward_xp, 0),
+    0,
+  ) ?? 0;
 
-  async function handleStart() {
-    if (onContinue) {
-      await onContinue();
+  async function handleRetry() {
+    setRetrying(true);
+    setRetryError(null);
+    try {
+      const result = await onRetry();
+      if (result.roadmap) router.push("/career/roadmap");
+      else setRetryError(result.message || "Roadmap generation is still unavailable.");
+    } catch (error) {
+      setRetryError(error instanceof Error ? error.message : "Unable to retry roadmap generation.");
     }
+    setRetrying(false);
+  }
 
+  function handleStart() {
+    if (roadmap) {
+      router.push("/career/roadmap");
+      return;
+    }
     router.push("/dashboard");
   }
 
@@ -60,8 +83,9 @@ export default function RoadmapPreview({
         </h1>
 
         <p className="mt-4 text-slate-400">
-          AI has created an 8-week preparation
-          journey just for you.
+          {roadmap
+            ? `A ${roadmap.duration_weeks}-week preparation journey for ${roadmap.target_company}.`
+            : message || "Your preferences are saved. A personalized roadmap can be generated when the AI service is available."}
         </p>
 
       </div>
@@ -77,7 +101,7 @@ export default function RoadmapPreview({
           </h3>
 
           <p className="mt-2 text-slate-400">
-            8 Weeks
+            {roadmap ? `${roadmap.duration_weeks} Weeks` : "Not generated"}
           </p>
 
         </div>
@@ -91,7 +115,7 @@ export default function RoadmapPreview({
           </h3>
 
           <p className="mt-2 text-slate-400">
-            2 Hours
+            {roadmap ? `${Math.round(roadmap.estimated_hours / Math.max(roadmap.duration_weeks * 5, 1))} Hours` : "Saved preferences"}
           </p>
 
         </div>
@@ -114,9 +138,9 @@ export default function RoadmapPreview({
 
       <div className="mt-12 space-y-5">
 
-        {roadmap.map((week) => (
+        {(roadmap?.weeks ?? []).map((week) => (
           <div
-            key={week.week}
+            key={week.id}
             className="rounded-2xl border border-white/10 bg-white/5 p-6"
           >
             <div className="flex justify-between">
@@ -124,7 +148,7 @@ export default function RoadmapPreview({
               <div>
 
                 <h2 className="text-xl font-bold text-white">
-                  Week {week.week}
+                  Week {week.week_number}
                 </h2>
 
                 <p className="mt-2 text-cyan-400">
@@ -134,19 +158,19 @@ export default function RoadmapPreview({
               </div>
 
               <span className="rounded-full bg-yellow-500/20 px-4 py-2 text-yellow-300">
-                +{week.xp} XP
+                {week.completion}% complete
               </span>
 
             </div>
 
             <div className="mt-5 flex flex-wrap gap-3">
 
-              {week.topics.map((topic) => (
+              {week.tasks.map((task) => (
                 <span
-                  key={topic}
+                  key={task.id}
                   className="rounded-full bg-cyan-500/15 px-3 py-2 text-sm text-cyan-300"
                 >
-                  {topic}
+                  {task.topic}
                 </span>
               ))}
 
@@ -157,12 +181,26 @@ export default function RoadmapPreview({
 
       </div>
 
+      {!roadmap && generationStatus === "pending" && (
+        <div className="mt-8 text-center">
+          <p className="text-sm text-slate-400">{retryError}</p>
+          <button
+            type="button"
+            onClick={handleRetry}
+            disabled={retrying}
+            className="mt-3 rounded-lg border border-cyan-500/30 px-4 py-2 text-sm font-semibold text-cyan-300 disabled:opacity-50"
+          >
+            {retrying ? "Retrying..." : "Retry roadmap generation"}
+          </button>
+        </div>
+      )}
+
       <div className="mt-12 flex justify-center">
 
         <GradientButton
           onClick={handleStart}
         >
-          🚀 Start My Journey
+          {roadmap ? "View My Roadmap" : "Continue to Dashboard"}
         </GradientButton>
 
       </div>

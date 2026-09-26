@@ -85,6 +85,7 @@ async def get_profile(
         graduation_year=profile.graduation_year or 2027,
         target_company=profile.target_company or "",
         target_package=profile.target_package or "",
+        onboarding_preferences=profile.onboarding_preferences or {},
         github=profile.github or current_user.github_url or "",
         linkedin=profile.linkedin or current_user.linkedin_url or "",
     )
@@ -116,6 +117,7 @@ async def update_profile(
             graduation_year=profile.graduation_year or 2027,
             target_company=profile.target_company or "",
             target_package=profile.target_package or "",
+            onboarding_preferences=profile.onboarding_preferences or {},
             github=profile.github or current_user.github_url or "",
             linkedin=profile.linkedin or current_user.linkedin_url or "",
         )
@@ -148,6 +150,7 @@ async def create_profile(
             graduation_year=existing.graduation_year or 2027,
             target_company=existing.target_company or "",
             target_package=existing.target_package or "",
+            onboarding_preferences=existing.onboarding_preferences or {},
             github=existing.github or current_user.github_url or "",
             linkedin=existing.linkedin or current_user.linkedin_url or "",
         )
@@ -162,6 +165,7 @@ async def create_profile(
         graduation_year=profile.graduation_year or 2027,
         target_company=profile.target_company or "",
         target_package=profile.target_package or "",
+        onboarding_preferences=profile.onboarding_preferences or {},
         github=profile.github or current_user.github_url or "",
         linkedin=profile.linkedin or current_user.linkedin_url or "",
-    )
+    )

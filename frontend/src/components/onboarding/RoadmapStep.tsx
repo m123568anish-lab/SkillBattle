@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { AxiosError } from "axios";
 
 import AIThinking from "./AIThinking";
 import TypingText from "./TypingText";
 import ProgressStage from "./ProgressStage";
+import { OnboardingRoadmapResult } from "@/services/onboarding.service";
 
 interface Props {
-  onComplete: () => void;
+  onGenerate: () => Promise<OnboardingRoadmapResult>;
+  onComplete: (result: OnboardingRoadmapResult | null) => void;
 }
 
 const messages = [
@@ -19,28 +22,45 @@ const messages = [
 ];
 
 export default function RoadmapStep({
+  onGenerate,
   onComplete,
 }: Props) {
   const [stage, setStage] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    if (stage >= messages.length) return;
-
-    const timer = setTimeout(() => {
-      if (stage === messages.length - 1) {
-        setTimeout(() => {
-          onComplete();
-        }, 1200);
-      } else {
-        setStage((prev) => prev + 1);
-      }
+    let active = true;
+    setLoading(true);
+    setError(null);
+    setStage(0);
+    const stageTimer = window.setInterval(() => {
+      setStage((current) => Math.min(current + 1, messages.length - 1));
     }, 2500);
 
-    return () => clearTimeout(timer);
-  }, [stage, onComplete]);
+    onGenerate()
+      .then((result) => {
+        if (active) onComplete(result);
+      })
+      .catch((reason: unknown) => {
+        if (!active) return;
+        const responseError = reason as AxiosError<{ detail?: string; message?: string }>;
+        setError(
+          responseError.response?.data?.detail ||
+          responseError.response?.data?.message ||
+          (reason instanceof Error ? reason.message : "Unable to save your preferences."),
+        );
+        setLoading(false);
+      });
 
-  const progress =
-    ((stage + 1) / messages.length) * 100;
+    return () => {
+      active = false;
+      window.clearInterval(stageTimer);
+    };
+  }, [attempt, onComplete, onGenerate]);
+
+  const progress = loading ? ((stage + 1) / messages.length) * 100 : 100;
 
   return (
     <motion.div
@@ -56,7 +76,7 @@ export default function RoadmapStep({
 
       <div className="mt-10">
         <TypingText
-          text={messages[stage]}
+          text={error ? "Your preferences are saved separately from roadmap generation." : messages[stage]}
         />
       </div>
 
@@ -87,7 +107,7 @@ export default function RoadmapStep({
 
         <p className="mt-3 text-center text-slate-400">
 
-          {Math.round(progress)}%
+          {loading ? `${Math.round(progress)}%` : error ? "Retry available" : "Ready"}
 
         </p>
 
@@ -96,6 +116,28 @@ export default function RoadmapStep({
       <ProgressStage
         stage={stage}
       />
+
+      {error && (
+        <div className="mt-8 rounded-xl border border-rose-500/20 bg-rose-500/10 p-5 text-center">
+          <p className="text-sm text-rose-200">{error}</p>
+          <div className="mt-4 flex justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setAttempt((value) => value + 1)}
+              className="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-semibold text-white"
+            >
+              Retry
+            </button>
+            <button
+              type="button"
+              onClick={() => onComplete(null)}
+              className="rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold text-slate-200"
+            >
+              Continue without roadmap
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="mt-12 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-6">
 
