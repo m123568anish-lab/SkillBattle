@@ -9,9 +9,7 @@ from pathlib import Path
 from alembic.config import Config
 from alembic import command
 
-from app.database.base import Base
-from app.database.database import engine
-from app import models as _models
+from app.database.init_db import init_db
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,8 +20,8 @@ def run_migrations():
         # Configure Alembic
         alembic_cfg = Config("alembic.ini")
 
-        logger.info("Creating missing tables from the current application schema")
-        Base.metadata.create_all(bind=engine)
+        logger.info("Creating and repairing tables from the current application schema")
+        init_db()
 
         try:
             ini_path = Path(__file__).parent / "alembic.ini"

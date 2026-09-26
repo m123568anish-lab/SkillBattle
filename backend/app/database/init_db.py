@@ -127,6 +127,7 @@ def init_db() -> None:
             Base.metadata.create_all(bind=engine)
             _repair_users_table()
             _repair_achievements_table()
+            _repair_dashboard_tables()
             logger.info(f"✅ Tables created: {list(Base.metadata.tables.keys())}")
         except Exception as e:
             # Some DB backends may raise an OperationalError on concurrent create_all
@@ -207,3 +208,26 @@ def _repair_achievements_table() -> None:
                 logger.info("Added missing achievements.%s column", name)
 
         connection.execute(text('CREATE INDEX IF NOT EXISTS "ix_achievements_user_id" ON "achievements" ("user_id")'))
+
+
+def _repair_dashboard_tables() -> None:
+    """Add dashboard fields missing from databases created by older app versions."""
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+    additions = {
+        "xp": {"daily_xp": "INTEGER NOT NULL DEFAULT 0"},
+        "daily_challenges": {"xp_reward": "INTEGER NOT NULL DEFAULT 50"},
+    }
+
+    with engine.begin() as connection:
+        for table, columns in additions.items():
+            if table not in tables:
+                continue
+
+            existing = {column["name"] for column in inspector.get_columns(table)}
+            for name, definition in columns.items():
+                if name not in existing:
+                    connection.execute(
+                        text(f'ALTER TABLE "{table}" ADD COLUMN "{name}" {definition}')
+                    )
+                    logger.info("Added missing %s.%s column", table, name)

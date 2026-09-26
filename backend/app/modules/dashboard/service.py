@@ -32,79 +32,39 @@ from app.modules.dashboard.schemas import (
 
 class DashboardService:
 
-    @staticmethod
-    async def _rollback_after_database_error(db: AsyncSession) -> None:
-        """Clear SQLAlchemy's failed transaction state before fallback queries."""
-        try:
-            await db.rollback()
-        except Exception:
-            pass
-
     async def get_dashboard(
         self,
         db: AsyncSession,
         current_user: User,
     ) -> DashboardResponse:
-
-        try:
-            user = await dashboard_repository.get_user(db, current_user.id)
-        except Exception:
-            await self._rollback_after_database_error(db)
-            user = None
-
+        user_id = str(current_user.id)
+        user = await dashboard_repository.get_user(db, user_id)
         if user is None:
             user = current_user
 
-        # Fetch queries with defensive error handling so dashboard never throws HTTP 500
-        try:
-            challenge = await dashboard_repository.get_daily_challenge(db)
-        except Exception:
-            await self._rollback_after_database_error(db)
-            challenge = None
-
-        try:
-            achievements = await dashboard_repository.get_achievements(db, current_user.id)
-        except Exception:
-            await self._rollback_after_database_error(db)
-            achievements = []
-
-        try:
-            battles_played, battles_won = await dashboard_repository.get_battle_stats(db, current_user.id)
-        except Exception:
-            await self._rollback_after_database_error(db)
-            battles_played, battles_won = 0, 0
-
-        try:
-            current_streak = await dashboard_repository.get_current_streak(db, current_user.id)
-        except Exception:
-            await self._rollback_after_database_error(db)
-            current_streak = 0
+        challenge = await dashboard_repository.get_daily_challenge(db)
+        achievements = await dashboard_repository.get_achievements(db, user_id)
+        battles_played, battles_won = await dashboard_repository.get_battle_stats(db, user_id)
+        current_streak = await dashboard_repository.get_current_streak(db, user_id)
 
         total_xp = 0
         user_level = 1
         rating = 1000
-        user_xp = None
-        try:
-            stats = (
-                await db.execute(
-                    select(UserStats).where(UserStats.user_id == current_user.id)
-                )
-            ).scalar_one_or_none()
-            if stats:
-                total_xp = getattr(stats, "xp", 0) or 0
-                user_level = getattr(stats, "level", 1) or 1
-                rating = getattr(stats, "rating", 1000) or 1000
+        user_stats = (
+            await db.execute(
+                select(UserStats).where(UserStats.user_id == user_id)
+            )
+        ).scalar_one_or_none()
+        if user_stats:
+            total_xp = getattr(user_stats, "xp", 0) or 0
+            user_level = getattr(user_stats, "level", 1) or 1
+            rating = getattr(user_stats, "rating", 1000) or 1000
 
-            from app.modules.xp.repository import xp_repository
-            user_xp = await xp_repository.get_by_user(db, current_user.id)
-            if not stats and user_xp:
-                total_xp = int(getattr(user_xp, "total_xp", 0) or 0)
-                user_level = int(getattr(user_xp, "level", 1) or 1)
-        except Exception:
-            await self._rollback_after_database_error(db)
-            total_xp = 0
-            user_level = 1
-            rating = 1000
+        from app.modules.xp.repository import xp_repository
+        user_xp = await xp_repository.get_by_user(db, user_id)
+        if not user_stats and user_xp:
+            total_xp = int(getattr(user_xp, "total_xp", 0) or 0)
+            user_level = int(getattr(user_xp, "level", 1) or 1)
 
         stats = DashboardStats(
             xp=total_xp,
@@ -150,10 +110,10 @@ class DashboardService:
         if challenge is None:
             daily = DailyChallenge(
                 id="0",
-                title="Daily Coding Arena",
+                title="No daily challenge available",
                 difficulty="Easy",
-                description="Solve today's coding challenge to build your streak and earn XP.",
-                xp_reward=100,
+                description="Check back later for a new challenge.",
+                xp_reward=0,
             )
         else:
             daily = DailyChallenge(
