@@ -22,7 +22,7 @@ export function useLogin() {
 
         try {
 
-            await login(data);
+            const loggedInUser = await login(data);
 
             console.log("✅ Login Success");
 
@@ -38,6 +38,7 @@ export function useLogin() {
 
             return {
                 success: true,
+                user: loggedInUser,
                 tokens: {
                     access_token: localStorage.getItem("access_token"),
                 },

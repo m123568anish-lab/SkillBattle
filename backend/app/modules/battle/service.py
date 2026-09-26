@@ -31,6 +31,7 @@ from app.modules.battle.config import battle_config_service
 from app.modules.battle.orchestrator import battle_orchestrator
 
 import asyncio
+from datetime import datetime
 
 
 class BattleService:
@@ -256,6 +257,7 @@ class BattleService:
             problem_id=config["problem_id"],
             status="running",
             max_players=config["max_players"],
+            started_at=datetime.utcnow(),
         )
 
         battle = await battle_repository.create_battle(db, battle)
@@ -270,7 +272,9 @@ class BattleService:
 
         await db.commit()
 
-        asyncio.create_task(battle_orchestrator.start_battle(battle.id, config["duration"]))
+        asyncio.create_task(
+            battle_orchestrator.start_battle(battle.id, config["duration"])
+        )
 
         return {"status": "matched", "battle_id": battle.id}
 
@@ -321,32 +325,23 @@ class BattleService:
         from app.modules.battle.reward.service import battle_reward_service
 
         battle = await battle_repository.get_battle(db, battle_id)
-
         if battle is None:
             return
 
-        players = await battle_repository.get_participants(db, battle_id)
-
-        winner = battle_result_engine.determine_winner(players)
-
-        draw = battle_result_engine.is_draw(players)
-
-        battle.status = "finished"
-
-        await battle_repository.update_battle(db, battle)
-
-        await db.commit()
-
-        # Distribute XP and ratings atomically
         reward_res = await battle_reward_service.finish_battle(db, battle_id)
+        if reward_res is None:
+            return None
+
+        players = await battle_repository.get_participants(db, battle_id)
+        draw = bool(reward_res["draw"])
 
         await battle_ws.broadcast(
             battle_id,
             BattleEvent.BATTLE_FINISHED.value,
             {
-                "winner": (None if draw else (winner.user_id if winner else None)),
+                "winner": reward_res["winner"],
                 "draw": draw,
-                "rewards": reward_res.get("rewards", []) if reward_res else [],
+                "rewards": reward_res["rewards"],
                 "leaderboard": [
                     {"user_id": player.user_id, "score": player.score, "rank": player.rank}
                     for player in players
@@ -354,7 +349,11 @@ class BattleService:
             },
         )
 
-        return {"winner": None if draw else (winner.user_id if winner else None), "draw": draw, "rewards": reward_res}
+        return {
+            "winner": reward_res["winner"],
+            "draw": draw,
+            "rewards": reward_res["rewards"],
+        }
 
 
 battle_service = BattleService()

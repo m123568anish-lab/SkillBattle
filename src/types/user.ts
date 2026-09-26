@@ -21,5 +21,6 @@ export interface User {
     email: string;
     avatar?: string;
     is_active: boolean;
+    onboarding_completed?: boolean;
     created_at: string;
 }

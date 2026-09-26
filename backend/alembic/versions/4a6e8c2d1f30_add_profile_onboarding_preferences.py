@@ -13,16 +13,25 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "profiles",
-        sa.Column(
-            "onboarding_preferences",
-            sa.JSON(),
-            nullable=False,
-            server_default=sa.text("'{}'"),
-        ),
-    )
+    inspector = sa.inspect(op.get_bind())
+    if "profiles" not in inspector.get_table_names():
+        return
+    columns = {column["name"] for column in inspector.get_columns("profiles")}
+    if "onboarding_preferences" not in columns:
+        op.add_column(
+            "profiles",
+            sa.Column(
+                "onboarding_preferences",
+                sa.JSON(),
+                nullable=False,
+                server_default=sa.text("'{}'"),
+            ),
+        )
 
 
 def downgrade() -> None:
-    op.drop_column("profiles", "onboarding_preferences")
+    inspector = sa.inspect(op.get_bind())
+    if "profiles" in inspector.get_table_names():
+        columns = {column["name"] for column in inspector.get_columns("profiles")}
+        if "onboarding_preferences" in columns:
+            op.drop_column("profiles", "onboarding_preferences")

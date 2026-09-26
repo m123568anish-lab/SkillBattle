@@ -19,6 +19,8 @@ class ProfileUpdateRequest(BaseModel):
 class ProfileResponse(BaseModel):
     full_name: Optional[str] = ""
     email: Optional[str] = ""
+    total_xp: int = 0
+    level: int = 1
 
     avatar: Optional[str] = ""
     bio: Optional[str] = ""
@@ -33,6 +35,7 @@ class ProfileResponse(BaseModel):
 
     github: Optional[str] = ""
     linkedin: Optional[str] = ""
+    onboarding_completed: bool = False
 
     model_config = {
         "from_attributes": True

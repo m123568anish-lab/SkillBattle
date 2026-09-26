@@ -13,11 +13,15 @@ import GoalStep from "@/components/onboarding/GoalStep";
 import RoadmapStep from "@/components/onboarding/RoadmapStep";
 import RoadmapPreview from "@/components/onboarding/RoadmapPreview";
 
+import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
+import { useAuthStore } from "@/store/authStore";
 import { useOnboarding } from "@/hooks/use-onboarding";
 
 import { saveOnboarding } from "@/services/onboarding.service";
 
 export default function OnboardingPage() {
+  const router = useRouter();
   const {
     step,
     data,
@@ -29,8 +33,13 @@ export default function OnboardingPage() {
   async function handleFinish() {
     try {
       await saveOnboarding(data);
+      useAuthStore.getState().updateUserPartial({ onboarding_completed: true });
+      toast.success("Welcome to SkillBattle! Your personalized journey is ready.");
+      router.replace("/dashboard");
     } catch (error) {
-      console.error(error);
+      console.error("Onboarding finish error:", error);
+      useAuthStore.getState().updateUserPartial({ onboarding_completed: true });
+      router.replace("/dashboard");
     }
   }
 

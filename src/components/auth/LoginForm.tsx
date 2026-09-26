@@ -50,7 +50,11 @@ export default function LoginForm() {
 
     toast.success("Welcome back!");
 
-    router.replace("/dashboard");
+    if (result.user?.onboarding_completed === false) {
+      router.replace("/onboarding");
+    } else {
+      router.replace("/dashboard");
+    }
   } catch (error: any) {
     console.error(error);
 

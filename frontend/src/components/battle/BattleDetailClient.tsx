@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { api } from "@/lib/api";
+import { useDashboardStore } from "@/store/dashboardStore";
 import toast from "react-hot-toast";
 
 function buildWsUrl(id: string) {
@@ -44,6 +45,9 @@ export default function BattleDetailClient({ id }: { id: string }) {
       try {
         const payload = JSON.parse(ev.data);
         const { event, data } = payload;
+        if (event === "battle_finished") {
+          void useDashboardStore.getState().refresh();
+        }
         if (event === "player_joined" || event === "player_left") {
           setPlayers(data.players ?? 0);
         }
@@ -86,12 +90,12 @@ export default function BattleDetailClient({ id }: { id: string }) {
         source_code: source,
       });
       setLastResult(resp.data);
-      // Award XP for battle completion
-      try {
-        await api.post("/xp/add", { amount: 100 });
-        toast.success("Solution Submitted! +100 XP Earned! 🏆");
-      } catch {
-        toast.success("Submitted successfully!");
+      const xpEarned = Number(resp.data?.xp_earned || 0);
+      if (xpEarned > 0) {
+        toast.success(`Solution accepted! +${xpEarned} XP`);
+        await useDashboardStore.getState().refresh();
+      } else {
+        toast.success("Submission recorded.");
       }
     } catch (err) {
       console.error(err);

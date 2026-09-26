@@ -47,8 +47,10 @@ class DashboardService:
         battles_played, battles_won = await dashboard_repository.get_battle_stats(db, user_id)
         current_streak = await dashboard_repository.get_current_streak(db, user_id)
 
-        total_xp = 0
-        user_level = 1
+        from app.modules.xp.service import xp_service
+        user_xp = await xp_service.get_user_xp(db, current_user)
+        total_xp = int(user_xp.total_xp or 0)
+        user_level = int(user_xp.level or 1)
         rating = 1000
         user_stats = (
             await db.execute(
@@ -56,15 +58,7 @@ class DashboardService:
             )
         ).scalar_one_or_none()
         if user_stats:
-            total_xp = getattr(user_stats, "xp", 0) or 0
-            user_level = getattr(user_stats, "level", 1) or 1
             rating = getattr(user_stats, "rating", 1000) or 1000
-
-        from app.modules.xp.repository import xp_repository
-        user_xp = await xp_repository.get_by_user(db, user_id)
-        if not user_stats and user_xp:
-            total_xp = int(getattr(user_xp, "total_xp", 0) or 0)
-            user_level = int(getattr(user_xp, "level", 1) or 1)
 
         stats = DashboardStats(
             xp=total_xp,

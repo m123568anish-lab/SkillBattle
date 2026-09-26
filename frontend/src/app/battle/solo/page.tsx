@@ -3,8 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { api } from "@/lib/api";
+import { useDashboardStore } from "@/store/dashboardStore";
 import { useRouter } from "next/navigation";
 import { RefreshCw, Clock, Award, CheckCircle2, XCircle, ChevronRight, Play, RotateCcw, Timer, Zap, BookOpen } from "lucide-react";
+import toast from "react-hot-toast";
 
 // 30 min in seconds
 const QUESTION_ROTATION_SECONDS = 30 * 60;
@@ -418,7 +420,6 @@ export default function SoloBattlePage() {
   const [mcqIndex,       setMcqIndex]       = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [answeredMap,    setAnsweredMap]     = useState<Record<number, boolean | null>>({}); // id→correct?
-  const [mcqXp,          setMcqXp]          = useState(0);
 
   // ── Coding state ───────────────────────────────────────────────────────
   const [language,    setLanguage]    = useState("python");
@@ -428,6 +429,7 @@ export default function SoloBattlePage() {
   const [output,      setOutput]      = useState("");
   const [codingSolved, setCodingSolved] = useState(false);
   const [codingXp,    setCodingXp]    = useState(0);
+  const [persistedProgress, setPersistedProgress] = useState<{ total_xp: number; level: number } | null>(null);
 
   // ── Reward modal ───────────────────────────────────────────────────────
   const [rewardModal, setRewardModal] = useState<{ title: string; xp: number } | null>(null);
@@ -442,6 +444,7 @@ export default function SoloBattlePage() {
     setCode(newProb.starterCode[language] || newProb.starterCode.python);
     setCodingSolved(false);
     setCodingXp(0);
+    setPersistedProgress(null);
     setOutput("");
   }, [language]);
 
@@ -462,7 +465,6 @@ export default function SoloBattlePage() {
     setMcqIndex(0);
     setSelectedOption(null);
     setAnsweredMap({});
-    setMcqXp(0);
     setLanguage("python");
     setCode(prob.starterCode.python);
     setOutput("");
@@ -485,9 +487,6 @@ export default function SoloBattlePage() {
     if (selectedOption === null || isCurrentAnswered || !currentMcq) return;
     const correct = selectedOption === currentMcq.correctIndex;
     setAnsweredMap((p) => ({ ...p, [currentMcq.id]: correct }));
-    if (correct) {
-      setMcqXp((p) => p + currentMcq.xpReward);
-    }
   };
 
   // Auto-advance after answering (after 0.8s)
@@ -530,41 +529,48 @@ export default function SoloBattlePage() {
         language,
         source_code: code,
       });
-      const passed = res.data.verdict === "Accepted" || res.data.passed_tests > 0;
+      const passed = res.data.verdict === "Accepted";
       if (passed) {
+        const xpEarned = Number(res.data.xp_earned || 0);
         setCodingSolved(true);
-        setCodingXp(sessionProblem.xpReward);
-        setOutput(`✅ ACCEPTED — All test cases passed!\n🏆 +${sessionProblem.xpReward} XP Earned!`);
+        setCodingXp(xpEarned);
+        setOutput(`✅ ACCEPTED — All test cases passed!\n🏆 +${xpEarned} verified XP Earned!`);
       } else {
         setOutput(`❌ ${res.data.verdict || "Wrong Answer"} — ${res.data.passed_tests ?? 0}/${res.data.total_tests ?? 3} tests passed.`);
       }
-    } catch {
-      // Grant XP on compiler errors (integration fallback)
-      setCodingSolved(true);
-      setCodingXp(sessionProblem.xpReward);
-      setOutput(`✅ ACCEPTED — All test cases passed!\n🏆 +${sessionProblem.xpReward} XP Earned!`);
+    } catch (error: any) {
+      setCodingSolved(false);
+      setCodingXp(0);
+      const message = error?.response?.data?.detail || error?.message || "Submission failed.";
+      setOutput(`Submission failed: ${message}`);
+      toast.error("The server could not verify this submission. No XP was awarded.");
     } finally {
       setSubmitting(false);
     }
   };
 
   // ── Summary screen ─────────────────────────────────────────────────────
-  const totalXp = mcqXp + codingXp;
+  const totalXp = codingXp;
   const allDone = mcqDone && codingSolved;
 
   const handleFinishSession = async () => {
-    setSessionComplete(true);
     try {
-      await api.post("/battle/solo/finish", {
-        xp_earned: totalXp,
+      const response = await api.post("/battle/solo/finish", {
         mcq_results: sessionQuestions.map((q) => ({
           category: q.category,
           correct: answeredMap[q.id] === true
         })),
         coding_solved: codingSolved
       });
+      setPersistedProgress({
+        total_xp: Number(response.data.total_xp || 0),
+        level: Number(response.data.level || 1),
+      });
+      await useDashboardStore.getState().refresh();
+      setSessionComplete(true);
     } catch (e) {
       console.error(e);
+      toast.error("Unable to save your session. Please retry before leaving.");
     }
   };
 
@@ -578,7 +584,7 @@ export default function SoloBattlePage() {
           <div className="grid gap-4 sm:grid-cols-3 w-full max-w-lg">
             {[
               { label: "MCQ Correct",    value: `${correctCount} / 10`,   color: "text-cyan-400" },
-              { label: "XP Earned",      value: `+${totalXp} XP`,          color: "text-yellow-400" },
+              { label: "Verified XP Earned", value: `+${totalXp} XP`,      color: "text-yellow-400" },
               { label: "Time Taken",     value: fmt(elapsed),              color: "text-violet-400" },
             ].map((s) => (
               <div key={s.label} className="rounded-2xl border border-white/10 bg-slate-900/50 p-5">
@@ -587,6 +593,11 @@ export default function SoloBattlePage() {
               </div>
             ))}
           </div>
+          {persistedProgress && (
+            <p className="text-sm text-slate-300">
+              Database total: {persistedProgress.total_xp.toLocaleString()} XP · Level {persistedProgress.level}
+            </p>
+          )}
           <div className="flex gap-3">
             <button onClick={startSession} className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-6 py-3 font-bold text-white shadow-lg shadow-cyan-500/20 hover:opacity-90 transition">
               <RotateCcw className="h-4 w-4" /> New Session (Fresh 10 Qs)
@@ -639,7 +650,7 @@ export default function SoloBattlePage() {
             }`}
           >
             {m === "mcq"
-              ? `📝 MCQs (${Object.keys(answeredMap).length}/10) · ${mcqXp} XP`
+              ? `📝 MCQs (${Object.keys(answeredMap).length}/10)`
               : `💻 Coding ${codingSolved ? "✓" : ""} · ${codingXp} XP`}
           </button>
         ))}
@@ -660,7 +671,7 @@ export default function SoloBattlePage() {
                   "bg-rose-500/20 text-rose-300"
                 }`}>{currentMcq.difficulty}</span>
               </div>
-              <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-3 py-1 text-xs font-bold text-yellow-300">+{currentMcq.xpReward} XP</span>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-300">Practice question</span>
             </div>
 
             {/* Progress bar */}
@@ -761,7 +772,7 @@ export default function SoloBattlePage() {
             <div className="rounded-xl border border-white/5 bg-slate-800/40 p-4 space-y-2 text-xs text-slate-400">
               <div className="flex justify-between"><span>Answered</span><span className="font-bold text-white">{Object.keys(answeredMap).length} / {sessionQuestions.length}</span></div>
               <div className="flex justify-between"><span>Correct</span><span className="font-bold text-emerald-400">{correctCount}</span></div>
-              <div className="flex justify-between"><span>MCQ XP</span><span className="font-bold text-yellow-400">+{mcqXp}</span></div>
+              <div className="flex justify-between"><span>Verified coding XP</span><span className="font-bold text-yellow-400">+{codingXp}</span></div>
             </div>
 
             {mcqDone && (
@@ -831,7 +842,7 @@ export default function SoloBattlePage() {
                     </span>
                   )}
 
-                  <span className="text-slate-500 text-xs flex items-center gap-1 ml-auto"><Award size={12}/> +{sessionProblem.xpReward} XP</span>
+                  <span className="text-slate-500 text-xs flex items-center gap-1 ml-auto"><Award size={12}/> Server verified</span>
                   {codingSolved && <span className="text-emerald-400 text-xs font-bold flex items-center gap-1"><CheckCircle2 size={12}/> Solved</span>}
                 </div>
               </div>

@@ -19,12 +19,14 @@ import {
 } from "@/lib/validation";
 
 import { useRegister } from "@/hooks/use-register";
+import { useLogin } from "@/hooks/use-login";
 import { AI_AVATARS } from "@/lib/avatars";
 
 export default function RegisterForm() {
   const router = useRouter();
 
   const { loading, signUp } = useRegister();
+  const { signIn } = useLogin();
 
   const [showPassword, setShowPassword] =
     useState(false);
@@ -47,15 +49,17 @@ export default function RegisterForm() {
     try {
       await signUp({ ...data, avatar });
 
-      toast.success(
-        "Registration successful!"
-      );
-
-      router.push("/dashboard");
-    } catch {
-      toast.error(
-        "Registration failed."
-      );
+      try {
+        await signIn({ email: data.email, password: data.password });
+        toast.success("Account created! Let's set up your profile.");
+        router.replace("/onboarding");
+      } catch {
+        toast.success("Account created successfully! Please log in.");
+        router.replace("/login");
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail || "Registration failed.";
+      toast.error(msg);
     }
   }
 

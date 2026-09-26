@@ -442,13 +442,6 @@ async def solo_finish(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if request.xp_earned:
-        await xp_service.add_xp(
-            db,
-            current_user,
-            request.xp_earned,
-        )
-
     for res in request.mcq_results or []:
         stmt = select(UserSkillStat).where(
             UserSkillStat.user_id == current_user.id,
@@ -470,4 +463,10 @@ async def solo_finish(
             stat.correct_attempts += 1
 
     await db.commit()
-    return {"status": "success", "xp_added": request.xp_earned}
+    progression = await xp_service.get_user_xp(db, current_user)
+    return {
+        "status": "success",
+        "xp_added": 0,
+        "total_xp": progression.total_xp,
+        "level": progression.level,
+    }

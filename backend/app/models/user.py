@@ -161,6 +161,12 @@ class User(Base):
         default=True,
     )
 
+    onboarding_completed: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
+
     last_login: Mapped[datetime | None] = mapped_column(
         DateTime,
         default=None,

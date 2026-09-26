@@ -12,8 +12,11 @@ Production Version
 
 from __future__ import annotations
 
+import logging
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.database.session import AsyncSessionLocal
 from app.modules.battle.timer import battle_timer
 
 from app.modules.battle.websocket import (
@@ -24,9 +27,7 @@ from app.modules.battle.events import (
     BattleEvent,
 )
 
-from app.modules.battle.reward import (
-    battle_reward_service,
-)
+logger = logging.getLogger(__name__)
 
 
 class BattleOrchestrator:
@@ -45,7 +46,6 @@ class BattleOrchestrator:
 
     async def start_battle(
         self,
-        db: AsyncSession,
         battle_id: str,
         duration: int,
     ):
@@ -73,39 +73,18 @@ class BattleOrchestrator:
 
         )
 
-        await battle_timer.start(
+        try:
+            await battle_timer.start(battle_id, duration)
 
-            battle_id,
+            from app.modules.battle.service import battle_service
 
-            duration,
-
-        )
-
-        await battle_reward_service.finish_battle(
-
-            db,
-
-            battle_id,
-
-        )
-
-        from app.modules.battle.service import battle_service
-
-        await battle_service.finish_battle(
-
-            db,
-
-            battle_id,
-
-        )
-
-        self.active_battles.pop(
-
-            battle_id,
-
-            None,
-
-        )
+            async with AsyncSessionLocal() as db:
+                await battle_service.finish_battle(db, battle_id)
+        except Exception:
+            logger.exception("Battle timer/finalization failed for battle_id=%s", battle_id)
+            raise
+        finally:
+            self.active_battles.pop(battle_id, None)
 
     # =====================================================
     # Force Finish

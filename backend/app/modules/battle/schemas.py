@@ -126,7 +126,9 @@ class BattleResultResponse(BaseModel):
 
     battle_id: str
 
-    winner_id: str
+    winner_id: Optional[str]
+
+    is_draw: bool = False
 
     total_players: int
 
@@ -274,7 +276,7 @@ class MCQResult(BaseModel):
     correct: bool
 
 class SoloFinishRequest(BaseModel):
-    xp_earned: int
+    xp_earned: int = 0
     mcq_results: list[MCQResult]
     coding_solved: bool
 

@@ -130,25 +130,17 @@ class BattleLeaderboardService:
 
         return participants[0]
     
-    def update_final(
-    self,
-    db,
-    battle_id: str,
-):
-
-     participants = battle_repository.get_participants(
+    async def update_final(
+        self,
         db,
-        battle_id,
-    )
-
-     participants.sort(
-        key=lambda p: (
-            -p.score,
-            p.joined_at,
-        )
-    )
-
-     return participants
+        battle_id: str,
+    ):
+        participants = await battle_repository.get_participants(db, battle_id)
+        participants.sort(key=lambda player: (-player.score, player.joined_at))
+        for rank, participant in enumerate(participants, start=1):
+            participant.rank = rank
+        await db.flush()
+        return participants
 
 
 battle_leaderboard_service = BattleLeaderboardService()

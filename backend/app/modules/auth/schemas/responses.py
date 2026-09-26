@@ -31,6 +31,8 @@ class UserResponse(BaseModel):
 
     is_verified: bool
 
+    onboarding_completed: bool = False
+
     avatar_url: str | None = None
 
     created_at: datetime

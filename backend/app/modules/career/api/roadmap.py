@@ -381,6 +381,10 @@ async def create_onboarding_roadmap(
         .limit(1)
     )
     existing = existing_result.scalar_one_or_none()
+    current_user.onboarding_completed = True
+    db.add(current_user)
+    await db.commit()
+
     if existing:
         return OnboardingRoadmapResponse(
             preferences_saved=True,
@@ -393,8 +397,8 @@ async def create_onboarding_roadmap(
     try:
         weeks = await generate_personalized_weeks(preferences, duration_weeks)
     except Exception:
-        await db.rollback()
         logger.exception("Could not generate onboarding roadmap for user_id=%s", user_id)
+        # Even on AI failure, preferences and onboarding status are persisted
         return OnboardingRoadmapResponse(
             preferences_saved=True,
             generation_status="pending",
@@ -410,6 +414,10 @@ async def create_onboarding_roadmap(
         weeks,
         payload.daily_hours,
     )
+
+    current_user.onboarding_completed = True
+    db.add(current_user)
+    await db.commit()
 
     return OnboardingRoadmapResponse(
         preferences_saved=True,

@@ -5,6 +5,8 @@ export interface Profile {
   username?: string;
   full_name?: string;
   email?: string;
+  total_xp: number;
+  level: number;
   avatar?: string;
   bio?: string;
   college?: string;

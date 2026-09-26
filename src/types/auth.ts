@@ -9,6 +9,7 @@ export interface User {
     role: string;
     level?: number;
     coding_rating?: number;
+    onboarding_completed?: boolean;
 
 }
 

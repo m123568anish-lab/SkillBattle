@@ -77,20 +77,6 @@ class BattleTimerEngine:
 
                 self.running[battle_id] -= 1
 
-        await battle_ws.broadcast(
-
-            battle_id,
-
-            BattleEvent.BATTLE_FINISHED.value,
-
-            {
-
-                "battle_id": battle_id,
-
-            },
-
-        )
-
         self.running.pop(
             battle_id,
             None,

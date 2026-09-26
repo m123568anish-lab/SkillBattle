@@ -11,6 +11,8 @@ import { AI_AVATARS } from "@/lib/avatars";
 const defaultProfile: Profile = {
   full_name: "",
   email: "",
+  total_xp: 0,
+  level: 1,
   bio: "",
   avatar: "",
   college: "",
@@ -166,6 +168,16 @@ export default function ProfileForm() {
                 </span>
               )}
             </div>
+          </div>
+        </div>
+        <div className="mt-6 grid grid-cols-2 gap-3 border-t border-white/10 pt-5 sm:max-w-sm">
+          <div>
+            <p className="text-xs font-semibold uppercase text-slate-400">Persisted XP</p>
+            <p className="mt-1 text-xl font-bold text-white">{profile.total_xp.toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase text-slate-400">Level</p>
+            <p className="mt-1 text-xl font-bold text-white">{profile.level}</p>
           </div>
         </div>
       </motion.div>

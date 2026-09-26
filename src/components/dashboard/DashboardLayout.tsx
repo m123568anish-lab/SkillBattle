@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
 import { X, Home, Sword, Trophy, Users, MoreHorizontal, ChevronRight, Search, Sparkles, Bot, Flame } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sidebarItems, type SidebarItem } from "@/data/dashboard";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
 
 interface Props {
   children: React.ReactNode;
@@ -16,6 +17,16 @@ interface Props {
 export default function DashboardLayout({
   children,
 }: Props) {
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const authLoading = useAuthStore((s) => s.loading);
+
+  useEffect(() => {
+    if (!authLoading && user && user.onboarding_completed === false) {
+      router.replace("/onboarding");
+    }
+  }, [authLoading, user, router]);
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [menuSearch, setMenuSearch] = useState("");
   const pathname = usePathname();

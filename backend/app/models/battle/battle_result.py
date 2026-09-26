@@ -19,6 +19,7 @@ from sqlalchemy import (
     String,
     Integer,
     Float,
+    Boolean,
     DateTime,
     ForeignKey,
 )
@@ -61,14 +62,20 @@ class BattleResult(Base):
         index=True,
     )
 
-    winner_id: Mapped[str] = mapped_column(
+    winner_id: Mapped[str | None] = mapped_column(
         String(36),
         ForeignKey(
             "users.id",
             ondelete="CASCADE",
         ),
-        nullable=False,
+        nullable=True,
         index=True,
+    )
+
+    is_draw: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
     )
 
     # ==========================================================

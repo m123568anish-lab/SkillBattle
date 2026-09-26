@@ -26,7 +26,7 @@ interface AuthState {
 
         data: LoginRequest,
 
-    ): Promise<void>;
+    ): Promise<User>;
 
     logout(): Promise<void>;
 
@@ -71,6 +71,8 @@ export const useAuthStore = create<AuthState>(
                 isAuthenticated:true,
 
             });
+
+            return user;
 
         }
 

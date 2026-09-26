@@ -170,6 +170,7 @@ def _repair_users_table() -> None:
         "resume_score": "INTEGER DEFAULT 0",
         "is_active": "BOOLEAN DEFAULT TRUE",
         "is_verified": "BOOLEAN DEFAULT TRUE",
+        "onboarding_completed": "BOOLEAN DEFAULT TRUE",
         "last_login": "TIMESTAMP",
         "is_superuser": "BOOLEAN DEFAULT FALSE",
         "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
@@ -181,6 +182,9 @@ def _repair_users_table() -> None:
             if name not in existing:
                 connection.execute(text(f'ALTER TABLE "users" ADD COLUMN "{name}" {definition}'))
                 logger.info("Added missing users.%s column", name)
+
+        # Ensure all existing user records have onboarding_completed set to True
+        connection.execute(text('UPDATE "users" SET "onboarding_completed" = TRUE WHERE "onboarding_completed" IS NULL'))
 
         if "xp" in inspector.get_table_names():
             connection.execute(text('CREATE INDEX IF NOT EXISTS "ix_xp_user_id" ON "xp" ("user_id")'))

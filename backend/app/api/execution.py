@@ -121,15 +121,14 @@ async def submit_solution(
         submission.execution_time_ms = elapsed
 
         if solved:
+            from app.modules.xp.service import xp_service
+
+            await xp_service.add_xp(db, current_user, xp_earned, commit=False)
             stats = (
                 await db.execute(select(UserStats).where(UserStats.user_id == current_user.id))
             ).scalar_one_or_none()
-            if stats is None:
-                stats = UserStats(user_id=current_user.id)
-                db.add(stats)
-            stats.xp += xp_earned
-            stats.level = max(1, stats.xp // 500 + 1)
-            stats.rating += max(1, xp_earned // 10)
+            if stats is not None:
+                stats.rating += max(1, xp_earned // 10)
         await db.commit()
         return {
             "accepted": solved,

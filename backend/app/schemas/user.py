@@ -29,6 +29,7 @@ class UserResponse(BaseModel):
     email: EmailStr
     is_active: bool
     is_verified: bool
+    onboarding_completed: bool = False
     avatar_url: str | None = None
 
     model_config = {
