@@ -113,59 +113,63 @@ export default function LeaderboardPage() {
 
       {/* Full Rankings Table */}
       <div className="rounded-3xl border border-white/10 bg-slate-900/40 backdrop-blur-xl overflow-hidden">
-        <div className="grid grid-cols-12 gap-4 border-b border-white/5 px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">
-          <span className="col-span-1">Rank</span>
-          <span className="col-span-5">Player</span>
-          <span className="col-span-2 text-right">Level</span>
-          <span className="col-span-2 text-right">XP</span>
-          <span className="col-span-2 text-right">Streak</span>
-        </div>
+        <div className="overflow-x-auto">
+          <div className="min-w-[600px]">
+            <div className="grid grid-cols-12 gap-4 border-b border-white/5 px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+              <span className="col-span-1">Rank</span>
+              <span className="col-span-5">Player</span>
+              <span className="col-span-2 text-right">Level</span>
+              <span className="col-span-2 text-right">XP</span>
+              <span className="col-span-2 text-right">Streak</span>
+            </div>
 
-        {loading ? (
-          <div className="flex h-48 items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
-          </div>
-        ) : board.length === 0 ? (
-          <p className="py-12 text-center text-slate-400">No leaderboard data available yet.</p>
-        ) : (
-          <div className="divide-y divide-white/5">
-            {board.map((player: any, idx: number) => (
-              <div
-                key={player.id ?? player.username ?? idx}
-                className={`grid grid-cols-12 gap-4 px-6 py-4 transition hover:bg-white/5 ${
-                  myRank?.id === player.id ? "bg-violet-500/5" : ""
-                }`}
-              >
-                <div className="col-span-1 flex items-center">{getRankIcon(idx + 1)}</div>
-
-                <div className="col-span-5 flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 text-xs font-black text-white flex-shrink-0">
-                    {player.username?.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="font-bold text-white text-sm">{player.username}</p>
-                    <p className="text-xs text-slate-500">{player.email ?? ""}</p>
-                  </div>
-                </div>
-
-                <div className="col-span-2 flex items-center justify-end">
-                  <span className="rounded-lg bg-violet-500/20 px-2 py-0.5 text-xs font-bold text-violet-300">
-                    Lv. {player.level ?? 1}
-                  </span>
-                </div>
-
-                <div className="col-span-2 flex items-center justify-end font-black text-white">
-                  {(player.xp ?? 0).toLocaleString()}
-                </div>
-
-                <div className="col-span-2 flex items-center justify-end gap-1 text-sm font-bold text-orange-400">
-                  <Flame className="h-4 w-4" />
-                  {player.current_streak ?? 0}
-                </div>
+            {loading ? (
+              <div className="flex h-48 items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
               </div>
-            ))}
+            ) : board.length === 0 ? (
+              <p className="py-12 text-center text-slate-400">No leaderboard data available yet.</p>
+            ) : (
+              <div className="divide-y divide-white/5">
+                {board.map((player: any, idx: number) => (
+                  <div
+                    key={player.id ?? player.username ?? idx}
+                    className={`grid grid-cols-12 gap-4 px-6 py-4 transition hover:bg-white/5 ${
+                      myRank?.id === player.id ? "bg-violet-500/5" : ""
+                    }`}
+                  >
+                    <div className="col-span-1 flex items-center">{getRankIcon(idx + 1)}</div>
+
+                    <div className="col-span-5 flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 text-xs font-black text-white flex-shrink-0">
+                        {player.username?.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-bold text-white text-sm">{player.username}</p>
+                        <p className="text-xs text-slate-500">{player.email ?? ""}</p>
+                      </div>
+                    </div>
+
+                    <div className="col-span-2 flex items-center justify-end">
+                      <span className="rounded-lg bg-violet-500/20 px-2 py-0.5 text-xs font-bold text-violet-300">
+                        Lv. {player.level ?? 1}
+                      </span>
+                    </div>
+
+                    <div className="col-span-2 flex items-center justify-end font-black text-white">
+                      {(player.xp ?? 0).toLocaleString()}
+                    </div>
+
+                    <div className="col-span-2 flex items-center justify-end gap-1 text-sm font-bold text-orange-400">
+                      <Flame className="h-4 w-4" />
+                      {player.current_streak ?? 0}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </DashboardLayout>
   );

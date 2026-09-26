@@ -17,11 +17,11 @@ export default function Sidebar() {
       initial={false}
       animate={{ width: isCollapsed ? 88 : 280 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="hidden md:flex flex-col my-6 ml-6 rounded-3xl border border-white/10 bg-gradient-to-b from-[#0F172A] via-[#070B14] to-[#050816] backdrop-blur-2xl shadow-2xl shadow-black/50 relative overflow-hidden"
+      className="hidden md:flex flex-col flex-shrink-0 my-6 ml-6 h-[calc(100vh-3rem)] h-[calc(100dvh-3rem)] rounded-3xl border border-white/10 bg-gradient-to-b from-[#0F172A] via-[#070B14] to-[#050816] backdrop-blur-2xl shadow-2xl shadow-black/50 relative overflow-hidden z-30"
     >
       {/* Aurora Ambient Light */}
-      <div className="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-cyan-500/10 blur-3xl" />
-      <div className="absolute -bottom-24 -right-24 h-48 w-48 rounded-full bg-violet-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute -top-24 -left-24 h-48 w-48 rounded-full bg-cyan-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 -right-24 h-48 w-48 rounded-full bg-violet-500/10 blur-3xl" />
 
       {/* Collapse Button */}
       <button
@@ -33,7 +33,7 @@ export default function Sidebar() {
       </button>
 
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-white/5 p-6 relative z-10">
+      <div className="flex items-center gap-3 border-b border-white/5 p-6 relative z-10 flex-shrink-0">
         <div className="rounded-2xl bg-gradient-to-br from-cyan-500/20 to-violet-500/20 p-3 border border-cyan-500/30 shadow-lg shadow-cyan-500/5 flex-shrink-0">
           <Trophy className="text-cyan-400 animate-pulse" size={24} />
         </div>
@@ -55,7 +55,7 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto relative z-10 scrollbar-hide">
+      <nav className="flex-1 min-h-0 overflow-y-auto relative z-10 scrollbar-hide">
         <div className="p-4 space-y-5">
           {sidebarCategories.map((category) => (
             <div key={category.id}>
@@ -138,7 +138,7 @@ export default function Sidebar() {
 
       {/* Footer - Quick Action */}
       {!isCollapsed && (
-        <div className="border-t border-white/5 p-4 relative z-10">
+        <div className="border-t border-white/5 p-4 relative z-10 flex-shrink-0">
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}

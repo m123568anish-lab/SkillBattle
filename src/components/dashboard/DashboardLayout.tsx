@@ -55,7 +55,10 @@ export default function DashboardLayout({
       suppressHydrationWarning
       className="
         flex
-        min-h-screen
+        h-screen
+        h-[100dvh]
+        w-full
+        overflow-hidden
         skillbattle-shell
         bg-[#050816]
         text-white
@@ -182,7 +185,10 @@ export default function DashboardLayout({
       <main
         className="
           flex-1
-          overflow-auto
+          min-w-0
+          h-full
+          overflow-y-auto
+          overflow-x-hidden
           p-3
           sm:p-8
           px-4
@@ -193,7 +199,9 @@ export default function DashboardLayout({
       >
         <TopNavbar onMenuClick={() => setMobileMenuOpen(true)} />
 
-        {children}
+        <div className="w-full min-w-0">
+          {children}
+        </div>
 
       </main>
 
