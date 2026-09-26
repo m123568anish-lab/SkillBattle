@@ -53,15 +53,12 @@ export default function CareerRoadmapPage() {
     if (currentStatus) return; // Already completed
     try {
       await careerService.completeTask(taskId);
-      // Local optimistic update
       if (selectedRoadmap) {
-        const updatedWeeks = selectedRoadmap.weeks.map((week) => ({
-          ...week,
-          tasks: week.tasks.map((task) =>
-            task.id === taskId ? { ...task, completed: true } : task
-          ),
-        }));
-        setSelectedRoadmap({ ...selectedRoadmap, weeks: updatedWeeks });
+        const updatedRoadmap = await careerService.getRoadmap(selectedRoadmap.id);
+        setSelectedRoadmap(updatedRoadmap);
+        setRoadmaps((current) => current.map((roadmap) =>
+          roadmap.id === updatedRoadmap.id ? updatedRoadmap : roadmap
+        ));
       }
     } catch (err) {
       console.error("Failed to complete task:", err);

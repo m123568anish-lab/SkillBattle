@@ -51,7 +51,7 @@ export default function RegisterForm() {
         "Account created successfully!"
       );
 
-      router.push("/dashboard");
+      router.push("/onboarding");
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       const msg =

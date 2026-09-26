@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.profile import Profile
@@ -42,11 +43,13 @@ class ProfileService:
         current_user: User,
     ) -> Profile:
 
+        user_id = str(current_user.id)
+
         profile = await profile_repository.get_by_user_id(
 
             db,
 
-            current_user.id,
+            user_id,
 
         )
 
@@ -78,15 +81,14 @@ class ProfileService:
 
         )
 
-        profile = await profile_repository.create(
-
-            db,
-
-            profile,
-
-        )
-
-        await profile_repository.commit(db)
+        try:
+            profile = await profile_repository.create(db, profile)
+            await profile_repository.commit(db)
+        except IntegrityError:
+            await db.rollback()
+            profile = await profile_repository.get_by_user_id(db, user_id)
+            if profile is None:
+                raise
 
         return profile
 

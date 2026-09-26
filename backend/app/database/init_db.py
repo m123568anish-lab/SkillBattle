@@ -127,7 +127,9 @@ def init_db() -> None:
             Base.metadata.create_all(bind=engine)
             _repair_users_table()
             _repair_achievements_table()
+            _repair_profile_preferences()
             _repair_dashboard_tables()
+            _seed_initial_problems()
             logger.info(f"✅ Tables created: {list(Base.metadata.tables.keys())}")
         except Exception as e:
             # Some DB backends may raise an OperationalError on concurrent create_all
@@ -210,6 +212,26 @@ def _repair_achievements_table() -> None:
         connection.execute(text('CREATE INDEX IF NOT EXISTS "ix_achievements_user_id" ON "achievements" ("user_id")'))
 
 
+def _repair_profile_preferences() -> None:
+    """Add onboarding preferences to profiles created by an earlier version."""
+    inspector = inspect(engine)
+    if "profiles" not in inspector.get_table_names():
+        return
+
+    existing = {column["name"] for column in inspector.get_columns("profiles")}
+    if "onboarding_preferences" in existing:
+        return
+
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "ALTER TABLE \"profiles\" ADD COLUMN "
+                "\"onboarding_preferences\" JSON NOT NULL DEFAULT '{}'"
+            )
+        )
+        logger.info("Added missing profiles.onboarding_preferences column")
+
+
 def _repair_dashboard_tables() -> None:
     """Add dashboard fields missing from databases created by older app versions."""
     inspector = inspect(engine)
@@ -231,3 +253,104 @@ def _repair_dashboard_tables() -> None:
                         text(f'ALTER TABLE "{table}" ADD COLUMN "{name}" {definition}')
                     )
                     logger.info("Added missing %s.%s column", table, name)
+
+
+def _seed_initial_problems() -> None:
+    """Seed initial coding practice problems if the problems table is empty."""
+    inspector = inspect(engine)
+    if "problems" not in inspector.get_table_names():
+        return
+
+    with engine.begin() as connection:
+        count = connection.execute(text("SELECT COUNT(*) FROM problems")).scalar()
+        if count and count > 0:
+            return
+
+        logger.info("Seeding initial practice problems into database...")
+        seed_data = [
+            (
+                "Two Sum",
+                "two-sum",
+                "Easy",
+                "Arrays",
+                "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
+                "Line 1: Space-separated integers (nums)\nLine 2: Single integer (target)",
+                "Space-separated pair of indices",
+                "2 <= nums.length <= 10^4",
+                "Use a hash map to store complements for O(N) lookup.",
+                100,
+            ),
+            (
+                "Reverse String",
+                "reverse-string",
+                "Easy",
+                "Strings",
+                "Write a function that reverses a string. The input string is given as an array of characters.",
+                "Single line string",
+                "Reversed string",
+                "1 <= s.length <= 10^5",
+                "Use two pointers (left and right) swapping elements inward.",
+                80,
+            ),
+            (
+                "Valid Parentheses",
+                "valid-parentheses",
+                "Easy",
+                "Stack",
+                "Given a string s containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.",
+                "Single line containing brackets",
+                "True if valid, False otherwise",
+                "1 <= s.length <= 10^4",
+                "Use a stack to push open brackets and match on closing brackets.",
+                120,
+            ),
+            (
+                "Binary Search",
+                "binary-search",
+                "Medium",
+                "Search",
+                "Given an array of integers nums which is sorted in ascending order, and an integer target, write a function to search target in nums.",
+                "Line 1: Sorted integers\nLine 2: Target integer",
+                "Index of target if found, else -1",
+                "1 <= nums.length <= 10^4",
+                "Maintain low and high pointers, halve the search space at mid.",
+                200,
+            ),
+            (
+                "Maximum Subarray",
+                "maximum-subarray",
+                "Hard",
+                "Dynamic Programming",
+                "Given an integer array nums, find the subarray with the largest sum, and return its sum.",
+                "Space-separated integers",
+                "Single integer (maximum sum)",
+                "1 <= nums.length <= 10^5",
+                "Kadane's Algorithm: current_sum = max(num, current_sum + num).",
+                300,
+            ),
+        ]
+
+        for title, slug, diff, cat, desc, inp, out, const, exp, xp in seed_data:
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO problems (title, slug, difficulty, category, description, input_format, output_format, constraints, explanation, xp_reward, time_limit, memory_limit, is_active, created_at, updated_at)
+                    VALUES (:title, :slug, :diff, :cat, :desc, :inp, :out, :const, :exp, :xp, 2, 256, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    ON CONFLICT DO NOTHING
+                    """
+                ),
+                {
+                    "title": title,
+                    "slug": slug,
+                    "diff": diff,
+                    "cat": cat,
+                    "desc": desc,
+                    "inp": inp,
+                    "out": out,
+                    "const": const,
+                    "exp": exp,
+                    "xp": xp,
+                },
+            )
+        logger.info("Successfully seeded 5 initial practice problems.")
+

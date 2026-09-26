@@ -10,7 +10,7 @@ import logging
 from datetime import datetime
 from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
@@ -216,7 +216,7 @@ Student preferences:
             if [week.week_number for week in result.weeks] != list(range(1, duration_weeks + 1)):
                 raise ValueError("AI roadmap week numbers are not consecutive")
             return [week.model_dump() for week in result.weeks]
-        except (Exception, ValidationError) as exc:
+        except Exception as exc:
             last_error = exc
             logger.warning("Roadmap generation attempt %s failed: %s", attempt + 1, exc)
 
@@ -357,9 +357,10 @@ async def create_onboarding_roadmap(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    user_id = str(current_user.id)
     preferences = payload.preferences()
     company = payload.companies[0]
-    profile = await profile_service.update_profile(
+    await profile_service.update_profile(
         db,
         current_user,
         ProfileUpdateRequest(
@@ -369,9 +370,12 @@ async def create_onboarding_roadmap(
         ),
     )
 
+    await db.execute(
+        select(User.id).where(User.id == user_id).with_for_update()
+    )
     existing_result = await db.execute(
         select(Roadmap)
-        .where(Roadmap.user_id == current_user.id, Roadmap.status == "ACTIVE")
+        .where(Roadmap.user_id == user_id)
         .options(selectinload(Roadmap.weeks).selectinload(RoadmapWeek.tasks))
         .order_by(Roadmap.created_at.desc())
         .limit(1)
@@ -388,23 +392,24 @@ async def create_onboarding_roadmap(
     title = f"{payload.level} {payload.goals[0]} Preparation"
     try:
         weeks = await generate_personalized_weeks(preferences, duration_weeks)
-        roadmap = await persist_roadmap(
-            db,
-            str(current_user.id),
-            title,
-            company,
-            duration_weeks,
-            weeks,
-            payload.daily_hours,
-        )
     except Exception:
         await db.rollback()
-        logger.exception("Could not generate onboarding roadmap for user_id=%s", current_user.id)
+        logger.exception("Could not generate onboarding roadmap for user_id=%s", user_id)
         return OnboardingRoadmapResponse(
             preferences_saved=True,
             generation_status="pending",
             message="Your preferences are saved. Roadmap generation is temporarily unavailable; retry when the AI service is available.",
         )
+
+    roadmap = await persist_roadmap(
+        db,
+        user_id,
+        title,
+        company,
+        duration_weeks,
+        weeks,
+        payload.daily_hours,
+    )
 
     return OnboardingRoadmapResponse(
         preferences_saved=True,

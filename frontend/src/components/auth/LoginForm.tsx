@@ -23,6 +23,7 @@ import {
 } from "@/lib/validation";
 
 import { useLogin } from "@/hooks/use-login";
+import api from "@/lib/api";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -50,7 +51,13 @@ export default function LoginForm() {
 
       toast.success("Welcome back!");
 
-      router.replace("/dashboard");
+      try {
+        const profile = await api.get<{ onboarding_preferences?: { languages?: string[] } }>("/profile/me");
+        const hasOnboarding = Boolean(profile.data.onboarding_preferences?.languages?.length);
+        router.replace(hasOnboarding ? "/dashboard" : "/onboarding");
+      } catch {
+        router.replace("/dashboard");
+      }
     } catch (error: any) {
       console.error("Login submission error:", error);
     }

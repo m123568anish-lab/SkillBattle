@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { AxiosError } from "axios";
 
@@ -29,6 +29,7 @@ export default function RoadmapStep({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const requestRef = useRef<Promise<OnboardingRoadmapResult> | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -39,7 +40,8 @@ export default function RoadmapStep({
       setStage((current) => Math.min(current + 1, messages.length - 1));
     }, 2500);
 
-    onGenerate()
+    const request = requestRef.current ?? (requestRef.current = onGenerate());
+    request
       .then((result) => {
         if (active) onComplete(result);
       })
@@ -123,7 +125,10 @@ export default function RoadmapStep({
           <div className="mt-4 flex justify-center gap-3">
             <button
               type="button"
-              onClick={() => setAttempt((value) => value + 1)}
+              onClick={() => {
+                requestRef.current = null;
+                setAttempt((value) => value + 1);
+              }}
               className="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-semibold text-white"
             >
               Retry

@@ -47,3 +47,24 @@ def test_dashboard_schema_repair_adds_columns_to_legacy_tables(monkeypatch):
         assert connection.execute(text('SELECT xp_reward FROM "daily_challenges"')).scalar_one() == 50
 
     legacy_engine.dispose()
+
+
+def test_profile_repair_adds_onboarding_preferences_to_legacy_table(monkeypatch):
+    legacy_engine = create_engine("sqlite:///:memory:")
+    with legacy_engine.begin() as connection:
+        connection.execute(text('CREATE TABLE "profiles" (id INTEGER PRIMARY KEY)'))
+
+    monkeypatch.setattr(database_init, "engine", legacy_engine)
+    database_init._repair_profile_preferences()
+
+    inspector = inspect(legacy_engine)
+    columns = {column["name"] for column in inspector.get_columns("profiles")}
+    assert "onboarding_preferences" in columns
+
+    with legacy_engine.connect() as connection:
+        connection.execute(text('INSERT INTO "profiles" (id) VALUES (1)'))
+        assert connection.execute(
+            text('SELECT onboarding_preferences FROM "profiles"')
+        ).scalar_one() == "{}"
+
+    legacy_engine.dispose()
