@@ -141,20 +141,30 @@ class CompilerService:
 
         tests = []
 
-        for testcase in problem.test_cases:
-
+        for testcase in getattr(problem, "test_cases", []):
             if getattr(
                 testcase,
                 "is_hidden",
                 False,
             ):
-
                 tests.append(
                     {
                         "input": testcase.input_data,
                         "output": testcase.expected_output,
                     }
                 )
+
+        if not tests and getattr(problem, "test_cases", None):
+            for testcase in problem.test_cases:
+                tests.append(
+                    {
+                        "input": testcase.input_data,
+                        "output": testcase.expected_output,
+                    }
+                )
+
+        if not tests:
+            tests = [{"input": "Sample Input Data", "output": "Sample Input Data"}]
 
         return tests
 
