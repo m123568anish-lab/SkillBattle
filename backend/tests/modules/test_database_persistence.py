@@ -10,6 +10,10 @@ class FakeSession:
         self.rollbacks = 0
         self.closed = False
         self.fail_on_commit = False
+        self.is_active = True
+        self.dirty = [1]
+        self.new = []
+        self.deleted = []
 
     async def commit(self):
         if self.fail_on_commit:

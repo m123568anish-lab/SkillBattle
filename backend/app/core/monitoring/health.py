@@ -25,7 +25,7 @@ router = APIRouter()
 async def health():
     """Lightweight application health check for Render & UptimeRobot."""
     return {
-        "status": "ok",
+        "status": "healthy",
         "app": "SkillBattle API",
         "version": "2.0.0",
     }
