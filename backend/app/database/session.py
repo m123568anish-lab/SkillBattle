@@ -30,7 +30,18 @@ logger = logging.getLogger(__name__)
 # Database URL
 # ---------------------------------------------------------
 
-DATABASE_URL = normalize_async_database_url(str(settings.ASYNC_DATABASE_URL))
+_raw_url = normalize_async_database_url(str(settings.ASYNC_DATABASE_URL))
+
+# Guarantee the asyncpg driver is specified for PostgreSQL URLs.
+# Without this, SQLAlchemy defaults to psycopg2 which is not installed.
+if _raw_url.startswith("postgresql://"):
+    DATABASE_URL = _raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+elif _raw_url.startswith("postgresql+psycopg://"):
+    DATABASE_URL = _raw_url.replace("postgresql+psycopg://", "postgresql+asyncpg://", 1)
+elif _raw_url.startswith("postgresql+psycopg2://"):
+    DATABASE_URL = _raw_url.replace("postgresql+psycopg2://", "postgresql+asyncpg://", 1)
+else:
+    DATABASE_URL = _raw_url
 
 # ---------------------------------------------------------
 # Engine Configuration

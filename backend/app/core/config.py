@@ -238,6 +238,12 @@ class Settings(BaseSettings):
         self.ASYNC_DATABASE_URL = normalize_async_database_url(
             self.ASYNC_DATABASE_URL
         )
+        # Guarantee the asyncpg driver suffix is present so the async engine
+        # never falls back to psycopg2 (which is not installed).
+        if self.ASYNC_DATABASE_URL.startswith("postgresql://"):
+            self.ASYNC_DATABASE_URL = self.ASYNC_DATABASE_URL.replace(
+                "postgresql://", "postgresql+asyncpg://", 1
+            )
         return self
 
 
