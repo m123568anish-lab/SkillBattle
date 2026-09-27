@@ -1,5 +1,6 @@
 "use client";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import GradientButton from '@/components/design/GradientButton';
@@ -12,6 +13,7 @@ import DailyChallenge from "@/components/dashboard/DailyChallenge";
 import BattleDock from "@/components/dashboard/BattleDock";
 
 import { useDashboard } from "@/hooks/use-dashboard";
+import { useAuthStore } from "@/store/authStore";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -34,12 +36,24 @@ const itemVariants = {
 };
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { user } = useAuthStore();
   const {
     dashboard,
     loading,
     error,
     refresh,
   } = useDashboard();
+
+  useEffect(() => {
+    if (!user) return;
+    const role = (user.role || "user").toLowerCase();
+    if (["college", "college_admin", "placement_officer", "faculty"].includes(role)) {
+      router.replace("/college/dashboard");
+    } else if (["company", "company_admin", "recruiter"].includes(role)) {
+      router.replace("/company/dashboard");
+    }
+  }, [user, router]);
 
   if (loading) {
     return (

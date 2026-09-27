@@ -143,6 +143,38 @@ class AuthService:
 
             )
 
+        # Validate selected portal role against stored user account role
+        if request.role:
+            req_role_upper = request.role.strip().upper()
+            user_role_lower = (user.role or "user").strip().lower()
+
+            student_roles = {"STUDENT", "USER"}
+            college_roles = {"COLLEGE", "COLLEGE_ADMIN", "PLACEMENT_OFFICER", "FACULTY"}
+            company_roles = {"COMPANY", "COMPANY_ADMIN", "RECRUITER"}
+
+            role_mismatch = False
+            if req_role_upper in student_roles:
+                if user_role_lower not in {"user", "student"}:
+                    role_mismatch = True
+            elif req_role_upper in college_roles:
+                if user_role_lower not in {"college", "college_admin", "placement_officer", "faculty"}:
+                    role_mismatch = True
+            elif req_role_upper in company_roles:
+                if user_role_lower not in {"company", "company_admin", "recruiter"}:
+                    role_mismatch = True
+
+            if role_mismatch:
+                target_portal = "Student"
+                if user_role_lower in {"user", "student"}:
+                    target_portal = "Student"
+                elif user_role_lower in {"college", "college_admin", "placement_officer", "faculty"}:
+                    target_portal = "College"
+                elif user_role_lower in {"company", "company_admin", "recruiter"}:
+                    target_portal = "Company"
+                raise ValueError(
+                    f"Your account is registered as a {target_portal} account. Please select {target_portal} to continue."
+                )
+
         access_token = create_access_token(
 
             user.id,

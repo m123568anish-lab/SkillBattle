@@ -205,14 +205,18 @@ class QuestionEngine:
 
         for sec_idx, sec in enumerate(sections_config):
             qtype = str(sec.get("question_type", "coding")).lower()
+            skill_category = (sec.get("skill_category") or "").strip()
             count = int(sec.get("question_count", 1))
             sec_title = sec.get("title", f"Section {sec_idx + 1}")
 
             # Fetch matching questions from DB
-            stmt = select(Question).where(
+            filters = [
                 Question.question_type == qtype,
                 Question.is_active == True,
-            ).limit(count)
+            ]
+            if skill_category:
+                filters.append(func.lower(Question.skill_category) == skill_category.casefold())
+            stmt = select(Question).where(*filters).limit(count)
             result = await db.execute(stmt)
             qs = list(result.scalars().all())
 
@@ -222,7 +226,7 @@ class QuestionEngine:
                     db,
                     question_type=qtype,
                     difficulty=difficulty,
-                    topic="DSA" if qtype == "coding" else "CS Fundamentals",
+                    topic=skill_category or ("DSA" if qtype == "coding" else "CS Fundamentals"),
                 )
                 qs.append(new_q)
 
@@ -250,6 +254,7 @@ class QuestionEngine:
                 "section_index": sec_idx,
                 "title": sec_title,
                 "question_type": qtype,
+                "skill_category": skill_category or None,
                 "weight": sec.get("weight", 1.0),
                 "duration_minutes": sec.get("duration_minutes", 10),
                 "negative_marking": sec.get("negative_marking", False),
@@ -285,6 +290,7 @@ class QuestionEngine:
                 "section_index": sec_idx,
                 "title": sec.get("title"),
                 "question_type": sec.get("question_type"),
+                "skill_category": sec.get("skill_category"),
                 "weight": sec.get("weight"),
                 "duration_minutes": sec.get("duration_minutes"),
                 "negative_marking": sec.get("negative_marking"),

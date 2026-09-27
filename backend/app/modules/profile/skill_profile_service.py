@@ -67,6 +67,7 @@ class SkillProfileService:
         battle_rows = (await db.execute(battle_stmt)).all()
         by_battle: dict[str, list[BattleSubmission]] = defaultdict(list)
         battle_titles: dict[str, str] = {}
+        battle_types: dict[str, str] = {}
         for submission, battle, question in battle_rows:
             if submission.total_tests > 0:
                 score = round(submission.passed_tests / submission.total_tests * 100.0, 1)
@@ -76,6 +77,7 @@ class SkillProfileService:
             record_skill(skill, score, "battle")
             by_battle[battle.id].append(submission)
             battle_titles[battle.id] = battle.title
+            battle_types[battle.id] = battle.battle_type
 
         for battle_id, submissions in by_battle.items():
             scores = [
@@ -84,14 +86,17 @@ class SkillProfileService:
                 else (100.0 if submission.verdict in {"Accepted", "Correct"} else 0.0)
                 for submission in submissions
             ]
-            battles.append(
-                {
-                    "source": "battle",
-                    "title": battle_titles[battle_id],
-                    "score": round(sum(scores) / len(scores), 1),
-                    "completed_at": max(s.submitted_at for s in submissions).isoformat(),
-                }
-            )
+            battle_type = battle_types[battle_id]
+            activity = {
+                "source": f"{battle_type}_assessment" if battle_type in {"company", "college"} else "battle",
+                "title": battle_titles[battle_id],
+                "score": round(sum(scores) / len(scores), 1),
+                "completed_at": max(s.submitted_at for s in submissions).isoformat(),
+            }
+            if battle_type in {"company", "college"}:
+                assessments.append(activity)
+            else:
+                battles.append(activity)
 
         college_stmt = (
             select(CollegeAssessmentSubmission)

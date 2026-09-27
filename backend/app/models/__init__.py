@@ -32,7 +32,7 @@ from .college import (
     CollegeAssessmentQuestion,
     CollegeAssessmentSubmission,
 )
-from .company import Company, CompanyMember, JobPosting, CandidateApplication
+from .company import Company, CompanyMember, CandidateApplication, CandidatePrivacySettings, JobPosting
 from .battle import BattleConfig, BattleRoom, BattleParticipant, BattleSubmission, BattleResult
 
 __all__ = [
@@ -74,6 +74,7 @@ __all__ = [
     "CollegeAssessmentSubmission",
     "Company",
     "CompanyMember",
+    "CandidatePrivacySettings",
     "JobPosting",
     "CandidateApplication",
     "BattleConfig",

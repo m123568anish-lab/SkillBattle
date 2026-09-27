@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Moon, Search, Sun, Menu, Command } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Moon, Search, Sun, Menu, Command, Building2, Briefcase } from "lucide-react";
 import NotificationMenu from "./NotificationMenu";
 import ProfileMenu from "./ProfileMenu";
 import { useAuthStore } from "@/store/authStore";
@@ -14,6 +15,7 @@ interface TopNavbarProps {
 }
 
 export default function TopNavbar({ onMenuClick, onOpenSearch }: TopNavbarProps) {
+  const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const dashboard = useDashboardStore((s) => s.dashboard);
   const [lightMode, setLightMode] = useState(false);
@@ -36,6 +38,16 @@ export default function TopNavbar({ onMenuClick, onOpenSearch }: TopNavbarProps)
     });
   }
 
+  const role = (user?.role || "user").toLowerCase();
+  const isCollege = pathname.startsWith("/college") || ["college", "college_admin", "placement_officer", "faculty"].includes(role);
+  const isCompany = pathname.startsWith("/company") || ["company", "company_admin", "recruiter"].includes(role);
+
+  const searchPlaceholder = isCollege
+    ? "Search students, assessments..."
+    : isCompany
+    ? "Search candidates, jobs..."
+    : "Search battles, users...";
+
   const level = dashboard?.stats?.level ?? user?.level ?? 1;
   const rating = dashboard?.stats?.rating ?? 1000;
   const xp = dashboard?.stats?.xp ?? 0;
@@ -51,7 +63,7 @@ export default function TopNavbar({ onMenuClick, onOpenSearch }: TopNavbarProps)
         >
           <Search size={19} className="shrink-0" />
           <span className="min-w-0 flex-1 text-sm text-slate-400 truncate">
-            Search battles, users...
+            {searchPlaceholder}
           </span>
           <kbd className="hidden lg:inline-flex items-center gap-0.5 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] font-mono text-slate-400">
             <Command size={10} />K
@@ -59,11 +71,23 @@ export default function TopNavbar({ onMenuClick, onOpenSearch }: TopNavbarProps)
         </button>
 
         <div className="ml-auto flex items-center gap-5">
-          <div className="flex h-10 items-center gap-4 rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] px-4 text-xs font-black uppercase tracking-wide">
-            <span className="text-cyan-300">◉ LVL {level}</span>
-            <span className="text-yellow-300">♜ {rating} RATING</span>
-            <span className="text-violet-300">ϟ {xp} XP</span>
-          </div>
+          {!isCollege && !isCompany ? (
+            <div className="flex h-10 items-center gap-4 rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] px-4 text-xs font-black uppercase tracking-wide">
+              <span className="text-cyan-300">◉ LVL {level}</span>
+              <span className="text-yellow-300">♜ {rating} RATING</span>
+              <span className="text-violet-300">ϟ {xp} XP</span>
+            </div>
+          ) : isCollege ? (
+            <div className="flex h-10 items-center gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-4 text-xs font-bold text-cyan-300">
+              <Building2 size={16} />
+              <span>Placement Cell Portal</span>
+            </div>
+          ) : (
+            <div className="flex h-10 items-center gap-2 rounded-xl border border-violet-500/20 bg-violet-500/10 px-4 text-xs font-bold text-violet-300">
+              <Briefcase size={16} />
+              <span>Enterprise Hiring Portal</span>
+            </div>
+          )}
 
           <NotificationMenu />
 
@@ -83,7 +107,7 @@ export default function TopNavbar({ onMenuClick, onOpenSearch }: TopNavbarProps)
 
       {/* Mobile Top Navbar Header */}
       <div className="mobile-skillbattle-navbar relative flex min-h-[64px] w-full items-center justify-between gap-2 border-b border-white/10 bg-[#0F172A]/90 px-3 py-2 backdrop-blur-xl md:hidden">
-        {/* Left: Menu Trigger + SkillBattle Logo (linking to /) */}
+        {/* Left: Menu Trigger + SkillBattle Logo */}
         <div className="relative flex min-w-0 items-center gap-3">
           <button
             type="button"

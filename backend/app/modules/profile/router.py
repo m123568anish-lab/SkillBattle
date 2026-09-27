@@ -22,8 +22,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
 from app.core.dependencies import get_current_user
+from sqlalchemy import select
 
 from app.models.user import User
+from app.models.company import CandidatePrivacySettings
 
 from app.modules.profile.schemas import (
     ProfileResponse,
@@ -35,6 +37,7 @@ from app.modules.profile.service import (
     profile_service,
 )
 from app.modules.profile.skill_profile_service import skill_profile_service
+from app.modules.company.schemas import CandidatePrivacySettingsRequest, CandidatePrivacySettingsResponse
 from app.modules.xp.service import xp_service
 
 router = APIRouter(
@@ -112,6 +115,52 @@ async def get_skill_profile(
     current_user: User = Depends(get_current_user),
 ) -> SkillProfileResponse:
     return SkillProfileResponse(**await skill_profile_service.get_profile(db, current_user))
+
+
+@router.get("/sharing-settings", response_model=CandidatePrivacySettingsResponse)
+async def get_sharing_settings(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> CandidatePrivacySettingsResponse:
+    result = await db.execute(
+        select(CandidatePrivacySettings).where(CandidatePrivacySettings.user_id == current_user.id)
+    )
+    settings = result.scalar_one_or_none()
+    if not settings:
+        return CandidatePrivacySettingsResponse(user_id=current_user.id)
+    return CandidatePrivacySettingsResponse(
+        user_id=current_user.id,
+        share_contact_info=settings.share_contact_info,
+        share_skill_profile=settings.share_skill_profile,
+        share_assessment_results=settings.share_assessment_results,
+        allow_recruiter_search=settings.allow_recruiter_search,
+    )
+
+
+@router.put("/sharing-settings", response_model=CandidatePrivacySettingsResponse)
+async def update_sharing_settings(
+    payload: CandidatePrivacySettingsRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> CandidatePrivacySettingsResponse:
+    result = await db.execute(
+        select(CandidatePrivacySettings).where(CandidatePrivacySettings.user_id == current_user.id)
+    )
+    settings = result.scalar_one_or_none()
+    if not settings:
+        settings = CandidatePrivacySettings(user_id=current_user.id)
+        db.add(settings)
+    for key, value in payload.model_dump().items():
+        setattr(settings, key, value)
+    await db.commit()
+    await db.refresh(settings)
+    return CandidatePrivacySettingsResponse(
+        user_id=current_user.id,
+        share_contact_info=settings.share_contact_info,
+        share_skill_profile=settings.share_skill_profile,
+        share_assessment_results=settings.share_assessment_results,
+        allow_recruiter_search=settings.allow_recruiter_search,
+    )
 
 
 @router.put(

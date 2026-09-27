@@ -19,6 +19,8 @@ export interface LoginRequest {
 
     password: string;
 
+    role?: string;
+
 }
 
 export interface RegisterRequest {

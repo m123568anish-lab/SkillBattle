@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import RoleGuard from "@/components/auth/RoleGuard";
 import { collegeService, CollegeDashboard } from "@/services/college.service";
 import { Building2, Users, UserCheck, Award, BarChart3, TrendingUp, AlertTriangle, CheckCircle2, ChevronRight, Layers, Plus, ShieldAlert } from "lucide-react";
 import Link from "next/link";
@@ -30,7 +31,8 @@ export default function CollegeDashboardPage() {
   };
 
   return (
-    <DashboardLayout>
+    <RoleGuard allowedRoles={["college", "college_admin", "placement_officer", "faculty"]}>
+      <DashboardLayout>
       <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-violet-500 tracking-tight">
@@ -249,5 +251,6 @@ export default function CollegeDashboardPage() {
         </div>
       )}
     </DashboardLayout>
+    </RoleGuard>
   );
 }

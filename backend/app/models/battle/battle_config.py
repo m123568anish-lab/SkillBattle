@@ -127,16 +127,23 @@ class BattleConfig(Base):
         nullable=False,
     )
 
-    company_id: Mapped[str | None] = mapped_column(
-        String(36),
+    company_id: Mapped[int | None] = mapped_column(
+        Integer,
         ForeignKey("companies.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
 
-    college_id: Mapped[str | None] = mapped_column(
-        String(36),
+    college_id: Mapped[int | None] = mapped_column(
+        Integer,
         ForeignKey("colleges.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    job_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("job_postings.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
     )
@@ -163,6 +170,7 @@ class BattleConfig(Base):
     # Relationships
     company = relationship("Company")
     college = relationship("College")
+    job = relationship("JobPosting")
 
     def __repr__(self) -> str:
         return f"<BattleConfig(id={self.id}, title='{self.title}', type='{self.battle_type}')>"

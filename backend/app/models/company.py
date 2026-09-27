@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -51,6 +51,18 @@ class CompanyMember(Base):
     company: Mapped[Company] = relationship(back_populates="members")
 
 
+class CandidatePrivacySettings(Base):
+    __tablename__ = "candidate_privacy_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    share_contact_info: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    share_skill_profile: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    share_assessment_results: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    allow_recruiter_search: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class JobPosting(Base):
     __tablename__ = "job_postings"
 
@@ -81,4 +93,7 @@ class CandidateApplication(Base):
     status: Mapped[str] = mapped_column(String(50), default="applied")
     score: Mapped[int] = mapped_column(Integer, default=0)
     consent_to_recruiters: Mapped[bool] = mapped_column(Boolean, default=False)
+    assessment_battle_id: Mapped[str | None] = mapped_column(ForeignKey("battle_rooms.id", ondelete="SET NULL"), nullable=True)
+    assessment_status: Mapped[str] = mapped_column(String(30), default="not_started", nullable=False)
+    assessment_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

@@ -51,6 +51,7 @@ class BattleType(str, Enum):
 class BattleSectionConfig(BaseModel):
     title: str = Field(..., min_length=2, max_length=100)
     question_type: QuestionTypeEnum
+    skill_category: Optional[str] = Field(default=None, max_length=100)
     question_count: int = Field(default=1, ge=1, le=50)
     weight: float = Field(default=1.0, ge=0.0, le=1.0)
     duration_minutes: int = Field(default=10, ge=1, le=180)
@@ -69,8 +70,9 @@ class BattleConfigCreate(BaseModel):
     scoring_rules: Dict[str, Any] = Field(default_factory=dict)
     negative_marking: bool = False
     visibility: str = Field(default="public")
-    company_id: Optional[str] = None
-    college_id: Optional[str] = None
+    company_id: Optional[int] = None
+    college_id: Optional[int] = None
+    job_id: Optional[int] = None
 
 
 class BattleConfigResponse(BaseModel):
@@ -86,8 +88,9 @@ class BattleConfigResponse(BaseModel):
     scoring_rules: Dict[str, Any]
     negative_marking: bool
     visibility: str
-    company_id: Optional[str] = None
-    college_id: Optional[str] = None
+    company_id: Optional[int] = None
+    college_id: Optional[int] = None
+    job_id: Optional[int] = None
     created_at: datetime
 
     class Config:

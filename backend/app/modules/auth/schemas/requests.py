@@ -85,8 +85,9 @@ class LoginRequest(BaseModel):
 
     email: EmailStr
     password: str = Field(min_length=1, max_length=128)
+    role: str | None = Field(default=None, max_length=50)
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class RefreshTokenRequest(BaseModel):

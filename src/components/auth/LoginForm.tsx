@@ -27,8 +27,8 @@ import { useLogin } from "@/hooks/use-login";
 export default function LoginForm() {
   const router = useRouter();
 
-  const [showPassword, setShowPassword] =
-    useState(false);
+  const [selectedRole, setSelectedRole] = useState<"STUDENT" | "COLLEGE" | "COMPANY">("STUDENT");
+  const [showPassword, setShowPassword] = useState(false);
 
   const { loading, signIn } = useLogin();
 
@@ -41,34 +41,104 @@ export default function LoginForm() {
   });
 
   async function onSubmit(data: LoginFormData) {
-  try {
-    const result = await signIn(data);
+    try {
+      const loginPayload = { ...data, role: selectedRole };
+      const result = await signIn(loginPayload);
 
-    if (!result?.tokens?.access_token) {
-      throw new Error("No access token received.");
+      if (!result?.tokens?.access_token) {
+        throw new Error("No access token received.");
+      }
+
+      toast.success("Welcome back!");
+
+      const role = (result.user?.role || "user").toLowerCase();
+      if (
+        role === "college" ||
+        role === "college_admin" ||
+        role === "placement_officer" ||
+        role === "faculty"
+      ) {
+        router.replace("/college/dashboard");
+      } else if (
+        role === "company" ||
+        role === "company_admin" ||
+        role === "recruiter"
+      ) {
+        router.replace("/company/dashboard");
+      } else {
+        if (result.user?.onboarding_completed === false) {
+          router.replace("/onboarding");
+        } else {
+          router.replace("/student/dashboard");
+        }
+      }
+    } catch (error: any) {
+      console.error(error);
+
+      const message =
+        error?.response?.data?.detail ||
+        error?.message ||
+        "Unable to login.";
+
+      toast.error(message);
     }
-
-    toast.success("Welcome back!");
-
-    if (result.user?.onboarding_completed === false) {
-      router.replace("/onboarding");
-    } else {
-      router.replace("/dashboard");
-    }
-  } catch (error: any) {
-    console.error(error);
-
-    const message =
-      error?.response?.data?.detail ||
-      error?.message ||
-      "Unable to login.";
-
-    toast.error(message);
   }
-}
 
   return (
     <>
+      {/* Account Role Selector */}
+      <div className="mb-6">
+        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">
+          Choose Account Type
+        </label>
+        <div className="grid grid-cols-3 gap-3">
+          {/* Student Card */}
+          <button
+            type="button"
+            onClick={() => setSelectedRole("STUDENT")}
+            className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-200 cursor-pointer ${
+              selectedRole === "STUDENT"
+                ? "border-cyan-500 bg-gradient-to-b from-cyan-500/20 to-cyan-500/5 text-cyan-300 shadow-lg shadow-cyan-500/20"
+                : "border-white/10 bg-white/5 text-slate-400 hover:border-white/20 hover:text-white"
+            }`}
+          >
+            <span className="text-2xl mb-1">🎓</span>
+            <span className="text-sm font-bold">Student</span>
+            <span className="text-[10px] text-slate-400">Learning & Arena</span>
+          </button>
+
+          {/* College Card */}
+          <button
+            type="button"
+            onClick={() => setSelectedRole("COLLEGE")}
+            className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-200 cursor-pointer ${
+              selectedRole === "COLLEGE"
+                ? "border-cyan-500 bg-gradient-to-b from-cyan-500/20 to-cyan-500/5 text-cyan-300 shadow-lg shadow-cyan-500/20"
+                : "border-white/10 bg-white/5 text-slate-400 hover:border-white/20 hover:text-white"
+            }`}
+          >
+            <span className="text-2xl mb-1">🏫</span>
+            <span className="text-sm font-bold">College</span>
+            <span className="text-[10px] text-slate-400">Placement Cell</span>
+          </button>
+
+          {/* Company Card */}
+          <button
+            type="button"
+            onClick={() => setSelectedRole("COMPANY")}
+            className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-200 cursor-pointer ${
+              selectedRole === "COMPANY"
+                ? "border-cyan-500 bg-gradient-to-b from-cyan-500/20 to-cyan-500/5 text-cyan-300 shadow-lg shadow-cyan-500/20"
+                : "border-white/10 bg-white/5 text-slate-400 hover:border-white/20 hover:text-white"
+            }`}
+          >
+            <span className="text-2xl mb-1">🏢</span>
+            <span className="text-sm font-bold">Company</span>
+            <span className="text-[10px] text-slate-400">Recruiter</span>
+          </button>
+        </div>
+      </div>
+
       <SocialLogin />
 
       <div className="my-6 flex items-center gap-3">

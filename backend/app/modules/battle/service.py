@@ -24,6 +24,8 @@ from app.models.user import User
 from app.models.user_stats import UserStats
 from app.models.battle import BattleRoom, BattleParticipant, BattleSubmission, BattleResult
 from app.models.question import Question, UserSubmission
+from app.models.company import CandidateApplication, Company
+from app.models.college import CollegeStudent
 
 from app.modules.battle.repository import battle_repository
 from app.modules.battle.schemas import (
@@ -62,17 +64,50 @@ class BattleService:
 
         # Resolve Configuration Template or Database Config
         sections_config = []
+        company_application = None
+        db_config = None
         if request.config_id:
             db_config = await battle_config_service.get_config(db, request.config_id)
-            if db_config:
-                battle_type_val = db_config.battle_type
-                sections_config = db_config.sections
-                difficulty = db_config.difficulty
-            else:
-                tmpl = battle_config_service.get_template(battle_type_val, request.difficulty)
-                sections_config = tmpl["sections"]
-                difficulty = request.difficulty
+            if not db_config:
+                raise ValueError("Assessment configuration not found.")
+
+            battle_type_val = db_config.battle_type
+            sections_config = db_config.sections
+            difficulty = db_config.difficulty
+
+            if db_config.company_id is not None:
+                company = await db.get(Company, db_config.company_id)
+                if not company or company.status != "verified" or db_config.job_id is None:
+                    raise ValueError("Company assessment is unavailable.")
+
+                application_result = await db.execute(
+                    select(CandidateApplication).where(
+                        CandidateApplication.candidate_user_id == current_user.id,
+                        CandidateApplication.job_id == db_config.job_id,
+                    )
+                )
+                company_application = application_result.scalar_one_or_none()
+                if not company_application:
+                    raise ValueError("Apply to this job before taking its assessment.")
+                if company_application.assessment_status == "completed":
+                    raise ValueError("This application assessment has already been completed.")
+                if company_application.assessment_status == "in_progress":
+                    raise ValueError("This application already has an assessment in progress.")
+            elif db_config.battle_type == "company":
+                raise ValueError("Company assessments must be attached to a verified job.")
+
+            if db_config.college_id is not None:
+                student_link_result = await db.execute(
+                    select(CollegeStudent).where(
+                        CollegeStudent.user_id == current_user.id,
+                        CollegeStudent.college_id == db_config.college_id,
+                    )
+                )
+                if student_link_result.scalar_one_or_none() is None:
+                    raise ValueError("Join the college before taking its assessment.")
         else:
+            if battle_type_val in {"company", "college"}:
+                raise ValueError("Organization assessments must use an assigned configuration.")
             tmpl = battle_config_service.get_template(battle_type_val, request.difficulty)
             sections_config = tmpl["sections"]
             difficulty = request.difficulty
@@ -82,6 +117,7 @@ class BattleService:
             db, sections_config, difficulty=difficulty
         )
 
+        is_solo_assessment = db_config is not None and db_config.battle_type in {"company", "college"} and request.max_players == 1
         battle = BattleRoom(
             config_id=request.config_id,
             title=request.title,
@@ -92,7 +128,10 @@ class BattleService:
             current_section_index=0,
             sections_config=sections_config,
             questions_data=resolved_sections,
-            status="waiting",
+            status="running" if is_solo_assessment else "waiting",
+            company_id=str(db_config.company_id) if db_config and db_config.company_id is not None else None,
+            college_id=str(db_config.college_id) if db_config and db_config.college_id is not None else None,
+            started_at=datetime.utcnow() if is_solo_assessment else None,
             created_at=datetime.utcnow(),
         )
 
@@ -106,6 +145,11 @@ class BattleService:
         )
 
         await battle_repository.add_participant(db, participant)
+
+        if company_application:
+            company_application.assessment_battle_id = battle.id
+            company_application.assessment_status = "in_progress"
+            company_application.assessment_score = None
 
         # Auto-add a friend if available and max_players > 1
         from app.modules.friend.service import friend_service
@@ -217,20 +261,49 @@ class BattleService:
             raise ValueError("Player is not a participant in this battle.")
 
         qtype = request.question_type.value if hasattr(request.question_type, "value") else str(request.question_type)
+        if request.question_id is None:
+            raise ValueError("A question id is required for scored submissions.")
+        if request.section_index < 0 or request.section_index >= len(battle.questions_data or []):
+            raise ValueError("Question section is not part of this battle.")
+
+        section = battle.questions_data[request.section_index]
+        if str(section.get("question_type", "")).lower() != qtype:
+            raise ValueError("Question type does not match the selected section.")
+        selected_question = next(
+            (
+                question
+                for question in section.get("questions", [])
+                if question.get("id") == request.question_id
+            ),
+            None,
+        )
+        if selected_question is None:
+            raise ValueError("Question does not belong to this battle section.")
+
+        duplicate_result = await db.execute(
+            select(BattleSubmission.id).where(
+                BattleSubmission.battle_id == battle.id,
+                BattleSubmission.user_id == current_user.id,
+                BattleSubmission.question_id == request.question_id,
+            )
+        )
+        if duplicate_result.scalar_one_or_none():
+            raise ValueError("This question has already been submitted.")
+
         score_earned = 0.0
         verdict = "Submitted"
         passed_tests = 0
         total_tests = 1
 
-        # Look up question object if provided
-        q_obj = None
-        if request.question_id:
-            stmt = select(Question).where(Question.id == request.question_id)
-            q_obj = (await db.execute(stmt)).scalar_one_or_none()
+        # Resolve the authoritative question record after confirming room membership.
+        stmt = select(Question).where(Question.id == request.question_id)
+        q_obj = (await db.execute(stmt)).scalar_one_or_none()
+        if q_obj is None:
+            raise ValueError("Question was not found.")
 
         # Evaluate based on Question Type
         if qtype == "mcq":
-            correct_opt = q_obj.correct_option if q_obj else "A"
+            correct_opt = q_obj.correct_option
             neg_marking = False
             if battle.sections_config and request.section_index < len(battle.sections_config):
                 neg_marking = battle.sections_config[request.section_index].get("negative_marking", False)
@@ -277,7 +350,7 @@ class BattleService:
                 )
 
         elif qtype == "technical":
-            rubric = q_obj.rubric if (q_obj and q_obj.rubric) else {"key_concepts": ["architecture", "logic"]}
+            rubric = q_obj.rubric or {"key_concepts": ["architecture", "logic"]}
             score_earned = battle_score_manager.calculate_technical_score(
                 student_response=request.source_code,
                 rubric=rubric,
@@ -557,6 +630,14 @@ class BattleService:
                 stats = stats_res.scalar_one_or_none()
                 if stats:
                     stats.rating = max(0, stats.rating + rating_change)
+
+        company_application_result = await db.execute(
+            select(CandidateApplication).where(CandidateApplication.assessment_battle_id == battle_id)
+        )
+        company_application = company_application_result.scalar_one_or_none()
+        if company_application:
+            company_application.assessment_status = "completed"
+            company_application.assessment_score = float(res_data["accuracy_percentage"])
 
         await db.commit()
 

@@ -33,6 +33,8 @@ from app.modules.battle.replay import battle_replay_service
 from app.modules.battle.timer import battle_timer
 from app.modules.battle.repository import battle_repository
 from app.modules.xp.service import xp_service
+from app.modules.company.service import company_service
+from app.modules.college.service import college_service
 
 router = APIRouter(
     prefix="/battle",
@@ -108,6 +110,33 @@ async def create_battle_config(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if request.company_id is not None and request.college_id is not None:
+        raise HTTPException(status_code=400, detail="A battle configuration can belong to only one organization.")
+
+    if request.company_id is not None:
+        company = await company_service.get_company_for_user(db, current_user)
+        if (
+            not company
+            or company.id != request.company_id
+            or company.status != "verified"
+            or request.battle_type.value != "company"
+            or request.job_id is None
+        ):
+            raise HTTPException(status_code=403, detail="Verified company staff can configure assessments only for their own jobs.")
+    elif request.job_id is not None or request.battle_type.value == "company":
+        raise HTTPException(status_code=403, detail="Company assessments must be created by the verified job owner.")
+
+    if request.college_id is not None:
+        college = await college_service.get_user_college(db, current_user)
+        if (
+            not college
+            or college.id != request.college_id
+            or request.battle_type.value != "college"
+        ):
+            raise HTTPException(status_code=403, detail="College staff can configure assessments only for their own institution.")
+    elif request.battle_type.value == "college":
+        raise HTTPException(status_code=403, detail="College assessments require an institution owner.")
+
     return await battle_config_service.create_config(db, request)
 
 
@@ -122,7 +151,14 @@ async def create_battle(
     current_user: User = Depends(get_current_user),
 ):
     try:
-        return await battle_service.create_battle(db, current_user, request)
+        battle = await battle_service.create_battle(db, current_user, request)
+        if battle.questions_data:
+            battle.questions_data = question_engine.sanitize_sections_for_client(
+                battle.questions_data,
+                current_section_index=battle.current_section_index,
+                is_completed=False,
+            )
+        return battle
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -232,6 +268,13 @@ async def finish_battle(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    battle = await battle_service.get_battle(db, battle_id)
+    if battle is None:
+        raise HTTPException(status_code=404, detail="Battle not found.")
+    participant = await battle_repository.get_participant(db, battle_id, current_user.id)
+    if participant is None and not (current_user.is_superuser or current_user.role.lower() == "admin"):
+        raise HTTPException(status_code=403, detail="Only battle participants or platform admins can finish this battle.")
+
     res = await battle_service.finish_battle(db, battle_id)
     if res is None:
         raise HTTPException(status_code=404, detail="Battle not found or already finished.")
@@ -242,7 +285,22 @@ async def finish_battle(
 async def get_battle_result(
     battle_id: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
+    battle = await battle_service.get_battle(db, battle_id)
+    if battle is None:
+        raise HTTPException(status_code=404, detail="Battle not found.")
+    participant = await battle_repository.get_participant(db, battle_id, current_user.id)
+    authorized = participant is not None or current_user.is_superuser or current_user.role.lower() == "admin"
+    if not authorized and battle.company_id is not None:
+        company = await company_service.get_company_for_user(db, current_user)
+        authorized = company is not None and str(company.id) == battle.company_id
+    if not authorized and battle.college_id is not None:
+        college = await college_service.get_user_college(db, current_user)
+        authorized = college is not None and str(college.id) == battle.college_id
+    if not authorized:
+        raise HTTPException(status_code=403, detail="You do not have access to this battle result.")
+
     stmt = select(BattleResult).where(BattleResult.battle_id == battle_id)
     res = (await db.execute(stmt)).scalar_one_or_none()
     if not res:

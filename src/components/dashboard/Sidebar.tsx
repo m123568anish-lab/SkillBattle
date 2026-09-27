@@ -2,23 +2,56 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Trophy, ChevronLeft, ChevronRight, Zap } from "lucide-react";
-import { sidebarCategories } from "@/data/dashboard";
+import { Trophy, ChevronLeft, ChevronRight, Zap, PlusCircle, Briefcase } from "lucide-react";
+import {
+  studentSidebarCategories,
+  collegeSidebarCategories,
+  companySidebarCategories,
+} from "@/data/dashboard";
+import { useAuthStore } from "@/store/authStore";
 import { motion } from "framer-motion";
 import { useState } from "react";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user } = useAuthStore();
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const role = (user?.role || "user").toLowerCase();
+  const isCollegePath = pathname.startsWith("/college");
+  const isCompanyPath = pathname.startsWith("/company");
+
+  let categories = studentSidebarCategories;
+  let badgeTitle = "Arena";
+  let quickActionIcon = Zap;
+  let quickActionLabel = "Start Battle";
+  let quickActionHref = "/battle";
+
+  if (isCollegePath || ["college", "college_admin", "placement_officer", "faculty"].includes(role)) {
+    categories = collegeSidebarCategories;
+    badgeTitle = "Institution";
+    quickActionIcon = PlusCircle;
+    quickActionLabel = "Create Assessment";
+    quickActionHref = "/college/assessments/new";
+  } else if (isCompanyPath || ["company", "company_admin", "recruiter"].includes(role)) {
+    categories = companySidebarCategories;
+    badgeTitle = "Enterprise";
+    quickActionIcon = Briefcase;
+    quickActionLabel = "Create Job";
+    quickActionHref = "/company/jobs";
+  }
 
   const isItemActive = (href: string) => {
     if (pathname === href) return true;
-    if (href === "/dashboard") return false;
+    if (href === "/student/dashboard" && pathname === "/student/dashboard") return true;
+    if (href === "/college/dashboard" && pathname === "/college/dashboard") return true;
+    if (href === "/company/dashboard" && pathname === "/company/dashboard") return true;
     if (href === "/battle" && pathname.startsWith("/battle")) return true;
-    if (href === "/college/dashboard" && pathname.startsWith("/college")) return true;
     if (href === "/tournament" && (pathname.startsWith("/tournament") || pathname.startsWith("/tournaments"))) return true;
     return pathname.startsWith(href + "/");
   };
+
+  const QuickActionIcon = quickActionIcon;
 
   return (
     <motion.aside
@@ -42,7 +75,7 @@ export default function Sidebar() {
         {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
       </button>
 
-      {/* Header with Logo linking to "/" */}
+      {/* Header with Logo */}
       <Link
         href="/"
         className="flex items-center gap-3 border-b border-white/5 p-6 relative z-10 flex-shrink-0 group cursor-pointer transition hover:opacity-90"
@@ -62,7 +95,7 @@ export default function Sidebar() {
               SkillBattle
             </h2>
             <p className="text-xs font-bold uppercase tracking-widest text-cyan-500/70">
-              Arena
+              {badgeTitle}
             </p>
           </motion.div>
         )}
@@ -71,7 +104,7 @@ export default function Sidebar() {
       {/* Navigation */}
       <nav aria-label="Main Navigation" className="flex-1 min-h-0 overflow-y-auto relative z-10 scrollbar-hide">
         <div className="p-4 space-y-5">
-          {sidebarCategories.map((category) => (
+          {categories.map((category) => (
             <div key={category.id}>
               {!isCollapsed && category.items.length > 0 && (
                 <motion.h3
@@ -150,17 +183,17 @@ export default function Sidebar() {
         </div>
       </nav>
 
-      {/* Footer - Quick Action */}
+      {/* Footer - Role Quick Action */}
       {!isCollapsed && (
         <div className="border-t border-white/5 p-4 relative z-10 flex-shrink-0">
-          <Link href="/battle">
+          <Link href={quickActionHref}>
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               className="w-full flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500/80 to-violet-500/80 px-4 py-2.5 font-bold text-sm text-white shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 transition duration-200"
             >
-              <Zap size={16} />
-              Start Battle
+              <QuickActionIcon size={16} />
+              {quickActionLabel}
             </motion.button>
           </Link>
         </div>

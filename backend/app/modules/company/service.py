@@ -6,9 +6,13 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.company import CandidateApplication, Company, CompanyMember, JobPosting
+from app.models.company import CandidateApplication, CandidatePrivacySettings, Company, CompanyMember, JobPosting
 from app.models.profile import Profile
 from app.models.user import User
+from app.models.battle.battle_config import BattleConfig
+from app.modules.battle.config.service import battle_config_service
+from app.modules.battle.schemas import BattleConfigCreate, BattleTypeEnum
+from app.modules.profile.skill_profile_service import skill_profile_service
 
 
 class CompanyService:
@@ -31,7 +35,7 @@ class CompanyService:
             website=(payload.get("website") or "").strip(),
             headquarters=(payload.get("headquarters") or "").strip(),
             description=(payload.get("description") or "").strip(),
-            status="verified",
+            status="pending",
             created_by_user_id=user.id,
         )
         db.add(company)
@@ -58,6 +62,8 @@ class CompanyService:
         company = await self.get_company_for_user(db, user)
         if not company:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Company access required.")
+        if company.status != "verified":
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Company verification is required before posting jobs.")
 
         job = JobPosting(
             company_id=company.id,
@@ -76,6 +82,166 @@ class CompanyService:
         await db.refresh(job)
         return job
 
+    async def create_job_assessment(
+        self,
+        db: AsyncSession,
+        user: User,
+        job_id: int,
+        payload: dict[str, Any],
+    ) -> BattleConfig:
+        company = await self.get_company_for_user(db, user)
+        if not company or company.status != "verified":
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Verified company access required.")
+
+        job_result = await db.execute(
+            select(JobPosting).where(JobPosting.id == job_id, JobPosting.company_id == company.id)
+        )
+        job = job_result.scalar_one_or_none()
+        if not job:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found for this company.")
+
+        existing = await db.execute(select(BattleConfig).where(BattleConfig.job_id == job.id))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This job already has an assessment.")
+
+        config = BattleConfigCreate(
+            title=payload["title"],
+            description=payload.get("description", ""),
+            battle_type=BattleTypeEnum.COMPANY,
+            difficulty=payload.get("difficulty", "medium"),
+            duration_minutes=payload.get("duration_minutes", 45),
+            question_count=payload.get("question_count", 5),
+            sections=payload["sections"],
+            allowed_languages=payload.get("allowed_languages", ["python", "javascript", "cpp", "java"]),
+            scoring_rules=payload.get("scoring_rules", {}),
+            negative_marking=payload.get("negative_marking", False),
+            visibility="private",
+            company_id=company.id,
+            job_id=job.id,
+        )
+        return await battle_config_service.create_config(db, config)
+
+    async def list_openings(self, db: AsyncSession) -> list[dict[str, Any]]:
+        stmt = (
+            select(JobPosting, Company, BattleConfig.id)
+            .join(Company, Company.id == JobPosting.company_id)
+            .outerjoin(BattleConfig, BattleConfig.job_id == JobPosting.id)
+            .where(Company.status == "verified", JobPosting.status.in_(("open", "active")))
+            .order_by(JobPosting.created_at.desc())
+        )
+        result = await db.execute(stmt)
+        return [
+            {
+                "job_id": job.id,
+                "company_id": company.id,
+                "company_name": company.name,
+                "title": job.title,
+                "location": job.location,
+                "employment_type": job.employment_type,
+                "remote_allowed": job.remote_allowed,
+                "description": job.description,
+                "required_skills": job.required_skills,
+                "assessment_available": assessment_id is not None,
+            }
+            for job, company, assessment_id in result.all()
+        ]
+
+    async def list_user_applications(self, db: AsyncSession, user: User) -> list[dict[str, Any]]:
+        stmt = (
+            select(CandidateApplication, JobPosting, Company, BattleConfig.id)
+            .join(JobPosting, JobPosting.id == CandidateApplication.job_id)
+            .join(Company, Company.id == JobPosting.company_id)
+            .outerjoin(BattleConfig, BattleConfig.job_id == JobPosting.id)
+            .where(CandidateApplication.candidate_user_id == user.id)
+            .order_by(CandidateApplication.created_at.desc())
+        )
+        result = await db.execute(stmt)
+        return [
+            {
+                "application_id": application.id,
+                "job_id": job.id,
+                "company_name": company.name,
+                "job_title": job.title,
+                "status": application.status,
+                "consent_to_recruiters": application.consent_to_recruiters,
+                "assessment_config_id": config_id,
+                "assessment_status": application.assessment_status,
+            }
+            for application, job, company, config_id in result.all()
+        ]
+
+    async def get_application_for_student(
+        self,
+        db: AsyncSession,
+        user: User,
+        application_id: int,
+    ) -> CandidateApplication:
+        result = await db.execute(
+            select(CandidateApplication).where(
+                CandidateApplication.id == application_id,
+                CandidateApplication.candidate_user_id == user.id,
+            )
+        )
+        application = result.scalar_one_or_none()
+        if not application:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found.")
+        if application.status not in {"applied", "shortlisted"}:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This application is no longer active.")
+        return application
+
+    async def update_application_consent(
+        self,
+        db: AsyncSession,
+        user: User,
+        application_id: int,
+        consent: bool,
+    ) -> CandidateApplication:
+        application = await self.get_application_for_student(db, user, application_id)
+        application.consent_to_recruiters = consent
+        await db.commit()
+        await db.refresh(application)
+        return application
+
+    async def update_application_status(
+        self,
+        db: AsyncSession,
+        user: User,
+        application_id: int,
+        new_status: str,
+    ) -> CandidateApplication:
+        company = await self.get_company_for_user(db, user)
+        if not company:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Company access required.")
+        result = await db.execute(
+            select(CandidateApplication)
+            .join(JobPosting, JobPosting.id == CandidateApplication.job_id)
+            .where(CandidateApplication.id == application_id, JobPosting.company_id == company.id)
+        )
+        application = result.scalar_one_or_none()
+        if not application:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found for this company.")
+
+        if new_status == "shortlisted":
+            visible_candidates = await self.list_candidates(db, user, application.job_id)
+            candidate = next((row for row in visible_candidates if row["application_id"] == application_id), None)
+            if not candidate or not candidate["consent"] or not candidate["eligible"]:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Candidate has not shared eligible verified skills.")
+            if application.assessment_status != "completed":
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Candidate must complete the company assessment before shortlisting.")
+            privacy_result = await db.execute(
+                select(CandidatePrivacySettings).where(
+                    CandidatePrivacySettings.user_id == application.candidate_user_id
+                )
+            )
+            privacy = privacy_result.scalar_one_or_none()
+            if not privacy or not privacy.share_assessment_results:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Candidate has not shared assessment results.")
+
+        application.status = new_status
+        await db.commit()
+        await db.refresh(application)
+        return application
+
     async def list_jobs(self, db: AsyncSession, user: User) -> list[JobPosting]:
         company = await self.get_company_for_user(db, user)
         if not company:
@@ -89,32 +255,75 @@ class CompanyService:
         if not company:
             return []
 
-        stmt = select(CandidateApplication, User, Profile, JobPosting).join(JobPosting, JobPosting.id == CandidateApplication.job_id).join(User, User.id == CandidateApplication.candidate_user_id).outerjoin(Profile, Profile.user_id == User.id).where(JobPosting.company_id == company.id)
+        stmt = (
+            select(CandidateApplication, User, Profile, JobPosting, CandidatePrivacySettings)
+            .join(JobPosting, JobPosting.id == CandidateApplication.job_id)
+            .join(User, User.id == CandidateApplication.candidate_user_id)
+            .outerjoin(Profile, Profile.user_id == User.id)
+            .outerjoin(CandidatePrivacySettings, CandidatePrivacySettings.user_id == User.id)
+            .where(JobPosting.company_id == company.id)
+        )
         if job_id is not None:
             stmt = stmt.where(JobPosting.id == job_id)
         stmt = stmt.order_by(CandidateApplication.created_at.desc())
         result = await db.execute(stmt)
 
         rows: list[dict[str, Any]] = []
-        for application, candidate, profile, posting in result.all():
+        for application, candidate, profile, posting, privacy in result.all():
             consented = application.consent_to_recruiters
+            share_contact = consented and bool(privacy and privacy.share_contact_info)
+            share_skills = consented and bool(privacy and privacy.share_skill_profile)
+            share_results = consented and bool(privacy and privacy.share_assessment_results)
+            skill_profile = await skill_profile_service.get_profile(db, candidate) if share_skills else None
+            required_skills = [
+                item.strip().casefold()
+                for item in posting.required_skills.replace(";", ",").split(",")
+                if item.strip()
+            ]
+            skill_rows = skill_profile["skills"] if skill_profile else []
+            eligible = not required_skills or all(
+                any(
+                    skill["skill"].casefold() == required
+                    and skill["score"] >= 60
+                    and skill["attempts"] > 0
+                    for skill in skill_rows
+                )
+                for required in required_skills
+            )
             rows.append(
                 {
                     "application_id": application.id,
                     "job_id": posting.id,
                     "job_title": posting.title,
-                    "candidate_id": candidate.id if consented else None,
-                    "candidate_name": candidate.full_name if consented else "Private candidate",
-                    "candidate_email": candidate.email if consented else "",
+                    "candidate_id": candidate.id if share_contact else None,
+                    "candidate_name": candidate.full_name if share_contact else "Private candidate",
+                    "candidate_email": candidate.email if share_contact else "",
                     "status": application.status,
                     "score": application.score,
                     "consent": consented,
-                    "target_company": (profile.target_company if consented and profile else ""),
-                    "github": (profile.github if consented and profile else ""),
-                    "linkedin": (profile.linkedin if consented and profile else ""),
+                    "eligible": eligible if share_skills else False,
+                    "skill_profile": skill_profile if share_skills else None,
+                    "assessment_status": application.assessment_status,
+                    "assessment_score": application.assessment_score if share_results else None,
+                    "target_company": (profile.target_company if share_contact and profile else ""),
+                    "github": (profile.github if share_contact and profile else ""),
+                    "linkedin": (profile.linkedin if share_contact and profile else ""),
                 }
             )
         return rows
+
+    async def list_pending_companies(self, db: AsyncSession) -> list[Company]:
+        result = await db.execute(select(Company).where(Company.status == "pending").order_by(Company.created_at.asc()))
+        return list(result.scalars().all())
+
+    async def update_company_status(self, db: AsyncSession, company_id: int, company_status: str) -> Company:
+        company = await db.get(Company, company_id)
+        if not company:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found.")
+        company.status = company_status
+        await db.commit()
+        await db.refresh(company)
+        return company
 
     async def get_dashboard(self, db: AsyncSession, user: User) -> dict[str, Any]:
         company = await self.get_company_for_user(db, user)
@@ -161,6 +370,12 @@ class CompanyService:
         job = result.scalar_one_or_none()
         if not job:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found.")
+        if job.status not in {"open", "active"}:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This job is not accepting applications.")
+        company_result = await db.execute(select(Company).where(Company.id == job.company_id))
+        company = company_result.scalar_one_or_none()
+        if not company or company.status != "verified":
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Company is not verified.")
 
         existing = await db.execute(
             select(CandidateApplication).where(

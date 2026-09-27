@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from app.modules.battle.schemas import BattleSectionConfig
+
 
 class CompanyRegisterRequest(BaseModel):
     name: str = Field(..., min_length=2, max_length=200)
@@ -58,3 +60,38 @@ class CompanyDashboardResponse(BaseModel):
     candidates_total: int
     shortlisted_total: int
     recent_applications: list[dict]
+
+
+class CompanyStatusRequest(BaseModel):
+    status: str = Field(..., pattern="^(verified|rejected|suspended)$")
+
+
+class CandidatePrivacySettingsRequest(BaseModel):
+    share_contact_info: bool = False
+    share_skill_profile: bool = False
+    share_assessment_results: bool = False
+    allow_recruiter_search: bool = False
+
+
+class CandidatePrivacySettingsResponse(CandidatePrivacySettingsRequest):
+    user_id: str
+
+
+class CandidateApplicationConsentRequest(BaseModel):
+    consent_to_recruiters: bool
+
+
+class CandidateApplicationStatusRequest(BaseModel):
+    status: str = Field(..., pattern="^(applied|shortlisted|rejected)$")
+
+
+class CompanyAssessmentCreate(BaseModel):
+    title: str = Field(..., min_length=3, max_length=150)
+    description: str = ""
+    difficulty: str = "medium"
+    duration_minutes: int = Field(default=45, ge=1, le=180)
+    question_count: int = Field(default=5, ge=1, le=50)
+    sections: list[BattleSectionConfig]
+    allowed_languages: list[str] = Field(default_factory=lambda: ["python", "javascript", "cpp", "java"])
+    scoring_rules: dict = Field(default_factory=dict)
+    negative_marking: bool = False

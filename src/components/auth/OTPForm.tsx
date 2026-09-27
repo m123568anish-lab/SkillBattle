@@ -180,7 +180,7 @@ export default function OTPForm() {
 
       {/* OTP Inputs */}
 
-      <div className="flex justify-center gap-3">
+      <div className="flex justify-center gap-1.5 sm:gap-3">
 
         {otp.map((digit, index) => (
           <input
@@ -203,14 +203,17 @@ export default function OTPForm() {
               handleKeyDown(e, index)
             }
             className="
-              h-14
-              w-14
+              h-11
+              w-9
+              sm:h-14
+              sm:w-14
               rounded-xl
               border
               border-white/10
               bg-white/5
               text-center
-              text-2xl
+              text-xl
+              sm:text-2xl
               font-bold
               text-white
               outline-none

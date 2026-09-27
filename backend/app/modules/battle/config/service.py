@@ -260,6 +260,7 @@ class BattleConfigService:
             visibility=data.visibility,
             company_id=data.company_id,
             college_id=data.college_id,
+            job_id=data.job_id,
         )
         db.add(config)
         await db.commit()
@@ -272,7 +273,12 @@ class BattleConfigService:
         return result.scalar_one_or_none()
 
     async def list_configs(self, db: AsyncSession, battle_type: str | None = None) -> List[BattleConfig]:
-        stmt = select(BattleConfig).where(BattleConfig.is_active == True)
+        stmt = select(BattleConfig).where(
+            BattleConfig.is_active.is_(True),
+            BattleConfig.visibility == "public",
+            BattleConfig.company_id.is_(None),
+            BattleConfig.college_id.is_(None),
+        )
         if battle_type:
             stmt = stmt.where(BattleConfig.battle_type == battle_type.lower())
         stmt = stmt.order_by(BattleConfig.created_at.desc())

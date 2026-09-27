@@ -102,6 +102,8 @@ async def test_advanced_battle_engine_workflow(client: AsyncClient):
     assert details_resp.status_code == 200
     sections = details_resp.json()["questions_data"]
     assert len(sections) > 0
+    mcq_question_id = sections[0]["questions"][0]["id"]
+    coding_question_id = sections[1]["questions"][0]["id"]
 
     # 5. Submit MCQ Answer
     mcq_sub_resp = await client.post(
@@ -109,6 +111,7 @@ async def test_advanced_battle_engine_workflow(client: AsyncClient):
         headers=headers,
         json={
             "battle_id": battle_id,
+            "question_id": mcq_question_id,
             "section_index": 0,
             "question_type": "mcq",
             "mcq_option": "B",
@@ -123,6 +126,7 @@ async def test_advanced_battle_engine_workflow(client: AsyncClient):
         headers=headers,
         json={
             "battle_id": battle_id,
+            "question_id": coding_question_id,
             "section_index": 1,
             "question_type": "coding",
             "source_code": "def solution(a, b):\n    return a + b",
@@ -149,7 +153,7 @@ async def test_advanced_battle_engine_workflow(client: AsyncClient):
     assert "section_scores" in finish_data
 
     # 9. Get Battle Result endpoint
-    result_resp = await client.get(f"/battle/{battle_id}/result")
+    result_resp = await client.get(f"/battle/{battle_id}/result", headers=headers)
     assert result_resp.status_code == 200
     res_payload = result_resp.json()
     assert res_payload["battle_type"] == "placement"
