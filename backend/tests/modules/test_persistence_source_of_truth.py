@@ -9,7 +9,10 @@ from app.database.base import Base
 from app.models.battle.battle_participant import BattleParticipant
 from app.models.battle.battle_result import BattleResult
 from app.models.battle.battle_room import BattleRoom
+from app.models.compiler import CodeSubmission
 from app.models.profile import Profile
+from app.models.problem import Problem
+from app.models.problem_testcase import ProblemTestCase
 from app.models.user import User
 from app.models.user_stats import UserStats
 from app.models.xp import XP
@@ -18,6 +21,9 @@ from app.modules.auth.services.auth_service import auth_service
 from app.modules.battle.service import battle_service
 from app.modules.battle.websocket import battle_ws
 from app.modules.dashboard.service import dashboard_service
+from app.modules.compiler.schemas import JudgeResult, SubmitCodeRequest
+from app.modules.compiler.service import compiler_service
+from app.modules.xp.service import xp_service
 from app.modules.profile.router import get_profile
 from app.modules.xp.repository import xp_repository
 from app.modules.xp.service import xp_service
@@ -51,6 +57,10 @@ async def test_registration_creates_progression_row_and_profile_reads_persisted_
         )).scalar_one()
         assert stats.xp == 550
         assert stats.level == 2
+
+        stats.xp = 0
+        stats.level = 1
+        await session.commit()
 
         profile = await get_profile(session, user)
         assert profile.total_xp == 550
@@ -199,5 +209,117 @@ async def test_solo_finish_ignores_client_claimed_xp():
         assert response["xp_added"] == 0
         assert response["total_xp"] == 0
         assert xp is not None and xp.total_xp == 0
+
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_accepted_compiler_submission_awards_once_and_empty_tests_do_not_reward(monkeypatch):
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    def accepted_judgement(*args, **kwargs):
+        return JudgeResult(
+            verdict="Accepted",
+            passed_tests=1,
+            total_tests=1,
+            execution_time=10,
+            memory_used=1,
+            failed_test_index=None,
+            runtime_ms=10,
+            memory_mb=1,
+            score=100,
+        )
+
+    async def no_battle_notification(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr("app.modules.compiler.service.judge_engine.judge", accepted_judgement)
+    monkeypatch.setattr(compiler_service, "notify_battle", no_battle_notification)
+
+    async with session_factory() as session:
+        user = User(
+            username="compiler_xp_user",
+            full_name="Compiler XP User",
+            email="compiler-xp@example.com",
+            password_hash="not-used",
+        )
+        session.add(user)
+        await session.flush()
+        session.add(UserStats(user_id=user.id, level=1, rating=1000, xp=0))
+        problem = Problem(
+            title="Verified compiler XP",
+            slug="verified-compiler-xp",
+            difficulty="Easy",
+            category="Arrays",
+            description="Test valid submissions receive server calculated XP.",
+            input_format="number",
+            output_format="number",
+            constraints="1 <= n <= 10",
+            explanation="",
+            xp_reward=100,
+            is_active=True,
+        )
+        session.add(problem)
+        await session.flush()
+        session.add(ProblemTestCase(
+            problem_id=problem.id,
+            input_data="1",
+            expected_output="1",
+            is_hidden=True,
+        ))
+        await session.commit()
+
+        request = SubmitCodeRequest(
+            problem_id=problem.id,
+            language="python",
+            source_code="print(1)",
+        )
+        first = await compiler_service.submit_solution(session, user, request)
+        repeated = await compiler_service.submit_solution(session, user, request)
+        xp = await xp_repository.get_by_user(session, user.id)
+        submissions = (await session.execute(
+            select(func.count()).select_from(CodeSubmission).where(
+                CodeSubmission.user_id == user.id,
+                CodeSubmission.problem_id == problem.id,
+            )
+        )).scalar_one()
+
+        assert first.verdict == "Accepted"
+        assert first.xp_earned == 150
+        assert repeated.verdict == "Accepted"
+        assert repeated.xp_earned == 0
+        assert xp is not None and xp.total_xp == 150
+        assert submissions == 2
+
+        empty_problem = Problem(
+            title="No test cases configured",
+            slug="no-test-cases-configured",
+            difficulty="Easy",
+            category="Arrays",
+            description="No cases means no verified acceptance.",
+            input_format="number",
+            output_format="number",
+            constraints="1 <= n <= 10",
+            explanation="",
+            xp_reward=100,
+            is_active=True,
+        )
+        session.add(empty_problem)
+        await session.commit()
+        with pytest.raises(ValueError, match="no configured test cases"):
+            await compiler_service.submit_solution(
+                session,
+                user,
+                SubmitCodeRequest(
+                    problem_id=empty_problem.id,
+                    language="python",
+                    source_code="print(1)",
+                ),
+            )
+        xp = await xp_repository.get_by_user(session, user.id)
+        assert xp is not None and xp.total_xp == 150
 
     await engine.dispose()

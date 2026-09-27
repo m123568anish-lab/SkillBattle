@@ -104,7 +104,12 @@ class BattleRewardService:
             if user is None:
                 raise RuntimeError(f"Battle participant user {participant.user_id} no longer exists")
 
-            await xp_service.add_xp(db, user, xp_earned, commit=False)
+            progression = await xp_service.add_xp(
+                db,
+                user,
+                xp_earned,
+                commit=False,
+            )
             user.coding_rating = max(0, (user.coding_rating or 1000) + rating_change)
             stats_result = await db.execute(
                 select(UserStats).where(UserStats.user_id == user.id).with_for_update()
@@ -119,6 +124,8 @@ class BattleRewardService:
                 "winner": is_winner,
                 "xp": xp_earned,
                 "rating_change": rating_change,
+                "total_xp": progression.total_xp,
+                "level": progression.level,
             }
             rewards.append(reward)
             total_xp_earned += xp_earned

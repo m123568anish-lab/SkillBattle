@@ -213,12 +213,15 @@ async def test_onboarding_http_flow_persists_and_returns_pending_on_empty_ai(mon
                 },
             )
             assert registration.status_code == 201
+            assert registration.json()["onboarding_completed"] is False
 
             login = await client.post(
                 "/api/v1/auth/login",
                 json={"email": "onboarding-http@example.com", "password": "Onboarding123"},
             )
             assert login.status_code == 200
+            assert login.json()["user"]["onboarding_completed"] is False
+
             token = login.json()["tokens"]["access_token"]
             headers = {"Authorization": f"Bearer {token}"}
 
@@ -234,16 +237,19 @@ async def test_onboarding_http_flow_persists_and_returns_pending_on_empty_ai(mon
             profile = await client.get("/api/v1/profile/me", headers=headers)
             assert profile.status_code == 200
             assert profile.json()["onboarding_preferences"]["languages"] == ["Python", "JavaScript"]
+            assert profile.json()["onboarding_completed"] is True
 
             refreshed_login = await client.post(
                 "/api/v1/auth/login",
                 json={"email": "onboarding-http@example.com", "password": "Onboarding123"},
             )
+            assert refreshed_login.json()["user"]["onboarding_completed"] is True
             refreshed_headers = {
                 "Authorization": f"Bearer {refreshed_login.json()['tokens']['access_token']}"
             }
             refreshed_profile = await client.get("/api/v1/profile/me", headers=refreshed_headers)
             assert refreshed_profile.json()["onboarding_preferences"] == profile.json()["onboarding_preferences"]
+            assert refreshed_profile.json()["onboarding_completed"] is True
     finally:
         app.dependency_overrides.pop(get_db, None)
         await engine.dispose()

@@ -31,6 +31,10 @@ class BattleEvent(str, Enum):
 
     TIMER_UPDATED = "timer_updated"
 
+    STATE_SYNC = "state_sync"
+
+    FORFEIT = "forfeit"
+
     CHAT = "chat"
 
     SYSTEM = "system"

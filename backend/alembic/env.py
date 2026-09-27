@@ -8,16 +8,11 @@ from sqlalchemy import pool
 from alembic import context
 
 # ---------------------------------------------------------
-# Import your project settings
-# ---------------------------------------------------------
-
-from app.core.config import settings
-
-# ---------------------------------------------------------
 # Import SQLAlchemy Base
 # ---------------------------------------------------------
 
 from app.database.base import Base
+from app.database.database import engine as application_engine
 
 # ---------------------------------------------------------
 # Import ALL models here
@@ -43,27 +38,12 @@ from app.models.matchmaking import MatchmakingMatch, PlacementPrepSession
 config = context.config
 
 # ---------------------------------------------------------
-# Read database url from .env
+# Use the application's resolved sync URL so Alembic and FastAPI target the same
+# absolute SQLite file or PostgreSQL database.
 # ---------------------------------------------------------
 
-database_url = settings.DATABASE_URL
-
-# Alembic uses synchronous engines.
-# Remove async driver.
-
-database_url = database_url.replace(
-    "+aiosqlite",
-    "",
-)
-
-database_url = database_url.replace(
-    "+asyncpg",
-    "",
-)
-
-# The backend installs Psycopg 3, not the legacy psycopg2 driver.
-if database_url.startswith("postgresql://"):
-    database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+database_url = application_engine.url.render_as_string(hide_password=False)
+database_url = database_url.replace("%", "%%")
 
 config.set_main_option(
     "sqlalchemy.url",

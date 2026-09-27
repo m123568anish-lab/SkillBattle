@@ -15,11 +15,13 @@ from __future__ import annotations
 import logging
 from urllib import request
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.compiler import (
     CodeSubmission,
 )
+from app.models.user import User
 from app.modules.battle.websocket import battle_ws
 
 from app.modules.battle.events import BattleEvent
@@ -163,9 +165,6 @@ class CompilerService:
                     }
                 )
 
-        if not tests:
-            tests = [{"input": "Sample Input Data", "output": "Sample Input Data"}]
-
         return tests
 
 
@@ -190,6 +189,24 @@ class CompilerService:
 
         )
 
+        await db.execute(
+            select(User.id)
+            .where(User.id == current_user.id)
+            .with_for_update()
+        )
+
+        previous_accepted = (
+            await db.execute(
+                select(CodeSubmission.id)
+                .where(
+                    CodeSubmission.user_id == current_user.id,
+                    CodeSubmission.problem_id == request.problem_id,
+                    CodeSubmission.verdict == "Accepted",
+                )
+                .limit(1)
+            )
+        ).scalar_one_or_none() is not None
+
         # ------------------------------------------------------
         # Load Problem
         # ------------------------------------------------------
@@ -213,7 +230,7 @@ class CompilerService:
         if not hidden_tests:
 
             raise ValueError(
-                "Problem has no hidden test cases."
+                "Problem has no configured test cases; submission was not judged or rewarded."
             )
 
         # ------------------------------------------------------
@@ -300,7 +317,7 @@ class CompilerService:
 
         xp_earned = 0
 
-        if judge_result.verdict == "Accepted":
+        if judge_result.verdict == "Accepted" and not previous_accepted:
             difficulty_xp = {
                 "easy": 100,
                 "medium": 250,

@@ -114,6 +114,11 @@ async def update_profile(
     current_user: User = Depends(get_current_user),
 ):
     try:
+        payload = payload.model_copy(update={
+            "onboarding_preferences": (
+                await profile_service.get_profile(db, current_user)
+            ).onboarding_preferences or {}
+        })
         profile = await profile_service.update_profile(
             db,
             current_user,

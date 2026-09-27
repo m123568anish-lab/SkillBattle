@@ -483,12 +483,13 @@ async def complete_task(
         if roadmap.progress == 100:
             roadmap.status = "COMPLETED"
 
+        await xp_service.add_xp(
+            db,
+            current_user,
+            task.reward_xp,
+            commit=False,
+        )
         await db.commit()
-
-        try:
-            await xp_service.add_xp(db, current_user, task.reward_xp)
-        except Exception:
-            logger.exception("Could not award roadmap task XP for task_id=%s", task_id)
 
     return {
         "status": "success",
