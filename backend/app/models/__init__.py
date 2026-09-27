@@ -21,6 +21,17 @@ from .user import User
 from .question import Question, UserSubmission
 from .user_stats import UserSettings, UserStats
 from .matchmaking import MatchmakingMatch, PlacementPrepSession
+from .user_skill_stat import UserSkillStat
+from .xp import XP
+from .college import (
+    College,
+    Department,
+    Batch,
+    CollegeStudent,
+    CollegeAssessment,
+    CollegeAssessmentQuestion,
+    CollegeAssessmentSubmission,
+)
 
 __all__ = [
     "Achievement",
@@ -50,8 +61,13 @@ __all__ = [
     "UserSettings",
     "MatchmakingMatch",
     "PlacementPrepSession",
+    "UserSkillStat",
+    "XP",
+    "College",
+    "Department",
+    "Batch",
+    "CollegeStudent",
+    "CollegeAssessment",
+    "CollegeAssessmentQuestion",
+    "CollegeAssessmentSubmission",
 ]
-
-
-from .user_skill_stat import UserSkillStat
-from .xp import XP

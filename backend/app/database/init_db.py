@@ -46,6 +46,13 @@ from app.models import (
     UserSubmission,
     UserStats,
     UserSettings,
+    College,
+    Department,
+    Batch,
+    CollegeStudent,
+    CollegeAssessment,
+    CollegeAssessmentQuestion,
+    CollegeAssessmentSubmission,
 )
 from app.models.battle import (
     BattleParticipant,
@@ -55,6 +62,7 @@ from app.models.battle import (
 )
 from app.models.user_skill_stat import UserSkillStat
 from app.models.xp import XP
+
 
 # Silence unused import warnings
 __all__ = [
@@ -129,6 +137,7 @@ def init_db() -> None:
             _repair_achievements_table()
             _repair_profile_preferences()
             _repair_dashboard_tables()
+            _repair_college_tables()
             _seed_initial_problems()
             logger.info(f"✅ Tables created: {list(Base.metadata.tables.keys())}")
         except Exception as e:
@@ -357,4 +366,14 @@ def _seed_initial_problems() -> None:
                 },
             )
         logger.info("Successfully seeded 5 initial practice problems.")
+
+
+def _repair_college_tables() -> None:
+    """Ensure all college platform tables exist in the database."""
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Checked & created college platform tables.")
+    except Exception as e:
+        logger.warning(f"College tables repair warning: {e}")
+
 

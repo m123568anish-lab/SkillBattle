@@ -25,6 +25,7 @@ from app.modules.tournament.router import router as tournament_router
 from app.modules.xp.router import router as xp_router
 from app.modules.admin.router import router as admin_router
 from app.modules.placement.router import router as placement_router
+from app.modules.college.router import router as college_router
 from app.api.questions import router as questions_router
 from app.api.execution import router as execution_router
 
@@ -36,6 +37,7 @@ ROUTERS: list[tuple[str, APIRouter]] = [
     ("dashboard", dashboard_router_module),
     ("admin", admin_router),
     ("placement", placement_router),
+    ("college", college_router),
     ("xp", xp_router),
     ("streak", streak_router),
     ("ai", ai_router),
@@ -58,6 +60,7 @@ ROUTERS: list[tuple[str, APIRouter]] = [
     ("execution", execution_router),
     ("api_v1", api_router),
 ]
+
 
 
 def register_routers(app: FastAPI) -> None:

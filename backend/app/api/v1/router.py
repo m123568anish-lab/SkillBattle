@@ -21,6 +21,7 @@ from app.modules.career.router import router as career_router
 from app.modules.notification.router import router as notification_router
 from app.modules.achievements.router import router as achievements_router
 from app.modules.campaign.router import router as campaign_router
+from app.modules.college.router import router as college_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -43,3 +44,4 @@ api_router.include_router(career_router)
 api_router.include_router(notification_router)
 api_router.include_router(achievements_router)
 api_router.include_router(campaign_router)
+api_router.include_router(college_router)

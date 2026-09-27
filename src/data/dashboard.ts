@@ -12,6 +12,7 @@ import {
   Mic,
   Medal,
   Gamepad,
+  Building2,
   LucideIcon,
 } from "lucide-react";
 
@@ -32,6 +33,7 @@ export const sidebarItems: SidebarItem[] = [
   // Main
   { title: "Dashboard", href: "/dashboard", icon: Home, category: "main" },
   { title: "Battle Arena", href: "/battle", icon: Sword, category: "main" },
+  { title: "College Platform", href: "/college/dashboard", icon: Building2, category: "main" },
 
   // Compete
   { title: "Tournaments", href: "/tournament", icon: Trophy, category: "compete" },
