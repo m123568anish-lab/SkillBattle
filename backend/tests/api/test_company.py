@@ -5,9 +5,10 @@ from httpx import AsyncClient
 
 @pytest.mark.asyncio
 async def test_company_registration_and_job_workflow(client: AsyncClient):
-    unique_id = uuid4().hex[:6].upper()
-    email = f"company_{unique_id.lower()}@example.com"
-    username = f"company_admin_{unique_id.lower()}"
+    unique_id = uuid4().hex[:6].lower()
+    email = f"company_{unique_id}@example.com"
+    username = f"company_admin_{unique_id}"
+    slug = f"skillbattle-labs-{unique_id}"
 
     register_resp = await client.post(
         "/auth/register",
@@ -33,7 +34,7 @@ async def test_company_registration_and_job_workflow(client: AsyncClient):
         headers=headers,
         json={
             "name": "SkillBattle Labs",
-            "slug": "skillbattle-labs",
+            "slug": slug,
             "industry": "Software",
             "website": "https://skillbattle.ai",
             "headquarters": "Bengaluru",
