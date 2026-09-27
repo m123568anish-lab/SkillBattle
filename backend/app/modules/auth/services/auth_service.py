@@ -48,7 +48,12 @@ class AuthService:
 
     # --------------------------------------------------
     async def register(self, db: AsyncSession, request: RegisterRequest) -> User:
-        logger.info("Registration attempt: email=%s username=%s", request.email, request.username)
+        logger.info(
+            "Registration attempt: email=%s username=%s account_type=%s",
+            request.email,
+            request.username,
+            request.account_type,
+        )
 
         existing_email = await user_repository.get_by_email(db, request.email)
         if existing_email:
@@ -61,6 +66,22 @@ class AuthService:
             request.username = f"{request.username[:20]}_{suffix}"
             logger.info("Username collision — assigned new username=%s", request.username)
 
+        account_type = request.account_type.upper()
+        if account_type == "STUDENT":
+            role = "student"
+            status = "ACTIVE"
+            requested_role = None
+        elif account_type == "COLLEGE":
+            role = "student"
+            status = "PENDING_VERIFICATION"
+            requested_role = "COLLEGE_ADMIN"
+        elif account_type == "COMPANY":
+            role = "student"
+            status = "PENDING_VERIFICATION"
+            requested_role = "COMPANY_ADMIN"
+        else:
+            raise ValueError("Unsupported account type.")
+
         hashed = await hash_password_async(request.password)
         user = User(
             username=request.username,
@@ -68,7 +89,12 @@ class AuthService:
             full_name=request.full_name,
             password_hash=hashed,
             avatar_url=request.avatar_url,
-            role="user",
+            role=role,
+            account_type=account_type,
+            requested_role=requested_role,
+            status=status,
+            is_active=True,
+            is_verified=account_type == "STUDENT",
             onboarding_completed=False,
         )
 
@@ -78,7 +104,7 @@ class AuthService:
         db.add(XP(user_id=created.id, total_xp=0, weekly_xp=0, daily_xp=0, level=1, rank=99999))
         await db.commit()
         await db.refresh(created)
-        logger.info("User created successfully: user_id=%s email=%s", created.id, created.email)
+        logger.info("User created successfully: user_id=%s email=%s account_type=%s status=%s", created.id, created.email, created.account_type, created.status)
         return created
 
     # --------------------------------------------------
@@ -135,13 +161,18 @@ class AuthService:
 
             )
 
+        status_value = (getattr(user, "status", "ACTIVE") or "ACTIVE").upper()
+        if status_value not in {"ACTIVE", "APPROVED"}:
+            if status_value == "PENDING_VERIFICATION":
+                raise ValueError("Your account is pending verification.")
+            if status_value == "REJECTED":
+                raise ValueError("Your account verification was rejected.")
+            if status_value == "SUSPENDED":
+                raise ValueError("Your account is suspended.")
+            raise ValueError("User account is disabled.")
+
         if not user.is_active:
-
-            raise ValueError(
-
-                "User account is disabled."
-
-            )
+            raise ValueError("User account is disabled.")
 
         # Validate selected portal role against stored user account role
         if request.role:

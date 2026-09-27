@@ -51,6 +51,7 @@ class JobPostingResponse(BaseModel):
     required_skills: str
     compensation: str
     status: str
+    assessment_config_id: str | None = None
 
 
 class CompanyDashboardResponse(BaseModel):

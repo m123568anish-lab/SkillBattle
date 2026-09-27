@@ -85,6 +85,24 @@ class User(Base):
         nullable=False,
     )
 
+    account_type: Mapped[str] = mapped_column(
+        String(30),
+        default="STUDENT",
+        nullable=False,
+    )
+
+    requested_role: Mapped[str | None] = mapped_column(
+        String(50),
+        default=None,
+        nullable=True,
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(30),
+        default="ACTIVE",
+        nullable=False,
+    )
+
     avatar_url: Mapped[str | None] = mapped_column(
         String(500),
         default=None,

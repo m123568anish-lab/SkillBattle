@@ -173,6 +173,16 @@ async def test_college_to_company_verified_skill_and_shortlist_flow(client: Asyn
     )
     assert job.status_code == 200, job.text
 
+    discovered = await client.get(
+        f"/api/v1/company/discover?job_id={job.json()['id']}",
+        headers=company_headers,
+    )
+    assert discovered.status_code == 200, discovered.text
+    discovered_candidate = next(
+        item for item in discovered.json() if item["candidate_email"] == student_email
+    )
+    assert discovered_candidate["eligible"] is True
+
     question_slug = f"ecosystem-algorithms-{suffix}"
     async with AsyncSessionLocal() as db:
         db.add(
@@ -228,15 +238,8 @@ async def test_college_to_company_verified_skill_and_shortlist_flow(client: Asyn
     assert any(item["assessment_config_id"] == assessment_config.json()["id"] for item in my_applications.json())
 
     battle = await client.post(
-        "/api/v1/battle/create",
+        f"/api/v1/company/my-applications/{application_id}/assessment/start",
         headers=student_headers,
-        json={
-            "title": "Algorithms hiring assessment",
-            "difficulty": "easy",
-            "config_id": assessment_config.json()["id"],
-            "battle_type": "company",
-            "max_players": 1,
-        },
     )
     assert battle.status_code == 200, battle.text
     question = battle.json()["questions_data"][0]["questions"][0]

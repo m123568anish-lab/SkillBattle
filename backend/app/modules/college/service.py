@@ -57,35 +57,44 @@ class CollegeService:
                 detail=f"College code '{payload.code}' is already registered."
             )
 
-        # Find or create admin user account
+        # Find or create admin user account without granting privileged access before verification.
         stmt_user = select(User).where(User.email == payload.admin_email)
         res_user = await db.execute(stmt_user)
         admin_user = res_user.scalar_one_or_none()
 
         if admin_user:
-            admin_user.role = "college_admin"
+            admin_user.account_type = "COLLEGE"
+            admin_user.requested_role = "COLLEGE_ADMIN"
+            admin_user.role = "student"
+            admin_user.status = "PENDING_VERIFICATION"
+            admin_user.is_verified = False
+            admin_user.is_active = True
+            admin_user.onboarding_completed = False
         else:
             admin_user = User(
                 username=f"admin_{payload.code.lower()}",
                 full_name=payload.admin_name,
                 email=payload.admin_email,
                 password_hash=hash_password(payload.admin_password),
-                role="college_admin",
+                role="student",
+                account_type="COLLEGE",
+                requested_role="COLLEGE_ADMIN",
+                status="PENDING_VERIFICATION",
                 is_active=True,
-                is_verified=True,
-                onboarding_completed=True,
+                is_verified=False,
+                onboarding_completed=False,
             )
             db.add(admin_user)
             await db.flush()
 
-        # Create College record
+        # Create College record as pending and unverified until admin approval.
         college = College(
             name=payload.name,
             code=payload.code.upper(),
             domain=payload.domain,
             city=payload.city,
             state=payload.state,
-            is_verified=True,  # Default verified for platform setup
+            is_verified=False,
             admin_user_id=admin_user.id,
         )
         db.add(college)

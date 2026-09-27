@@ -29,6 +29,12 @@ class UserResponse(BaseModel):
 
     role: str
 
+    account_type: str = "STUDENT"
+
+    requested_role: str | None = None
+
+    status: str = "ACTIVE"
+
     is_verified: bool
 
     onboarding_completed: bool = False

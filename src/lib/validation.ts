@@ -14,6 +14,8 @@ export const loginSchema = z.object({
 
 export const registerSchema = z
   .object({
+    account_type: z.enum(["STUDENT", "COLLEGE", "COMPANY"]).default("STUDENT"),
+
     name: z
       .string()
       .min(3, "Name must be at least 3 characters"),

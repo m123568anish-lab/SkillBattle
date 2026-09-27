@@ -97,14 +97,22 @@ async def get_current_user(
 
         )
 
-    if not user.is_active:
-
+    status_value = (getattr(user, "status", "ACTIVE") or "ACTIVE").upper()
+    if status_value in {"PENDING_VERIFICATION", "REJECTED", "SUSPENDED"}:
+        details = {
+            "PENDING_VERIFICATION": "Account is pending verification.",
+            "REJECTED": "Account verification was rejected.",
+            "SUSPENDED": "Account is suspended.",
+        }
         raise HTTPException(
-
             status_code=status.HTTP_403_FORBIDDEN,
+            detail=details.get(status_value, "Account is disabled."),
+        )
 
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is disabled.",
-
         )
 
     return user

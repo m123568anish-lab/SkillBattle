@@ -30,6 +30,8 @@ export default function RegisterForm() {
 
   const [showPassword, setShowPassword] =
     useState(false);
+  const [selectedAccountType, setSelectedAccountType] =
+    useState<"STUDENT" | "COLLEGE" | "COMPANY">("STUDENT");
   const [avatar, setAvatar] = useState(AI_AVATARS[0].url);
 
   const {
@@ -47,7 +49,7 @@ export default function RegisterForm() {
     data: RegisterFormData
   ) {
     try {
-      await signUp({ ...data, avatar });
+      await signUp({ ...data, avatar, account_type: selectedAccountType });
 
       try {
         await signIn({ email: data.email, password: data.password });
@@ -68,6 +70,34 @@ export default function RegisterForm() {
       onSubmit={handleSubmit(onSubmit)}
       className="space-y-6"
     >
+      <div className="mb-6">
+        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">
+          Choose your account
+        </label>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { key: "STUDENT", label: "Student", icon: "🎓", sub: "Learn & compete" },
+            { key: "COLLEGE", label: "College", icon: "🏫", sub: "Manage students" },
+            { key: "COMPANY", label: "Company", icon: "🏢", sub: "Hire talent" },
+          ].map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => setSelectedAccountType(option.key as "STUDENT" | "COLLEGE" | "COMPANY")}
+              className={`flex flex-col items-center justify-center rounded-2xl border p-3 text-center transition ${
+                selectedAccountType === option.key
+                  ? "border-cyan-500 bg-cyan-500/10 text-cyan-200"
+                  : "border-white/10 bg-white/5 text-slate-300"
+              }`}
+            >
+              <span className="mb-1 text-2xl">{option.icon}</span>
+              <span className="text-sm font-bold">{option.label}</span>
+              <span className="text-[10px] text-slate-400">{option.sub}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <AvatarUpload value={avatar} onChange={setAvatar} />
 
       <input

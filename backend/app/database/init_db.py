@@ -179,6 +179,9 @@ def _repair_users_table() -> None:
     missing_columns = {
         "username": "VARCHAR(30) DEFAULT 'player'",
         "role": "VARCHAR(50) DEFAULT 'user'",
+        "account_type": "VARCHAR(30) DEFAULT 'STUDENT'",
+        "requested_role": "VARCHAR(50)",
+        "status": "VARCHAR(30) DEFAULT 'ACTIVE'",
         "avatar_url": "VARCHAR(500)",
         "bio": "VARCHAR(1000)",
         "country": "VARCHAR(100)",

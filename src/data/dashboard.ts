@@ -48,7 +48,7 @@ export const studentSidebarCategories: SidebarCategory[] = [
     id: "main",
     label: "Main",
     items: [
-      { title: "Dashboard", href: "/student/dashboard", icon: Home },
+      { title: "Dashboard", href: "/dashboard", icon: Home },
       { title: "Practice", href: "/practice", icon: Sparkles },
       { title: "Battle Arena", href: "/battle", icon: Sword },
     ],
@@ -67,6 +67,7 @@ export const studentSidebarCategories: SidebarCategory[] = [
     label: "Learn & Grow",
     items: [
       { title: "Career Roadmap", href: "/career/roadmap", icon: Map },
+      { title: "Jobs", href: "/jobs", icon: Briefcase },
       { title: "AI Mock Interview", href: "/interview", icon: Mic },
       { title: "AI Coach", href: "/coach", icon: Bot },
     ],
@@ -77,6 +78,7 @@ export const studentSidebarCategories: SidebarCategory[] = [
     items: [
       { title: "Achievements", href: "/achievements", icon: Medal },
       { title: "Analytics", href: "/analytics", icon: BarChart3 },
+      { title: "Verified Skill Profile", href: "/skill-profile", icon: GraduationCap },
     ],
   },
   {
@@ -173,8 +175,7 @@ export const companySidebarCategories: SidebarCategory[] = [
     items: [
       { title: "Jobs", href: "/company/jobs", icon: Briefcase },
       { title: "Candidates", href: "/company/candidates", icon: Users },
-      { title: "Shortlisted", href: "/company/shortlisted", icon: UserCheck },
-      { title: "Interviews", href: "/company/interviews", icon: Mic },
+      { title: "Shortlisted", href: "/company/candidates?status=shortlisted", icon: UserCheck },
     ],
   },
   {
@@ -182,33 +183,27 @@ export const companySidebarCategories: SidebarCategory[] = [
     label: "Assessments",
     items: [
       { title: "Assessments", href: "/company/assessments", icon: Award },
-      { title: "Create Assessment", href: "/company/assessments/new", icon: PlusCircle },
-      { title: "Results", href: "/company/results", icon: BarChart3 },
     ],
   },
   {
     id: "talent",
     label: "Talent",
     items: [
-      { title: "Discover Candidates", href: "/company/discover", icon: Search },
-      { title: "Skill Profiles", href: "/company/talent", icon: GraduationCap },
+      { title: "Discover Candidates", href: "/company/candidates", icon: Search },
     ],
   },
   {
     id: "analytics",
     label: "Analytics",
     items: [
-      { title: "Hiring Analytics", href: "/company/analytics", icon: TrendingUp },
-      { title: "Assessment Analytics", href: "/company/assessment-analytics", icon: BarChart3 },
+      { title: "Company Overview", href: "/company/dashboard", icon: TrendingUp },
     ],
   },
   {
     id: "company",
     label: "Company",
     items: [
-      { title: "Company Profile", href: "/company/profile", icon: Building },
-      { title: "Team", href: "/company/team", icon: Users },
-      { title: "Settings", href: "/company/settings", icon: Settings },
+      { title: "Company Profile", href: "/company/register", icon: Building },
     ],
   },
 ];

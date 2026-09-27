@@ -28,6 +28,12 @@ class CompanyService:
         if not raw_slug:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A valid company slug is required.")
 
+        user.account_type = "COMPANY"
+        user.requested_role = "COMPANY_ADMIN"
+        user.role = "student"
+        user.status = "PENDING_VERIFICATION"
+        user.is_verified = False
+
         company = Company(
             name=str(payload["name"]).strip(),
             slug=raw_slug,
@@ -43,7 +49,6 @@ class CompanyService:
 
         membership = CompanyMember(company_id=company.id, user_id=user.id, role="company_admin", status="active")
         db.add(membership)
-        user.role = "company_admin"
         await db.commit()
         await db.refresh(company)
         return company
@@ -250,6 +255,23 @@ class CompanyService:
         result = await db.execute(stmt)
         return list(result.scalars().all())
 
+    async def get_job_assessment_config_id(
+        self,
+        db: AsyncSession,
+        user: User,
+        job_id: int,
+    ) -> str | None:
+        company = await self.get_company_for_user(db, user)
+        if not company:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Company access required.")
+        job_result = await db.execute(
+            select(JobPosting.id).where(JobPosting.id == job_id, JobPosting.company_id == company.id)
+        )
+        if job_result.scalar_one_or_none() is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found for this company.")
+        config_result = await db.execute(select(BattleConfig.id).where(BattleConfig.job_id == job_id))
+        return config_result.scalar_one_or_none()
+
     async def list_candidates(self, db: AsyncSession, user: User, job_id: int | None = None) -> list[dict[str, Any]]:
         company = await self.get_company_for_user(db, user)
         if not company:
@@ -311,6 +333,63 @@ class CompanyService:
                 }
             )
         return rows
+
+    async def discover_candidates(self, db: AsyncSession, user: User, job_id: int) -> list[dict[str, Any]]:
+        company = await self.get_company_for_user(db, user)
+        if not company or company.status != "verified":
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Verified company access required.")
+
+        job_result = await db.execute(
+            select(JobPosting).where(JobPosting.id == job_id, JobPosting.company_id == company.id)
+        )
+        job = job_result.scalar_one_or_none()
+        if not job:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found for this company.")
+
+        required_skills = [
+            item.strip().casefold()
+            for item in job.required_skills.replace(";", ",").split(",")
+            if item.strip()
+        ]
+        candidates_result = await db.execute(
+            select(User, CandidatePrivacySettings)
+            .join(CandidatePrivacySettings, CandidatePrivacySettings.user_id == User.id)
+            .where(
+                User.is_active.is_(True),
+                User.role.in_(("user", "student")),
+                CandidatePrivacySettings.allow_recruiter_search.is_(True),
+                CandidatePrivacySettings.share_skill_profile.is_(True),
+            )
+        )
+
+        eligible_candidates: list[dict[str, Any]] = []
+        for candidate, privacy in candidates_result.all():
+            profile = await skill_profile_service.get_profile(db, candidate)
+            skills = profile["skills"]
+            if required_skills and not all(
+                any(
+                    skill["skill"].casefold() == required
+                    and skill["score"] >= 60
+                    and skill["attempts"] > 0
+                    for skill in skills
+                )
+                for required in required_skills
+            ):
+                continue
+
+            eligible_candidates.append(
+                {
+                    "candidate_id": candidate.id if privacy.share_contact_info else None,
+                    "candidate_name": candidate.full_name if privacy.share_contact_info else "Private candidate",
+                    "candidate_email": candidate.email if privacy.share_contact_info else "",
+                    "job_id": job.id,
+                    "job_title": job.title,
+                    "eligible": True,
+                    "skill_profile": profile,
+                }
+            )
+
+        return eligible_candidates
 
     async def list_pending_companies(self, db: AsyncSession) -> list[Company]:
         result = await db.execute(select(Company).where(Company.status == "pending").order_by(Company.created_at.asc()))

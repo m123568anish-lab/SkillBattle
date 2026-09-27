@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_admin, get_current_user
 from app.database.session import get_db
+from app.models.company import JobPosting
 from app.models.user import User
+from app.models.battle.battle_config import BattleConfig
 from app.modules.company.schemas import CandidateApplicationConsentRequest, CandidateApplicationRequest, CandidateApplicationStatusRequest, CompanyAssessmentCreate, CompanyDashboardResponse, CompanyRegisterRequest, CompanyStatusRequest, CompanySummary, JobPostingRequest, JobPostingResponse
 from app.modules.battle.schemas import BattleConfigResponse, BattleResponse, CreateBattleRequest
 from app.modules.battle.service import battle_service
@@ -104,6 +107,7 @@ async def list_jobs(
             required_skills=job.required_skills,
             compensation=job.compensation,
             status=job.status,
+            assessment_config_id=await company_service.get_job_assessment_config_id(db, current_user, job.id),
         )
         for job in jobs
     ]
@@ -216,6 +220,15 @@ async def list_candidates(
     current_user: User = Depends(get_current_user),
 ):
     return await company_service.list_candidates(db, current_user, job_id)
+
+
+@router.get("/discover")
+async def discover_candidates(
+    job_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await company_service.discover_candidates(db, current_user, job_id)
 
 
 @router.get("/admin/companies/pending", response_model=list[CompanySummary])

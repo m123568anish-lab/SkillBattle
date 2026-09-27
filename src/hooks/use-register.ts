@@ -4,6 +4,7 @@ import { useState } from "react";
 import { authService } from "@/services/auth.service";
 
 interface RegisterFormData {
+    account_type?: "STUDENT" | "COLLEGE" | "COMPANY";
     name: string;
     email: string;
     password: string;
@@ -33,6 +34,8 @@ export function useRegister() {
                 password: data.password,
 
                 avatar_url: data.avatar,
+
+                account_type: data.account_type || "STUDENT",
 
             };
 

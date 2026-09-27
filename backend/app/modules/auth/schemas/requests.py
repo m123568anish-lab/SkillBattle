@@ -34,9 +34,10 @@ class RegisterRequest(BaseModel):
     full_name: str = Field(min_length=2, max_length=120)
     password: str = Field(min_length=8, max_length=128)
     avatar_url: str | None = Field(default=None, max_length=500)
+    account_type: str = Field(default="STUDENT", max_length=20)
 
     model_config = ConfigDict(
-        extra="forbid",           # Reject unknown/extra fields
+        extra="forbid",
         str_strip_whitespace=True,
     )
 
@@ -73,12 +74,19 @@ class RegisterRequest(BaseModel):
     def validate_password(cls, v: str) -> str:
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters.")
-        # Must contain at least one digit and one letter
         if not any(c.isdigit() for c in v):
             raise ValueError("Password must contain at least one digit.")
         if not any(c.isalpha() for c in v):
             raise ValueError("Password must contain at least one letter.")
         return v
+
+    @field_validator("account_type")
+    @classmethod
+    def validate_account_type(cls, v: str) -> str:
+        account_type = (v or "STUDENT").strip().upper()
+        if account_type not in {"STUDENT", "COLLEGE", "COMPANY"}:
+            raise ValueError("Account type must be one of: STUDENT, COLLEGE, COMPANY.")
+        return account_type
 
 
 class LoginRequest(BaseModel):
@@ -126,4 +134,4 @@ class ResetPasswordRequest(BaseModel):
     token: str = Field(min_length=10, max_length=2048)
     new_password: str = Field(min_length=8, max_length=128)
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid")

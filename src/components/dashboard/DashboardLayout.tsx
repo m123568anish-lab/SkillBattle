@@ -18,7 +18,12 @@ import {
   Flame,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { sidebarCategories, SidebarItem } from "@/data/dashboard";
+import {
+  companySidebarCategories,
+  collegeSidebarCategories,
+  studentSidebarCategories,
+  SidebarItem,
+} from "@/data/dashboard";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
@@ -54,12 +59,18 @@ export default function DashboardLayout({ children }: Props) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [mobileMenuOpen]);
 
+  const navigationCategories = useMemo(() => {
+    if (pathname.startsWith("/company")) return companySidebarCategories;
+    if (pathname.startsWith("/college")) return collegeSidebarCategories;
+    return studentSidebarCategories;
+  }, [pathname]);
+
   // Filtered categories for mobile drawer
   const filteredCategories = useMemo(() => {
     const query = menuSearch.trim().toLowerCase();
-    if (!query) return sidebarCategories;
+    if (!query) return navigationCategories;
 
-    return sidebarCategories
+    return navigationCategories
       .map((cat) => ({
         ...cat,
         items: cat.items.filter(
@@ -69,20 +80,21 @@ export default function DashboardLayout({ children }: Props) {
         ),
       }))
       .filter((cat) => cat.items.length > 0);
-  }, [menuSearch]);
+  }, [menuSearch, navigationCategories]);
 
   const isItemActive = useCallback(
     (href: string) => {
-      if (pathname === href) return true;
-      if (href === "/dashboard") return false;
-      if (href === "/battle" && pathname.startsWith("/battle")) return true;
-      if (href === "/college/dashboard" && pathname.startsWith("/college")) return true;
+      const route = href.split("?", 1)[0].split("#", 1)[0];
+      if (pathname === route) return true;
+      if (route === "/dashboard") return false;
+      if (route === "/battle" && pathname.startsWith("/battle")) return true;
+      if (route === "/college/dashboard" && pathname.startsWith("/college")) return true;
       if (
-        href === "/tournament" &&
+        route === "/tournament" &&
         (pathname.startsWith("/tournament") || pathname.startsWith("/tournaments"))
       )
         return true;
-      return pathname.startsWith(href + "/");
+      return pathname.startsWith(route + "/");
     },
     [pathname]
   );
