@@ -9,14 +9,14 @@ export const navigation = [
   },
   {
     name: "Leaderboard",
-    href: "/dashboard",
+    href: "/leaderboard",
   },
   {
     name: "Tournament",
     href: "/tournament",
   },
   {
-    name: "Pricing",
-    href: "/pricing",
+    name: "Career",
+    href: "/career/roadmap",
   },
 ];

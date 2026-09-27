@@ -115,4 +115,9 @@ export const careerService = {
     const res = await api.get("/career/interview/user");
     return res.data;
   },
+
+  async completeInterview(sessionId: number): Promise<any> {
+    const res = await api.post(`/career/interview/${sessionId}/complete`);
+    return res.data;
+  },
 };

@@ -289,6 +289,36 @@ async def submit_answer(
     db.add(ans_obj)
     await db.commit()
 
+    # Calculate overall session score and status update
+    stmt_sess = (
+        select(InterviewSession)
+        .where(InterviewSession.id == q_obj.session_id)
+        .options(selectinload(InterviewSession.questions).selectinload(InterviewQuestion.answers))
+    )
+    res_sess = await db.execute(stmt_sess)
+    session_obj = res_sess.scalar_one_or_none()
+
+    session_completed = False
+    overall_score = score
+    if session_obj:
+        scores = []
+        for q in session_obj.questions:
+            if q.id == q_obj.id:
+                scores.append(score)
+            elif q.answers:
+                scores.append(q.answers[-1].score)
+
+        if scores:
+            overall_score = round(sum(scores) / len(scores), 1)
+            session_obj.overall_score = overall_score
+
+        if len(scores) >= session_obj.total_questions:
+            session_obj.status = "COMPLETED"
+            session_obj.finished_at = datetime.utcnow()
+            session_completed = True
+
+        await db.commit()
+
     # Grant XP for answering
     try:
         await xp_service.add_xp(db, current_user, 50)
@@ -300,7 +330,50 @@ async def submit_answer(
         "question_id": req.question_id,
         "score": score,
         "feedback": feedback,
-        "xp_earned": 50
+        "xp_earned": 50,
+        "session_overall_score": overall_score,
+        "session_completed": session_completed,
+    }
+
+
+@router.post("/{session_id}/complete")
+async def complete_interview(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    stmt = (
+        select(InterviewSession)
+        .where(InterviewSession.id == session_id, InterviewSession.user_id == current_user.id)
+        .options(selectinload(InterviewSession.questions).selectinload(InterviewQuestion.answers))
+    )
+    res = await db.execute(stmt)
+    session = res.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Interview session not found")
+
+    scores = []
+    for q in session.questions:
+        if q.answers:
+            scores.append(q.answers[-1].score)
+
+    if scores:
+        session.overall_score = round(sum(scores) / len(scores), 1)
+
+    session.status = "COMPLETED"
+    session.finished_at = datetime.utcnow()
+    await db.commit()
+
+    rating = "Exceeds Expectations (Strong Hire)" if session.overall_score >= 80 else ("Meets Expectations (Hire)" if session.overall_score >= 60 else "Needs Improvement")
+
+    return {
+        "status": "success",
+        "session_id": session.id,
+        "overall_score": session.overall_score,
+        "performance_rating": rating,
+        "finished_at": session.finished_at,
+        "total_questions": session.total_questions,
+        "questions_answered": len(scores)
     }
 
 
@@ -317,3 +390,4 @@ async def get_user_interviews(
     )
     res = await db.execute(stmt)
     return res.scalars().all()
+

@@ -40,14 +40,14 @@ export default function DashboardLayout({
     const core = [
       byTitle("Dashboard", "/dashboard"),
       byTitle("Battle Arena", "/battle"),
-      byTitle("Tournaments", "/tournaments"),
+      byTitle("Tournaments", "/tournament"),
       byTitle("Leaderboard", "/leaderboard"),
-      byTitle("Career Roadmap", "/roadmap"),
-      byTitle("Resume Screening", "/resume-screener"),
+      byTitle("Career Roadmap", "/career/roadmap"),
+      byTitle("Resume Screening", "/career/resume"),
     ].filter((item): item is SidebarItem => Boolean(item));
     const ai = [
-      byTitle("AI Mock Interview", "/ai-interview"),
-      byTitle("AI Coach", "/ai-coach"),
+      byTitle("AI Mock Interview", "/interview"),
+      byTitle("AI Coach", "/coach"),
       byTitle("Achievements", "/achievements"),
       byTitle("Analytics", "/analytics"),
       byTitle("Calendar", "/calendar"),
