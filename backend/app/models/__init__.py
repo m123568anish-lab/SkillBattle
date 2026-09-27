@@ -32,6 +32,7 @@ from .college import (
     CollegeAssessmentQuestion,
     CollegeAssessmentSubmission,
 )
+from .company import Company, CompanyMember, JobPosting, CandidateApplication
 
 __all__ = [
     "Achievement",
@@ -70,4 +71,8 @@ __all__ = [
     "CollegeAssessment",
     "CollegeAssessmentQuestion",
     "CollegeAssessmentSubmission",
+    "Company",
+    "CompanyMember",
+    "JobPosting",
+    "CandidateApplication",
 ]

@@ -11,8 +11,8 @@ import {
   FileText,
   Mic,
   Medal,
-  Gamepad,
   Building2,
+  Users,
   LucideIcon,
 } from "lucide-react";
 
@@ -37,7 +37,8 @@ export const sidebarItems: SidebarItem[] = [
 
   // Compete
   { title: "Tournaments", href: "/tournament", icon: Trophy, category: "compete" },
-  { title: "Leaderboard", href: "/leaderboard", icon: Trophy, category: "compete" },
+  { title: "Leaderboard", href: "/leaderboard", icon: Medal, category: "compete" },
+  { title: "Social & Friends", href: "/social", icon: Users, category: "compete" },
 
   // Learn & Grow
   { title: "Career Roadmap", href: "/career/roadmap", icon: Map, category: "learn" },

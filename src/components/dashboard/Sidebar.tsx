@@ -11,6 +11,15 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
+  const isItemActive = (href: string) => {
+    if (pathname === href) return true;
+    if (href === "/dashboard") return false;
+    if (href === "/battle" && pathname.startsWith("/battle")) return true;
+    if (href === "/college/dashboard" && pathname.startsWith("/college")) return true;
+    if (href === "/tournament" && (pathname.startsWith("/tournament") || pathname.startsWith("/tournaments"))) return true;
+    return pathname.startsWith(href + "/");
+  };
+
   return (
     <motion.aside
       suppressHydrationWarning
@@ -27,14 +36,19 @@ export default function Sidebar() {
       <button
         suppressHydrationWarning
         onClick={() => setIsCollapsed(!isCollapsed)}
+        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         className="absolute right-3 top-6 z-20 rounded-lg border border-white/10 bg-white/5 p-1.5 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/30 transition duration-200"
       >
         {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
       </button>
 
-      {/* Header */}
-      <div className="flex items-center gap-3 border-b border-white/5 p-6 relative z-10 flex-shrink-0">
-        <div className="rounded-2xl bg-gradient-to-br from-cyan-500/20 to-violet-500/20 p-3 border border-cyan-500/30 shadow-lg shadow-cyan-500/5 flex-shrink-0">
+      {/* Header with Logo linking to "/" */}
+      <Link
+        href="/"
+        className="flex items-center gap-3 border-b border-white/5 p-6 relative z-10 flex-shrink-0 group cursor-pointer transition hover:opacity-90"
+        title="Go to Home"
+      >
+        <div className="rounded-2xl bg-gradient-to-br from-cyan-500/20 to-violet-500/20 p-3 border border-cyan-500/30 shadow-lg shadow-cyan-500/5 flex-shrink-0 group-hover:border-cyan-400/50 transition">
           <Trophy className="text-cyan-400 animate-pulse" size={24} />
         </div>
 
@@ -52,10 +66,10 @@ export default function Sidebar() {
             </p>
           </motion.div>
         )}
-      </div>
+      </Link>
 
       {/* Navigation */}
-      <nav className="flex-1 min-h-0 overflow-y-auto relative z-10 scrollbar-hide">
+      <nav aria-label="Main Navigation" className="flex-1 min-h-0 overflow-y-auto relative z-10 scrollbar-hide">
         <div className="p-4 space-y-5">
           {sidebarCategories.map((category) => (
             <div key={category.id}>
@@ -73,7 +87,7 @@ export default function Sidebar() {
               <div className="space-y-1.5 mt-2">
                 {category.items.map((item) => {
                   const Icon = item.icon;
-                  const active = pathname === item.href;
+                  const active = isItemActive(item.href);
 
                   return (
                     <Link
@@ -139,14 +153,16 @@ export default function Sidebar() {
       {/* Footer - Quick Action */}
       {!isCollapsed && (
         <div className="border-t border-white/5 p-4 relative z-10 flex-shrink-0">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="w-full flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500/80 to-violet-500/80 px-4 py-2.5 font-bold text-sm text-white shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 transition duration-200"
-          >
-            <Zap size={16} />
-            Start Battle
-          </motion.button>
+          <Link href="/battle">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500/80 to-violet-500/80 px-4 py-2.5 font-bold text-sm text-white shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 transition duration-200"
+            >
+              <Zap size={16} />
+              Start Battle
+            </motion.button>
+          </Link>
         </div>
       )}
     </motion.aside>

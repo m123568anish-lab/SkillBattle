@@ -53,6 +53,10 @@ from app.models import (
     CollegeAssessment,
     CollegeAssessmentQuestion,
     CollegeAssessmentSubmission,
+    Company,
+    CompanyMember,
+    JobPosting,
+    CandidateApplication,
 )
 from app.models.battle import (
     BattleParticipant,
@@ -91,6 +95,10 @@ __all__ = [
     "UserSubmission",
     "UserStats",
     "UserSettings",
+    "Company",
+    "CompanyMember",
+    "JobPosting",
+    "CandidateApplication",
 ]
 
 
