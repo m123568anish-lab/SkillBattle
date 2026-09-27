@@ -109,6 +109,7 @@ class CollegeStudentResponse(BaseModel):
 
 class AssessmentQuestionCreate(BaseModel):
     question_type: str = Field(default="MCQ", example="MCQ")  # MCQ or CODING
+    skill_category: str = Field(default="General", min_length=1, max_length=100)
     question_text: str = Field(..., example="What is the time complexity of QuickSort average case?")
     options: List[str] = Field(default_factory=list, example=["O(N log N)", "O(N^2)", "O(N)", "O(1)"])
     correct_option: str = Field(default="", example="O(N log N)")

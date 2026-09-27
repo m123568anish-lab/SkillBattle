@@ -78,6 +78,7 @@ async def test_college_registration_and_workflow(client: AsyncClient):
             "questions": [
                 {
                     "question_type": "MCQ",
+                    "skill_category": "Algorithms",
                     "question_text": "What is the time complexity of QuickSort average case?",
                     "options": ["O(N log N)", "O(N^2)", "O(N)", "O(1)"],
                     "correct_option": "O(N log N)",
@@ -103,6 +104,110 @@ async def test_college_registration_and_workflow(client: AsyncClient):
     assert dash_data["college_name"] == payload["name"]
     assert "skill_distribution" in dash_data
     assert "weak_areas" in dash_data
+    assert dash_data["total_students"] == 0
+    assert dash_data["active_students"] == 0
+    assert dash_data["assessment_participation_rate"] == 0
+    assert dash_data["average_performance_score"] == 0
+    assert dash_data["pass_rate"] == 0
+    assert dash_data["skill_distribution"] == []
+    assert dash_data["weak_areas"] == []
+    assert dash_data["department_analytics"] == [
+        {
+            "department_name": "Computer Science & Engineering",
+            "total_students": 0,
+            "avg_performance": 0,
+            "pass_rate": 0,
+        }
+    ]
+
+    student_email = f"student_{unique_id.lower()}@example.com"
+    student_resp = await client.post(
+        "/auth/register",
+        json={
+            "username": f"student_{unique_id.lower()}",
+            "email": student_email,
+            "full_name": "Placement Test Student",
+            "password": "StudentPass#123",
+        },
+    )
+    assert student_resp.status_code == 201, student_resp.text
+
+    enroll_resp = await client.post(
+        "/api/v1/college/student/add",
+        headers=headers,
+        json={
+            "user_email_or_username": student_email,
+            "department_id": dept_data["id"],
+            "batch_id": batch_data["id"],
+            "roll_number": "QA-001",
+        },
+    )
+    assert enroll_resp.status_code == 200, enroll_resp.text
+    assert enroll_resp.json()["full_name"] == "Placement Test Student"
+    assert enroll_resp.json()["department_name"] == "Computer Science & Engineering"
+    assert enroll_resp.json()["batch_name"] == "Batch 2023-2027"
+
+    roster_resp = await client.get("/api/v1/college/students", headers=headers)
+    assert roster_resp.status_code == 200, roster_resp.text
+    assert [student["email"] for student in roster_resp.json()] == [student_email]
+
+    updated_dashboard = await client.get("/api/v1/college/dashboard", headers=headers)
+    assert updated_dashboard.status_code == 200, updated_dashboard.text
+    assert updated_dashboard.json()["total_students"] == 1
+    assert updated_dashboard.json()["active_students"] == 1
+
+    student_login = await client.post(
+        "/auth/login",
+        json={"email": student_email, "password": "StudentPass#123"},
+    )
+    assert student_login.status_code == 200, student_login.text
+    student_headers = {
+        "Authorization": f"Bearer {student_login.json()['tokens']['access_token']}"
+    }
+    assigned_resp = await client.get(
+        "/api/v1/college/student/my-assessments",
+        headers=student_headers,
+    )
+    assert assigned_resp.status_code == 200, assigned_resp.text
+    assigned_assessment = next(
+        item for item in assigned_resp.json() if item["id"] == assess_data["id"]
+    )
+    mcq_question = next(
+        question for question in assigned_assessment["questions"]
+        if question["question_type"] == "MCQ"
+    )
+    assert mcq_question["skill_category"] == "Algorithms"
+    assert "correct_option" not in mcq_question
+
+    submission_resp = await client.post(
+        "/api/v1/college/student/assessment/submit",
+        headers=student_headers,
+        json={
+            "assessment_id": assess_data["id"],
+            "answers": {f"q_{mcq_question['id']}": "O(N log N)"},
+        },
+    )
+    assert submission_resp.status_code == 200, submission_resp.text
+    assert submission_resp.json()["percentage"] == 50
+
+    skill_profile_resp = await client.get(
+        "/api/v1/profile/skill-profile",
+        headers=student_headers,
+    )
+    assert skill_profile_resp.status_code == 200, skill_profile_resp.text
+    profile_data = skill_profile_resp.json()
+    algorithms = next(skill for skill in profile_data["skills"] if skill["skill"] == "Algorithms")
+    assert algorithms["score"] == 100
+    assert algorithms["attempts"] == 1
+    assert algorithms["sources"] == ["college_assessment"]
+    assert profile_data["assessment_performance"][0]["score"] == 50
+
+    forged_profile_resp = await client.post(
+        "/api/v1/profile/skill-profile",
+        headers=student_headers,
+        json={"skills": [{"skill": "Python", "score": 100, "verified": True}]},
+    )
+    assert forged_profile_resp.status_code == 405
 
 
 @pytest.mark.asyncio

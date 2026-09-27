@@ -88,6 +88,7 @@ class XPService:
         amount: int,
         *,
         commit: bool = True,
+        reason: str | None = None,
     ) -> XP:
         if amount <= 0:
             raise ValueError("XP amount must be positive")
@@ -120,6 +121,9 @@ class XPService:
             await db.commit()
         logger.info("Added %s verified XP to user %s", amount, current_user.id)
         return xp
+
+    # Alias for award_xp
+    award_xp = add_xp
 
     # =====================================================
     # Remove XP

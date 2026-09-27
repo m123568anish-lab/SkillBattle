@@ -319,7 +319,39 @@ async def get_my_assigned_assessments(
     current_user: User = Depends(get_current_user),
 ):
     """Get college assessments assigned to the current student."""
-    return await college_service.get_student_assigned_assessments(db, current_user)
+    assessments = await college_service.get_student_assigned_assessments(db, current_user)
+    return [
+        {
+            "id": assessment.id,
+            "college_id": assessment.college_id,
+            "department_id": assessment.department_id,
+            "batch_id": assessment.batch_id,
+            "title": assessment.title,
+            "description": assessment.description,
+            "assessment_type": assessment.assessment_type,
+            "duration_minutes": assessment.duration_minutes,
+            "start_time": assessment.start_time,
+            "end_time": assessment.end_time,
+            "status": assessment.status,
+            "pass_marks": assessment.pass_marks,
+            "total_marks": assessment.total_marks,
+            "created_at": assessment.created_at,
+            "questions_count": len(assessment.questions),
+            "questions": [
+                {
+                    "id": question.id,
+                    "question_type": question.question_type,
+                    "skill_category": question.skill_category,
+                    "question_text": question.question_text,
+                    "options": question.options_json or [],
+                    "coding_starter_code": question.coding_starter_code or "",
+                    "marks": question.marks,
+                }
+                for question in assessment.questions
+            ],
+        }
+        for assessment in assessments
+    ]
 
 
 @router.post("/student/assessment/submit", response_model=SubmissionResultResponse)

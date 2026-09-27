@@ -23,7 +23,11 @@ class BattleEvent(str, Enum):
 
     BATTLE_FINISHED = "battle_finished"
 
+    SECTION_TRANSITION = "section_transition"
+
     SUBMISSION = "submission"
+
+    SUBMIT_ANSWER = "submit_answer"
 
     SCORE_UPDATED = "score_updated"
 
@@ -32,6 +36,10 @@ class BattleEvent(str, Enum):
     TIMER_UPDATED = "timer_updated"
 
     STATE_SYNC = "state_sync"
+
+    RECONNECT_SYNC = "reconnect_sync"
+
+    ANTI_CHEAT_WARNING = "anti_cheat_warning"
 
     FORFEIT = "forfeit"
 

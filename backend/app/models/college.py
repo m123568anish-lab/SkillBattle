@@ -381,6 +381,12 @@ class CollegeAssessmentQuestion(Base):
         default="MCQ",  # MCQ or CODING
     )
 
+    skill_category: Mapped[str] = mapped_column(
+        String(100),
+        default="General",
+        nullable=False,
+    )
+
     question_text: Mapped[str] = mapped_column(
         Text,
         nullable=False,

@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user
 from app.database.session import get_db
 from app.models.user import User
-from app.modules.company.schemas import CompanyDashboardResponse, CompanyRegisterRequest, CompanySummary, JobPostingRequest, JobPostingResponse
+from app.modules.company.schemas import CandidateApplicationRequest, CompanyDashboardResponse, CompanyRegisterRequest, CompanySummary, JobPostingRequest, JobPostingResponse
 from app.modules.company.service import company_service
 
 router = APIRouter(prefix="/company", tags=["Company Platform"])
@@ -111,11 +109,11 @@ async def list_jobs(
 
 @router.post("/applications")
 async def submit_application(
-    payload: dict[str, Any],
+    payload: CandidateApplicationRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    application = await company_service.submit_application(db, current_user, payload)
+    application = await company_service.submit_application(db, current_user, payload.model_dump())
     return {"status": "applied", "application_id": application.id, "job_id": application.job_id}
 
 

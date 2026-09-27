@@ -28,11 +28,13 @@ from app.models.user import User
 from app.modules.profile.schemas import (
     ProfileResponse,
     ProfileUpdateRequest,
+    SkillProfileResponse,
 )
 
 from app.modules.profile.service import (
     profile_service,
 )
+from app.modules.profile.skill_profile_service import skill_profile_service
 from app.modules.xp.service import xp_service
 
 router = APIRouter(
@@ -102,6 +104,14 @@ async def get_profile(
     )
 
     return await _profile_response(db, current_user, profile)
+
+
+@router.get("/skill-profile", response_model=SkillProfileResponse)
+async def get_skill_profile(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> SkillProfileResponse:
+    return SkillProfileResponse(**await skill_profile_service.get_profile(db, current_user))
 
 
 @router.put(

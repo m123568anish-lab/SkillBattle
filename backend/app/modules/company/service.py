@@ -97,21 +97,21 @@ class CompanyService:
 
         rows: list[dict[str, Any]] = []
         for application, candidate, profile, posting in result.all():
+            consented = application.consent_to_recruiters
             rows.append(
                 {
                     "application_id": application.id,
                     "job_id": posting.id,
                     "job_title": posting.title,
-                    "candidate_id": candidate.id,
-                    "candidate_name": candidate.full_name,
-                    "candidate_email": candidate.email,
-                    "candidate_role": getattr(candidate, "role", "user"),
+                    "candidate_id": candidate.id if consented else None,
+                    "candidate_name": candidate.full_name if consented else "Private candidate",
+                    "candidate_email": candidate.email if consented else "",
                     "status": application.status,
                     "score": application.score,
-                    "consent": application.consent_to_recruiters,
-                    "target_company": (profile.target_company if profile else ""),
-                    "github": (profile.github if profile else ""),
-                    "linkedin": (profile.linkedin if profile else ""),
+                    "consent": consented,
+                    "target_company": (profile.target_company if consented and profile else ""),
+                    "github": (profile.github if consented and profile else ""),
+                    "linkedin": (profile.linkedin if consented and profile else ""),
                 }
             )
         return rows
@@ -153,6 +153,8 @@ class CompanyService:
     async def submit_application(self, db: AsyncSession, user: User, payload: dict[str, Any]) -> CandidateApplication:
         if not user or not getattr(user, "id", None):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required.")
+        if getattr(user, "role", "user") not in {"student", "user"}:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only student accounts can apply to jobs.")
 
         stmt = select(JobPosting).where(JobPosting.id == payload["job_id"])
         result = await db.execute(stmt)
@@ -160,10 +162,18 @@ class CompanyService:
         if not job:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found.")
 
-        candidate_user_id = payload.get("candidate_user_id") or user.id
+        existing = await db.execute(
+            select(CandidateApplication).where(
+                CandidateApplication.job_id == job.id,
+                CandidateApplication.candidate_user_id == user.id,
+            )
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="You have already applied to this job.")
+
         application = CandidateApplication(
             job_id=job.id,
-            candidate_user_id=candidate_user_id,
+            candidate_user_id=user.id,
             source="platform",
             status="applied",
             score=0,

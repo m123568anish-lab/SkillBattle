@@ -31,6 +31,26 @@ class BattleJudgeService:
     Executes and judges battle submissions.
     """
 
+    async def evaluate(
+        self,
+        language: str,
+        source_code: str,
+        problem_id: int = 1,
+    ) -> dict:
+        result = execution_manager.execute(
+            language=language,
+            source_code=source_code,
+            stdin="",
+        )
+        verdict = "Accepted" if result.return_code == 0 else "Wrong Answer"
+        return {
+            "verdict": verdict,
+            "passed_tests": 1 if verdict == "Accepted" else 0,
+            "total_tests": 1,
+            "runtime_ms": float(getattr(result, "execution_time", 10.0)),
+            "memory_mb": float(getattr(result, "memory_used", 5.0)),
+        }
+
     async def submit(
 
         self,

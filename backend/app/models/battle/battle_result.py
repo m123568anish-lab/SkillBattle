@@ -5,7 +5,7 @@ SkillBattle
 
 Battle Result Model
 
-Production SQLAlchemy 2.x Model
+Production SQLAlchemy 2.x Model with Advanced Battle Engine support
 
 =========================================================
 """
@@ -22,6 +22,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    JSON,
 )
 
 from sqlalchemy.orm import (
@@ -37,20 +38,14 @@ class BattleResult(Base):
 
     __tablename__ = "battle_results"
 
-    # ==========================================================
     # Primary Key
-    # ==========================================================
-
     id: Mapped[str] = mapped_column(
         String(36),
         primary_key=True,
         default=lambda: str(uuid.uuid4()),
     )
 
-    # ==========================================================
     # Foreign Keys
-    # ==========================================================
-
     battle_id: Mapped[str] = mapped_column(
         String(36),
         ForeignKey(
@@ -72,23 +67,28 @@ class BattleResult(Base):
         index=True,
     )
 
+    battle_type: Mapped[str] = mapped_column(
+        String(50),
+        default="general",
+        nullable=False,
+    )
+
     is_draw: Mapped[bool] = mapped_column(
         Boolean,
         default=False,
         nullable=False,
     )
 
-    # ==========================================================
     # Statistics
-    # ==========================================================
-
     total_players: Mapped[int] = mapped_column(
         Integer,
+        default=1,
         nullable=False,
     )
 
     duration_seconds: Mapped[int] = mapped_column(
         Integer,
+        default=0,
         nullable=False,
     )
 
@@ -104,10 +104,44 @@ class BattleResult(Base):
         nullable=False,
     )
 
-    # ==========================================================
-    # Rating Changes
-    # ==========================================================
+    accuracy_percentage: Mapped[float] = mapped_column(
+        Float,
+        default=0.0,
+        nullable=False,
+    )
 
+    # Detailed Section & Skill Analysis
+    section_scores: Mapped[dict] = mapped_column(
+        JSON,
+        default=dict,
+        nullable=False,
+    )
+
+    question_breakdown: Mapped[list] = mapped_column(
+        JSON,
+        default=list,
+        nullable=False,
+    )
+
+    skill_breakdown: Mapped[dict] = mapped_column(
+        JSON,
+        default=dict,
+        nullable=False,
+    )
+
+    placement_readiness: Mapped[dict] = mapped_column(
+        JSON,
+        default=dict,
+        nullable=False,
+    )
+
+    recommendations: Mapped[list] = mapped_column(
+        JSON,
+        default=list,
+        nullable=False,
+    )
+
+    # Rating & XP Changes
     rating_change: Mapped[int] = mapped_column(
         Integer,
         default=0,
@@ -120,20 +154,13 @@ class BattleResult(Base):
         nullable=False,
     )
 
-    # ==========================================================
-    # Timestamp
-    # ==========================================================
-
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
         nullable=False,
     )
 
-    # ==========================================================
     # Relationships
-    # ==========================================================
-
     battle = relationship(
         "BattleRoom",
         back_populates="result",
@@ -143,10 +170,6 @@ class BattleResult(Base):
         "User",
     )
 
-    # ==========================================================
-    # Helpers
-    # ==========================================================
-
     @property
     def is_ranked(self) -> bool:
         return self.rating_change != 0
@@ -155,5 +178,6 @@ class BattleResult(Base):
         return (
             f"<BattleResult("
             f"battle={self.battle_id}, "
+            f"type={self.battle_type}, "
             f"winner={self.winner_id})>"
         )

@@ -23,6 +23,11 @@ class JobPostingRequest(BaseModel):
     status: str = Field(default="draft")
 
 
+class CandidateApplicationRequest(BaseModel):
+    job_id: int
+    consent_to_recruiters: bool = False
+
+
 class CompanySummary(BaseModel):
     id: int
     name: str

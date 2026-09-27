@@ -5,7 +5,7 @@ SkillBattle
 
 Battle Room Model
 
-Production SQLAlchemy 2.x Model
+Production SQLAlchemy 2.x Model with Advanced Battle Engine support
 
 =========================================================
 """
@@ -19,6 +19,8 @@ from sqlalchemy import (
     String,
     DateTime,
     Integer,
+    JSON,
+    ForeignKey,
 )
 
 from sqlalchemy.orm import (
@@ -34,23 +36,32 @@ class BattleRoom(Base):
 
     __tablename__ = "battle_rooms"
 
-    # ==========================================================
     # Primary Key
-    # ==========================================================
-
     id: Mapped[str] = mapped_column(
         String(36),
         primary_key=True,
         default=lambda: str(uuid.uuid4()),
     )
 
-    # ==========================================================
-    # Battle Information
-    # ==========================================================
+    # Configuration Link
+    config_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("battle_configs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
+    # Battle Information
     title: Mapped[str] = mapped_column(
         String(120),
         nullable=False,
+    )
+
+    battle_type: Mapped[str] = mapped_column(
+        String(50),
+        default="general",
+        nullable=False,
+        index=True,
     )
 
     difficulty: Mapped[str] = mapped_column(
@@ -61,6 +72,7 @@ class BattleRoom(Base):
 
     problem_id: Mapped[int] = mapped_column(
         Integer,
+        default=1,
         nullable=False,
         index=True,
     )
@@ -78,10 +90,45 @@ class BattleRoom(Base):
         nullable=False,
     )
 
-    # ==========================================================
-    # Battle Timing
-    # ==========================================================
+    current_section_index: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
 
+    # Context IDs
+    company_id: Mapped[str | None] = mapped_column(
+        String(36),
+        nullable=True,
+        index=True,
+    )
+
+    college_id: Mapped[str | None] = mapped_column(
+        String(36),
+        nullable=True,
+        index=True,
+    )
+
+    # Structured Data
+    sections_config: Mapped[list] = mapped_column(
+        JSON,
+        default=list,
+        nullable=False,
+    )
+
+    questions_data: Mapped[list] = mapped_column(
+        JSON,
+        default=list,
+        nullable=False,
+    )
+
+    anti_cheat_logs: Mapped[list] = mapped_column(
+        JSON,
+        default=list,
+        nullable=False,
+    )
+
+    # Battle Timing
     started_at: Mapped[datetime | None] = mapped_column(
         DateTime,
         nullable=True,
@@ -107,9 +154,8 @@ class BattleRoom(Base):
         nullable=False,
     )
 
-    # ==========================================================
     # Relationships
-    # ==========================================================
+    config = relationship("BattleConfig")
 
     participants = relationship(
         "BattleParticipant",
@@ -130,21 +176,18 @@ class BattleRoom(Base):
         cascade="all, delete-orphan",
     )
 
-    # ==========================================================
-    # Helpers
-    # ==========================================================
-
     @property
     def is_running(self) -> bool:
         return self.status == "running"
 
     @property
     def is_finished(self) -> bool:
-        return self.status == "finished"
+        return self.status in ("finished", "completed", "finalized")
 
     def __repr__(self) -> str:
         return (
             f"<BattleRoom(id={self.id}, "
             f"title='{self.title}', "
+            f"type='{self.battle_type}', "
             f"status='{self.status}')>"
         )

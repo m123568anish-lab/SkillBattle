@@ -222,6 +222,7 @@ class CollegeService:
             existing_link.department_id = payload.department_id
             existing_link.batch_id = payload.batch_id
             existing_link.roll_number = payload.roll_number or existing_link.roll_number
+            existing_link.user = target_user
             await db.commit()
             return existing_link
 
@@ -231,10 +232,12 @@ class CollegeService:
             department_id=payload.department_id,
             batch_id=payload.batch_id,
             roll_number=payload.roll_number or "",
+            user=target_user,
         )
         db.add(cs)
         await db.commit()
         await db.refresh(cs)
+        cs.user = target_user
         return cs
 
     async def list_students(
@@ -303,6 +306,7 @@ class CollegeService:
             q_obj = CollegeAssessmentQuestion(
                 assessment_id=assessment.id,
                 question_type=q_item.question_type,
+                skill_category=q_item.skill_category.strip(),
                 question_text=q_item.question_text,
                 options_json=q_item.options,
                 correct_option=q_item.correct_option,
@@ -368,17 +372,29 @@ class CollegeService:
         if not cs:
             return []
 
-        # Find assessments for student's college matching department or batch or all
-        stmt = (
-            select(CollegeAssessment)
-            .where(
-                CollegeAssessment.college_id == cs.college_id,
+        filters = [CollegeAssessment.college_id == cs.college_id]
+        if cs.department_id is None:
+            filters.append(CollegeAssessment.department_id.is_(None))
+        else:
+            filters.append(
                 or_(
-                    CollegeAssessment.batch_id == cs.batch_id,
+                    CollegeAssessment.department_id.is_(None),
                     CollegeAssessment.department_id == cs.department_id,
-                    CollegeAssessment.batch_id.is_(None),
                 )
             )
+        if cs.batch_id is None:
+            filters.append(CollegeAssessment.batch_id.is_(None))
+        else:
+            filters.append(
+                or_(
+                    CollegeAssessment.batch_id.is_(None),
+                    CollegeAssessment.batch_id == cs.batch_id,
+                )
+            )
+
+        stmt = (
+            select(CollegeAssessment)
+            .where(*filters)
             .options(selectinload(CollegeAssessment.questions))
             .order_by(CollegeAssessment.created_at.desc())
         )
@@ -400,6 +416,18 @@ class CollegeService:
         assessment = res.scalar_one_or_none()
         if not assessment:
             raise HTTPException(status_code=404, detail="Assessment not found")
+
+        student_link_stmt = select(CollegeStudent).where(
+            CollegeStudent.user_id == student_user.id,
+            CollegeStudent.college_id == assessment.college_id,
+        )
+        student_link = (await db.execute(student_link_stmt)).scalar_one_or_none()
+        if not student_link:
+            raise HTTPException(status_code=403, detail="This assessment is only available to enrolled college students.")
+        if assessment.department_id is not None and assessment.department_id != student_link.department_id:
+            raise HTTPException(status_code=403, detail="This assessment is not assigned to your department.")
+        if assessment.batch_id is not None and assessment.batch_id != student_link.batch_id:
+            raise HTTPException(status_code=403, detail="This assessment is not assigned to your batch.")
 
         # Evaluate MCQ and Coding answers
         mcq_score = 0.0
@@ -508,6 +536,13 @@ class CollegeService:
         stmt_st = select(func.count(CollegeStudent.id)).where(CollegeStudent.college_id == college.id)
         total_students = (await db.execute(stmt_st)).scalar() or 0
 
+        stmt_active = (
+            select(func.count(CollegeStudent.id))
+            .join(User, User.id == CollegeStudent.user_id)
+            .where(CollegeStudent.college_id == college.id, User.is_active.is_(True))
+        )
+        active_students = (await db.execute(stmt_active)).scalar() or 0
+
         # Departments
         depts = await self.list_departments(db, college.id)
         
@@ -522,48 +557,51 @@ class CollegeService:
 
         total_subs = len(submissions)
         passed_subs = sum(1 for s in submissions if s.is_passed)
-        avg_score = round(sum(s.percentage for s in submissions) / max(1, total_subs), 1) if total_subs > 0 else 78.5
-        pass_rate = round((passed_subs / max(1, total_subs)) * 100.0, 1) if total_subs > 0 else 82.0
-        participation_rate = round(min(100.0, (total_subs / max(1, total_students)) * 100.0), 1) if total_students > 0 else 85.0
+        avg_score = round(sum(s.percentage for s in submissions) / total_subs, 1) if total_subs else 0.0
+        pass_rate = round((passed_subs / total_subs) * 100.0, 1) if total_subs else 0.0
+        participating_students = len({submission.student_id for submission in submissions})
+        participation_rate = round((participating_students / total_students) * 100.0, 1) if total_students else 0.0
 
         # Department Analytics
         dept_analytics = []
         for d in depts:
+            stmt_dept_students = select(func.count(CollegeStudent.id)).where(
+                CollegeStudent.college_id == college.id,
+                CollegeStudent.department_id == d.id,
+            )
+            dept_students = (await db.execute(stmt_dept_students)).scalar() or 0
+            stmt_dept_submissions = (
+                select(CollegeAssessmentSubmission)
+                .join(CollegeStudent, CollegeStudent.user_id == CollegeAssessmentSubmission.student_id)
+                .where(
+                    CollegeAssessmentSubmission.assessment_id.in_(
+                        select(CollegeAssessment.id).where(CollegeAssessment.college_id == college.id)
+                    ),
+                    CollegeStudent.college_id == college.id,
+                    CollegeStudent.department_id == d.id,
+                )
+            )
+            dept_submissions = (await db.execute(stmt_dept_submissions)).scalars().all()
+            dept_total = len(dept_submissions)
+            dept_passed = sum(1 for submission in dept_submissions if submission.is_passed)
             dept_analytics.append({
                 "department_name": d.name,
-                "total_students": max(12, int(total_students / max(1, len(depts)))),
-                "avg_performance": avg_score,
-                "pass_rate": pass_rate,
+                "total_students": dept_students,
+                "avg_performance": round(sum(s.percentage for s in dept_submissions) / dept_total, 1) if dept_total else 0.0,
+                "pass_rate": round((dept_passed / dept_total) * 100.0, 1) if dept_total else 0.0,
             })
-        if not dept_analytics:
-            dept_analytics = [
-                {"department_name": "Computer Science & Engg", "total_students": max(15, total_students), "avg_performance": 84.5, "pass_rate": 88.0},
-                {"department_name": "Information Technology", "total_students": 25, "avg_performance": 76.0, "pass_rate": 80.0},
-                {"department_name": "Electronics & Comm", "total_students": 20, "avg_performance": 72.5, "pass_rate": 75.0},
-            ]
-
-        # Skill Distribution
-        skill_distribution = [
-            {"skill": "Arrays & Hashing", "average_score": 88.0},
-            {"skill": "Dynamic Programming", "average_score": 58.5},
-            {"skill": "Graph Algorithms", "average_score": 62.0},
-            {"skill": "SQL & Window Functions", "average_score": 82.0},
-            {"skill": "System Design Core", "average_score": 74.0},
-        ]
-
-        weak_areas = ["Dynamic Programming (0/1 Knapsack & Grid DP)", "Graph Shortest Paths (Dijkstra)", "System Design Latency Estimation"]
 
         return {
             "college_name": college.name,
-            "total_students": total_students or 120,
-            "active_students": int((total_students or 120) * 0.85),
+            "total_students": total_students,
+            "active_students": active_students,
             "assessment_participation_rate": participation_rate,
             "average_performance_score": avg_score,
             "pass_rate": pass_rate,
-            "skill_distribution": skill_distribution,
-            "weak_areas": weak_areas,
+            "skill_distribution": [],
+            "weak_areas": [],
             "department_analytics": dept_analytics,
-            "placement_prep_progress": 76.5,
+            "placement_prep_progress": 0.0,
         }
 
 

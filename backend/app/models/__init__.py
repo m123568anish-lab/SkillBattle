@@ -33,6 +33,7 @@ from .college import (
     CollegeAssessmentSubmission,
 )
 from .company import Company, CompanyMember, JobPosting, CandidateApplication
+from .battle import BattleConfig, BattleRoom, BattleParticipant, BattleSubmission, BattleResult
 
 __all__ = [
     "Achievement",
@@ -75,4 +76,9 @@ __all__ = [
     "CompanyMember",
     "JobPosting",
     "CandidateApplication",
+    "BattleConfig",
+    "BattleRoom",
+    "BattleParticipant",
+    "BattleSubmission",
+    "BattleResult",
 ]

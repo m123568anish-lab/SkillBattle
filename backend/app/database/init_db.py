@@ -146,7 +146,9 @@ def init_db() -> None:
             _repair_profile_preferences()
             _repair_dashboard_tables()
             _repair_college_tables()
+            _repair_battle_tables()
             _seed_initial_problems()
+            _seed_initial_questions()
             logger.info(f"✅ Tables created: {list(Base.metadata.tables.keys())}")
         except Exception as e:
             # Some DB backends may raise an OperationalError on concurrent create_all
@@ -380,8 +382,241 @@ def _repair_college_tables() -> None:
     """Ensure all college platform tables exist in the database."""
     try:
         Base.metadata.create_all(bind=engine)
+        inspector = inspect(engine)
+        if "college_assessment_questions" in inspector.get_table_names():
+            columns = {column["name"] for column in inspector.get_columns("college_assessment_questions")}
+            if "skill_category" not in columns:
+                with engine.begin() as connection:
+                    connection.execute(
+                        text(
+                            'ALTER TABLE "college_assessment_questions" '
+                            'ADD COLUMN "skill_category" VARCHAR(100) NOT NULL DEFAULT \'General\''
+                        )
+                    )
+                logger.info("Added missing college_assessment_questions.skill_category column")
         logger.info("Checked & created college platform tables.")
     except Exception as e:
         logger.warning(f"College tables repair warning: {e}")
+
+
+def _repair_battle_tables() -> None:
+    """Ensure missing columns exist on questions, battle_rooms, battle_submissions, and battle_results."""
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+
+    with engine.begin() as connection:
+        if "questions" in tables:
+            existing = {c["name"] for c in inspector.get_columns("questions")}
+            cols = {
+                "question_type": "VARCHAR(30) DEFAULT 'coding'",
+                "options": "JSON",
+                "correct_option": "VARCHAR(100) DEFAULT ''",
+                "buggy_code": "TEXT",
+                "fixed_code_reference": "TEXT",
+                "rubric": "JSON",
+                "explanation": "TEXT",
+                "skill_category": "VARCHAR(50) DEFAULT 'Problem Solving'",
+                "estimated_time_minutes": "INTEGER DEFAULT 5",
+                "is_ai_generated": "BOOLEAN DEFAULT FALSE",
+                "is_validated": "BOOLEAN DEFAULT TRUE",
+            }
+            for name, defn in cols.items():
+                if name not in existing:
+                    connection.execute(text(f'ALTER TABLE "questions" ADD COLUMN "{name}" {defn}'))
+                    logger.info("Added missing questions.%s column", name)
+
+            # Ensure JSON columns have valid JSON syntax in SQLite
+            connection.execute(text("UPDATE questions SET options = '[]' WHERE options IS NULL OR options = ''"))
+            connection.execute(text("UPDATE questions SET examples = '[]' WHERE examples IS NULL OR examples = ''"))
+            connection.execute(text("UPDATE questions SET hidden_test_cases = '[]' WHERE hidden_test_cases IS NULL OR hidden_test_cases = ''"))
+            connection.execute(text("UPDATE questions SET company_tags = '[]' WHERE company_tags IS NULL OR company_tags = ''"))
+            connection.execute(text("UPDATE questions SET topic_tags = '[]' WHERE topic_tags IS NULL OR topic_tags = ''"))
+            connection.execute(text("UPDATE questions SET rubric = '{}' WHERE rubric IS NULL OR rubric = ''"))
+
+        if "battle_rooms" in tables:
+            existing = {c["name"] for c in inspector.get_columns("battle_rooms")}
+            cols = {
+                "config_id": "VARCHAR(36)",
+                "battle_type": "VARCHAR(50) DEFAULT 'general'",
+                "current_section_index": "INTEGER DEFAULT 0",
+                "company_id": "VARCHAR(36)",
+                "college_id": "VARCHAR(36)",
+                "sections_config": "JSON",
+                "questions_data": "JSON",
+                "anti_cheat_logs": "JSON",
+            }
+            for name, defn in cols.items():
+                if name not in existing:
+                    connection.execute(text(f'ALTER TABLE "battle_rooms" ADD COLUMN "{name}" {defn}'))
+                    logger.info("Added missing battle_rooms.%s column", name)
+
+        if "battle_submissions" in tables:
+            existing = {c["name"] for c in inspector.get_columns("battle_submissions")}
+            cols = {
+                "question_id": "INTEGER",
+                "section_index": "INTEGER DEFAULT 0",
+                "question_type": "VARCHAR(30) DEFAULT 'coding'",
+                "mcq_option": "VARCHAR(100)",
+                "score_earned": "FLOAT DEFAULT 0.0",
+                "max_possible_score": "FLOAT DEFAULT 100.0",
+                "time_taken_seconds": "INTEGER DEFAULT 0",
+                "telemetry": "JSON",
+            }
+            for name, defn in cols.items():
+                if name not in existing:
+                    connection.execute(text(f'ALTER TABLE "battle_submissions" ADD COLUMN "{name}" {defn}'))
+                    logger.info("Added missing battle_submissions.%s column", name)
+
+        if "battle_results" in tables:
+            existing = {c["name"] for c in inspector.get_columns("battle_results")}
+            cols = {
+                "battle_type": "VARCHAR(50) DEFAULT 'general'",
+                "accuracy_percentage": "FLOAT DEFAULT 0.0",
+                "section_scores": "JSON",
+                "question_breakdown": "JSON",
+                "skill_breakdown": "JSON",
+                "placement_readiness": "JSON",
+                "recommendations": "JSON",
+            }
+            for name, defn in cols.items():
+                if name not in existing:
+                    connection.execute(text(f'ALTER TABLE "battle_results" ADD COLUMN "{name}" {defn}'))
+                    logger.info("Added missing battle_results.%s column", name)
+
+
+def _seed_initial_questions() -> None:
+    """Seed initial MCQ, Debugging, Coding, and Technical questions if questions table is empty."""
+    inspector = inspect(engine)
+    if "questions" not in inspector.get_table_names():
+        return
+
+    with engine.begin() as connection:
+        count = connection.execute(text("SELECT COUNT(*) FROM questions")).scalar()
+        if count and count > 0:
+            return
+
+        logger.info("Seeding initial MCQ, Debugging, and Technical questions...")
+        import json
+
+        sample_qs = [
+            # MCQs
+            {
+                "title": "Time Complexity of QuickSort Worst Case",
+                "slug": "time-complexity-quicksort-worst-case",
+                "description": "What is the worst-case time complexity of the standard QuickSort algorithm?",
+                "difficulty": "Easy",
+                "question_type": "mcq",
+                "options": [
+                    {"key": "A", "text": "O(N log N)"},
+                    {"key": "B", "text": "O(N^2)"},
+                    {"key": "C", "text": "O(N)"},
+                    {"key": "D", "text": "O(log N)"}
+                ],
+                "correct_option": "B",
+                "explanation": "QuickSort worst-case happens when the pivot chosen is consistently the smallest or largest element, resulting in O(N^2) time.",
+                "topic_tags": ["DSA", "Algorithms"],
+                "skill_category": "DSA",
+            },
+            {
+                "title": "ACID Properties in DBMS",
+                "slug": "acid-properties-dbms",
+                "description": "Which letter in ACID stands for ensuring that a transaction once committed is permanently saved?",
+                "difficulty": "Easy",
+                "question_type": "mcq",
+                "options": [
+                    {"key": "A", "text": "Atomicity"},
+                    {"key": "B", "text": "Consistency"},
+                    {"key": "C", "text": "Isolation"},
+                    {"key": "D", "text": "Durability"}
+                ],
+                "correct_option": "D",
+                "explanation": "Durability guarantees that once a transaction has been committed, it will remain committed even in the event of a system failure.",
+                "topic_tags": ["DBMS", "SQL"],
+                "skill_category": "DBMS",
+            },
+            # Debugging
+            {
+                "title": "Fix Off-By-One Loop Bug",
+                "slug": "fix-off-by-one-loop-bug",
+                "description": "The function below is supposed to calculate the sum of elements from 1 to N, but it raises an IndexOutOfRange or wrong answer. Fix the bug.",
+                "difficulty": "Medium",
+                "question_type": "debugging",
+                "buggy_code": "def sum_to_n(n):\n    total = 0\n    for i in range(1, n): # Bug here\n        total += i\n    return total",
+                "fixed_code_reference": "def sum_to_n(n):\n    total = 0\n    for i in range(1, n + 1):\n        total += i\n    return total",
+                "explanation": "range(1, n) excludes n. It should be range(1, n + 1).",
+                "topic_tags": ["Debugging", "Python"],
+                "skill_category": "Debugging",
+            },
+            # Technical Question
+            {
+                "title": "Explain REST vs GraphQL",
+                "slug": "explain-rest-vs-graphql",
+                "description": "Explain the architectural differences between RESTful APIs and GraphQL APIs. When would you prefer GraphQL over REST?",
+                "difficulty": "Medium",
+                "question_type": "technical",
+                "rubric": {"key_concepts": ["Over-fetching", "Under-fetching", "Single Endpoint", "HTTP Methods", "Schema/Queries"]},
+                "explanation": "GraphQL uses a single endpoint and allows clients to request exact fields, preventing over-fetching. REST uses multiple URIs and standard HTTP verbs.",
+                "topic_tags": ["Web Architecture", "System Design"],
+                "skill_category": "System Design",
+            },
+        ]
+
+        for q in sample_qs:
+            for optional_field in (
+                "options",
+                "correct_option",
+                "buggy_code",
+                "fixed_code_reference",
+                "rubric",
+                "constraints",
+                "examples",
+                "hidden_test_cases",
+                "company_tags",
+                "estimated_time_minutes",
+            ):
+                q.setdefault(
+                    optional_field,
+                    [] if optional_field in {"examples", "hidden_test_cases", "company_tags", "options"} else ({} if optional_field == "rubric" else (5 if optional_field == "estimated_time_minutes" else "")),
+                )
+
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO questions (
+                        title, slug, description, difficulty, question_type, options, correct_option,
+                        buggy_code, fixed_code_reference, rubric, explanation, constraints, examples,
+                        hidden_test_cases, company_tags, topic_tags, skill_category, estimated_time_minutes,
+                        is_active, is_ai_generated, is_validated, created_at
+                    ) VALUES (
+                        :title, :slug, :description, :difficulty, :question_type, :options, :correct_option,
+                        :buggy_code, :fixed_code_reference, :rubric, :explanation, :constraints, :examples,
+                        :hidden_test_cases, :company_tags, :topic_tags, :skill_category, :estimated_time_minutes,
+                        TRUE, FALSE, TRUE, CURRENT_TIMESTAMP
+                    ) ON CONFLICT DO NOTHING
+                    """
+                ),
+                {
+                    "title": q["title"],
+                    "slug": q["slug"],
+                    "description": q["description"],
+                    "difficulty": q["difficulty"],
+                    "question_type": q["question_type"],
+                    "options": json.dumps(q["options"]),
+                    "correct_option": q["correct_option"],
+                    "buggy_code": q["buggy_code"],
+                    "fixed_code_reference": q["fixed_code_reference"],
+                    "rubric": json.dumps(q["rubric"]),
+                    "explanation": q["explanation"],
+                    "constraints": q["constraints"],
+                    "examples": json.dumps(q["examples"]),
+                    "hidden_test_cases": json.dumps(q["hidden_test_cases"]),
+                    "company_tags": json.dumps(q["company_tags"]),
+                    "topic_tags": json.dumps(q["topic_tags"]),
+                    "skill_category": q["skill_category"],
+                    "estimated_time_minutes": q["estimated_time_minutes"],
+                },
+            )
+        logger.info("Seeded initial MCQ, Debugging, and Technical questions.")
+
 
 
