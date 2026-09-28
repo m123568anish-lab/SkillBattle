@@ -63,13 +63,10 @@ class CollegeService:
         admin_user = res_user.scalar_one_or_none()
 
         if admin_user:
-            admin_user.account_type = "COLLEGE"
-            admin_user.requested_role = "COLLEGE_ADMIN"
-            admin_user.role = "student"
-            admin_user.status = "PENDING_VERIFICATION"
-            admin_user.is_verified = False
-            admin_user.is_active = True
-            admin_user.onboarding_completed = False
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This email is already associated with an account. Use a different administrator email.",
+            )
         else:
             admin_user = User(
                 username=f"admin_{payload.code.lower()}",
@@ -98,6 +95,48 @@ class CollegeService:
             admin_user_id=admin_user.id,
         )
         db.add(college)
+        await db.commit()
+        await db.refresh(college)
+        return college
+
+    async def list_pending_colleges(self, db: AsyncSession) -> List[College]:
+        stmt = (
+            select(College)
+            .join(User, User.id == College.admin_user_id)
+            .where(User.status == "PENDING_VERIFICATION")
+            .order_by(College.created_at.asc())
+        )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def update_college_status(
+        self,
+        db: AsyncSession,
+        college_id: int,
+        college_status: str,
+    ) -> College:
+        college = await db.get(College, college_id)
+        if not college:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="College not found.")
+
+        admin_user = await db.get(User, college.admin_user_id) if college.admin_user_id else None
+        if college_status == "verified" and admin_user is None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="College has no administrator to activate.")
+
+        if college_status == "verified":
+            college.is_verified = True
+            admin_user.account_type = "COLLEGE"
+            admin_user.role = "college_admin"
+            admin_user.requested_role = None
+            admin_user.status = "ACTIVE"
+            admin_user.is_active = True
+        else:
+            college.is_verified = False
+            if admin_user:
+                admin_user.account_type = "COLLEGE"
+                admin_user.role = "student"
+                admin_user.status = "REJECTED"
+
         await db.commit()
         await db.refresh(college)
         return college

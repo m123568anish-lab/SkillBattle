@@ -36,6 +36,30 @@ async def test_college_to_company_verified_skill_and_shortlist_flow(client: Asyn
         },
     )
     assert college_register.status_code == 200, college_register.text
+    assert college_register.json()["is_verified"] is False
+
+    admin_email = f"platform_{suffix}@example.com"
+    admin_headers = await _register_and_login(
+        client, f"platform_{suffix}", admin_email, "Platform Admin", "PlatformPass#123"
+    )
+    async with AsyncSessionLocal() as db:
+        admin_result = await db.execute(select(User).where(User.email == admin_email))
+        platform_admin = admin_result.scalar_one()
+        platform_admin.role = "admin"
+        platform_admin.is_superuser = True
+        await db.commit()
+    pending_colleges = await client.get(
+        "/api/v1/college/admin/colleges/pending",
+        headers=admin_headers,
+    )
+    assert pending_colleges.status_code == 200, pending_colleges.text
+    approved_college = await client.patch(
+        f"/api/v1/college/admin/colleges/{college_register.json()['id']}/status",
+        headers=admin_headers,
+        json={"status": "verified"},
+    )
+    assert approved_college.status_code == 200, approved_college.text
+
     college_admin_login = await client.post(
         "/auth/login",
         json={"email": college_email, "password": "CollegePass#123"},
@@ -145,16 +169,6 @@ async def test_college_to_company_verified_skill_and_shortlist_flow(client: Asyn
     assert company_register.status_code == 200, company_register.text
     assert company_register.json()["status"] == "pending"
 
-    admin_email = f"platform_{suffix}@example.com"
-    admin_headers = await _register_and_login(
-        client, f"platform_{suffix}", admin_email, "Platform Admin", "PlatformPass#123"
-    )
-    async with AsyncSessionLocal() as db:
-        admin_result = await db.execute(select(User).where(User.email == admin_email))
-        platform_admin = admin_result.scalar_one()
-        platform_admin.role = "admin"
-        platform_admin.is_superuser = True
-        await db.commit()
     approved = await client.patch(
         f"/api/v1/company/admin/companies/{company_register.json()['id']}/status",
         headers=admin_headers,

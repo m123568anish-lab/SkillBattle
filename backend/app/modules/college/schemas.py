@@ -24,6 +24,10 @@ class CollegeRegisterRequest(BaseModel):
     admin_password: str = Field(..., example="CollegeAdmin#123")
 
 
+class CollegeStatusRequest(BaseModel):
+    status: str = Field(..., pattern="^(verified|rejected)$")
+
+
 class CollegeResponse(BaseModel):
     id: int
     name: str

@@ -400,6 +400,19 @@ class CompanyService:
         if not company:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found.")
         company.status = company_status
+        owner = await db.get(User, company.created_by_user_id) if company.created_by_user_id else None
+        if owner:
+            owner.account_type = "COMPANY"
+            if company_status == "verified":
+                owner.role = "company_admin"
+                owner.requested_role = None
+                owner.status = "ACTIVE"
+                owner.is_active = True
+            elif company_status == "rejected":
+                owner.role = "student"
+                owner.status = "REJECTED"
+            elif company_status == "suspended":
+                owner.status = "SUSPENDED"
         await db.commit()
         await db.refresh(company)
         return company

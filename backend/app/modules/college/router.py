@@ -9,10 +9,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
-from app.core.dependencies import get_current_user, require_role
+from app.core.dependencies import get_current_admin, get_current_user
 from app.models.user import User
 from app.modules.college.schemas import (
     CollegeRegisterRequest,
+    CollegeStatusRequest,
     CollegeResponse,
     DepartmentCreateRequest,
     DepartmentResponse,
@@ -46,6 +47,24 @@ async def register_college(
 ):
     """Register a new institution/college and create its College Admin account."""
     return await college_service.register_college(db, payload)
+
+
+@router.get("/admin/colleges/pending", response_model=List[CollegeResponse])
+async def list_pending_colleges(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_admin),
+):
+    return await college_service.list_pending_colleges(db)
+
+
+@router.patch("/admin/colleges/{college_id}/status", response_model=CollegeResponse)
+async def update_college_status(
+    college_id: int,
+    payload: CollegeStatusRequest,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_admin),
+):
+    return await college_service.update_college_status(db, college_id, payload.status)
 
 
 @router.get("/my-college", response_model=Optional[CollegeResponse])

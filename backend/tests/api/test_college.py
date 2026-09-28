@@ -7,6 +7,10 @@ SkillBattle - College & Placement Cell Platform Tests
 import pytest
 from uuid import uuid4
 from httpx import AsyncClient
+from sqlalchemy import select
+
+from app.database.session import AsyncSessionLocal
+from app.models.user import User
 
 
 @pytest.mark.asyncio
@@ -34,11 +38,53 @@ async def test_college_registration_and_workflow(client: AsyncClient):
     data = response.json()
     assert data["name"] == payload["name"]
     assert data["code"] == code
-    assert data["is_verified"] is True
+    assert data["is_verified"] is False
+
+    platform_admin_email = f"platform_admin_{unique_id.lower()}@example.com"
+    admin_registration = await client.post(
+        "/auth/register",
+        json={
+            "username": f"platform_admin_{unique_id.lower()}",
+            "email": platform_admin_email,
+            "full_name": "Platform Administrator",
+            "password": "PlatformPass#123",
+        },
+    )
+    assert admin_registration.status_code == 201, admin_registration.text
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(User).where(User.email == platform_admin_email))
+        platform_admin = result.scalar_one()
+        platform_admin.role = "admin"
+        platform_admin.is_superuser = True
+        await db.commit()
+
+    admin_login = await client.post(
+        "/auth/login",
+        json={"email": platform_admin_email, "password": "PlatformPass#123"},
+    )
+    assert admin_login.status_code == 200, admin_login.text
+    admin_headers = {
+        "Authorization": f"Bearer {admin_login.json()['tokens']['access_token']}"
+    }
+    pending_colleges = await client.get(
+        "/api/v1/college/admin/colleges/pending",
+        headers=admin_headers,
+    )
+    assert pending_colleges.status_code == 200, pending_colleges.text
+    assert any(item["id"] == data["id"] for item in pending_colleges.json())
+    approval = await client.patch(
+        f"/api/v1/college/admin/colleges/{data['id']}/status",
+        headers=admin_headers,
+        json={"status": "verified"},
+    )
+    assert approval.status_code == 200, approval.text
+    assert approval.json()["is_verified"] is True
 
     # 2. Login as College Admin
     login_resp = await client.post("/auth/login", json={"email": admin_email, "password": "CollegeAdmin#123"})
     assert login_resp.status_code == 200
+    assert login_resp.json()["user"]["role"] == "college_admin"
+    assert login_resp.json()["user"]["status"] == "ACTIVE"
     token = login_resp.json()["tokens"]["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -215,3 +261,41 @@ async def test_student_role_isolation(client: AsyncClient):
     """Verify students cannot access college administration endpoints."""
     resp = await client.get("/api/v1/college/dashboard")
     assert resp.status_code in [401, 403]
+
+
+@pytest.mark.asyncio
+async def test_college_registration_cannot_repurpose_existing_student(client: AsyncClient):
+    unique_id = uuid4().hex[:8].lower()
+    email = f"existing_student_{unique_id}@example.com"
+    password = "StudentPass#123"
+
+    registration = await client.post(
+        "/auth/register",
+        json={
+            "username": f"existing_student_{unique_id}",
+            "email": email,
+            "full_name": "Existing Student",
+            "password": password,
+        },
+    )
+    assert registration.status_code == 201, registration.text
+
+    college_registration = await client.post(
+        "/api/v1/college/register",
+        json={
+            "name": f"Test Institution {unique_id}",
+            "code": f"TST_{unique_id.upper()}",
+            "admin_name": "Untrusted Registrant",
+            "admin_email": email,
+            "admin_password": "DifferentPass#456",
+        },
+    )
+    assert college_registration.status_code == 409, college_registration.text
+
+    login = await client.post(
+        "/auth/login",
+        json={"email": email, "password": password},
+    )
+    assert login.status_code == 200, login.text
+    assert login.json()["user"]["account_type"] == "STUDENT"
+    assert login.json()["user"]["role"] == "student"

@@ -22,19 +22,18 @@ async def test_student_selecting_college_during_registration_stays_pending(clien
 
     assert registration.status_code == 201, registration.text
     data = registration.json()
-    assert data["role"] in {"user", "student"}
-    assert data.get("status") in {None, "PENDING_VERIFICATION", "ACTIVE"}
+    assert data["role"] == "student"
+    assert data["account_type"] == "COLLEGE"
+    assert data["status"] == "PENDING_VERIFICATION"
 
     login_resp = await client.post(
         "/auth/login",
         json={"email": email, "password": "StrongPass#123"},
     )
-    assert login_resp.status_code == 200, login_resp.text
-    token = login_resp.json()["tokens"]["access_token"]
-    headers = {"Authorization": f"Bearer {token}"}
+    assert login_resp.status_code == 401, login_resp.text
 
-    college_dashboard = await client.get("/api/v1/college/dashboard", headers=headers)
+    college_dashboard = await client.get("/api/v1/college/dashboard")
     assert college_dashboard.status_code in (401, 403), college_dashboard.text
 
-    student_dashboard = await client.get("/api/v1/dashboard", headers=headers)
-    assert student_dashboard.status_code == 200, student_dashboard.text
+    student_dashboard = await client.get("/api/v1/dashboard")
+    assert student_dashboard.status_code in (401, 403), student_dashboard.text

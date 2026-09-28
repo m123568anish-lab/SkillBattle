@@ -4,6 +4,7 @@ from uuid import uuid4
 from httpx import AsyncClient
 
 from app.database.session import AsyncSessionLocal
+from app.models.company import Company
 from app.models.user import User
 
 
@@ -51,9 +52,7 @@ async def test_company_registration_and_job_workflow(client: AsyncClient):
     assert company_data["status"] == "pending"
 
     dashboard_resp = await client.get("/company/dashboard", headers=headers)
-    assert dashboard_resp.status_code == 200, dashboard_resp.text
-    dashboard_data = dashboard_resp.json()
-    assert dashboard_data["company"]["name"] == "SkillBattle Labs"
+    assert dashboard_resp.status_code == 403, dashboard_resp.text
 
     blocked_job_resp = await client.post(
         "/company/jobs",
@@ -97,6 +96,23 @@ async def test_company_registration_and_job_workflow(client: AsyncClient):
         json={"status": "verified"},
     )
     assert verification.status_code == 200, verification.text
+
+    async with AsyncSessionLocal() as db:
+        company = await db.get(Company, company_data["id"])
+        owner = await db.get(User, company.created_by_user_id)
+        assert owner.status == "ACTIVE"
+        assert owner.role == "company_admin"
+
+    current_user = await client.get("/auth/me", headers=headers)
+    assert current_user.status_code == 200, current_user.text
+    assert current_user.json()["account_type"] == "COMPANY"
+    assert current_user.json()["role"] == "company_admin"
+    assert current_user.json()["status"] == "ACTIVE"
+
+    dashboard_resp = await client.get("/company/dashboard", headers=headers)
+    assert dashboard_resp.status_code == 200, dashboard_resp.text
+    dashboard_data = dashboard_resp.json()
+    assert dashboard_data["company"]["name"] == "SkillBattle Labs"
 
     job_resp = await client.post(
         "/company/jobs",
