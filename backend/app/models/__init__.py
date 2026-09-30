@@ -34,6 +34,7 @@ from .college import (
 )
 from .company import Company, CompanyMember, CandidateApplication, CandidatePrivacySettings, JobPosting
 from .battle import BattleConfig, BattleRoom, BattleParticipant, BattleSubmission, BattleResult
+from .assessment_engine import UnifiedAssessment, AssessmentAttempt, AssessmentQuestionSubmission, StudentSkillProfile
 
 __all__ = [
     "Achievement",

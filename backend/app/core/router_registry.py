@@ -29,6 +29,10 @@ from app.modules.college.router import router as college_router
 from app.modules.company.router import router as company_router
 from app.api.questions import router as questions_router
 from app.api.execution import router as execution_router
+from app.modules.assessment_engine.routers.assessment_router import (
+    router as assessment_router,
+    skills_router,
+)
 
 
 ROUTERS: list[tuple[str, APIRouter]] = [
@@ -60,6 +64,8 @@ ROUTERS: list[tuple[str, APIRouter]] = [
     ("campaign", campaign_router),
     ("questions", questions_router),
     ("execution", execution_router),
+    ("assessment", assessment_router),
+    ("skills", skills_router),
     ("api_v1", api_router),
 ]
 
