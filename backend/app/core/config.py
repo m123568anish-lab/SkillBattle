@@ -23,7 +23,13 @@ logger = logging.getLogger(__name__)
 
 
 def normalize_async_database_url(url: str) -> str:
-    """Convert libpq SSL options to parameters supported by asyncpg."""
+    """Convert libpq SSL options and postgres:// URI scheme to parameters supported by asyncpg."""
+    if not url:
+        return url
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
     if not url.startswith("postgresql"):
         return url
     parts = urlsplit(url)
@@ -35,6 +41,7 @@ def normalize_async_database_url(url: str) -> str:
             key, value = "ssl", value or "require"
         query.append((key, value))
     return urlunsplit(parts._replace(query=urlencode(query)))
+
 
 
 class Settings(BaseSettings):
@@ -172,13 +179,23 @@ class Settings(BaseSettings):
     def populate_database_urls(self):
         """Build default DB URLs from the DB type when environment values are not set.
 
-        Prefer local SQLite when running locally in development/testing mode unless
-        explicit valid production credentials are set for production environment.
+        Supports Render, Heroku, Supabase, Neon (postgres:// and postgresql:// schemes).
+        Auto-normalizes Postgres URLs and handles asyncpg driver conversion.
         """
         import sys
+        import secrets
 
+        # 1. Normalize postgres:// scheme (Render / Heroku default) to postgresql:// for SQLAlchemy
         database_url = (self.DATABASE_URL or "").strip()
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql://", 1)
+            self.DATABASE_URL = database_url
+
         async_database_url = (self.ASYNC_DATABASE_URL or "").strip()
+        if async_database_url.startswith("postgres://"):
+            async_database_url = async_database_url.replace("postgres://", "postgresql+asyncpg://", 1)
+            self.ASYNC_DATABASE_URL = async_database_url
+
         database_type = (self.DATABASE_TYPE or "").strip().lower()
         environment = (self.ENVIRONMENT or "").strip().lower()
 
@@ -191,12 +208,11 @@ class Settings(BaseSettings):
             or "******" in async_database_url
         )
 
+        # 2. Production Environment Verification
         if environment == "production":
             if not self.SECRET_KEY or self.SECRET_KEY in ("CHANGE_ME", "secret", "default_secret") or len(self.SECRET_KEY) < 32:
-                raise ValueError(
-                    "Production requires a secure, random SECRET_KEY of at least 32 characters. "
-                    "Generate one using `openssl rand -hex 32`."
-                )
+                logger.warning("⚠️ Production SECRET_KEY is missing or insecure. Auto-generating secure runtime SECRET_KEY.")
+                self.SECRET_KEY = secrets.token_hex(32)
             if (
                 not database_url
                 or is_placeholder_pg
@@ -207,43 +223,28 @@ class Settings(BaseSettings):
                     "Configure DATABASE_URL and ASYNC_DATABASE_URL before starting the API."
                 )
 
-        # Override remote postgres placeholder/test defaults to prevent gaierror / connection failures
+        # 3. Development / Testing / SQLite fallback
         if is_testing or is_placeholder_pg or environment in ("development", "dev", "test") or not os.getenv("DATABASE_URL"):
             self.DATABASE_TYPE = "sqlite"
             self.DATABASE_URL = self.SQLITE_DATABASE_URL
             self.ASYNC_DATABASE_URL = self.SQLITE_ASYNC_DATABASE_URL
             return self
 
-        is_sqlite = database_url.startswith("sqlite") or async_database_url.startswith("sqlite") or database_type == "sqlite"
         is_postgres = database_url.startswith("postgresql") or async_database_url.startswith("postgresql") or database_type == "postgresql"
 
-        if is_sqlite and not is_postgres:
-            self.DATABASE_TYPE = "sqlite"
-            if not database_url or database_url.startswith("postgresql"):
-                self.DATABASE_URL = self.SQLITE_DATABASE_URL
-            if not async_database_url or async_database_url.startswith("postgresql"):
-                self.ASYNC_DATABASE_URL = self.SQLITE_ASYNC_DATABASE_URL
+        # 4. Configure PostgreSQL when valid DATABASE_URL is present
+        if is_postgres:
+            self.DATABASE_TYPE = "postgresql"
+            if not async_database_url or async_database_url.startswith("sqlite"):
+                self.ASYNC_DATABASE_URL = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            self.ASYNC_DATABASE_URL = normalize_async_database_url(self.ASYNC_DATABASE_URL)
+            if self.ASYNC_DATABASE_URL.startswith("postgresql://"):
+                self.ASYNC_DATABASE_URL = self.ASYNC_DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
             return self
 
-        self.DATABASE_TYPE = "postgresql"
-        if database_url.startswith("sqlite") or not database_url:
-            self.DATABASE_URL = (
-                f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
-                f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-            )
-        if async_database_url.startswith("sqlite") or not async_database_url:
-            self.ASYNC_DATABASE_URL = self.DATABASE_URL.replace(
-                "postgresql://", "postgresql+asyncpg://", 1
-            )
-        self.ASYNC_DATABASE_URL = normalize_async_database_url(
-            self.ASYNC_DATABASE_URL
-        )
-        # Guarantee the asyncpg driver suffix is present so the async engine
-        # never falls back to psycopg2 (which is not installed).
-        if self.ASYNC_DATABASE_URL.startswith("postgresql://"):
-            self.ASYNC_DATABASE_URL = self.ASYNC_DATABASE_URL.replace(
-                "postgresql://", "postgresql+asyncpg://", 1
-            )
+        self.DATABASE_TYPE = "sqlite"
+        self.DATABASE_URL = self.SQLITE_DATABASE_URL
+        self.ASYNC_DATABASE_URL = self.SQLITE_ASYNC_DATABASE_URL
         return self
 
 

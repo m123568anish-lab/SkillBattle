@@ -15,7 +15,9 @@ engine_kwargs = {
 
 # Get the database URL
 database_url = str(settings.DATABASE_URL)
-if database_url.startswith("postgresql://"):
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql+psycopg://", 1)
+elif database_url.startswith("postgresql://"):
     database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
 
 # If using SQLite file DB with a relative path, convert to absolute path inside backend folder
