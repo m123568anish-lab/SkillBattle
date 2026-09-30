@@ -11,16 +11,21 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "users",
-        sa.Column(
-            "onboarding_completed",
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.text("true"),
-        ),
-    )
-    op.execute("UPDATE users SET onboarding_completed = true WHERE onboarding_completed IS NULL")
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_columns = [c["name"] for c in inspector.get_columns("users")]
+    
+    if "onboarding_completed" not in existing_columns:
+        op.add_column(
+            "users",
+            sa.Column(
+                "onboarding_completed",
+                sa.Boolean(),
+                nullable=False,
+                server_default=sa.text("1"),
+            ),
+        )
+    op.execute("UPDATE users SET onboarding_completed = 1 WHERE onboarding_completed IS NULL")
 
 
 def downgrade() -> None:
