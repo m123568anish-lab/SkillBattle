@@ -14,7 +14,7 @@ export const loginSchema = z.object({
 
 export const registerSchema = z
   .object({
-    account_type: z.enum(["STUDENT", "COLLEGE", "COMPANY"]).default("STUDENT"),
+    account_type: z.enum(["STUDENT", "COLLEGE", "COMPANY"]).optional(),
 
     name: z
       .string()

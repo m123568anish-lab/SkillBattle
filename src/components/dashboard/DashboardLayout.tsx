@@ -76,7 +76,7 @@ export default function DashboardLayout({ children }: Props) {
         items: cat.items.filter(
           (item) =>
             item.title.toLowerCase().includes(query) ||
-            item.category.toLowerCase().includes(query)
+            (item.category?.toLowerCase().includes(query) ?? false)
         ),
       }))
       .filter((cat) => cat.items.length > 0);
@@ -155,7 +155,11 @@ export default function DashboardLayout({ children }: Props) {
                     SkillBattle
                   </span>
                   <span className="rounded bg-cyan-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-300">
-                    Arena
+                    {pathname.startsWith("/college")
+                      ? "Institution"
+                      : pathname.startsWith("/company")
+                      ? "Enterprise"
+                      : "Arena"}
                   </span>
                 </Link>
 
@@ -168,26 +172,72 @@ export default function DashboardLayout({ children }: Props) {
                 </button>
               </div>
 
-              {/* Quick Actions Shortcuts */}
+              {/* Role-Specific Quick Action Shortcuts */}
               <div className="mb-4 grid grid-cols-2 gap-2 shrink-0">
-                <Link
-                  href="/battle"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="group rounded-xl border border-fuchsia-500/20 bg-fuchsia-500/10 p-3 transition hover:border-fuchsia-400/40"
-                >
-                  <Flame className="mb-2 text-fuchsia-300" size={18} />
-                  <span className="block text-xs font-bold text-white">Start Battle</span>
-                  <span className="block text-[10px] text-slate-400">Enter Arena</span>
-                </Link>
-                <Link
-                  href="/coach"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="group rounded-xl border border-violet-500/20 bg-violet-500/10 p-3 transition hover:border-violet-400/40"
-                >
-                  <Bot className="mb-2 text-violet-300" size={18} />
-                  <span className="block text-xs font-bold text-white">AI Coach</span>
-                  <span className="block text-[10px] text-slate-400">Get Advice</span>
-                </Link>
+                {pathname.startsWith("/college") ? (
+                  <>
+                    <Link
+                      href="/college/assessments"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="group rounded-xl border border-cyan-500/20 bg-cyan-500/10 p-3 transition hover:border-cyan-400/40"
+                    >
+                      <Sparkles className="mb-2 text-cyan-300" size={18} />
+                      <span className="block text-xs font-bold text-white">Assessments</span>
+                      <span className="block text-[10px] text-slate-400">Manage Tests</span>
+                    </Link>
+                    <Link
+                      href="/college/students"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="group rounded-xl border border-violet-500/20 bg-violet-500/10 p-3 transition hover:border-violet-400/40"
+                    >
+                      <Users className="mb-2 text-violet-300" size={18} />
+                      <span className="block text-xs font-bold text-white">Students</span>
+                      <span className="block text-[10px] text-slate-400">Roster & Batches</span>
+                    </Link>
+                  </>
+                ) : pathname.startsWith("/company") ? (
+                  <>
+                    <Link
+                      href="/company/jobs"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="group rounded-xl border border-violet-500/20 bg-violet-500/10 p-3 transition hover:border-violet-400/40"
+                    >
+                      <Sparkles className="mb-2 text-violet-300" size={18} />
+                      <span className="block text-xs font-bold text-white">Jobs</span>
+                      <span className="block text-[10px] text-slate-400">Postings</span>
+                    </Link>
+                    <Link
+                      href="/company/candidates"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="group rounded-xl border border-cyan-500/20 bg-cyan-500/10 p-3 transition hover:border-cyan-400/40"
+                    >
+                      <Users className="mb-2 text-cyan-300" size={18} />
+                      <span className="block text-xs font-bold text-white">Talent Pool</span>
+                      <span className="block text-[10px] text-slate-400">Discover</span>
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/battle"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="group rounded-xl border border-fuchsia-500/20 bg-fuchsia-500/10 p-3 transition hover:border-fuchsia-400/40"
+                    >
+                      <Flame className="mb-2 text-fuchsia-300" size={18} />
+                      <span className="block text-xs font-bold text-white">Start Battle</span>
+                      <span className="block text-[10px] text-slate-400">Enter Arena</span>
+                    </Link>
+                    <Link
+                      href="/coach"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="group rounded-xl border border-violet-500/20 bg-violet-500/10 p-3 transition hover:border-violet-400/40"
+                    >
+                      <Bot className="mb-2 text-violet-300" size={18} />
+                      <span className="block text-xs font-bold text-white">AI Coach</span>
+                      <span className="block text-[10px] text-slate-400">Get Advice</span>
+                    </Link>
+                  </>
+                )}
               </div>
 
               {/* Search Filter */}
@@ -292,13 +342,45 @@ export default function DashboardLayout({ children }: Props) {
           className="skillbattle-mobile-nav flex w-full max-w-lg items-center justify-between rounded-t-2xl border border-white/10 bg-slate-950/95 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_20px_60px_rgba(8,145,178,0.25)] backdrop-blur-xl"
         >
           {[
-            { title: "Home", href: "/dashboard", icon: Home },
-            { title: "Battle", href: "/battle", icon: Sword },
-            { title: "Rank", href: "/leaderboard", icon: Trophy },
-            { title: "Social", href: "/social", icon: Users },
-            { title: "More", href: "#more", icon: MoreHorizontal },
+            {
+              title: "Home",
+              href: pathname.startsWith("/college")
+                ? "/college/dashboard"
+                : pathname.startsWith("/company")
+                ? "/company/dashboard"
+                : "/student/dashboard",
+              icon: Home,
+            },
+            {
+              title: pathname.startsWith("/college") ? "Tests" : pathname.startsWith("/company") ? "Jobs" : "Battle",
+              href: pathname.startsWith("/college")
+                ? "/college/assessments"
+                : pathname.startsWith("/company")
+                ? "/company/jobs"
+                : "/battle",
+              icon: Sword,
+            },
+            {
+              title: pathname.startsWith("/college") ? "Students" : pathname.startsWith("/company") ? "Talent" : "Rank",
+              href: pathname.startsWith("/college")
+                ? "/college/students"
+                : pathname.startsWith("/company")
+                ? "/company/candidates"
+                : "/leaderboard",
+              icon: Trophy,
+            },
+            {
+              title: "Social",
+              href: "/social",
+              icon: Users,
+            },
+            {
+              title: "More",
+              href: "#more",
+              icon: MoreHorizontal,
+            },
           ].map((tab) => {
-            const active = isItemActive(tab.href);
+            const active = tab.title === "More" ? mobileMenuOpen : isItemActive(tab.href);
             const Icon = tab.icon;
             const className = `relative flex flex-1 flex-col items-center justify-center gap-1 rounded-full px-2 py-2 text-[10px] font-bold uppercase tracking-[0.14em] transition ${
               active

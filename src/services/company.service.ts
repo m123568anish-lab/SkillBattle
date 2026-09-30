@@ -21,6 +21,7 @@ export interface JobPosting {
   required_skills: string;
   compensation?: string;
   status: string;
+  assessment_config_id?: string | number | null;
 }
 
 export interface CompanyDashboard {
@@ -32,12 +33,19 @@ export interface CompanyDashboard {
   recent_applications: Array<{ candidate: string; job: string; score: number; status: string }>;
 }
 
+export interface SkillActivity {
+  source: string;
+  title: string;
+  score: number;
+  completed_at?: string | null;
+}
+
 export interface SkillProfile {
   skills: Array<{ skill: string; score: number; attempts: number; sources: string[]; verified: boolean }>;
-  practice_performance: Array<{ source: string; title: string; score: number; completed_at?: string | null }>;
-  battle_performance: Array<{ source: string; title: string; score: number; completed_at?: string | null }>;
-  assessment_performance: Array<{ source: string; title: string; score: number; completed_at?: string | null }>;
-  interview_results: Array<{ source: string; title: string; score: number; completed_at?: string | null }>;
+  practice_performance: SkillActivity[];
+  battle_performance: SkillActivity[];
+  assessment_performance: SkillActivity[];
+  interview_results: SkillActivity[];
   achievements: Array<{ title: string; description: string; earned_at?: string | null }>;
 }
 
