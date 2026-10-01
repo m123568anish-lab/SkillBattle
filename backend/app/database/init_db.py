@@ -450,13 +450,23 @@ def _repair_battle_tables() -> None:
                     connection.execute(text(f'ALTER TABLE "questions" ADD COLUMN "{name}" {defn}'))
                     logger.info("Added missing questions.%s column", name)
 
-            # Ensure JSON columns have valid JSON syntax in SQLite
-            connection.execute(text("UPDATE questions SET options = '[]' WHERE options IS NULL OR options = ''"))
-            connection.execute(text("UPDATE questions SET examples = '[]' WHERE examples IS NULL OR examples = ''"))
-            connection.execute(text("UPDATE questions SET hidden_test_cases = '[]' WHERE hidden_test_cases IS NULL OR hidden_test_cases = ''"))
-            connection.execute(text("UPDATE questions SET company_tags = '[]' WHERE company_tags IS NULL OR company_tags = ''"))
-            connection.execute(text("UPDATE questions SET topic_tags = '[]' WHERE topic_tags IS NULL OR topic_tags = ''"))
-            connection.execute(text("UPDATE questions SET rubric = '{}' WHERE rubric IS NULL OR rubric = ''"))
+            # Cast JSON to text before checking legacy empty values; PostgreSQL JSON
+            # has no equality operator against an untyped empty string.
+            json_defaults = {
+                "options": "[]",
+                "examples": "[]",
+                "hidden_test_cases": "[]",
+                "company_tags": "[]",
+                "topic_tags": "[]",
+                "rubric": "{}",
+            }
+            for column, default_json in json_defaults.items():
+                connection.execute(
+                    text(
+                        f"UPDATE questions SET {column} = '{default_json}' "
+                        f"WHERE {column} IS NULL OR CAST({column} AS TEXT) IN ('', '\"\"')"
+                    )
+                )
 
         if "battle_rooms" in tables:
             existing = {c["name"] for c in inspector.get_columns("battle_rooms")}
