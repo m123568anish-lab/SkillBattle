@@ -22,10 +22,10 @@ def upgrade() -> None:
                 "onboarding_completed",
                 sa.Boolean(),
                 nullable=False,
-                server_default=sa.text("1"),
+                server_default=sa.true(),
             ),
         )
-    op.execute("UPDATE users SET onboarding_completed = 1 WHERE onboarding_completed IS NULL")
+    op.execute("UPDATE users SET onboarding_completed = true WHERE onboarding_completed IS NULL")
 
 
 def downgrade() -> None:
