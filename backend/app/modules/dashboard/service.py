@@ -14,6 +14,7 @@ from fastapi import HTTPException, status
 
 from app.models.user import User
 from app.models.user_stats import UserStats
+from app.models.user_skill_stat import UserSkillStat
 
 from app.modules.dashboard.repository import (
     dashboard_repository,
@@ -69,16 +70,8 @@ class DashboardService:
             battles_won=battles_won,
         )
 
-        from datetime import datetime
-
-        today = datetime.utcnow().strftime("%a")
-        weekly = [
-            WeeklyActivity(
-                day=day,
-                xp=int(getattr(user_xp, "weekly_xp", 0) or 0) if day == today and user_xp else 0,
-            )
-            for day in ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-        ]
+        # XP stores a weekly aggregate, not per-day history. Do not fabricate a daily chart.
+        weekly: list[WeeklyActivity] = []
 
         achievement_list = [
             Achievement(
@@ -90,16 +83,44 @@ class DashboardService:
             for item in achievements
         ]
 
-        recommendation = AIRecommendation(
-            title="Keep building your streak" if stats.streak == 0 else "Continue your practice",
-            message=(
-                "Complete your first battle to start building a measurable record."
-                if stats.battles_played == 0
-                else "Finish another battle to improve your live battle statistics."
-            ),
-            progress=min(stats.battles_played, 100),
-            action="Start Battle",
+        skill_result = await db.execute(
+            select(UserSkillStat).where(
+                UserSkillStat.user_id == user_id,
+                UserSkillStat.total_attempts > 0,
+            )
         )
+        skill_evidence = list(skill_result.scalars().all())
+        weakest_skill = min(
+            skill_evidence,
+            key=lambda skill: skill.correct_attempts / skill.total_attempts,
+            default=None,
+        )
+        if weakest_skill:
+            accuracy = round(weakest_skill.correct_attempts / weakest_skill.total_attempts * 100)
+            recommendation = AIRecommendation(
+                title=f"Practice {weakest_skill.subject}",
+                message=(
+                    f"Your recorded accuracy is {accuracy}% "
+                    f"({weakest_skill.correct_attempts} of {weakest_skill.total_attempts} attempts). "
+                    "Focused practice in this area is your clearest next step."
+                ),
+                progress=accuracy,
+                action=f"Practice {weakest_skill.subject}",
+            )
+        elif stats.battles_played == 0:
+            recommendation = AIRecommendation(
+                title="Record your first result",
+                message="There is not enough assessment or practice evidence to personalize a next step yet.",
+                progress=0,
+                action="Start practice",
+            )
+        else:
+            recommendation = AIRecommendation(
+                title="Build on your battle activity",
+                message=f"You have {stats.battles_played} recorded battles. Try a new practice topic to add skill evidence.",
+                progress=min(stats.battles_played, 100),
+                action="Explore practice",
+            )
 
         if challenge is None:
             daily = DailyChallenge(

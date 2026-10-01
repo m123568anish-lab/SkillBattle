@@ -104,8 +104,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 <Database className="h-5 w-5 text-emerald-400" />
               </div>
               <div>
-                <p className="text-sm font-bold text-white">DB Status</p>
-                <p className="text-xs text-emerald-400">Connected & Stable</p>
+                <p className="text-sm font-bold text-white">System health</p>
+                <Link href="/admin?tab=server" className="text-xs text-cyan-300 hover:text-cyan-200">
+                  Open live checks
+                </Link>
               </div>
             </div>
           </div>

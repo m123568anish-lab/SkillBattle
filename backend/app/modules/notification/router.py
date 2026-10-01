@@ -4,11 +4,10 @@ SkillBattle - Notifications Router
 =========================================================
 """
 from datetime import datetime
-from typing import List
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 
 from app.database.session import get_db
 from app.core.dependencies import get_current_user
@@ -26,13 +25,29 @@ class NotificationSchema(BaseModel):
     notification_type: str
     is_read: bool
     created_at: datetime
+    related_entity_type: str | None
+    related_entity_id: str | None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
-@router.get("", response_model=List[NotificationSchema])
+@router.get("/unread-count")
+async def get_unread_count(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    count = await db.scalar(
+        select(func.count())
+        .select_from(Notification)
+        .where(Notification.user_id == current_user.id, Notification.is_read.is_(False))
+    )
+    return {"unread_count": int(count or 0)}
+
+
+@router.get("", response_model=list[NotificationSchema])
 async def get_notifications(
+    limit: int = Query(default=30, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -40,7 +55,8 @@ async def get_notifications(
         select(Notification)
         .where(Notification.user_id == current_user.id)
         .order_by(Notification.created_at.desc())
-        .limit(30)
+        .limit(limit)
+        .offset(offset)
     )
     res = await db.execute(stmt)
     return res.scalars().all()
@@ -52,15 +68,17 @@ async def mark_read(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    stmt = select(Notification).where(
-        Notification.id == notification_id,
-        Notification.user_id == current_user.id,
+    result = await db.execute(
+        update(Notification)
+        .where(
+            Notification.id == notification_id,
+            Notification.user_id == current_user.id,
+        )
+        .values(is_read=True)
     )
-    res = await db.execute(stmt)
-    n = res.scalar_one_or_none()
-    if n:
-        n.is_read = True
-        await db.commit()
+    if not result.rowcount:
+        raise HTTPException(status_code=404, detail="Notification not found.")
+    await db.commit()
     return {"status": "success"}
 
 
@@ -69,12 +87,13 @@ async def mark_all_read(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    stmt = select(Notification).where(
-        Notification.user_id == current_user.id,
-        Notification.is_read == False,  # noqa: E712
+    result = await db.execute(
+        update(Notification)
+        .where(
+            Notification.user_id == current_user.id,
+            Notification.is_read.is_(False),
+        )
+        .values(is_read=True)
     )
-    res = await db.execute(stmt)
-    for n in res.scalars().all():
-        n.is_read = True
     await db.commit()
-    return {"status": "success"}
+    return {"status": "success", "updated_count": result.rowcount or 0}

@@ -91,20 +91,6 @@ class DashboardRepository:
         )
         won = won_result.scalar_one_or_none() or 0
 
-        # Fallback to UserSkillStat if no formal multiplayer battles found
-        if played == 0:
-            from app.models.user_skill_stat import UserSkillStat
-            attempts_result = await db.execute(
-                select(func.sum(UserSkillStat.total_attempts)).where(UserSkillStat.user_id == user_id)
-            )
-            attempts = attempts_result.scalar_one_or_none() or 0
-            if attempts > 0:
-                played = attempts
-                correct_result = await db.execute(
-                    select(func.sum(UserSkillStat.correct_attempts)).where(UserSkillStat.user_id == user_id)
-                )
-                won = correct_result.scalar_one_or_none() or 0
-
         return played, won
 
 

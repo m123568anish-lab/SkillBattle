@@ -13,6 +13,8 @@ from app.models.battle.battle_config import BattleConfig
 from app.modules.battle.config.service import battle_config_service
 from app.modules.battle.schemas import BattleConfigCreate, BattleTypeEnum
 from app.modules.profile.skill_profile_service import skill_profile_service
+from app.modules.notification.service import notification_service
+from app.modules.audit.service import audit_service
 
 
 class CompanyService:
@@ -242,7 +244,29 @@ class CompanyService:
             if not privacy or not privacy.share_assessment_results:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Candidate has not shared assessment results.")
 
+        status_changed = application.status != new_status
         application.status = new_status
+        if status_changed:
+            audit_service.enqueue(
+                db,
+                action="candidate_application_status_updated",
+                module="company",
+                user_id=user.id,
+                organization_type="company",
+                organization_id=company.id,
+                entity_type="application",
+                entity_id=application.id,
+                metadata={"status": new_status},
+            )
+            notification_service.enqueue(
+                db,
+                user_id=application.candidate_user_id,
+                title="Application status updated",
+                message=f"{company.name} updated your application status to {new_status.replace('_', ' ')}.",
+                notification_type="application",
+                related_entity_type="application",
+                related_entity_id=str(application.id),
+            )
         await db.commit()
         await db.refresh(application)
         return application
@@ -487,6 +511,39 @@ class CompanyService:
             consent_to_recruiters=bool(payload.get("consent_to_recruiters", False)),
         )
         db.add(application)
+        await db.flush()
+
+        members_result = await db.execute(
+            select(CompanyMember.user_id).where(
+                CompanyMember.company_id == company.id,
+                CompanyMember.status == "active",
+            )
+        )
+        for member_user_id in set(members_result.scalars().all()):
+            if member_user_id == user.id:
+                continue
+            notification_service.enqueue(
+                db,
+                user_id=member_user_id,
+                title=f"New application: {job.title}",
+                message="A candidate applied for this role.",
+                notification_type="application",
+                related_entity_type="application",
+                related_entity_id=str(application.id),
+            )
+
+        audit_service.enqueue(
+            db,
+            action="candidate_application_submitted",
+            module="company",
+            user_id=user.id,
+            organization_type="company",
+            organization_id=company.id,
+            entity_type="application",
+            entity_id=application.id,
+            metadata={"job_id": job.id},
+        )
+
         await db.commit()
         await db.refresh(application)
         return application

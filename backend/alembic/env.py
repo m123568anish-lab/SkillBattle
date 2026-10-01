@@ -12,28 +12,11 @@ from alembic import context
 # Import SQLAlchemy Base
 # ---------------------------------------------------------
 
-from app.database.base import Base
+from app.models import Base
+from app.modules.audit.model import AuditLog
 from app.database.database import engine as application_engine
 
 # ---------------------------------------------------------
-# Import ALL models here
-#
-# IMPORTANT:
-# Alembic only detects tables that are imported.
-# ---------------------------------------------------------
-
-# Models live under `app.models` — import them so Alembic
-# can detect table metadata.
-from app.models.user import User
-from app.models.resume import Resume
-from app.models.refresh_token import RefreshToken
-from app.models.xp import XP
-from app.models.challenge import Challenge
-from app.models.streak import Streak
-from app.models.question import Question, UserSubmission
-from app.models.user_stats import UserStats, UserSettings
-from app.models.matchmaking import MatchmakingMatch, PlacementPrepSession
-
 # ---------------------------------------------------------
 
 config = context.config

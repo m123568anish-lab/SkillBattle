@@ -11,6 +11,8 @@ Admin Router
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func, select, text
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.database.session import get_db
 from app.models.user import User
@@ -24,6 +26,10 @@ from app.modules.admin.schemas import (
     BattleSettings,
 )
 from app.modules.admin.service import admin_service
+from app.models.assessment_engine import AssessmentAttempt
+from app.models.battle.battle_room import BattleRoom
+from app.models.user import User
+from app.core.config import settings
 
 router = APIRouter(
     prefix="/admin",
@@ -123,3 +129,72 @@ async def update_settings(
     admin: User = Depends(get_current_admin),
 ):
     return await admin_service.update_settings(payload)
+
+
+@router.get("/system-health")
+async def get_system_health(
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+):
+    database_status = "healthy"
+    try:
+        await db.execute(text("SELECT 1"))
+        migration_version = await db.scalar(text("SELECT version_num FROM alembic_version LIMIT 1"))
+    except SQLAlchemyError:
+        database_status = "unhealthy"
+        migration_version = None
+        await db.rollback()
+        return {
+            "api": "healthy",
+            "database": database_status,
+            "migration_version": migration_version,
+            "total_users": None,
+            "active_users": None,
+            "assessment_attempts": None,
+            "active_battles": None,
+            "completed_battles": None,
+            "ai_providers": {
+                "openai": bool(settings.OPENAI_API_KEY),
+                "anthropic": bool(settings.ANTHROPIC_API_KEY),
+                "gemini": bool(settings.GEMINI_API_KEY),
+                "deepseek": bool(settings.DEEPSEEK_API_KEY),
+            },
+            "websocket": "initialized",
+            "failed_jobs": None,
+            "notification_queue": "not_configured",
+        }
+
+    total_users = await db.scalar(select(func.count()).select_from(User))
+    active_users = await db.scalar(
+        select(func.count()).select_from(User).where(User.is_active.is_(True))
+    )
+    assessment_count = await db.scalar(
+        select(func.count()).select_from(AssessmentAttempt)
+    )
+    active_battles = await db.scalar(
+        select(func.count()).select_from(BattleRoom).where(BattleRoom.status.in_(["waiting", "active", "running"]))
+    )
+    completed_battles = await db.scalar(
+        select(func.count()).select_from(BattleRoom).where(BattleRoom.status == "completed")
+    )
+
+    ai_providers = {
+        "openai": bool(settings.OPENAI_API_KEY),
+        "anthropic": bool(settings.ANTHROPIC_API_KEY),
+        "gemini": bool(settings.GEMINI_API_KEY),
+        "deepseek": bool(settings.DEEPSEEK_API_KEY),
+    }
+    return {
+        "api": "healthy",
+        "database": database_status,
+        "migration_version": migration_version,
+        "total_users": int(total_users or 0),
+        "active_users": int(active_users or 0),
+        "assessment_attempts": int(assessment_count or 0),
+        "active_battles": int(active_battles or 0),
+        "completed_battles": int(completed_battles or 0),
+        "ai_providers": ai_providers,
+        "websocket": "initialized",
+        "failed_jobs": None,
+        "notification_queue": "not_configured",
+    }

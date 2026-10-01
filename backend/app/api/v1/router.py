@@ -23,6 +23,9 @@ from app.modules.achievements.router import router as achievements_router
 from app.modules.campaign.router import router as campaign_router
 from app.modules.college.router import router as college_router
 from app.modules.company.router import router as company_router
+from app.modules.search.router import router as search_router
+from app.modules.audit.router import router as audit_router
+from app.modules.organization_onboarding.router import router as organization_onboarding_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -47,3 +50,6 @@ api_router.include_router(achievements_router)
 api_router.include_router(campaign_router)
 api_router.include_router(college_router)
 api_router.include_router(company_router)
+api_router.include_router(search_router)
+api_router.include_router(audit_router)
+api_router.include_router(organization_onboarding_router)

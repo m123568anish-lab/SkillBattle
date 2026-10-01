@@ -23,6 +23,27 @@ from app.modules.notification.repository import (
 
 class NotificationService:
 
+    def enqueue(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        title: str,
+        message: str,
+        notification_type: str = "system",
+        related_entity_type: str | None = None,
+        related_entity_id: str | None = None,
+    ) -> Notification:
+        notification = Notification(
+            user_id=user_id,
+            title=title,
+            message=message,
+            notification_type=notification_type,
+            related_entity_type=related_entity_type,
+            related_entity_id=related_entity_id,
+        )
+        db.add(notification)
+        return notification
+
     # =====================================================
     # Create Notification
     # =====================================================
@@ -34,30 +55,21 @@ class NotificationService:
         title: str,
         message: str,
         notification_type: str = "system",
+        related_entity_type: str | None = None,
+        related_entity_id: str | None = None,
     ):
-
-        notification = Notification(
-
-            user_id=user_id,
-
-            title=title,
-
-            message=message,
-
-            notification_type=notification_type,
-
-        )
-
-        notification = await notification_repository.create(
-
+        notification = self.enqueue(
             db,
-
-            notification,
-
+            user_id,
+            title,
+            message,
+            notification_type,
+            related_entity_type,
+            related_entity_id,
         )
-
+        await db.flush()
+        await db.refresh(notification)
         await notification_repository.commit(db)
-
         return notification
 
     # =====================================================

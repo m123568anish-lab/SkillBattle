@@ -45,6 +45,8 @@ from app.modules.battle.events import BattleEvent
 from app.modules.battle.matchmaking import matchmaking_engine
 from app.modules.battle.orchestrator import battle_orchestrator
 from app.modules.xp.service import xp_service
+from app.modules.notification.service import notification_service
+from app.modules.audit.service import audit_service
 
 
 class BattleService:
@@ -638,6 +640,43 @@ class BattleService:
         if company_application:
             company_application.assessment_status = "completed"
             company_application.assessment_score = float(res_data["accuracy_percentage"])
+
+        for participant in participants:
+            is_winner = participant.user_id == res_data.get("winner_id") and not res_data["is_draw"]
+            audit_service.enqueue(
+                db,
+                action="battle_completed",
+                module="battle",
+                user_id=participant.user_id,
+                entity_type="battle",
+                entity_id=battle.id,
+                metadata={
+                    "outcome": "draw" if res_data["is_draw"] else "win" if is_winner else "completed",
+                    "xp_earned": 50 + (100 if is_winner else 0),
+                },
+            )
+            if company_application:
+                result_message = "Your company assessment result is ready."
+                notification_type = "assessment"
+            elif res_data["is_draw"]:
+                result_message = "Your battle ended in a draw. View the final results."
+                notification_type = "battle"
+            elif participant.user_id == res_data.get("winner_id"):
+                result_message = "You won the battle. View your final results."
+                notification_type = "battle"
+            else:
+                result_message = "Your battle is complete. View your final results."
+                notification_type = "battle"
+
+            notification_service.enqueue(
+                db,
+                user_id=participant.user_id,
+                title="Battle result ready",
+                message=result_message,
+                notification_type=notification_type,
+                related_entity_type="battle",
+                related_entity_id=str(battle.id),
+            )
 
         await db.commit()
 

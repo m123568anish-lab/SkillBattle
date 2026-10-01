@@ -1,95 +1,217 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, CheckCheck, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowUpRight, Bell, CheckCheck, X } from "lucide-react";
 import api from "@/services/api";
 
-export default function NotificationMenu() {
-  const [notifs, setNotifs] = useState<any[]>([]);
-  const [open, setOpen] = useState(false);
+type NotificationItem = {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  notification_type: string;
+  is_read: boolean;
+  created_at: string;
+  related_entity_type: string | null;
+  related_entity_id: string | null;
+};
 
-  const fetchNotifs = async () => {
-    try {
-      const res = await api.get("/notifications");
-      setNotifs(res.data);
-    } catch { /* fail silently */ }
-  };
+export default function NotificationMenu() {
+  const router = useRouter();
+  const [notifs, setNotifs] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState(0);
 
   useEffect(() => {
-    fetchNotifs();
-    const interval = setInterval(fetchNotifs, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    let active = true;
+    const fetchNotifications = async () => {
+      try {
+        const [notificationResponse, countResponse] = await Promise.all([
+          api.get<NotificationItem[]>("/notifications", { params: { limit: 30 } }),
+          api.get<{ unread_count: number }>("/notifications/unread-count"),
+        ]);
+        if (!active) return;
+        setNotifs(notificationResponse.data);
+        setUnreadCount(countResponse.data.unread_count);
+        setError(null);
+      } catch {
+        if (active) setError("Notifications could not be loaded.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
 
-  const unreadCount = notifs.filter((n) => !n.is_read).length;
+    void fetchNotifications();
+    const interval = setInterval(() => void fetchNotifications(), 30000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [refreshToken]);
+
+  const markRead = async (notification: NotificationItem) => {
+    if (notification.is_read) return;
+    try {
+      await api.put(`/notifications/${encodeURIComponent(notification.id)}/read`);
+      setNotifs((previous) => previous.map((item) => (
+        item.id === notification.id ? { ...item, is_read: true } : item
+      )));
+      setUnreadCount((count) => Math.max(0, count - 1));
+      setError(null);
+    } catch {
+      setError("This notification could not be marked as read.");
+    }
+  };
 
   const markAllRead = async () => {
     try {
       await api.put("/notifications/read-all");
-      setNotifs((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    } catch { /* fail silently */ }
+      setNotifs((previous) => previous.map((item) => ({ ...item, is_read: true })));
+      setUnreadCount(0);
+      setError(null);
+    } catch {
+      setError("Notifications could not be marked as read.");
+    }
+  };
+
+  const destinationFor = (notification: NotificationItem): string | null => {
+    const relatedId = notification.related_entity_id;
+    if (notification.related_entity_type === "battle" && relatedId) {
+      return `/battle/${encodeURIComponent(relatedId)}`;
+    }
+    if (notification.related_entity_type === "application") {
+      return "/dashboard";
+    }
+    return null;
+  };
+
+  const openNotification = async (notification: NotificationItem) => {
+    await markRead(notification);
+    const destination = destinationFor(notification);
+    if (destination) {
+      setOpen(false);
+      router.push(destination);
+    }
   };
 
   const typeIcon = (type: string) => {
     const icons: Record<string, string> = {
-      battle: "⚔️", xp: "⚡", achievement: "🏅", system: "🔔",
+      application: "▣",
+      assessment: "✓",
+      battle: "⚔",
+      xp: "⚡",
+      achievement: "◇",
+      system: "•",
     };
-    return icons[type] || "🔔";
+    return icons[type] || "•";
   };
 
   return (
     <div className="relative">
       <button
-        suppressHydrationWarning
-        onClick={() => setOpen((p) => !p)}
+        type="button"
+        aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ""}`}
+        aria-expanded={open}
+        onClick={() => setOpen((previous) => !previous)}
         className="relative rounded-xl border border-white/10 bg-white/5 p-3 transition hover:border-cyan-400"
       >
         <Bell className="text-white" size={22} />
         {unreadCount > 0 && (
-          <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white shadow-lg shadow-rose-500/40">
-            {unreadCount > 9 ? "9+" : unreadCount}
+          <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-black text-white">
+            {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-14 z-50 w-80 rounded-2xl border border-white/10 bg-slate-900/95 shadow-2xl shadow-black/50 backdrop-blur-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-              <span className="font-bold text-white text-sm">Notifications {unreadCount > 0 && <span className="text-violet-400">({unreadCount})</span>}</span>
-              <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Close notifications"
+            className="fixed inset-0 z-40 cursor-default"
+            onClick={() => setOpen(false)}
+          />
+          <section
+            aria-label="Notifications"
+            className="absolute right-0 top-14 z-50 w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-white/10 bg-slate-900 shadow-2xl shadow-black/50"
+          >
+            <header className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+              <span className="text-sm font-bold text-white">
+                Notifications{unreadCount > 0 ? ` (${unreadCount})` : ""}
+              </span>
+              <div className="flex items-center gap-3">
                 {unreadCount > 0 && (
-                  <button onClick={markAllRead} className="flex items-center gap-1 text-xs text-slate-400 hover:text-white transition">
+                  <button
+                    type="button"
+                    onClick={markAllRead}
+                    className="flex items-center gap-1 text-xs text-slate-400 transition hover:text-white"
+                  >
                     <CheckCheck className="h-3.5 w-3.5" /> All read
                   </button>
                 )}
-                <button onClick={() => setOpen(false)} className="text-slate-500 hover:text-white">
+                <button
+                  type="button"
+                  aria-label="Close notifications"
+                  onClick={() => setOpen(false)}
+                  className="text-slate-500 hover:text-white"
+                >
                   <X className="h-4 w-4" />
                 </button>
               </div>
-            </div>
+            </header>
 
-            <div className="max-h-80 overflow-y-auto divide-y divide-white/5">
-              {notifs.length === 0 ? (
+            {error && (
+              <div role="alert" className="flex items-center justify-between gap-3 border-b border-rose-400/20 px-4 py-2 text-xs text-rose-200">
+                <span>{error}</span>
+                <button type="button" onClick={() => setRefreshToken((value) => value + 1)} className="shrink-0 underline">
+                  Retry
+                </button>
+              </div>
+            )}
+
+            <div className="max-h-80 divide-y divide-white/5 overflow-y-auto">
+              {loading ? (
+                <p className="px-4 py-8 text-center text-sm text-slate-400">Loading notifications…</p>
+              ) : notifs.length === 0 ? (
                 <div className="py-8 text-center text-sm text-slate-400">
-                  <Bell className="mx-auto h-8 w-8 mb-2 opacity-30" />
+                  <Bell className="mx-auto mb-2 h-8 w-8 opacity-30" />
                   No notifications yet
                 </div>
               ) : (
-                notifs.map((n) => (
-                  <div key={n.id} className={`flex gap-3 px-4 py-3 hover:bg-white/5 ${!n.is_read ? "bg-violet-500/5" : ""}`}>
-                    <span className="text-xl flex-shrink-0 mt-0.5">{typeIcon(n.notification_type)}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-semibold ${!n.is_read ? "text-white" : "text-slate-400"}`}>{n.title}</p>
-                      <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{n.message}</p>
-                    </div>
-                    {!n.is_read && <span className="h-2 w-2 flex-shrink-0 rounded-full bg-violet-500 mt-2" />}
-                  </div>
-                ))
+                notifs.map((notification) => {
+                  const destination = destinationFor(notification);
+                  return (
+                    <button
+                      key={notification.id}
+                      type="button"
+                      onClick={() => void openNotification(notification)}
+                      className={`flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-white/5 ${notification.is_read ? "" : "bg-cyan-400/5"}`}
+                    >
+                      <span aria-hidden="true" className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/5 text-sm text-cyan-200">
+                        {typeIcon(notification.notification_type)}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className={`block text-sm font-semibold ${notification.is_read ? "text-slate-300" : "text-white"}`}>
+                          {notification.title}
+                        </span>
+                        <span className="mt-0.5 line-clamp-2 block text-xs text-slate-400">
+                          {notification.message}
+                        </span>
+                        <time className="mt-1 block text-[11px] text-slate-500" dateTime={notification.created_at}>
+                          {new Date(notification.created_at).toLocaleString()}
+                        </time>
+                      </span>
+                      {destination && <ArrowUpRight aria-hidden="true" className="mt-1 h-4 w-4 shrink-0 text-slate-500" />}
+                    </button>
+                  );
+                })
               )}
             </div>
-          </div>
+          </section>
         </>
       )}
     </div>

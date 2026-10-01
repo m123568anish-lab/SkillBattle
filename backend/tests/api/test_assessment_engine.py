@@ -6,7 +6,7 @@ SkillBattle V3 — Assessment Engine & Skill Intelligence Tests
 
 import pytest
 from app.modules.assessment_engine.services.scoring_service import CentralizedScoringEngine
-from app.modules.assessment_engine.services.sandbox_runner import SandboxRunner
+from app.modules.assessment_engine.services.sandbox_runner import SecureCodeRunner
 
 
 def test_scoring_engine_mcq_evaluation():
@@ -57,7 +57,7 @@ def test_scoring_engine_coding_evaluation():
 
 
 def test_sandbox_runner_python_execution():
-    runner = SandboxRunner()
+    runner = SecureCodeRunner()
     code = "def solution(a, b):\n    return a + b\n"
     test_cases = [
         {"input": "2\n3", "output": "5"},

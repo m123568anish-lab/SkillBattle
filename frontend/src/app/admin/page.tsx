@@ -6,6 +6,7 @@ import UserManagement from "@/components/admin/UserManagement";
 import BattleLogs from "@/components/admin/BattleLogs";
 import BattleSettingsForm from "@/components/admin/BattleSettingsForm";
 import AdminOverview from "@/components/admin/AdminOverview";
+import SystemHealthPanel from "@/components/admin/SystemHealthPanel";
 
 export default function AdminPage() {
   const searchParams = useSearchParams();
@@ -48,14 +49,7 @@ export default function AdminPage() {
             <BattleSettingsForm />
           </div>
         )}
-        {activeTab === "server" && (
-          <div className="flex h-64 items-center justify-center rounded-2xl border border-dashed border-white/10">
-            <div className="text-center">
-              <p className="font-semibold text-white">Server health data is unavailable</p>
-              <p className="mt-2 text-sm text-slate-400">Connect the monitoring service to view live infrastructure metrics.</p>
-            </div>
-          </div>
-        )}
+        {activeTab === "server" && <SystemHealthPanel />}
       </div>
     </div>
   );

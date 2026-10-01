@@ -1,3 +1,5 @@
+from app.database.base import Base
+
 from .achievement import Achievement
 from .api_request_log import ApiRequestLog
 from .campaign import UserCampaignProgress
@@ -35,8 +37,11 @@ from .college import (
 from .company import Company, CompanyMember, CandidateApplication, CandidatePrivacySettings, JobPosting
 from .battle import BattleConfig, BattleRoom, BattleParticipant, BattleSubmission, BattleResult
 from .assessment_engine import UnifiedAssessment, AssessmentAttempt, AssessmentQuestionSubmission, StudentSkillProfile
+from .notification import Notification
+from app.modules.audit.model import AuditLog
 
 __all__ = [
+    "Base",
     "Achievement",
     "Challenge",
     "CodeSubmission",
@@ -78,6 +83,8 @@ __all__ = [
     "CandidatePrivacySettings",
     "JobPosting",
     "CandidateApplication",
+    "Notification",
+    "AuditLog",
     "BattleConfig",
     "BattleRoom",
     "BattleParticipant",

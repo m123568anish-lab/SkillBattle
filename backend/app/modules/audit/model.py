@@ -13,7 +13,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, DateTime
+from sqlalchemy import DateTime, ForeignKey, JSON, String, func
 
 from sqlalchemy.orm import (
     Mapped,
@@ -35,6 +35,7 @@ class AuditLog(Base):
 
     user_id: Mapped[str | None] = mapped_column(
         String(36),
+        ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
@@ -45,6 +46,21 @@ class AuditLog(Base):
 
     module: Mapped[str] = mapped_column(
         String(100),
+    )
+
+    organization_type: Mapped[str | None] = mapped_column(String(30), nullable=True)
+
+    organization_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+
+    entity_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
+    entity_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    metadata_json: Mapped[dict] = mapped_column(
+        JSON,
+        default=dict,
+        server_default="{}",
+        nullable=False,
     )
 
     ip_address: Mapped[str | None] = mapped_column(
@@ -60,4 +76,6 @@ class AuditLog(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
+        server_default=func.now(),
+        nullable=False,
     )
