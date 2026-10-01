@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
@@ -53,7 +54,8 @@ config.set_main_option(
 # ---------------------------------------------------------
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
+    logging.getLogger("__main__").setLevel(logging.INFO)
 
 # ---------------------------------------------------------
 
