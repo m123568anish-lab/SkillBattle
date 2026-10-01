@@ -435,6 +435,10 @@ def _repair_battle_tables() -> None:
             cols = {
                 "question_type": "VARCHAR(30) DEFAULT 'coding'",
                 "options": "JSON",
+                "examples": "JSON",
+                "hidden_test_cases": "JSON",
+                "company_tags": "JSON",
+                "topic_tags": "JSON",
                 "correct_option": "VARCHAR(100) DEFAULT ''",
                 "buggy_code": "TEXT",
                 "fixed_code_reference": "TEXT",
