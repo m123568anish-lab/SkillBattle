@@ -52,6 +52,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     { title: "User Management", href: "/admin?tab=users", icon: Users },
     { title: "System Logs", href: "/admin?tab=logs", icon: Activity },
     { title: "Server Health", href: "/admin?tab=server", icon: Server },
+    { title: "Verification Dashboard", href: "/admin?tab=verification", icon: Shield },
     { title: "Global Settings", href: "/admin?tab=settings", icon: Settings },
   ];
 

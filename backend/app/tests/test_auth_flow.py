@@ -47,6 +47,26 @@ def test_register_and_login_flow(client):
     assert login_response.status_code in {200, 401}
 
 
+def test_pending_verification_account_can_login(client):
+    unique = uuid.uuid4().hex[:8]
+    payload = {
+        "username": f"pendingcollege{unique}",
+        "email": f"pendingcollege{unique}@example.com",
+        "full_name": "Pending College",
+        "password": "demo12345",
+        "account_type": "COLLEGE",
+    }
+
+    register_response = client.post("/api/v1/auth/register", json=payload)
+    assert register_response.status_code in {201, 400}, register_response.text
+
+    login_response = client.post(
+        "/api/v1/auth/login",
+        json={"email": payload["email"], "password": payload["password"]},
+    )
+    assert login_response.status_code == 200, login_response.text
+
+
 def test_login_rate_limit_after_repeated_failures(client):
     unique = uuid.uuid4().hex[:8]
     payload = {

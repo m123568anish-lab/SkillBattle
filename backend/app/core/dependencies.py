@@ -98,9 +98,8 @@ async def get_current_user(
         )
 
     status_value = (getattr(user, "status", "ACTIVE") or "ACTIVE").upper()
-    if status_value in {"PENDING_VERIFICATION", "REJECTED", "SUSPENDED"}:
+    if status_value in {"REJECTED", "SUSPENDED"}:
         details = {
-            "PENDING_VERIFICATION": "Account is pending verification.",
             "REJECTED": "Account verification was rejected.",
             "SUSPENDED": "Account is suspended.",
         }

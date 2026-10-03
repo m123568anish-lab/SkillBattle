@@ -222,13 +222,12 @@ class AuthService:
             )
 
         status_value = (getattr(user, "status", "ACTIVE") or "ACTIVE").upper()
-        if status_value not in {"ACTIVE", "APPROVED"}:
-            if status_value == "PENDING_VERIFICATION":
-                raise ValueError("Your account is pending verification.")
+        if status_value in {"REJECTED", "SUSPENDED"}:
             if status_value == "REJECTED":
                 raise ValueError("Your account verification was rejected.")
             if status_value == "SUSPENDED":
                 raise ValueError("Your account is suspended.")
+        if status_value not in {"ACTIVE", "APPROVED", "PENDING_VERIFICATION"}:
             raise ValueError("User account is disabled.")
 
         if not user.is_active:

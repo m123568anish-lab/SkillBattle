@@ -7,6 +7,7 @@ import BattleLogs from "@/components/admin/BattleLogs";
 import BattleSettingsForm from "@/components/admin/BattleSettingsForm";
 import AdminOverview from "@/components/admin/AdminOverview";
 import SystemHealthPanel from "@/components/admin/SystemHealthPanel";
+import AdminVerificationPanel from "@/components/admin/AdminVerificationPanel";
 
 export default function AdminPage() {
   const searchParams = useSearchParams();
@@ -23,6 +24,7 @@ export default function AdminPage() {
           {activeTab === "logs" && "Live System Logs"}
           {activeTab === "settings" && "Global Configurations"}
           {activeTab === "server" && "Server Health"}
+          {activeTab === "verification" && "Verification Dashboard"}
         </h1>
         <p className="mt-2 text-sm text-slate-400">
           {activeTab === "overview" && "High-level metrics and health of the BattleAI ecosystem."}
@@ -31,6 +33,7 @@ export default function AdminPage() {
           {activeTab === "logs" && "Monitor battle arena logs and match outcomes."}
           {activeTab === "settings" && "Adjust global matchmaking rules and experience point rewards."}
           {activeTab === "server" && "Real-time metrics for backend, databases, and microservices."}
+          {activeTab === "verification" && "Live platform verification status for the owner and admin team."}
         </p>
       </div>
 
@@ -50,6 +53,7 @@ export default function AdminPage() {
           </div>
         )}
         {activeTab === "server" && <SystemHealthPanel />}
+        {activeTab === "verification" && <AdminVerificationPanel />}
       </div>
     </div>
   );
