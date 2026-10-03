@@ -12,8 +12,15 @@ Business logic for authentication.
 
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
 import logging
+import secrets
+import struct
+import time
 import uuid
+from collections import defaultdict, deque
 from datetime import datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,6 +49,56 @@ from app.modules.auth.schemas.requests import (
 )
 
 logger = logging.getLogger(__name__)
+
+_LOGIN_FAILURES: dict[str, deque[datetime]] = defaultdict(deque)
+_LOGIN_FAILURE_WINDOW = timedelta(minutes=15)
+_LOGIN_MAX_FAILURES = 5
+
+
+def _normalize_login_key(value: str | None) -> str:
+    return (value or "unknown").strip().lower()
+
+
+def _is_login_allowed(email: str | None, ip_address: str | None) -> bool:
+    key = f"{_normalize_login_key(email)}|{_normalize_login_key(ip_address)}"
+    now = datetime.utcnow()
+    window = _LOGIN_FAILURES.get(key, deque())
+    while window and now - window[0] > _LOGIN_FAILURE_WINDOW:
+        window.popleft()
+    if len(window) >= _LOGIN_MAX_FAILURES:
+        return False
+    return True
+
+
+def _record_failed_login(email: str | None, ip_address: str | None) -> None:
+    key = f"{_normalize_login_key(email)}|{_normalize_login_key(ip_address)}"
+    _LOGIN_FAILURES[key].append(datetime.utcnow())
+    while len(_LOGIN_FAILURES[key]) > _LOGIN_MAX_FAILURES:
+        _LOGIN_FAILURES[key].popleft()
+
+
+def _clear_login_failures(email: str | None, ip_address: str | None) -> None:
+    key = f"{_normalize_login_key(email)}|{_normalize_login_key(ip_address)}"
+    _LOGIN_FAILURES.pop(key, None)
+
+
+def _generate_totp_secret() -> str:
+    return base64.b32encode(secrets.token_bytes(20)).decode("ascii").rstrip("=")
+
+
+def _totp_code(secret: str, current_time: int | None = None) -> str:
+    key = base64.b32decode(secret.upper() + "=" * ((8 - len(secret) % 8) % 8), casefold=True)
+    now = int(time.time() if current_time is None else current_time)
+    counter = now // 30
+    msg = struct.pack(">Q", counter)
+    digest = hmac.new(key, msg, hashlib.sha1).digest()
+    offset = digest[-1] & 0x0F
+    binary = struct.unpack(">I", digest[offset:offset + 4])[0] & 0x7FFFFFFF
+    return str(binary % 10**6).zfill(6)
+
+
+def _hash_recovery_code(code: str) -> str:
+    return hashlib.sha256(code.strip().encode("utf-8")).hexdigest()
 
 
 class AuthService:
@@ -129,6 +186,9 @@ class AuthService:
 
     ) -> dict:
 
+        if not _is_login_allowed(request.email, ip_address):
+            raise ValueError("Too many login attempts. Please try again later.")
+
         user = await user_repository.get_by_email(
 
             db,
@@ -138,7 +198,7 @@ class AuthService:
         )
 
         if user is None:
-
+            _record_failed_login(request.email, ip_address)
             raise ValueError(
 
                 "Invalid email or password."
@@ -154,7 +214,7 @@ class AuthService:
         )
 
         if not is_valid:
-
+            _record_failed_login(request.email, ip_address)
             raise ValueError(
 
                 "Invalid email or password."
@@ -173,6 +233,11 @@ class AuthService:
 
         if not user.is_active:
             raise ValueError("User account is disabled.")
+
+        _clear_login_failures(request.email, ip_address)
+
+        if user.two_factor_enabled:
+            raise ValueError("Two-factor authentication is enabled for this account. Please complete the verification challenge.")
 
         # Validate selected portal role against stored user account role
         if request.role:
@@ -417,6 +482,40 @@ class AuthService:
         )
 
     # --------------------------------------------------
+
+    async def setup_two_factor(self, db: AsyncSession, email: str, password: str) -> dict:
+        user = await user_repository.get_by_email(db, email)
+        if user is None:
+            raise ValueError("Invalid email or password.")
+
+        if not await verify_password_async(password, user.password_hash):
+            raise ValueError("Invalid email or password.")
+
+        secret = _generate_totp_secret()
+        recovery_codes = [f"{uuid.uuid4().hex[:8].upper()}-{uuid.uuid4().hex[:8].upper()}" for _ in range(8)]
+        user.two_factor_secret = secret
+        user.two_factor_recovery_hashes = "[{}]".format(", ".join(f'"{_hash_recovery_code(code)}"' for code in recovery_codes))
+        user.two_factor_enabled = False
+        await user_repository.update_user(db, user)
+
+        return {
+            "secret": secret,
+            "recovery_codes": recovery_codes,
+            "otpauth_url": f"otpauth://totp/SkillBattle:{email}?secret={secret}&issuer=SkillBattle",
+        }
+
+    async def verify_two_factor(self, db: AsyncSession, email: str, code: str) -> dict:
+        user = await user_repository.get_by_email(db, email)
+        if user is None or not user.two_factor_secret:
+            raise ValueError("Two-factor authentication is not configured for this account.")
+
+        expected_code = _totp_code(user.two_factor_secret)
+        if code.strip() != expected_code:
+            raise ValueError("Invalid two-factor code.")
+
+        user.two_factor_enabled = True
+        await user_repository.update_user(db, user)
+        return {"enabled": True, "message": "Two-factor authentication enabled."}
 
     async def verify_email(
 

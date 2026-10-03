@@ -179,6 +179,24 @@ class User(Base):
         default=True,
     )
 
+    two_factor_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
+
+    two_factor_secret: Mapped[str | None] = mapped_column(
+        String(255),
+        default=None,
+        nullable=True,
+    )
+
+    two_factor_recovery_hashes: Mapped[str | None] = mapped_column(
+        String(2000),
+        default=None,
+        nullable=True,
+    )
+
     onboarding_completed: Mapped[bool] = mapped_column(
         Boolean,
         default=False,

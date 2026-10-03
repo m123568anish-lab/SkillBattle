@@ -105,6 +105,20 @@ class RefreshTokenRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class TwoFactorSetupRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=1, max_length=128)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class TwoFactorVerifyRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=6, max_length=6)
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class ChangePasswordRequest(BaseModel):
 
     current_password: str = Field(min_length=1, max_length=128)

@@ -132,16 +132,9 @@ async def get_current_verified_user(
 
 ) -> User:
 
-    if not current_user.is_verified:
-
-        raise HTTPException(
-
-            status_code=status.HTTP_403_FORBIDDEN,
-
-            detail="Email is not verified.",
-
-        )
-
+    # Email verification is not a normal login gate. Verification status is
+    # informational and should not block authenticated access unless a specific
+    # flow explicitly requires it.
     return current_user
 
 

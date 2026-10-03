@@ -28,6 +28,8 @@ from app.modules.auth.schemas.requests import (
     LoginRequest,
     RefreshTokenRequest,
     ChangePasswordRequest,
+    TwoFactorSetupRequest,
+    TwoFactorVerifyRequest,
 )
 
 from app.modules.auth.schemas.responses import (
@@ -143,13 +145,16 @@ async def login(
         }
 
     except ValueError as exc:
+        detail = str(exc)
+        if detail == "Too many login attempts. Please try again later.":
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=detail,
+            )
 
         raise HTTPException(
-
-            status_code=401,
-
-            detail=str(exc),
-
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=detail,
         )
 
 
@@ -193,6 +198,34 @@ async def refresh(
 # ==========================================================
 # Logout
 # ==========================================================
+
+@router.post(
+    "/2fa/setup",
+    response_model=dict,
+)
+async def setup_two_factor(
+    request: TwoFactorSetupRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return await auth_service.setup_two_factor(db, request.email, request.password)
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+
+
+@router.post(
+    "/2fa/verify",
+    response_model=dict,
+)
+async def verify_two_factor(
+    request: TwoFactorVerifyRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return await auth_service.verify_two_factor(db, request.email, request.code)
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+
 
 @router.post(
     "/logout",
