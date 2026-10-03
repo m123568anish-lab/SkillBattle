@@ -1,6 +1,7 @@
 export interface User {
 
     id: string;
+    username?: string;
 
     full_name: string;
 
@@ -11,6 +12,12 @@ export interface User {
     avatar_url?: string | null;
 
     role: string;
+    account_type?: "STUDENT" | "COLLEGE" | "COMPANY";
+    requested_role?: string | null;
+    onboarding_completed?: boolean;
+    status?: string;
+    is_superuser?: boolean;
+    level?: number;
 
 }
 
@@ -20,6 +27,7 @@ export interface LoginRequest {
     email: string;
 
     password: string;
+    role?: string;
 
 }
 
@@ -34,6 +42,7 @@ export interface RegisterRequest {
     password: string;
 
     avatar_url?: string | null;
+    account_type?: "STUDENT" | "COLLEGE" | "COMPANY";
 
 }
 

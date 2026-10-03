@@ -61,6 +61,10 @@ class CompanyDashboardResponse(BaseModel):
     candidates_total: int
     shortlisted_total: int
     recent_applications: list[dict]
+    assessment_completed: int = 0
+    application_pipeline: list[dict[str, str | int]] = Field(default_factory=list)
+    candidate_skill_distribution: list[dict[str, str | int]] = Field(default_factory=list)
+    job_performance: list[dict[str, str | int]] = Field(default_factory=list)
 
 
 class CompanyStatusRequest(BaseModel):

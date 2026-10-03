@@ -1,16 +1,14 @@
 import AuthLayout from "@/components/auth/AuthLayout";
-import AuthCard from "@/components/auth/AuthCard";
 import LoginForm from "@/components/auth/LoginForm";
 
 export default function LoginPage() {
   return (
-    <AuthLayout>
-      <AuthCard
-        title="Welcome Back 👋"
-        subtitle="Login to continue your SkillBattle journey."
-      >
-        <LoginForm />
-      </AuthCard>
+    <AuthLayout
+      eyebrow="Returning user"
+      title="Re-enter your SkillBattle workspace."
+      description="Your settings, progress, and role context are restored after secure authentication."
+    >
+      <LoginForm />
     </AuthLayout>
   );
 }

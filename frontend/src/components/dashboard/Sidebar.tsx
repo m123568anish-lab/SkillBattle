@@ -1,15 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Trophy, ChevronLeft, ChevronRight, Zap } from "lucide-react";
-import { sidebarCategories } from "@/data/dashboard";
+import { getPortalCategories, getPortalKind } from "@/data/dashboard";
 import { motion } from "framer-motion";
 import { useState } from "react";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const portal = getPortalKind(pathname);
+  const categories = getPortalCategories(portal);
+  const BrandIcon = portal === "college" ? Trophy : portal === "company" ? Zap : Trophy;
+  const portalLabel = portal === "college" ? "College" : portal === "company" ? "Hiring" : "Arena";
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const isActive = (href?: string) => {
+    if (!href) return false;
+    const [targetPath, query = ""] = href.split("?");
+    if (pathname !== targetPath) return false;
+    const targetParams = new URLSearchParams(query);
+    const targetEntries = Array.from(targetParams.entries());
+    const targetView = targetParams.get("view");
+    const currentView = searchParams.get("view");
+    if (targetView !== currentView) return false;
+    return targetEntries.every(([key, value]) => searchParams.get(key) === value);
+  };
 
   return (
     <motion.aside
@@ -35,7 +52,7 @@ export default function Sidebar() {
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-white/5 p-6 relative z-10">
         <div className="rounded-2xl bg-gradient-to-br from-cyan-500/20 to-violet-500/20 p-3 border border-cyan-500/30 shadow-lg shadow-cyan-500/5 flex-shrink-0">
-          <Trophy className="text-cyan-400 animate-pulse" size={24} />
+          <BrandIcon className="text-cyan-400" size={24} />
         </div>
 
         {!isCollapsed && (
@@ -48,7 +65,7 @@ export default function Sidebar() {
               SkillBattle
             </h2>
             <p className="text-xs font-bold uppercase tracking-widest text-cyan-500/70">
-              Arena
+              {portalLabel}
             </p>
           </motion.div>
         )}
@@ -57,7 +74,7 @@ export default function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto relative z-10 scrollbar-hide">
         <div className="p-4 space-y-5">
-          {sidebarCategories.map((category) => (
+          {categories.map((category) => (
             <div key={category.id}>
               {!isCollapsed && category.items.length > 0 && (
                 <motion.h3
@@ -73,11 +90,26 @@ export default function Sidebar() {
               <div className="space-y-1.5 mt-2">
                 {category.items.map((item) => {
                   const Icon = item.icon;
-                  const active = pathname === item.href;
+                  const active = isActive(item.href);
+
+                  if (!item.available || !item.href) {
+                    return (
+                      <div
+                        key={item.title}
+                        aria-disabled="true"
+                        title="This workflow is not available in the backend yet."
+                        className="flex items-center gap-3 rounded-xl border border-transparent px-4 py-2.5 text-slate-600"
+                      >
+                        <Icon size={18} className="flex-shrink-0" />
+                        {!isCollapsed && <span className="flex-1 text-sm font-medium">{item.title}</span>}
+                        {!isCollapsed && <span className="text-[9px] uppercase text-slate-600">Unavailable</span>}
+                      </div>
+                    );
+                  }
 
                   return (
                     <Link
-                      key={item.href}
+                      key={item.title}
                       href={item.href}
                       className="block relative group"
                       title={isCollapsed ? item.title : undefined}
@@ -139,14 +171,13 @@ export default function Sidebar() {
       {/* Footer - Quick Action */}
       {!isCollapsed && (
         <div className="border-t border-white/5 p-4 relative z-10">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="w-full flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500/80 to-violet-500/80 px-4 py-2.5 font-bold text-sm text-white shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 transition duration-200"
+          <Link
+            href={portal === "college" ? "/college/dashboard?view=students" : portal === "company" ? "/company/dashboard?view=jobs&action=create" : "/battle"}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500/80 to-violet-500/80 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-cyan-500/20 transition duration-200 hover:shadow-cyan-500/40"
           >
             <Zap size={16} />
-            Start Battle
-          </motion.button>
+            {portal === "college" ? "Manage Students" : portal === "company" ? "Create Job" : "Start Battle"}
+          </Link>
         </div>
       )}
     </motion.aside>

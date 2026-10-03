@@ -233,6 +233,7 @@ export default function OTPForm() {
       <GradientButton
         fullWidth
         loading={loading}
+        type="submit"
         onClick={handleVerify}
       >
         Verify Email

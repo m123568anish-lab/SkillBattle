@@ -36,12 +36,18 @@ export function AuthProvider({
     } = useAuthStore();
 
     useEffect(() => {
-    const token = localStorage.getItem("access_token");
+            const token = localStorage.getItem("access_token");
 
-    if (token) {
-        loadUser();
-    }
-}, []);
+            if (token) {
+                void loadUser();
+            } else {
+                useAuthStore.setState({
+                    user: null,
+                    isAuthenticated: false,
+                    loading: false,
+                });
+            }
+        }, [loadUser]);
 
     return (
 

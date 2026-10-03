@@ -38,7 +38,8 @@ export default function DashboardLayout({ children }: Props) {
   const authLoading = useAuthStore((s) => s.loading);
 
   useEffect(() => {
-    if (!authLoading && user && user.onboarding_completed === false) {
+    const accountType = (user?.account_type || user?.role || "").toUpperCase();
+    if (!authLoading && user && accountType === "STUDENT" && user.onboarding_completed === false) {
       router.replace("/onboarding");
     }
   }, [authLoading, user, router]);

@@ -46,6 +46,13 @@ async def get_dashboard(
 
 ):
     user_id = str(current_user.id)
+    account_type = (getattr(current_user, "account_type", "STUDENT") or "STUDENT").upper()
+    role = (getattr(current_user, "role", "user") or "user").lower()
+    if account_type != "STUDENT" or role not in {"student", "user"}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The student dashboard is only available to student accounts.",
+        )
     try:
         return await dashboard_service.get_dashboard(db, current_user)
     except HTTPException:

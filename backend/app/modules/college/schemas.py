@@ -201,10 +201,14 @@ class CollegeDashboardResponse(BaseModel):
     college_name: str
     total_students: int
     active_students: int
+    total_departments: int = 0
+    total_batches: int = 0
+    students_needing_attention: int = 0
+    upcoming_assessments: int = 0
     assessment_participation_rate: float
     average_performance_score: float
     pass_rate: float
     skill_distribution: List[SkillDistributionItem]
     weak_areas: List[str]
     department_analytics: List[DepartmentAnalyticsItem]
-    placement_prep_progress: float
+    placement_prep_progress: Optional[float] = None

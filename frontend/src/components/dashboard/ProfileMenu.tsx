@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ChevronDown,
   User,
@@ -8,13 +8,17 @@ import {
   LogOut,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import { getPortalKind } from "@/data/dashboard";
 
 export default function ProfileMenu() {
   const router = useRouter();
+  const pathname = usePathname();
+  const portal = getPortalKind(pathname);
 
   const logout = useAuthStore((s) => s.logout);
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const displayName = user?.username || user?.full_name || "User";
 
   async function handleLogout() {
     try {
@@ -49,15 +53,17 @@ export default function ProfileMenu() {
         <div className="relative">
           <div className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 opacity-70 blur-sm group-hover:opacity-100 transition duration-300"></div>
           <img
-            src={(user as any)?.avatar_url || `https://ui-avatars.com/api/?name=${(user as any)?.username || user?.full_name || 'User'}&background=070B14&color=06b6d4&bold=true`}
+            src={user?.avatar_url || user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=070B14&color=06b6d4&bold=true`}
             alt="Profile"
             className="relative h-9 w-9 rounded-full border border-white/20"
           />
         </div>
 
         <div className="hidden text-left md:block">
-          <p className="text-sm font-bold text-white leading-tight">{user?.full_name || (user as any)?.username || 'User'}</p>
-          <p className="text-[10px] font-semibold text-cyan-400 uppercase tracking-wider">Level {(user as any)?.level ?? 1}</p>
+          <p className="text-sm font-bold text-white leading-tight">{user?.full_name || displayName}</p>
+          <p className="text-[10px] font-semibold text-cyan-400 uppercase tracking-wider">
+            {portal === "student" ? `Level ${user?.level ?? 1}` : portal === "college" ? "College account" : "Company account"}
+          </p>
         </div>
 
         <ChevronDown size={16} className="text-slate-400 ml-1 transition group-hover:text-white" />
@@ -90,13 +96,13 @@ export default function ProfileMenu() {
       >
         <div className="px-3 py-2 mb-2 border-b border-white/5">
           <p className="text-xs text-slate-400 font-semibold">Signed in as</p>
-          <p className="text-sm text-white font-bold truncate">{(user as any)?.email || user?.full_name}</p>
+          <p className="text-sm text-white font-bold truncate">{user?.email || user?.full_name}</p>
         </div>
 
         <div className="space-y-1">
-          <button onClick={() => router.push('/profile')} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+          <button onClick={() => router.push(portal === "student" ? "/profile" : "/organization-setup")} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
             <User size={16} />
-            My Profile
+            {portal === "student" ? "My Profile" : "Organization setup"}
           </button>
 
           <button onClick={() => router.push('/settings')} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">

@@ -13,39 +13,29 @@ import {
     RefreshResponse,
 
 } from "@/types/auth";
+import type {
+    CollegeRegistrationRequest,
+    CompanyRegistrationRequest,
+} from "@/types/organization";
 
 class AuthService {
 
     // =========================
 
     async login(data: LoginRequest) {
-        try {
-            const response = await api.post(
-                "/auth/login",
-                data,
-            );
-
-            const result = response.data;
-
-            if (result?.tokens?.access_token) {
-                localStorage.setItem("access_token", result.tokens.access_token);
-            }
-            if (result?.tokens?.refresh_token) {
-                localStorage.setItem("refresh_token", result.tokens.refresh_token);
-            }
-
-            return result.user;
-        } catch (err: any) {
-            throw err;
-        }
+        const response = await api.post<LoginResponse>("/auth/login", data);
+        const result = response.data;
+        localStorage.setItem("access_token", result.tokens.access_token);
+        localStorage.setItem("refresh_token", result.tokens.refresh_token);
+        return result.user;
     }
 
 
     // =========================
 
-    async register(data: any) {
+    async register(data: RegisterRequest) {
 
-    const response = await api.post(
+    const response = await api.post<User>(
 
         "/auth/register",
 
@@ -56,6 +46,16 @@ class AuthService {
     return response.data;
 
 }
+
+    async registerCollege(data: CollegeRegistrationRequest) {
+        const response = await api.post("/college/register", data);
+        return response.data;
+    }
+
+    async registerCompany(data: CompanyRegistrationRequest) {
+        const response = await api.post("/company/register", data);
+        return response.data;
+    }
 
     // =========================
 

@@ -7,6 +7,8 @@ export interface User {
     avatar?: string | null;
     avatar_url?: string | null;
     role: string;
+    account_type?: "STUDENT" | "COLLEGE" | "COMPANY";
+    requested_role?: string | null;
     level?: number;
     coding_rating?: number;
     onboarding_completed?: boolean;

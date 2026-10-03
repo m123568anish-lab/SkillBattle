@@ -445,10 +445,38 @@ class CompanyService:
         company = await self.get_company_for_user(db, user)
         if not company:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Company access required.")
+        if company.status != "verified":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Company verification is required to access the hiring dashboard.",
+            )
 
         jobs = await self.list_jobs(db, user)
         candidate_rows = await self.list_candidates(db, user)
         shortlisted_total = sum(1 for item in candidate_rows if item["status"] == "shortlisted")
+        pipeline: dict[str, int] = {}
+        job_metrics: dict[int, dict[str, Any]] = {
+            job.id: {"job_id": job.id, "title": job.title, "applications": 0, "shortlisted": 0}
+            for job in jobs
+        }
+        skill_counts: dict[str, int] = {}
+        assessment_completed = 0
+        for item in candidate_rows:
+            status_value = str(item.get("status") or "applied")
+            pipeline[status_value] = pipeline.get(status_value, 0) + 1
+            if item.get("assessment_status") == "completed":
+                assessment_completed += 1
+            job_metric = job_metrics.get(item["job_id"])
+            if job_metric:
+                job_metric["applications"] += 1
+                if status_value == "shortlisted":
+                    job_metric["shortlisted"] += 1
+            profile = item.get("skill_profile")
+            if profile:
+                for skill in profile.get("skills", []):
+                    skill_name = str(skill.get("skill") or "").strip()
+                    if skill_name:
+                        skill_counts[skill_name] = skill_counts.get(skill_name, 0) + 1
 
         return {
             "company": {
@@ -461,9 +489,19 @@ class CompanyService:
                 "status": company.status,
             },
             "jobs_total": len(jobs),
-            "active_jobs": sum(1 for job in jobs if job.status in {"draft", "open", "active"}),
+            "active_jobs": sum(1 for job in jobs if job.status in {"open", "active"}),
             "candidates_total": len(candidate_rows),
             "shortlisted_total": shortlisted_total,
+            "assessment_completed": assessment_completed,
+            "application_pipeline": [
+                {"status": status_name, "count": count}
+                for status_name, count in sorted(pipeline.items())
+            ],
+            "candidate_skill_distribution": [
+                {"skill": skill, "count": count}
+                for skill, count in sorted(skill_counts.items(), key=lambda entry: (-entry[1], entry[0]))
+            ],
+            "job_performance": list(job_metrics.values()),
             "recent_applications": [
                 {
                     "candidate": item["candidate_name"],

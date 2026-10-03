@@ -147,6 +147,13 @@ class CollegeService:
         user: User,
     ) -> Optional[College]:
         role = getattr(user, "role", "user").lower()
+        account_type = (getattr(user, "account_type", "") or "").upper()
+
+        if account_type == "COLLEGE" and getattr(user, "requested_role", None) == "COLLEGE_ADMIN":
+            result = await db.execute(select(College).where(College.admin_user_id == user.id))
+            pending_college = result.scalar_one_or_none()
+            if pending_college:
+                return pending_college
 
         if role in ["college_admin", "placement_officer", "faculty"]:
             # Query college by admin_user_id or created entities
@@ -593,6 +600,16 @@ class CollegeService:
 
         # Departments
         depts = await self.list_departments(db, college.id)
+        total_batches = await db.scalar(
+            select(func.count(Batch.id)).where(Batch.college_id == college.id)
+        )
+        upcoming_assessments = await db.scalar(
+            select(func.count(CollegeAssessment.id)).where(
+                CollegeAssessment.college_id == college.id,
+                CollegeAssessment.start_time.is_not(None),
+                CollegeAssessment.start_time >= datetime.utcnow(),
+            )
+        )
         
         # Submissions for college
         stmt_subs = (
@@ -609,6 +626,7 @@ class CollegeService:
         pass_rate = round((passed_subs / total_subs) * 100.0, 1) if total_subs else 0.0
         participating_students = len({submission.student_id for submission in submissions})
         participation_rate = round((participating_students / total_students) * 100.0, 1) if total_students else 0.0
+        students_needing_attention = max(total_students - participating_students, 0)
 
         # Department Analytics
         dept_analytics = []
@@ -643,13 +661,17 @@ class CollegeService:
             "college_name": college.name,
             "total_students": total_students,
             "active_students": active_students,
+            "total_departments": len(depts),
+            "total_batches": int(total_batches or 0),
+            "students_needing_attention": students_needing_attention,
+            "upcoming_assessments": int(upcoming_assessments or 0),
             "assessment_participation_rate": participation_rate,
             "average_performance_score": avg_score,
             "pass_rate": pass_rate,
             "skill_distribution": [],
             "weak_areas": [],
             "department_analytics": dept_analytics,
-            "placement_prep_progress": 0.0,
+            "placement_prep_progress": None,
         }
 
 

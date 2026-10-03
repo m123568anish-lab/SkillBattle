@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 
 import { AuthProvider } from "@/context/AuthContext";
+import { AuthGuard } from "@/components/auth/AuthGuard";
 import PageMetadata from "@/components/common/PageMetadata";
 
 
@@ -51,7 +52,7 @@ export default function RootLayout({
         <AuthProvider>
           <div className="relative">
             <PageMetadata />
-            {children}
+            <AuthGuard>{children}</AuthGuard>
           </div>
         </AuthProvider>
 

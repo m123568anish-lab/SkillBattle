@@ -247,25 +247,29 @@ class AuthService:
             college_roles = {"COLLEGE", "COLLEGE_ADMIN", "PLACEMENT_OFFICER", "FACULTY"}
             company_roles = {"COMPANY", "COMPANY_ADMIN", "RECRUITER"}
 
-            role_mismatch = False
-            if req_role_upper in student_roles:
-                if user_role_lower not in {"user", "student"}:
-                    role_mismatch = True
-            elif req_role_upper in college_roles:
-                if user_role_lower not in {"college", "college_admin", "placement_officer", "faculty"}:
-                    role_mismatch = True
-            elif req_role_upper in company_roles:
-                if user_role_lower not in {"company", "company_admin", "recruiter"}:
-                    role_mismatch = True
+            account_type = (getattr(user, "account_type", "") or "").strip().upper()
+            requested_role = (getattr(user, "requested_role", "") or "").strip().upper()
+            if requested_role in college_roles or account_type == "COLLEGE":
+                account_portal = "COLLEGE"
+            elif requested_role in company_roles or account_type == "COMPANY":
+                account_portal = "COMPANY"
+            elif user_role_lower in {"college", "college_admin", "placement_officer", "faculty"}:
+                account_portal = "COLLEGE"
+            elif user_role_lower in {"company", "company_admin", "recruiter"}:
+                account_portal = "COMPANY"
+            else:
+                account_portal = "STUDENT"
 
-            if role_mismatch:
-                target_portal = "Student"
-                if user_role_lower in {"user", "student"}:
-                    target_portal = "Student"
-                elif user_role_lower in {"college", "college_admin", "placement_officer", "faculty"}:
-                    target_portal = "College"
-                elif user_role_lower in {"company", "company_admin", "recruiter"}:
-                    target_portal = "Company"
+            selected_portal = None
+            if req_role_upper in student_roles:
+                selected_portal = "STUDENT"
+            elif req_role_upper in college_roles:
+                selected_portal = "COLLEGE"
+            elif req_role_upper in company_roles:
+                selected_portal = "COMPANY"
+
+            if selected_portal and selected_portal != account_portal:
+                target_portal = account_portal.title()
                 raise ValueError(
                     f"Your account is registered as a {target_portal} account. Please select {target_portal} to continue."
                 )

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search, Menu, Trophy, Shield, Zap, ArrowUpRight, History } from "lucide-react";
 import api from "@/services/api";
@@ -9,6 +9,7 @@ import NotificationMenu from "./NotificationMenu";
 import ProfileMenu from "./ProfileMenu";
 import { useAuthStore } from "@/store/authStore";
 import { useDashboardStore } from "@/store/dashboardStore";
+import { getPortalKind } from "@/data/dashboard";
 
 type SearchResult = {
   type: string;
@@ -23,6 +24,8 @@ interface TopNavbarProps {
 
 export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const portal = getPortalKind(pathname);
   const user = useAuthStore((s) => s.user);
   const dashboard = useDashboardStore((s) => s.dashboard);
   const [searchQuery, setSearchQuery] = useState("");
@@ -199,7 +202,7 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
 
       {/* Profile & Live Rating Ribbon */}
       <div className="flex flex-wrap items-center gap-3.5 sm:gap-5 justify-end">
-        {user && (
+        {user && portal === "student" && (
           <div className="hidden md:flex items-center gap-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-cyan-300">
             <div className="flex items-center gap-1.5">
               <Shield size={14} className="text-cyan-400" />
@@ -218,15 +221,24 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
           </div>
         )}
 
+        {user && portal !== "student" && (
+          <div className="hidden md:flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-slate-300">
+            <Shield size={14} className="text-cyan-400" />
+            <span>{portal === "college" ? "College workspace" : "Company hiring"}</span>
+          </div>
+        )}
+
         <div className="flex items-center gap-3">
-          <Link
-            href="/activity"
-            aria-label="View activity"
-            title="Activity"
-            className="rounded-lg border border-white/10 bg-white/5 p-2.5 text-slate-300 transition hover:border-cyan-300 hover:text-white"
-          >
-            <History className="h-4 w-4" />
-          </Link>
+          {portal === "student" && (
+            <Link
+              href="/activity"
+              aria-label="View activity"
+              title="Activity"
+              className="rounded-lg border border-white/10 bg-white/5 p-2.5 text-slate-300 transition hover:border-cyan-300 hover:text-white"
+            >
+              <History className="h-4 w-4" />
+            </Link>
+          )}
           <NotificationMenu />
           <ProfileMenu />
         </div>

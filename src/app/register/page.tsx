@@ -1,16 +1,14 @@
 import AuthLayout from "@/components/auth/AuthLayout";
-import AuthCard from "@/components/auth/AuthCard";
 import RegisterForm from "@/components/auth/RegisterForm";
 
 export default function RegisterPage() {
   return (
-    <AuthLayout>
-      <AuthCard
-        title="Create Account 🚀"
-        subtitle="Join SkillBattle and start your placement journey."
-      >
-        <RegisterForm />
-      </AuthCard>
+    <AuthLayout
+      eyebrow="New to SkillBattle"
+      title="Create your SkillBattle identity."
+      description="Choose the path that matches how you learn, teach, or hire, then complete only the details needed right now."
+    >
+      <RegisterForm />
     </AuthLayout>
   );
 }

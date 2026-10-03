@@ -4,12 +4,13 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Shield, Users, Activity, Settings, LayoutDashboard, LogOut, Code, Server, Database } from "lucide-react";
-import { useDashboard } from "@/hooks/use-dashboard";
+import { useAuthStore } from "@/store/authStore";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { dashboard, loading } = useDashboard();
+  const user = useAuthStore((state) => state.user);
+  const loading = useAuthStore((state) => state.loading);
 
   if (loading) {
     return (
@@ -22,7 +23,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  const isAdmin = dashboard?.user?.role === "admin" || dashboard?.user?.is_superuser;
+  const isAdmin = user?.role === "admin" || user?.is_superuser;
 
   if (!isAdmin) {
     return (
@@ -134,9 +135,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-4">
              <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-1.5">
                 <div className="h-6 w-6 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500" />
-                <span className="text-sm font-bold text-white">{dashboard?.user?.username}</span>
+                <span className="text-sm font-bold text-white">{user?.username || user?.full_name}</span>
                 <span className="rounded bg-violet-500/20 px-2 py-0.5 text-xs font-bold text-violet-400 uppercase">
-                  {dashboard?.user?.role}
+                  {user?.role}
                 </span>
              </div>
           </div>

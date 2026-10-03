@@ -30,10 +30,11 @@ async def test_student_selecting_college_during_registration_stays_pending(clien
         "/auth/login",
         json={"email": email, "password": "StrongPass#123"},
     )
-    assert login_resp.status_code == 401, login_resp.text
+    assert login_resp.status_code == 200, login_resp.text
+    headers = {"Authorization": f"Bearer {login_resp.json()['tokens']['access_token']}"}
 
-    college_dashboard = await client.get("/api/v1/college/dashboard")
-    assert college_dashboard.status_code in (401, 403), college_dashboard.text
+    college_dashboard = await client.get("/api/v1/college/dashboard", headers=headers)
+    assert college_dashboard.status_code == 403, college_dashboard.text
 
-    student_dashboard = await client.get("/api/v1/dashboard")
-    assert student_dashboard.status_code in (401, 403), student_dashboard.text
+    student_dashboard = await client.get("/api/v1/dashboard", headers=headers)
+    assert student_dashboard.status_code == 403, student_dashboard.text

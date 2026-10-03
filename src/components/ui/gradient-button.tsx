@@ -18,6 +18,7 @@ export default function GradientButton({
   loading = false,
   fullWidth = false,
   disabled,
+  type = "button",
   ...props
 }: GradientButtonProps) {
   const variants = {
@@ -39,6 +40,7 @@ export default function GradientButton({
 
   return (
     <button
+      type={type}
       disabled={disabled || loading}
       className={cn(
         "inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold transition-all duration-300",

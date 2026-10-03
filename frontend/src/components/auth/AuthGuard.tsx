@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
+import { getPostLoginPath } from "@/lib/auth-routing";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -23,6 +24,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   const loading = useAuthStore((s) => s.loading);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
     if (loading) return; // wait until auth resolved
@@ -34,11 +36,11 @@ export function AuthGuard({ children }: AuthGuardProps) {
       return;
     }
 
-    if (isAuthenticated && (pathname === "/login" || pathname === "/register")) {
-      router.replace("/dashboard");
+    if (isAuthenticated && pathname === "/login") {
+      if (user) router.replace(getPostLoginPath(user));
       return;
     }
-  }, [loading, isAuthenticated, pathname, router]);
+  }, [loading, isAuthenticated, pathname, router, user]);
 
   if (loading) {
     return (

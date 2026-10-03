@@ -1,5 +1,6 @@
 "use client";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import GradientButton from '@/components/design/GradientButton';
@@ -14,6 +15,8 @@ import QuickSpeedrunWidget from "@/components/dashboard/QuickSpeedrunWidget";
 import ServerStatus from "@/components/dashboard/ServerStatus";
 
 import { useDashboard } from "@/hooks/use-dashboard";
+import { useAuthStore } from "@/store/authStore";
+import { getPostLoginPath } from "@/lib/auth-routing";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -36,12 +39,21 @@ const itemVariants = {
 };
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const user = useAuthStore((state) => state.user);
+  const authLoading = useAuthStore((state) => state.loading);
   const {
     dashboard,
     loading,
     error,
     refresh,
   } = useDashboard();
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    const destination = getPostLoginPath(user);
+    if (destination !== "/dashboard") router.replace(destination);
+  }, [authLoading, router, user]);
 
   if (loading) {
     return (

@@ -5,9 +5,9 @@ import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { sidebarItems } from "@/data/dashboard";
+import { getMobileNavigation, getPortalCategories, getPortalKind } from "@/data/dashboard";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 interface Props {
   children: React.ReactNode;
@@ -18,6 +18,19 @@ export default function DashboardLayout({
 }: Props) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const portal = getPortalKind(pathname);
+  const categories = getPortalCategories(portal);
+  const mobileNavigation = getMobileNavigation(portal);
+
+  const isActive = (href?: string) => {
+    if (!href) return false;
+    const [targetPath, query = ""] = href.split("?");
+    if (pathname !== targetPath) return false;
+    const targetParams = new URLSearchParams(query);
+    if (targetParams.get("view") !== searchParams.get("view")) return false;
+    return Array.from(targetParams.entries()).every(([key, value]) => searchParams.get(key) === value);
+  };
 
   return (
     <main
@@ -61,13 +74,22 @@ export default function DashboardLayout({
                     <X size={18} />
                   </button>
                 </div>
-                <nav className="mt-6 space-y-1.5">
-                  {sidebarItems.map((item) => {
+                <nav className="mt-6 max-h-[calc(100dvh-9rem)] space-y-1.5 overflow-y-auto">
+                  {categories.flatMap((category) => category.items).map((item) => {
                     const Icon = item.icon;
-                    const active = pathname === item.href;
+                    const active = isActive(item.href);
+                    if (!item.available || !item.href) {
+                      return (
+                        <div key={item.title} aria-disabled="true" className="flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm text-slate-600">
+                          <Icon size={18} />
+                          <span className="flex-1">{item.title}</span>
+                          <span className="text-[9px] uppercase">Unavailable</span>
+                        </div>
+                      );
+                    }
                     return (
                       <Link
-                        key={item.href}
+                        key={item.title}
                         href={item.href}
                         onClick={() => setMobileMenuOpen(false)}
                         className={`flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-semibold transition ${
@@ -106,13 +128,16 @@ export default function DashboardLayout({
 
       {/* Mobile Sticky Bottom Navigation Dock */}
       <div className="fixed bottom-0 left-0 right-0 z-30 lg:hidden border-t border-white/10 bg-[#070B14]/90 p-3 backdrop-blur-lg flex justify-around items-center">
-        {[
-          { title: "Home", href: "/dashboard", icon: sidebarItems[0].icon },
-          { title: "Battle", href: "/battle", icon: sidebarItems[2].icon },
-          { title: "Leaderboard", href: "/leaderboard", icon: sidebarItems[7].icon },
-          { title: "Profile", href: "/profile", icon: sidebarItems[12].icon },
-        ].map((tab) => {
-          const active = pathname === tab.href;
+        {mobileNavigation.map((tab) => {
+          const active = isActive(tab.href);
+          if (!tab.available || !tab.href) {
+            return (
+              <span key={tab.title} aria-disabled="true" className="flex flex-col items-center gap-1 text-[10px] font-bold uppercase text-slate-600">
+                <tab.icon size={20} />
+                <span>{tab.title}</span>
+              </span>
+            );
+          }
           return (
             <Link
               key={tab.title}
