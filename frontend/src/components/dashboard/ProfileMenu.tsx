@@ -30,7 +30,13 @@ export default function ProfileMenu() {
 
   const displayName = user?.full_name || user?.username || "User";
   const email = user?.email || "Your account";
-  const avatarUrl = user?.avatar_url || user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=070B14&color=06b6d4&bold=true`;
+  const initials = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("") || "U";
+  const avatarUrl = user?.avatar_url || user?.avatar || null;
 
   const menuActions = useMemo(() => {
     const role = (user?.role || user?.account_type || "student").toLowerCase();
@@ -107,15 +113,21 @@ export default function ProfileMenu() {
         aria-expanded={isMenuOpen}
         aria-haspopup="menu"
         onClick={() => setIsMenuOpen((open) => !open)}
-        className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#070B14] px-3 py-2 text-left transition hover:border-cyan-500/50 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] md:px-4"
+        className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#070B14] px-2.5 py-2 text-left transition hover:border-cyan-500/50 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] md:px-4"
       >
         <div className="relative">
           <div className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 opacity-70 blur-sm transition duration-300" />
-          <img
-            src={avatarUrl}
-            alt="Profile"
-            className="relative h-8 w-8 rounded-full border border-white/20 object-cover md:h-9 md:w-9"
-          />
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt="Profile"
+              className="relative h-8 w-8 rounded-full border border-white/20 object-cover md:h-9 md:w-9"
+            />
+          ) : (
+            <div className="relative grid h-8 w-8 place-items-center rounded-full border border-white/20 bg-slate-800 text-xs font-black text-cyan-200 md:h-9 md:w-9">
+              {initials}
+            </div>
+          )}
         </div>
 
         <div className="hidden text-left md:block">
@@ -131,7 +143,13 @@ export default function ProfileMenu() {
       {isMenuOpen && (
         <div className="absolute right-0 top-[calc(100%+10px)] z-50 w-[min(21rem,calc(100vw-1.5rem))] rounded-2xl border border-white/10 bg-[#0A0E1A]/95 p-2 shadow-2xl shadow-black/60 backdrop-blur-xl md:w-72">
           <div className="mb-2 flex items-center gap-3 border-b border-white/5 px-3 py-3">
-            <img src={avatarUrl} alt="Profile preview" className="h-11 w-11 rounded-full border border-white/20 object-cover" />
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Profile preview" className="h-11 w-11 rounded-full border border-white/20 object-cover" />
+            ) : (
+              <div className="grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-slate-800 text-sm font-black text-cyan-200">
+                {initials}
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-bold text-white">{displayName}</p>
               <p className="truncate text-xs text-slate-400">{email}</p>

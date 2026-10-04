@@ -18,6 +18,7 @@ import {
   Layers3,
   ListChecks,
   SearchCheck,
+  ShieldCheck,
   UserPlus,
   Users,
   Zap,
@@ -37,7 +38,7 @@ export interface SidebarCategory {
   items: SidebarItem[];
 }
 
-export type PortalKind = "student" | "college" | "company";
+export type PortalKind = "student" | "college" | "company" | "admin";
 
 export interface PortalNavItem {
   title: string;
@@ -48,6 +49,7 @@ export interface PortalNavItem {
 }
 
 export function getPortalKind(pathname: string): PortalKind {
+  if (pathname.startsWith("/admin")) return "admin";
   if (pathname.startsWith("/college")) return "college";
   if (pathname.startsWith("/company")) return "company";
   return "student";
@@ -111,21 +113,40 @@ export function getPortalCategories(portal: PortalKind): Array<{ id: string; lab
 export function getMobileNavigation(portal: PortalKind): PortalNavItem[] {
   if (portal === "college") {
     return [
-      collegeItems[0], collegeItems[1], collegeItems[5],
-      { title: "Placement", icon: BriefcaseBusiness, category: "mobile", available: false },
-      collegeItems[14],
+      collegeItems[0],
+      collegeItems[1],
+      collegeItems[5],
+      collegeItems[13],
+      { title: "More", icon: Layers3, category: "mobile", available: true },
     ];
   }
+
   if (portal === "company") {
     return [
-      companyItems[0], companyItems[1], companyItems[3], companyItems[6], companyItems[5],
+      companyItems[0],
+      companyItems[1],
+      companyItems[3],
+      companyItems[5] || { title: "Interviews", icon: ClipboardCheck, category: "mobile", available: true },
+      { title: "More", icon: Layers3, category: "mobile", available: true },
     ];
   }
+
+  if (portal === "admin") {
+    return [
+      { title: "Home", href: "/admin", icon: Home, category: "mobile", available: true },
+      { title: "Users", href: "/admin?tab=users", icon: Users, category: "mobile", available: true },
+      { title: "Organizations", href: "/admin?tab=organizations", icon: Building2, category: "mobile", available: true },
+      { title: "Security", href: "/admin?tab=security", icon: ShieldCheck, category: "mobile", available: true },
+      { title: "More", icon: Layers3, category: "mobile", available: true },
+    ];
+  }
+
   return [
     { title: "Home", href: "/dashboard", icon: Home, category: "mobile", available: true },
     { title: "Battle", href: "/battle", icon: Sword, category: "mobile", available: true },
     { title: "Leaderboard", href: "/leaderboard", icon: Trophy, category: "mobile", available: true },
-    { title: "Profile", href: "/profile", icon: User, category: "mobile", available: true },
+    { title: "Friends", href: "/profile", icon: User, category: "mobile", available: true },
+    { title: "More", icon: Layers3, category: "mobile", available: true },
   ];
 }
 

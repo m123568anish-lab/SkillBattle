@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
 import { X } from "lucide-react";
@@ -13,15 +13,115 @@ interface Props {
   children: React.ReactNode;
 }
 
-export default function DashboardLayout({
-  children,
-}: Props) {
+export default function DashboardLayout({ children }: Props) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const portal = getPortalKind(pathname);
   const categories = getPortalCategories(portal);
   const mobileNavigation = getMobileNavigation(portal);
+
+  const quickAccessGroups = useMemo(() => {
+    if (portal === "student") {
+      return [
+        {
+          title: "Learn",
+          items: [
+            { label: "Practice", href: "/battle" },
+            { label: "Career Roadmap", href: "/career/roadmap" },
+            { label: "AI Coach", href: "/coach" },
+            { label: "Mock Interview", href: "/interview" },
+          ],
+        },
+        {
+          title: "Compete",
+          items: [
+            { label: "Tournaments", href: "/tournament" },
+            { label: "Leaderboard", href: "/leaderboard" },
+            { label: "Achievements", href: "/achievements" },
+          ],
+        },
+        {
+          title: "Career",
+          items: [
+            { label: "Opportunities", href: "/opportunities" },
+            { label: "Placement", href: "/placement" },
+            { label: "Resume", href: "/career/resume" },
+            { label: "Skill Profile", href: "/profile" },
+          ],
+        },
+        {
+          title: "Personal",
+          items: [
+            { label: "Calendar", href: "/calendar" },
+            { label: "Profile", href: "/profile" },
+            { label: "Settings", href: "/settings" },
+          ],
+        },
+      ];
+    }
+
+    if (portal === "college") {
+      return [
+        {
+          title: "Workspaces",
+          items: [
+            { label: "Students", href: "/college/dashboard?view=students" },
+            { label: "Assessments", href: "/college/dashboard?view=assessments" },
+            { label: "Placement", href: "/placement" },
+            { label: "Analytics", href: "/college/dashboard?view=analytics" },
+          ],
+        },
+        {
+          title: "Organization",
+          items: [
+            { label: "College Profile", href: "/organization-setup" },
+            { label: "Settings", href: "/settings" },
+          ],
+        },
+      ];
+    }
+
+    if (portal === "company") {
+      return [
+        {
+          title: "Talent",
+          items: [
+            { label: "Jobs", href: "/company/dashboard?view=jobs" },
+            { label: "Candidates", href: "/company/dashboard?view=candidates" },
+            { label: "Interviews", href: "/company/dashboard?view=interviews" },
+            { label: "Analytics", href: "/company/dashboard?view=analytics" },
+          ],
+        },
+        {
+          title: "Company",
+          items: [
+            { label: "Company Profile", href: "/organization-setup" },
+            { label: "Settings", href: "/settings" },
+          ],
+        },
+      ];
+    }
+
+    return [
+      {
+        title: "Administration",
+        items: [
+          { label: "Users", href: "/admin?tab=users" },
+          { label: "Organizations", href: "/admin?tab=organizations" },
+          { label: "Security", href: "/admin?tab=security" },
+        ],
+      },
+      {
+        title: "Account",
+        items: [
+          { label: "Profile", href: "/profile" },
+          { label: "Settings", href: "/settings" },
+        ],
+      },
+    ];
+  }, [portal]);
 
   const isActive = (href?: string) => {
     if (!href) return false;
@@ -33,18 +133,9 @@ export default function DashboardLayout({
   };
 
   return (
-    <main
-      suppressHydrationWarning
-      className="
-        flex
-        min-h-screen
-        bg-[#050816]
-        text-white
-      "
-    >
+    <main suppressHydrationWarning className="flex min-h-screen bg-[#050816] text-white">
       <Sidebar />
 
-      {/* Mobile Drawer Backdrop */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <>
@@ -68,6 +159,7 @@ export default function DashboardLayout({
                     SkillBattle
                   </span>
                   <button
+                    type="button"
                     onClick={() => setMobileMenuOpen(false)}
                     className="rounded-lg border border-white/10 p-1 text-slate-400 hover:text-white"
                   >
@@ -110,47 +202,99 @@ export default function DashboardLayout({
         )}
       </AnimatePresence>
 
-      <section
-        className="
-          flex-1
-          overflow-auto
-          p-4
-          sm:p-8
-          pb-24
-          lg:pb-8
-        "
-      >
+      <AnimatePresence>
+        {moreOpen && (
+          <>
+            <motion.button
+              type="button"
+              aria-label="Close quick access"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMoreOpen(false)}
+              className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm lg:hidden"
+            />
+            <motion.aside
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 24, stiffness: 220 }}
+              className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-xl rounded-t-[28px] border border-white/10 bg-[#070B14] p-5 shadow-2xl shadow-black/60 lg:hidden"
+            >
+              <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-white/15" />
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-base font-black text-white">Quick access</h2>
+                <button
+                  type="button"
+                  aria-label="Close quick access"
+                  onClick={() => setMoreOpen(false)}
+                  className="rounded-full border border-white/10 p-2 text-slate-300"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+              <div className="space-y-5">
+                {quickAccessGroups.map((group) => (
+                  <div key={group.title}>
+                    <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300">{group.title}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {group.items.map((item) => (
+                        <Link
+                          key={item.label}
+                          href={item.href}
+                          onClick={() => setMoreOpen(false)}
+                          className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-slate-200 transition hover:border-cyan-500/30 hover:bg-cyan-500/5"
+                        >
+                          <span>{item.label}</span>
+                          <span className="text-cyan-300">→</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+
+      <section className="flex-1 overflow-auto p-4 pb-24 sm:p-8 lg:pb-8">
         <TopNavbar onMenuClick={() => setMobileMenuOpen(true)} />
-
         {children}
-
       </section>
 
-      {/* Mobile Sticky Bottom Navigation Dock */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 lg:hidden border-t border-white/10 bg-[#070B14]/90 p-3 backdrop-blur-lg flex justify-around items-center">
-        {mobileNavigation.map((tab) => {
-          const active = isActive(tab.href);
-          if (!tab.available || !tab.href) {
+      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#070B14]/90 p-3 backdrop-blur-lg lg:hidden">
+        <div className="mx-auto flex max-w-xl items-center justify-around gap-2">
+          {mobileNavigation.map((tab) => {
+            const active = isActive(tab.href);
+            if (!tab.available || !tab.href) {
+              return (
+                <button
+                  key={tab.title}
+                  type="button"
+                  aria-label={tab.title}
+                  onClick={() => setMoreOpen(true)}
+                  className="flex min-w-[64px] flex-col items-center gap-1 rounded-xl px-2 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400"
+                >
+                  <tab.icon size={20} />
+                  <span>{tab.title}</span>
+                </button>
+              );
+            }
             return (
-              <span key={tab.title} aria-disabled="true" className="flex flex-col items-center gap-1 text-[10px] font-bold uppercase text-slate-600">
+              <Link
+                key={tab.title}
+                href={tab.href}
+                className={`flex min-w-[64px] flex-col items-center gap-1 rounded-xl px-2 py-2 text-[10px] font-bold tracking-[0.12em] uppercase transition ${
+                  active ? "scale-105 text-cyan-400" : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
                 <tab.icon size={20} />
                 <span>{tab.title}</span>
-              </span>
+              </Link>
             );
-          }
-          return (
-            <Link
-              key={tab.title}
-              href={tab.href}
-              className={`flex flex-col items-center gap-1 text-[10px] font-bold tracking-wider uppercase transition ${
-                active ? "text-cyan-400 scale-105" : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              <tab.icon size={20} />
-              <span>{tab.title}</span>
-            </Link>
-          );
-        })}
+          })}
+        </div>
       </div>
     </main>
   );

@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, Menu, Trophy, Shield, Zap, ArrowUpRight, History } from "lucide-react";
+import { Search, Menu, Trophy, Shield, Zap, ArrowUpRight, History, Activity } from "lucide-react";
 import api from "@/services/api";
 import NotificationMenu from "./NotificationMenu";
 import ProfileMenu from "./ProfileMenu";
 import { useAuthStore } from "@/store/authStore";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { getPortalKind } from "@/data/dashboard";
+import { getPostLoginPath } from "@/lib/auth-routing";
 
 type SearchResult = {
   type: string;
@@ -68,11 +69,13 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
   const level = dashboard?.stats?.level ?? 1;
   const rating = dashboard?.stats?.rating ?? 1000;
   const xp = dashboard?.stats?.xp ?? 0;
+  const logoHref = user ? getPostLoginPath(user) : "/login";
 
   return (
     <header
       suppressHydrationWarning
       className="
+        relative z-20
         mb-8
         flex
         flex-col
@@ -86,36 +89,30 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
         sm:flex-row
         sm:items-center
         sm:justify-between
-        relative
-        z-20
       "
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <button
+          type="button"
           onClick={onMenuClick}
-          className="lg:hidden rounded-xl border border-white/10 bg-white/5 p-2.5 text-white hover:bg-white/10 transition"
+          className="lg:hidden rounded-xl border border-white/10 bg-white/5 p-2.5 text-white transition hover:bg-white/10"
+          aria-label="Open navigation menu"
         >
           <Menu size={20} />
         </button>
 
-        <div className="relative w-full max-w-xs">
-          <div
-            className="
-            flex
-            flex-1
-            items-center
-            gap-3
-            rounded-xl
-            border
-            border-white/10
-            bg-[#0F172A]
-            px-4
-            py-2.5
-            transition
-            focus-within:border-cyan-400
-            w-full
-          "
-          >
+        <Link
+          href={logoHref}
+          aria-label="SkillBattle home"
+          className="inline-flex items-center gap-2 rounded-xl px-1 py-1 text-left transition hover:opacity-90"
+        >
+          <span className="text-lg font-black tracking-tight text-white sm:text-xl">
+            SkillBattle
+          </span>
+        </Link>
+
+        <div className="relative hidden w-full max-w-xs md:block">
+          <div className="flex w-full flex-1 items-center gap-3 rounded-xl border border-white/10 bg-[#0F172A] px-4 py-2.5 transition focus-within:border-cyan-400">
             <Search size={18} className="shrink-0 text-slate-400" />
             <input
               value={searchQuery}
@@ -141,14 +138,7 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
               aria-expanded={searchOpen}
               aria-controls="global-search-results"
               placeholder="Search platform..."
-              className="
-              w-full
-              bg-transparent
-              text-sm
-              text-white
-              outline-none
-              placeholder:text-slate-500
-            "
+              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
             />
           </div>
           {searchOpen && searchQuery.trim().length >= 2 && (
@@ -189,7 +179,8 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
                         <span className="block truncate text-xs text-slate-400">{result.detail}</span>
                       </span>
                       <span className="flex items-center gap-1 text-[10px] uppercase text-cyan-300">
-                        {result.type}<ArrowUpRight className="h-3.5 w-3.5" />
+                        {result.type}
+                        <ArrowUpRight className="h-3.5 w-3.5" />
                       </span>
                     </button>
                   ))
@@ -200,8 +191,7 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
         </div>
       </div>
 
-      {/* Profile & Live Rating Ribbon */}
-      <div className="flex flex-wrap items-center gap-3.5 sm:gap-5 justify-end">
+      <div className="flex items-center justify-end gap-3 sm:gap-4">
         {user && portal === "student" && (
           <div className="hidden md:flex items-center gap-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-cyan-300">
             <div className="flex items-center gap-1.5">
@@ -224,21 +214,20 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
         {user && portal !== "student" && (
           <div className="hidden md:flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-slate-300">
             <Shield size={14} className="text-cyan-400" />
-            <span>{portal === "college" ? "College workspace" : "Company hiring"}</span>
+            <span>{portal === "college" ? "College workspace" : portal === "company" ? "Company hiring" : "Admin workspace"}</span>
           </div>
         )}
 
-        <div className="flex items-center gap-3">
-          {portal === "student" && (
-            <Link
-              href="/activity"
-              aria-label="View activity"
-              title="Activity"
-              className="rounded-lg border border-white/10 bg-white/5 p-2.5 text-slate-300 transition hover:border-cyan-300 hover:text-white"
-            >
-              <History className="h-4 w-4" />
-            </Link>
-          )}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Link
+            href="/activity"
+            aria-label="View activity"
+            title="Activity"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2.5 py-2.5 text-slate-200 transition hover:border-cyan-400/60 hover:text-white"
+          >
+            <Activity className="h-4 w-4" />
+            <span className="hidden text-xs font-semibold uppercase tracking-[0.12em] sm:inline">Activity</span>
+          </Link>
           <NotificationMenu />
           <ProfileMenu />
         </div>
