@@ -1,7 +1,8 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import dynamic from "next/dynamic";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import GradientButton from '@/components/design/GradientButton';
 
@@ -9,34 +10,58 @@ import DashboardHero from "@/components/dashboard/DashboardHero";
 import StatsGrid from "@/components/dashboard/StatsGrid";
 
 import AICoachCard from "@/components/dashboard/AICoachCard";
-import DailyChallenge from "@/components/dashboard/DailyChallenge";
-import BattleDock from "@/components/dashboard/BattleDock";
-import QuickSpeedrunWidget from "@/components/dashboard/QuickSpeedrunWidget";
-import ServerStatus from "@/components/dashboard/ServerStatus";
+
+function DashboardPlaceholder({ minHeight }: { minHeight: string }) {
+  return <div aria-hidden="true" className="animate-pulse rounded-2xl bg-white/[0.02]" style={{ minHeight }} />;
+}
+
+const DailyChallenge = dynamic(() => import("@/components/dashboard/DailyChallenge"), {
+  loading: () => <DashboardPlaceholder minHeight="42rem" />,
+});
+const BattleDock = dynamic(() => import("@/components/dashboard/BattleDock"), {
+  loading: () => <DashboardPlaceholder minHeight="36rem" />,
+});
+const QuickSpeedrunWidget = dynamic(() => import("@/components/dashboard/QuickSpeedrunWidget"), {
+  loading: () => <DashboardPlaceholder minHeight="10rem" />,
+});
+const ServerStatus = dynamic(() => import("@/components/dashboard/ServerStatus"), {
+  loading: () => <DashboardPlaceholder minHeight="18rem" />,
+});
 
 import { useDashboard } from "@/hooks/use-dashboard";
 import { useAuthStore } from "@/store/authStore";
 import { getPostLoginPath } from "@/lib/auth-routing";
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2,
-    },
-  },
-};
+function DeferredSection({ children, minHeight }: { children: ReactNode; minHeight: string }) {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [shouldRender, setShouldRender] = useState(false);
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: "easeOut" as const },
-  },
-};
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+
+    if (!("IntersectionObserver" in window)) {
+      setShouldRender(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setShouldRender(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: "600px 0px" });
+
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={sectionRef} style={{ minHeight }}>
+      {shouldRender ? children : <DashboardPlaceholder minHeight={minHeight} />}
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -107,53 +132,56 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <motion.div
-        initial={false}
-        variants={containerVariants}
-        animate="visible"
-        className="space-y-8"
-      >
+      <div className="space-y-8">
         {/* Hero Section */}
-        <motion.div variants={itemVariants}>
+        <div>
           <DashboardHero
             user={dashboard.user}
             stats={dashboard.stats}
             achievements={dashboard.achievements}
           />
-        </motion.div>
+        </div>
 
         {/* Stats Grid */}
-        <motion.div variants={itemVariants} className="mt-8">
+        <div className="mt-8">
           <StatsGrid
             stats={dashboard.stats}
           />
-        </motion.div>
+        </div>
 
         {/* AI Coach + Server Status Row */}
-        <motion.div variants={itemVariants} className="mt-8">
+        <div className="mt-8">
           <div className="grid gap-6 lg:grid-cols-2">
             <AICoachCard
               recommendation={dashboard.ai_recommendation}
             />
-            <ServerStatus />
+            <DeferredSection minHeight="18rem">
+              <ServerStatus />
+            </DeferredSection>
           </div>
-        </motion.div>
+        </div>
 
         {/* Daily Challenge */}
-        <motion.div variants={itemVariants} className="mt-8">
+        <div className="mt-8">
+          <DeferredSection minHeight="42rem">
           <DailyChallenge challenge={dashboard.daily_challenge} />
-        </motion.div>
+          </DeferredSection>
+        </div>
 
         {/* Quick OA Placement Speedrun */}
-        <motion.div variants={itemVariants} className="mt-8">
-          <QuickSpeedrunWidget />
-        </motion.div>
+        <div className="mt-8">
+          <DeferredSection minHeight="10rem">
+            <QuickSpeedrunWidget />
+          </DeferredSection>
+        </div>
 
         {/* Battle Dock */}
-        <motion.div variants={itemVariants} className="mt-8">
-          <BattleDock />
-        </motion.div>
-      </motion.div>
+        <div className="mt-8">
+          <DeferredSection minHeight="36rem">
+            <BattleDock />
+          </DeferredSection>
+        </div>
+      </div>
     </DashboardLayout>
   );
 }

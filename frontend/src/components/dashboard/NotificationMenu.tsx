@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, Bell, CheckCheck, X } from "lucide-react";
+import { ArrowUpRight, Bell, CheckCheck } from "lucide-react";
 import api from "@/services/api";
+import HeaderPanel from "./HeaderPanel";
 
 type NotificationItem = {
   id: string;
@@ -30,6 +31,7 @@ export default function NotificationMenu() {
     let active = true;
     const fetchNotifications = async () => {
       try {
+        if (open) setLoading(true);
         const countResponse = await api.get<{ unread_count: number }>("/notifications/unread-count");
         if (!active) return;
         setUnreadCount(countResponse.data.unread_count);
@@ -118,9 +120,10 @@ export default function NotificationMenu() {
         aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ""}`}
         aria-expanded={open}
         onClick={() => setOpen((previous) => !previous)}
-        className="relative rounded-xl border border-white/10 bg-white/5 p-3 transition hover:border-cyan-400"
+        aria-haspopup="dialog"
+        className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:border-cyan-400/60 hover:text-white sm:h-10 sm:w-10"
       >
-        <Bell className="text-white" size={22} />
+        <Bell className="h-[18px] w-[18px]" />
         {unreadCount > 0 && (
           <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-black text-white">
             {unreadCount > 99 ? "99+" : unreadCount}
@@ -128,43 +131,20 @@ export default function NotificationMenu() {
         )}
       </button>
 
-      {open && (
-        <>
+      <HeaderPanel
+        open={open}
+        title={`Notifications${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
+        onClose={() => setOpen(false)}
+        actions={unreadCount > 0 ? (
           <button
             type="button"
-            aria-label="Close notifications"
-            className="fixed inset-0 z-40 cursor-default"
-            onClick={() => setOpen(false)}
-          />
-          <section
-            aria-label="Notifications"
-            className="absolute right-0 top-14 z-50 w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-white/10 bg-slate-900 shadow-2xl shadow-black/50"
+            onClick={markAllRead}
+            className="inline-flex items-center gap-1 text-xs text-slate-400 transition hover:text-white"
           >
-            <header className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-              <span className="text-sm font-bold text-white">
-                Notifications{unreadCount > 0 ? ` (${unreadCount})` : ""}
-              </span>
-              <div className="flex items-center gap-3">
-                {unreadCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={markAllRead}
-                    className="flex items-center gap-1 text-xs text-slate-400 transition hover:text-white"
-                  >
-                    <CheckCheck className="h-3.5 w-3.5" /> All read
-                  </button>
-                )}
-                <button
-                  type="button"
-                  aria-label="Close notifications"
-                  onClick={() => setOpen(false)}
-                  className="text-slate-500 hover:text-white"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </header>
-
+            <CheckCheck className="h-3.5 w-3.5" /> All read
+          </button>
+        ) : undefined}
+      >
             {error && (
               <div role="alert" className="flex items-center justify-between gap-3 border-b border-rose-400/20 px-4 py-2 text-xs text-rose-200">
                 <span>{error}</span>
@@ -174,7 +154,7 @@ export default function NotificationMenu() {
               </div>
             )}
 
-            <div className="max-h-80 divide-y divide-white/5 overflow-y-auto">
+            <div className="divide-y divide-white/5">
               {loading ? (
                 <p className="px-4 py-8 text-center text-sm text-slate-400">Loading notifications…</p>
               ) : notifs.length === 0 ? (
@@ -212,9 +192,7 @@ export default function NotificationMenu() {
                 })
               )}
             </div>
-          </section>
-        </>
-      )}
+      </HeaderPanel>
     </div>
   );
 }

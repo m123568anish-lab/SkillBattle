@@ -131,7 +131,7 @@ export default function DashboardLayout({ children }: Props) {
   };
 
   return (
-    <main suppressHydrationWarning className="flex min-h-screen bg-[#050816] text-white">
+    <main suppressHydrationWarning className="flex min-h-screen bg-[#050816] text-white lg:h-dvh lg:min-h-0 lg:overflow-hidden">
       <Sidebar />
 
       <AnimatePresence>
@@ -190,7 +190,7 @@ export default function DashboardLayout({ children }: Props) {
         )}
       </AnimatePresence>
 
-      <section className="min-w-0 flex-1 overflow-auto p-3 pb-24 sm:p-8 lg:pb-8">
+      <section className="min-w-0 flex-1 overflow-auto p-3 pb-24 sm:p-8 lg:h-full lg:min-h-0 lg:pb-8">
         <TopNavbar />
         {children}
       </section>

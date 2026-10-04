@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 import { Trophy, Target, Shield, Zap, Sparkles, TrendingUp, Clock, ChevronRight, Star } from "lucide-react";
 import XPProgress from "./XPProgress";
 import type { UserSummary, DashboardStats, Achievement } from "@/types/dashboard";
@@ -20,6 +21,12 @@ export default function DashboardHero({ user, stats, achievements = [] }: Dashbo
     ? 0
     : Math.round((stats.battles_won / stats.battles_played) * 100);
   const recentAchievements = achievements.slice(0, 4);
+  const initials = (user.full_name || user.username || "SkillBattle Player")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
 
   const momentum = [
     { label: "XP Progress", value: `${Math.min(100, Math.round((stats.xp / nextLevelXP) * 100))}%`, icon: Zap, color: "text-violet-400" },
@@ -45,11 +52,23 @@ export default function DashboardHero({ user, stats, achievements = [] }: Dashbo
             <div className="relative flex-shrink-0">
               <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 opacity-70 blur-md animate-pulse" />
               <div className="relative rounded-3xl border border-white/20 bg-slate-950 p-1">
-                <img
-                  src={user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name || user.username || "User")}&background=0F172A&color=06b6d4&size=128&bold=true`}
-                  alt={user.full_name}
-                  className="h-28 w-28 rounded-2xl object-cover"
-                />
+                {user.avatar_url ? (
+                  <Image
+                    src={user.avatar_url}
+                    alt={user.full_name}
+                    width={112}
+                    height={112}
+                    unoptimized
+                    loading="eager"
+                    decoding="async"
+                    fetchPriority="high"
+                    className="h-28 w-28 rounded-2xl object-cover"
+                  />
+                ) : (
+                  <div aria-label={user.full_name || "User"} className="grid h-28 w-28 place-items-center rounded-2xl bg-slate-800 text-3xl font-black text-cyan-200">
+                    {initials || "SB"}
+                  </div>
+                )}
               </div>
               <span className="absolute -bottom-3 -right-2 flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-xs font-black text-white shadow-lg border border-cyan-400/40">
                 {level}

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   Bell,
   BriefcaseBusiness,
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { getPortalKind } from "@/data/dashboard";
+import HeaderPanel from "./HeaderPanel";
 
 export default function ProfileMenu() {
   const router = useRouter();
@@ -111,20 +113,23 @@ export default function ProfileMenu() {
         suppressHydrationWarning
         aria-label="Open profile menu"
         aria-expanded={isMenuOpen}
-        aria-haspopup="menu"
+        aria-haspopup="dialog"
         onClick={() => setIsMenuOpen((open) => !open)}
-        className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#070B14] px-2.5 py-2 text-left transition hover:border-cyan-500/50 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] md:px-4"
+        className="flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-1.5 text-left transition hover:border-cyan-500/50 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] sm:h-10 sm:gap-3 sm:rounded-xl sm:px-2.5 md:px-4"
       >
         <div className="relative">
           <div className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 opacity-70 blur-sm transition duration-300" />
           {avatarUrl ? (
-            <img
+            <Image
               src={avatarUrl}
               alt="Profile"
-              className="relative h-8 w-8 rounded-full border border-white/20 object-cover md:h-9 md:w-9"
+              width={36}
+              height={36}
+              unoptimized
+              className="relative h-7 w-7 rounded-full border border-white/20 object-cover sm:h-8 sm:w-8 md:h-9 md:w-9"
             />
           ) : (
-            <div className="relative grid h-8 w-8 place-items-center rounded-full border border-white/20 bg-slate-800 text-xs font-black text-cyan-200 md:h-9 md:w-9">
+            <div className="relative grid h-7 w-7 place-items-center rounded-full border border-white/20 bg-slate-800 text-[10px] font-black text-cyan-200 sm:h-8 sm:w-8 sm:text-xs md:h-9 md:w-9">
               {initials}
             </div>
           )}
@@ -140,11 +145,10 @@ export default function ProfileMenu() {
         <ChevronDown size={16} className={`hidden text-slate-400 transition md:block ${isMenuOpen ? "rotate-180 text-white" : ""}`} />
       </button>
 
-      {isMenuOpen && (
-        <div className="absolute right-0 top-[calc(100%+10px)] z-50 w-[min(21rem,calc(100vw-1.5rem))] rounded-2xl border border-white/10 bg-[#0A0E1A]/95 p-2 shadow-2xl shadow-black/60 backdrop-blur-xl md:w-72">
+      <HeaderPanel open={isMenuOpen} title="Account" onClose={() => setIsMenuOpen(false)}>
           <div className="mb-2 flex items-center gap-3 border-b border-white/5 px-3 py-3">
             {avatarUrl ? (
-              <img src={avatarUrl} alt="Profile preview" className="h-11 w-11 rounded-full border border-white/20 object-cover" />
+              <Image src={avatarUrl} alt="Profile preview" width={44} height={44} unoptimized className="h-11 w-11 rounded-full border border-white/20 object-cover" />
             ) : (
               <div className="grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-slate-800 text-sm font-black text-cyan-200">
                 {initials}
@@ -156,7 +160,7 @@ export default function ProfileMenu() {
             </div>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1 p-2">
             {menuActions.map(({ label, description, href, icon: Icon }) => (
               <button
                 key={label}
@@ -176,7 +180,7 @@ export default function ProfileMenu() {
             ))}
           </div>
 
-          <div className="mt-3 border-t border-white/5 pt-2">
+          <div className="mt-1 border-t border-white/5 px-2 pb-2 pt-2">
             <button
               type="button"
               onClick={handleLogout}
@@ -188,8 +192,7 @@ export default function ProfileMenu() {
               </span>
             </button>
           </div>
-        </div>
-      )}
+      </HeaderPanel>
     </div>
   );
 }

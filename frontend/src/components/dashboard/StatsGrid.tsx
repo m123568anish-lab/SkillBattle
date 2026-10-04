@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { Trophy, Target, Flame, Gem } from "lucide-react";
 import type { DashboardStats } from "@/types/dashboard";
 
@@ -83,12 +82,8 @@ export default function StatsGrid({ stats }: StatsGridProps) {
         const Icon = card.icon;
 
         return (
-          <motion.div
+          <div
             key={card.title}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: idx * 0.1 }}
-            whileHover={{ y: -5, scale: 1.02 }}
             className={`
               group
               rounded-3xl
@@ -128,7 +123,7 @@ export default function StatsGrid({ stats }: StatsGridProps) {
                 <Icon size={24} className={`${card.color} transition-transform duration-300 group-hover:scale-110`} />
               </div>
             </div>
-          </motion.div>
+          </div>
         );
       })}
     </div>

@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity, RefreshCw, X } from "lucide-react";
+import Link from "next/link";
+import { Activity, RefreshCw } from "lucide-react";
 import api from "@/services/api";
+import HeaderPanel from "./HeaderPanel";
 
 type ActivityEntry = {
   id: string;
@@ -41,41 +43,26 @@ export default function ActivityMenu() {
 
   return (
     <div className="relative">
+      <Link
+        href="/activity"
+        aria-label="Open activity page"
+        title="Activity"
+        className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:border-cyan-400/60 hover:text-white md:hidden"
+      >
+        <Activity className="h-[18px] w-[18px]" />
+      </Link>
       <button
         type="button"
         aria-label="Activity"
         aria-expanded={open}
+        aria-haspopup="dialog"
         onClick={() => setOpen((previous) => !previous)}
-        className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:border-cyan-400/60 hover:text-white"
+        className="relative hidden h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:border-cyan-400/60 hover:text-white md:inline-flex sm:h-10 sm:w-10"
       >
         <Activity className="h-[18px] w-[18px]" />
       </button>
 
-      {open && (
-        <>
-          <button
-            type="button"
-            aria-label="Close activity"
-            className="fixed inset-0 z-40 cursor-default"
-            onClick={() => setOpen(false)}
-          />
-          <section
-            aria-label="Recent activity"
-            className="fixed inset-x-0 bottom-0 z-50 max-h-[72dvh] overflow-hidden rounded-t-2xl border border-white/10 bg-slate-900 shadow-2xl shadow-black/50 md:absolute md:inset-x-auto md:right-0 md:top-11 md:max-h-[min(30rem,calc(100dvh-6rem))] md:w-[min(24rem,calc(100vw-1.5rem))] md:rounded-xl"
-          >
-            <header className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-              <span className="text-sm font-bold text-white">Activity</span>
-              <button
-                type="button"
-                aria-label="Close activity"
-                onClick={() => setOpen(false)}
-                className="text-slate-500 hover:text-white"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </header>
-
-            <div className="max-h-[calc(72dvh-3.25rem)] divide-y divide-white/5 overflow-y-auto md:max-h-[calc(min(30rem,100dvh-6rem)-3.25rem)]">
+      <HeaderPanel open={open} title="Activity" onClose={() => setOpen(false)}>
               {loading ? (
                 <p role="status" className="px-4 py-8 text-center text-sm text-slate-400">Loading activity…</p>
               ) : error ? (
@@ -107,10 +94,7 @@ export default function ActivityMenu() {
                   </div>
                 ))
               )}
-            </div>
-          </section>
-        </>
-      )}
+      </HeaderPanel>
     </div>
   );
 }

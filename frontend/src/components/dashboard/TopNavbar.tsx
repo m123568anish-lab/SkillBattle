@@ -11,7 +11,7 @@ import ProfileMenu from "./ProfileMenu";
 import { useAuthStore } from "@/store/authStore";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { getPortalKind } from "@/data/dashboard";
-import { getPostLoginPath } from "@/lib/auth-routing";
+import { getDashboardPath } from "@/lib/auth-routing";
 
 type SearchResult = {
   type: string;
@@ -66,7 +66,7 @@ export default function TopNavbar() {
   const level = dashboard?.stats?.level ?? 1;
   const rating = dashboard?.stats?.rating ?? 1000;
   const xp = dashboard?.stats?.xp ?? 0;
-  const logoHref = user ? getPostLoginPath(user) : "/login";
+  const logoHref = user ? getDashboardPath(user) : "/login";
 
   return (
     <header
@@ -85,11 +85,12 @@ export default function TopNavbar() {
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <Link
           href={logoHref}
-          aria-label="SkillBattle home"
-          className="inline-flex shrink-0 items-center rounded-lg px-1 py-1 text-left transition hover:opacity-90"
+          aria-label="Go to your SkillBattle dashboard"
+          title="Dashboard"
+          className="inline-flex min-w-0 shrink-0 items-center rounded-lg px-1 py-1 text-left transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
         >
-          <span className="text-base font-black tracking-tight text-white sm:text-xl">
-            SkillBattle
+          <span className="truncate text-sm font-black tracking-tight text-white sm:text-xl">
+            Skill<span className="text-cyan-300">Battle</span>
           </span>
         </Link>
 
