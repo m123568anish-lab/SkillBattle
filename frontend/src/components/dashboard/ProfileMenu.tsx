@@ -1,11 +1,18 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  Bell,
+  BriefcaseBusiness,
+  Building2,
   ChevronDown,
-  User,
-  Settings,
+  ChevronRight,
+  LockKeyhole,
   LogOut,
+  Settings,
+  ShieldCheck,
+  User,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { getPortalKind } from "@/data/dashboard";
@@ -14,13 +21,69 @@ export default function ProfileMenu() {
   const router = useRouter();
   const pathname = usePathname();
   const portal = getPortalKind(pathname);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const logout = useAuthStore((s) => s.logout);
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const displayName = user?.username || user?.full_name || "User";
+
+  const displayName = user?.full_name || user?.username || "User";
+  const email = user?.email || "Your account";
+  const avatarUrl = user?.avatar_url || user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=070B14&color=06b6d4&bold=true`;
+
+  const menuActions = useMemo(() => {
+    const role = (user?.role || user?.account_type || "student").toLowerCase();
+    const isAdmin = Boolean(user?.is_superuser || role.includes("admin"));
+    const isCollege = role.includes("college");
+    const isCompany = role.includes("company");
+    const items = [
+      { label: "Profile", description: "View your profile", href: "/profile", icon: User },
+      { label: "Settings", description: "Manage preferences", href: "/settings", icon: Settings },
+      { label: "Notifications", description: "Recent activity", href: "/activity", icon: Bell },
+    ];
+
+    if (isCollege) {
+      items.splice(1, 0, { label: "Organization Profile", description: "Institution details", href: "/organization-setup", icon: Building2 });
+    }
+
+    if (isCompany) {
+      items.splice(1, 0, { label: "Company Profile", description: "Organization details", href: "/organization-setup", icon: BriefcaseBusiness });
+    }
+
+    if (isAdmin) {
+      items.push({ label: "Admin Settings", description: "Platform controls", href: "/admin?tab=settings", icon: ShieldCheck });
+      items.push({ label: "Security", description: "Account protection", href: "/settings", icon: LockKeyhole });
+    }
+
+    return items;
+  }, [user]);
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (menuRef.current && !menuRef.current.contains(target)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsMenuOpen(false);
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMenuOpen]);
 
   async function handleLogout() {
+    setIsMenuOpen(false);
     try {
       await logout();
     } finally {
@@ -28,99 +91,87 @@ export default function ProfileMenu() {
     }
   }
 
+  const handleNavigate = (href: string) => {
+    setIsMenuOpen(false);
+    router.push(href);
+  };
+
   if (!isAuthenticated) return null;
 
   return (
-    <div className="group relative">
-
+    <div ref={menuRef} className="relative">
       <button
+        type="button"
         suppressHydrationWarning
-        className="
-          flex
-          items-center
-          gap-3
-          rounded-xl
-          border
-          border-white/10
-          bg-[#070B14]
-          px-4
-          py-2
-          transition
-          hover:border-cyan-500/50
-          hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]
-        "
+        aria-label="Open profile menu"
+        aria-expanded={isMenuOpen}
+        aria-haspopup="menu"
+        onClick={() => setIsMenuOpen((open) => !open)}
+        className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#070B14] px-3 py-2 text-left transition hover:border-cyan-500/50 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] md:px-4"
       >
         <div className="relative">
-          <div className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 opacity-70 blur-sm group-hover:opacity-100 transition duration-300"></div>
+          <div className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 opacity-70 blur-sm transition duration-300" />
           <img
-            src={user?.avatar_url || user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=070B14&color=06b6d4&bold=true`}
+            src={avatarUrl}
             alt="Profile"
-            className="relative h-9 w-9 rounded-full border border-white/20"
+            className="relative h-8 w-8 rounded-full border border-white/20 object-cover md:h-9 md:w-9"
           />
         </div>
 
         <div className="hidden text-left md:block">
-          <p className="text-sm font-bold text-white leading-tight">{user?.full_name || displayName}</p>
-          <p className="text-[10px] font-semibold text-cyan-400 uppercase tracking-wider">
-            {portal === "student" ? `Level ${user?.level ?? 1}` : portal === "college" ? "College account" : "Company account"}
+          <p className="text-sm font-bold text-white leading-tight">{displayName}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-cyan-400">
+            {portal === "student" ? `Level ${user?.level ?? 1}` : portal === "college" ? "College account" : portal === "company" ? "Company account" : "Admin account"}
           </p>
         </div>
 
-        <ChevronDown size={16} className="text-slate-400 ml-1 transition group-hover:text-white" />
+        <ChevronDown size={16} className={`hidden text-slate-400 transition md:block ${isMenuOpen ? "rotate-180 text-white" : ""}`} />
       </button>
 
-      <div
-        className="
-          invisible
-          absolute
-          right-0
-          top-[calc(100%+8px)]
-          w-60
-          rounded-2xl
-          border
-          border-white/10
-          bg-[#0A0E1A]/95
-          backdrop-blur-xl
-          p-2
-          opacity-0
-          shadow-2xl
-          shadow-black
-          transition-all
-          duration-200
-          translate-y-2
-          group-hover:visible
-          group-hover:opacity-100
-          group-hover:translate-y-0
-          z-50
-        "
-      >
-        <div className="px-3 py-2 mb-2 border-b border-white/5">
-          <p className="text-xs text-slate-400 font-semibold">Signed in as</p>
-          <p className="text-sm text-white font-bold truncate">{user?.email || user?.full_name}</p>
+      {isMenuOpen && (
+        <div className="absolute right-0 top-[calc(100%+10px)] z-50 w-[min(21rem,calc(100vw-1.5rem))] rounded-2xl border border-white/10 bg-[#0A0E1A]/95 p-2 shadow-2xl shadow-black/60 backdrop-blur-xl md:w-72">
+          <div className="mb-2 flex items-center gap-3 border-b border-white/5 px-3 py-3">
+            <img src={avatarUrl} alt="Profile preview" className="h-11 w-11 rounded-full border border-white/20 object-cover" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold text-white">{displayName}</p>
+              <p className="truncate text-xs text-slate-400">{email}</p>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            {menuActions.map(({ label, description, href, icon: Icon }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => handleNavigate(href)}
+                className="group flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left transition hover:border-cyan-500/20 hover:bg-white/5"
+              >
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-cyan-500/10 text-cyan-300">
+                  <Icon size={16} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-white">{label}</span>
+                  <span className="block text-[11px] text-slate-400">{description}</span>
+                </span>
+                <ChevronRight size={15} className="text-slate-500 transition group-hover:translate-x-0.5 group-hover:text-cyan-300" />
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-3 border-t border-white/5 pt-2">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="group/logout flex w-full items-center justify-between gap-3 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-2.5 text-sm font-bold text-rose-400 transition-all hover:bg-rose-500 hover:text-white hover:shadow-[0_0_15px_rgba(244,63,94,0.4)]"
+            >
+              <span className="flex items-center gap-2">
+                <LogOut size={16} className="transition-transform group-hover/logout:-translate-x-1" />
+                Sign Out
+              </span>
+            </button>
+          </div>
         </div>
-
-        <div className="space-y-1">
-          <button onClick={() => router.push(portal === "student" ? "/profile" : "/organization-setup")} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
-            <User size={16} />
-            {portal === "student" ? "My Profile" : "Organization setup"}
-          </button>
-
-          <button onClick={() => router.push('/settings')} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
-            <Settings size={16} />
-            Settings
-          </button>
-        </div>
-
-        <div className="mt-2 pt-2 border-t border-white/5">
-          <button onClick={handleLogout} className="group/logout flex w-full items-center justify-between gap-3 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-2.5 text-sm font-bold text-rose-400 transition-all hover:bg-rose-500 hover:text-white hover:shadow-[0_0_15px_rgba(244,63,94,0.4)]">
-            <span className="flex items-center gap-2">
-              <LogOut size={16} className="transition-transform group-hover/logout:-translate-x-1" />
-              Sign Out
-            </span>
-          </button>
-        </div>
-      </div>
-
+      )}
     </div>
   );
 }

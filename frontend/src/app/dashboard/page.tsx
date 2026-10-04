@@ -118,6 +118,7 @@ export default function DashboardPage() {
           <DashboardHero
             user={dashboard.user}
             stats={dashboard.stats}
+            achievements={dashboard.achievements}
           />
         </motion.div>
 
