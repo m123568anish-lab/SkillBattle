@@ -8,10 +8,18 @@ interface HeaderPanelProps {
   title: string;
   onClose: () => void;
   actions?: ReactNode;
+  mobilePresentation?: "sheet" | "popover";
   children: ReactNode;
 }
 
-export default function HeaderPanel({ open, title, onClose, actions, children }: HeaderPanelProps) {
+export default function HeaderPanel({
+  open,
+  title,
+  onClose,
+  actions,
+  mobilePresentation = "sheet",
+  children,
+}: HeaderPanelProps) {
   useEffect(() => {
     if (!open) return;
 
@@ -30,14 +38,22 @@ export default function HeaderPanel({ open, title, onClose, actions, children }:
       <button
         type="button"
         aria-label={`Close ${title}`}
-        className="fixed inset-0 z-40 cursor-default bg-black/45 backdrop-blur-[2px]"
+        className={`fixed inset-0 z-40 cursor-default ${
+          mobilePresentation === "popover"
+            ? "bg-transparent md:bg-black/45 md:backdrop-blur-[2px]"
+            : "bg-black/45 backdrop-blur-[2px]"
+        }`}
         onClick={onClose}
       />
       <section
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[min(78dvh,42rem)] w-full max-w-xl flex-col overflow-hidden rounded-t-2xl border border-white/10 bg-slate-900 shadow-2xl shadow-black/50 md:absolute md:inset-x-auto md:bottom-auto md:right-0 md:top-[calc(100%+0.5rem)] md:mx-0 md:max-h-[min(32rem,calc(100dvh-5rem))] md:w-[min(24rem,calc(100vw-1.5rem))] md:rounded-xl"
+        className={`${
+          mobilePresentation === "popover"
+            ? "absolute right-0 top-[calc(100%+0.5rem)] max-h-[min(32rem,calc(100dvh-5rem))] w-[min(24rem,calc(100vw-1.5rem))] rounded-xl"
+            : "fixed inset-x-0 bottom-0 mx-auto max-h-[min(78dvh,42rem)] w-full max-w-xl rounded-t-2xl md:absolute md:inset-x-auto md:bottom-auto md:right-0 md:top-[calc(100%+0.5rem)] md:mx-0 md:max-h-[min(32rem,calc(100dvh-5rem))] md:w-[min(24rem,calc(100vw-1.5rem))] md:rounded-xl"
+        } z-50 flex flex-col overflow-hidden border border-white/10 bg-slate-900 shadow-2xl shadow-black/50`}
       >
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
           <h2 className="min-w-0 truncate text-sm font-bold text-white">{title}</h2>

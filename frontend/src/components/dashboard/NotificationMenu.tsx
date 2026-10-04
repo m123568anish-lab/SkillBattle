@@ -135,6 +135,7 @@ export default function NotificationMenu() {
         open={open}
         title={`Notifications${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
         onClose={() => setOpen(false)}
+        mobilePresentation="popover"
         actions={unreadCount > 0 ? (
           <button
             type="button"

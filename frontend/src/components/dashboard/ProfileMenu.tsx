@@ -145,7 +145,12 @@ export default function ProfileMenu() {
         <ChevronDown size={16} className={`hidden text-slate-400 transition md:block ${isMenuOpen ? "rotate-180 text-white" : ""}`} />
       </button>
 
-      <HeaderPanel open={isMenuOpen} title="Account" onClose={() => setIsMenuOpen(false)}>
+      <HeaderPanel
+        open={isMenuOpen}
+        title="Account"
+        onClose={() => setIsMenuOpen(false)}
+        mobilePresentation="popover"
+      >
           <div className="mb-2 flex items-center gap-3 border-b border-white/5 px-3 py-3">
             {avatarUrl ? (
               <Image src={avatarUrl} alt="Profile preview" width={44} height={44} unoptimized className="h-11 w-11 rounded-full border border-white/20 object-cover" />
