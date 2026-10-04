@@ -69,12 +69,17 @@ export default function ServerStatus() {
   }
 
   useEffect(() => {
-    checkHealth();
-    fetchUptimeRobot();
+    const refreshStatus = () => {
+      void checkHealth();
+      void fetchUptimeRobot();
+    };
+
+    refreshStatus();
+
     const interval = setInterval(() => {
-      checkHealth();
-      fetchUptimeRobot();
+      refreshStatus();
     }, 5 * 60 * 1000);
+
     return () => clearInterval(interval);
   }, []);
 

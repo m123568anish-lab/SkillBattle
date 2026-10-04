@@ -41,7 +41,7 @@ export default function ChatWindow({
                     </h1>
 
                     <p className="mt-4 max-w-xl text-lg text-slate-500">
-                        I'm here to help you improve your resume,
+                        I&apos;m here to help you improve your resume,
                         prepare for interviews, learn new skills,
                         and plan your career.
                     </p>

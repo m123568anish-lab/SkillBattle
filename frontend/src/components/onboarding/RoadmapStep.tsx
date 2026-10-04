@@ -33,9 +33,15 @@ export default function RoadmapStep({
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    setError(null);
-    setStage(0);
+
+    const resetProgress = () => {
+      setLoading(true);
+      setError(null);
+      setStage(0);
+    };
+
+    resetProgress();
+
     const stageTimer = window.setInterval(() => {
       setStage((current) => Math.min(current + 1, messages.length - 1));
     }, 2500);

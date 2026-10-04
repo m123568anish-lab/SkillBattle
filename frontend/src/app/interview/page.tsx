@@ -18,10 +18,6 @@ export default function AIMockInterviewPage() {
   const [role, setRole] = useState("Software Engineer");
   const [difficulty, setDifficulty] = useState("Medium");
 
-  useEffect(() => {
-    fetchSessions();
-  }, []);
-
   const fetchSessions = async () => {
     try {
       setLoading(true);
@@ -36,6 +32,10 @@ export default function AIMockInterviewPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    void fetchSessions();
+  }, []);
 
   const handleStartInterview = async () => {
     try {

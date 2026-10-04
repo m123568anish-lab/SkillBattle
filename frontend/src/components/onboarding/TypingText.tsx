@@ -11,17 +11,16 @@ export default function TypingText({
   text,
   speed = 45,
 }: Props) {
-  const [display, setDisplay] =
-    useState("");
+  const [display, setDisplay] = useState("");
 
   useEffect(() => {
     let index = 0;
 
-    setDisplay("");
+    const resetDisplay = () => setDisplay("");
+    resetDisplay();
 
     const timer = setInterval(() => {
-      index++;
-
+      index += 1;
       setDisplay(text.slice(0, index));
 
       if (index >= text.length) {

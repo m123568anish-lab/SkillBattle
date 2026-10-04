@@ -28,7 +28,7 @@ export default function WelcomeStep({
       </h1>
 
       <p className="mx-auto max-w-xl text-lg text-slate-400">
-        Let's personalize your learning
+        Let&apos;s personalize your learning
         journey so our AI Coach can
         generate the perfect roadmap for
         you.
@@ -37,7 +37,7 @@ export default function WelcomeStep({
       <GradientButton
         onClick={onNext}
       >
-        Let's Begin
+        Let&apos;s Begin
       </GradientButton>
 
     </div>

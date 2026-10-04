@@ -4,7 +4,7 @@ export default function HeroBadge() {
       <span className="mr-2">🚀</span>
 
       <span className="text-sm font-medium text-cyan-300">
-        India's Competitive Learning Platform
+        India&apos;s Competitive Learning Platform
       </span>
     </div>
   );

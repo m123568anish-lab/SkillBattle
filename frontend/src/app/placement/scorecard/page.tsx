@@ -22,10 +22,6 @@ export default function PlacementScorecardPage() {
   const [data, setData] = useState<ScorecardData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchScorecard();
-  }, []);
-
   async function fetchScorecard() {
     try {
       const res = await api.get("/placement/scorecard");
@@ -36,6 +32,10 @@ export default function PlacementScorecardPage() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    void fetchScorecard();
+  }, []);
 
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">

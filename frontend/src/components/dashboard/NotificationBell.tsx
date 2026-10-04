@@ -1,32 +1,43 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Bell, Check, CheckCheck, X } from "lucide-react";
 import api from "@/services/api";
 
+interface NotificationItem {
+  id: string;
+  title: string;
+  message: string;
+  notification_type: string;
+  is_read: boolean;
+}
+
 export default function NotificationBell() {
-  const [notifs, setNotifs] = useState<any[]>([]);
+  const [notifs, setNotifs] = useState<NotificationItem[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const fetchNotifs = async () => {
+  const fetchNotifs = useCallback(async () => {
     try {
       setLoading(true);
       const res = await api.get("/notifications");
-      setNotifs(res.data);
+      setNotifs(res.data as NotificationItem[]);
     } catch {
       // fail silently
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchNotifs();
-    // Poll every 30s
-    const interval = setInterval(fetchNotifs, 30000);
+    void fetchNotifs();
+
+    const interval = setInterval(() => {
+      void fetchNotifs();
+    }, 30000);
+
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchNotifs]);
 
   const unreadCount = notifs.filter((n) => !n.is_read).length;
 

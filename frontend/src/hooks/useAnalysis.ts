@@ -5,50 +5,27 @@ import { careerService } from "@/services/career";
 import { useCareerStore } from "@/stores/career-store";
 import { ResumeAnalysis } from "@/types/analysis";
 
-export function useAnalysis(
+export function useAnalysis(resumeId?: string) {
+    const { analysis, setAnalysis } = useCareerStore();
 
-    resumeId?: string,
-
-) {
-
-    const {
-
-        analysis,
-
-        setAnalysis,
-
-    } = useCareerStore();
-
-    useEffect(() => {
-
+    const load = async () => {
         if (!resumeId) return;
 
-        load();
-
-        const timer = setInterval(load, 2000);
-
-        return () => clearInterval(timer);
-
-    }, [resumeId]);
-
-    async function load() {
-
-        if (!resumeId) return;
-
-        const data = await careerService.getAnalysis(
-
-            resumeId,
-
-        );
-
+        const data = await careerService.getAnalysis(resumeId);
         setAnalysis(data as ResumeAnalysis);
-
-    }
-
-    return {
-
-        analysis,
-
     };
 
+    useEffect(() => {
+        if (!resumeId) return;
+
+        void load();
+
+        const timer = setInterval(() => {
+            void load();
+        }, 2000);
+
+        return () => clearInterval(timer);
+    }, [resumeId, setAnalysis]);
+
+    return { analysis };
 }

@@ -14,7 +14,6 @@ import {
   Trophy,
   Zap,
   MessageSquare,
-  MoreVertical,
 } from "lucide-react";
 
 export default function FriendPanel() {
@@ -27,16 +26,18 @@ export default function FriendPanel() {
 
   useEffect(() => {
     let active = true;
+
     (async () => {
       try {
         const response = await friendService.listFriends();
         if (active) setFriends(response.friends);
-      } catch (err: any) {
-        console.error(err);
+      } catch (error: unknown) {
+        console.error(error);
       } finally {
         if (active) setLoading(false);
       }
     })();
+
     return () => {
       active = false;
     };
@@ -56,8 +57,11 @@ export default function FriendPanel() {
       setFriends((current) => [...current, newFriend]);
       setFriendId("");
       toast.success("Friend added! 🎮");
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || "Failed to add friend.");
+    } catch (error: unknown) {
+      const detail = error && typeof error === "object" && "response" in error
+        ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : undefined;
+      setError(detail || "Failed to add friend.");
       toast.error("Failed to add friend.");
     } finally {
       setAddingFriend(false);
@@ -70,7 +74,7 @@ export default function FriendPanel() {
         current.filter((f) => f.user_id !== friendUserId)
       );
       toast.success("Friend removed.");
-    } catch (err: any) {
+    } catch {
       toast.error("Failed to remove friend.");
     }
   }
