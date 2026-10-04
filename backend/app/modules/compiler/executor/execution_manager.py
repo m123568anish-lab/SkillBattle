@@ -14,13 +14,8 @@ from app.modules.compiler.languages import (
     LANGUAGES,
 )
 
-from app.modules.compiler.docker import (
-
-    docker_runner,
-
-    ExecutionLimits,
-
-)
+from app.modules.compiler.docker.docker_runner import docker_runner
+from app.modules.compiler.docker.limits import ExecutionLimits
 
 
 class ExecutionManager:

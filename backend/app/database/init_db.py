@@ -582,6 +582,43 @@ def _seed_initial_questions() -> None:
                 "topic_tags": ["DBMS", "SQL"],
                 "skill_category": "DBMS",
             },
+            {
+                "title": "Access Array Element",
+                "slug": "access-array-element",
+                "description": "Which operation retrieves the element at index 2 from an array named values?",
+                "difficulty": "Easy",
+                "question_type": "mcq",
+                "options": [
+                    {"key": "A", "text": "values[1]"},
+                    {"key": "B", "text": "values[2]"},
+                    {"key": "C", "text": "values(2)"},
+                    {"key": "D", "text": "values{2}"},
+                ],
+                "correct_option": "B",
+                "explanation": "Array indexing uses square brackets and the requested index directly.",
+                "topic_tags": ["Arrays", "Data Structures"],
+                "skill_category": "Data Structures",
+            },
+            # Coding
+            {
+                "title": "Sum Two Integers",
+                "slug": "sum-two-integers",
+                "description": "Read two integers from standard input and print their sum.",
+                "difficulty": "Easy",
+                "question_type": "coding",
+                "explanation": "Parse both integers and print their sum.",
+                "constraints": "The input contains exactly two integers.",
+                "examples": [
+                    {"input": "3 5\n", "output": "8\n"},
+                ],
+                "hidden_test_cases": [
+                    {"input": "3 5\n", "output": "8\n"},
+                    {"input": "-7 2\n", "output": "-5\n"},
+                    {"input": "1000000000 2000000000\n", "output": "3000000000\n"},
+                ],
+                "topic_tags": ["Algorithms", "Input/Output"],
+                "skill_category": "Algorithms",
+            },
             # Debugging
             {
                 "title": "Fix Off-By-One Loop Bug",
@@ -665,6 +702,4 @@ def _seed_initial_questions() -> None:
                 },
             )
         logger.info("Seeded initial MCQ, Debugging, and Technical questions.")
-
-
 

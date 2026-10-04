@@ -176,41 +176,27 @@ async def test_unauthorized_client_xp_award_endpoint_is_disabled(client):
 
 
 @pytest.mark.asyncio
-async def test_solo_finish_ignores_client_claimed_xp():
+async def test_solo_finish_rejects_client_claimed_results():
+    from fastapi import HTTPException
     from app.modules.battle.router import solo_finish
     from app.modules.battle.schemas import SoloFinishRequest
 
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
-        user = User(
-            username="solo_finish_user",
-            full_name="Solo Finish User",
-            email="solo-finish@example.com",
-            password_hash="not-used",
-        )
-        session.add(user)
-        await session.commit()
-
-        response = await solo_finish(
+    with pytest.raises(HTTPException) as raised:
+        await solo_finish(
             SoloFinishRequest(
                 xp_earned=9000,
                 mcq_results=[],
                 coding_solved=True,
             ),
-            session,
-            user,
+            db=None,
+            current_user=User(
+                username="solo_finish_user",
+                full_name="Solo Finish User",
+                email="solo-finish@example.com",
+                password_hash="not-used",
+            ),
         )
-        xp = await xp_repository.get_by_user(session, user.id)
-
-        assert response["xp_added"] == 0
-        assert response["total_xp"] == 0
-        assert xp is not None and xp.total_xp == 0
-
-    await engine.dispose()
+    assert raised.value.status_code == 410
 
 
 @pytest.mark.asyncio

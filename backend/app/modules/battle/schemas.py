@@ -137,6 +137,7 @@ class BattleResponse(BaseModel):
     started_at: Optional[datetime] = None
     ended_at: Optional[datetime] = None
     created_at: datetime
+    submitted_question_ids: List[int] = Field(default_factory=list)
 
     class Config:
         from_attributes = True

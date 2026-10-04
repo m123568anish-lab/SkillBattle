@@ -21,6 +21,7 @@ from .roadmap import Roadmap, RoadmapTask, RoadmapWeek
 from .streak import Streak
 from .user import User
 from .question import Question, UserSubmission
+from .question_exposure import QuestionExposure
 from .user_stats import UserSettings, UserStats
 from .matchmaking import MatchmakingMatch, PlacementPrepSession
 from .user_skill_stat import UserSkillStat
@@ -64,6 +65,7 @@ __all__ = [
     "User",
     "UserCampaignProgress",
     "Question",
+    "QuestionExposure",
     "UserSubmission",
     "UserStats",
     "UserSettings",

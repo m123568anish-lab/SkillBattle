@@ -4,7 +4,28 @@ from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_advanced_battle_engine_workflow(client: AsyncClient):
+async def test_advanced_battle_engine_workflow(client: AsyncClient, monkeypatch):
+    from app.modules.compiler.judge import judge_engine
+    from app.modules.compiler.schemas import JudgeResult
+
+    def accepted_judgement(language, source_code, testcases):
+        assert language == "python"
+        assert source_code
+        assert testcases
+        assert all({"input", "output"} <= set(testcase) for testcase in testcases)
+        return JudgeResult(
+            verdict="Accepted",
+            passed_tests=len(testcases),
+            total_tests=len(testcases),
+            execution_time=10,
+            memory_used=1,
+            runtime_ms=10,
+            memory_mb=1,
+            score=100,
+        )
+
+    monkeypatch.setattr(judge_engine, "judge", accepted_judgement)
+
     unique_id = uuid4().hex[:6].lower()
     email = f"student_{unique_id}@example.com"
     username = f"battle_user_{unique_id}"
@@ -28,6 +49,25 @@ async def test_advanced_battle_engine_workflow(client: AsyncClient):
     assert login_resp.status_code == 200, login_resp.text
     token = login_resp.json()["tokens"]["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
+
+    daily_resp = await client.post("/battle/daily", headers=headers)
+    assert daily_resp.status_code == 200, daily_resp.text
+    daily_battle = daily_resp.json()
+    daily_question_ids = [
+        question["id"]
+        for section in daily_battle["questions_data"]
+        for question in section["questions"]
+    ]
+    assert len(daily_question_ids) == 4
+    assert len(daily_question_ids) == len(set(daily_question_ids))
+    assert {section["question_type"] for section in daily_battle["questions_data"]} == {
+        "mcq",
+        "coding",
+    }
+
+    resumed_daily_resp = await client.post("/battle/daily", headers=headers)
+    assert resumed_daily_resp.status_code == 200, resumed_daily_resp.text
+    assert resumed_daily_resp.json()["id"] == daily_battle["id"]
 
     # 1. Fetch Battle Types
     types_resp = await client.get("/battle/types")
@@ -129,7 +169,11 @@ async def test_advanced_battle_engine_workflow(client: AsyncClient):
             "question_id": coding_question_id,
             "section_index": 1,
             "question_type": "coding",
-            "source_code": "def solution(a, b):\n    return a + b",
+            "source_code": (
+                "import sys\n"
+                "a, b = map(int, sys.stdin.read().split())\n"
+                "print(a + b)\n"
+            ),
             "language": "python",
             "time_taken_seconds": 120,
         },

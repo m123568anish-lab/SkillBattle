@@ -13,14 +13,16 @@ Production SQLAlchemy 2.x Model with Advanced Battle Engine support
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     String,
     DateTime,
+    Date,
     Integer,
     JSON,
     ForeignKey,
+    UniqueConstraint,
 )
 
 from sqlalchemy.orm import (
@@ -35,6 +37,13 @@ from app.database.base import Base
 class BattleRoom(Base):
 
     __tablename__ = "battle_rooms"
+    __table_args__ = (
+        UniqueConstraint(
+            "adaptive_owner_id",
+            "adaptive_date",
+            name="uq_battle_rooms_adaptive_owner_date",
+        ),
+    )
 
     # Primary Key
     id: Mapped[str] = mapped_column(
@@ -49,6 +58,18 @@ class BattleRoom(Base):
         ForeignKey("battle_configs.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
+    )
+
+    adaptive_owner_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+
+    adaptive_date: Mapped[date | None] = mapped_column(
+        Date,
+        nullable=True,
     )
 
     # Battle Information

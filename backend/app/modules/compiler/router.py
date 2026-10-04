@@ -73,6 +73,8 @@ async def run_code(
 
     request: RunCodeRequest,
 
+    current_user: User = Depends(get_current_user),
+
 ):
 
     try:

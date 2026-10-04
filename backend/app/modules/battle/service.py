@@ -14,16 +14,19 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 
 from app.models.user import User
 from app.models.user_stats import UserStats
 from app.models.battle import BattleRoom, BattleParticipant, BattleSubmission, BattleResult
 from app.models.question import Question, UserSubmission
+from app.models.user_skill_stat import UserSkillStat
 from app.models.company import CandidateApplication, Company
 from app.models.college import CollegeStudent
 
@@ -47,6 +50,8 @@ from app.modules.battle.orchestrator import battle_orchestrator
 from app.modules.xp.service import xp_service
 from app.modules.notification.service import notification_service
 from app.modules.audit.service import audit_service
+
+logger = logging.getLogger(__name__)
 
 
 class BattleService:
@@ -147,6 +152,11 @@ class BattleService:
         )
 
         await battle_repository.add_participant(db, participant)
+        await question_engine.record_question_exposures(
+            db,
+            user_id=current_user.id,
+            questions_data=resolved_sections,
+        )
 
         if company_application:
             company_application.assessment_battle_id = battle.id
@@ -170,8 +180,89 @@ class BattleService:
                 rank=2,
             )
             await battle_repository.add_participant(db, friend_participant)
+            await question_engine.record_question_exposures(
+                db,
+                user_id=friend_user_id,
+                questions_data=resolved_sections,
+            )
 
         await db.commit()
+        return battle
+
+    async def get_or_create_daily_battle(
+        self,
+        db: AsyncSession,
+        current_user: User,
+    ) -> BattleRoom:
+        daily_date = datetime.utcnow().date()
+        existing_result = await db.execute(
+            select(BattleRoom).where(
+                BattleRoom.adaptive_owner_id == current_user.id,
+                BattleRoom.adaptive_date == daily_date,
+            )
+        )
+        existing = existing_result.scalar_one_or_none()
+        if existing is not None:
+            return existing
+
+        template = battle_config_service.get_template("practice", "medium")
+        sections = [dict(section) for section in template["sections"]]
+        resolved_sections = await question_engine.get_adaptive_questions_for_user(
+            db,
+            user_id=current_user.id,
+            sections_config=sections,
+            difficulty="medium",
+        )
+        now = datetime.utcnow()
+        battle = BattleRoom(
+            title="Daily Adaptive Battle",
+            battle_type="practice",
+            difficulty="adaptive",
+            problem_id=1,
+            max_players=1,
+            current_section_index=0,
+            sections_config=sections,
+            questions_data=resolved_sections,
+            status="running",
+            started_at=now,
+            adaptive_owner_id=current_user.id,
+            adaptive_date=daily_date,
+        )
+        try:
+            await battle_repository.create_battle(db, battle)
+            await battle_repository.add_participant(
+                db,
+                BattleParticipant(
+                    battle_id=battle.id,
+                    user_id=current_user.id,
+                    score=0,
+                    rank=1,
+                ),
+            )
+            await question_engine.record_question_exposures(
+                db,
+                user_id=current_user.id,
+                questions_data=resolved_sections,
+            )
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            existing_result = await db.execute(
+                select(BattleRoom).where(
+                    BattleRoom.adaptive_owner_id == current_user.id,
+                    BattleRoom.adaptive_date == daily_date,
+                )
+            )
+            existing = existing_result.scalar_one_or_none()
+            if existing is None:
+                raise
+            return existing
+        logger.info(
+            "battle_created_adaptive user_id=%s battle_id=%s date=%s",
+            current_user.id,
+            battle.id,
+            daily_date.isoformat(),
+        )
         return battle
 
     # ==========================================================
@@ -205,6 +296,11 @@ class BattleService:
         )
 
         await battle_repository.add_participant(db, participant)
+        await question_engine.record_question_exposures(
+            db,
+            user_id=current_user.id,
+            questions_data=battle.questions_data,
+        )
         players = await battle_repository.get_participants(db, battle.id)
 
         if len(players) >= battle.max_players:
@@ -326,13 +422,13 @@ class BattleService:
             judge_res = await battle_judge.evaluate(
                 request.language,
                 request.source_code or "",
-                problem_id=battle.problem_id,
+                question=q_obj,
             )
-            verdict = judge_res.get("verdict", "Accepted")
-            passed_tests = judge_res.get("passed_tests", 1)
-            total_tests = judge_res.get("total_tests", 1)
-            runtime_ms = judge_res.get("runtime_ms", 10.0)
-            memory_mb = judge_res.get("memory_mb", 5.0)
+            verdict = judge_res["verdict"]
+            passed_tests = judge_res["passed_tests"]
+            total_tests = judge_res["total_tests"]
+            runtime_ms = judge_res["runtime_ms"]
+            memory_mb = judge_res["memory_mb"]
 
             if qtype == "coding":
                 score_earned = battle_score_manager.calculate_coding_score(
@@ -383,6 +479,35 @@ class BattleService:
             submitted_at=datetime.utcnow(),
         )
         db.add(sub)
+
+        is_correct = verdict in ("Accepted", "Correct")
+        if qtype == "technical":
+            is_correct = score_earned >= 10.5
+        skill_subject = (q_obj.skill_category or "Problem Solving").strip()
+        skill_result = await db.execute(
+            select(UserSkillStat).where(
+                UserSkillStat.user_id == current_user.id,
+                func.lower(UserSkillStat.subject) == skill_subject.casefold(),
+            ).limit(1)
+        )
+        skill_stat = skill_result.scalar_one_or_none()
+        if skill_stat is None:
+            skill_stat = UserSkillStat(
+                user_id=current_user.id,
+                subject=skill_subject,
+                correct_attempts=0,
+                total_attempts=0,
+            )
+            db.add(skill_stat)
+        skill_stat.total_attempts += 1
+        skill_stat.correct_attempts += int(is_correct)
+        await question_engine.record_question_result(
+            db,
+            user_id=current_user.id,
+            question_id=q_obj.id,
+            verdict="Correct" if is_correct else "Incorrect",
+            score=score_earned,
+        )
 
         # Update Participant Score atomically
         participant.score += int(score_earned)
@@ -506,6 +631,11 @@ class BattleService:
                     rank=1,
                 ),
             )
+            await question_engine.record_question_exposures(
+                db,
+                user_id=current_user.id,
+                questions_data=resolved_sections,
+            )
             await db.commit()
             return {"status": "invited", "battle_id": battle.id}
 
@@ -541,6 +671,12 @@ class BattleService:
         await battle_repository.add_participant(
             db, BattleParticipant(battle_id=battle.id, user_id=players["player2"].user_id)
         )
+        for player in (players["player1"], players["player2"]):
+            await question_engine.record_question_exposures(
+                db,
+                user_id=player.user_id,
+                questions_data=resolved_sections,
+            )
 
         await db.commit()
 
@@ -586,6 +722,22 @@ class BattleService:
 
         if existing_res is not None:
             return res_data
+
+        if battle.adaptive_owner_id is not None:
+            expected_question_ids = {
+                question.get("id")
+                for section in battle.questions_data or []
+                for question in section.get("questions", [])
+                if question.get("id") is not None
+            }
+            submitted_question_ids = {
+                submission.question_id
+                for submission in submissions
+                if submission.user_id == battle.adaptive_owner_id
+                and submission.question_id is not None
+            }
+            if not expected_question_ids.issubset(submitted_question_ids):
+                raise ValueError("Complete every question before finishing the daily battle.")
 
         battle.status = "completed"
         battle.ended_at = datetime.utcnow()
@@ -699,4 +851,3 @@ class BattleService:
 
 
 battle_service = BattleService()
-
