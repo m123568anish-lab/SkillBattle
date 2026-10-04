@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, Menu, Trophy, Shield, Zap, ArrowUpRight, History, Activity } from "lucide-react";
+import { Search, Trophy, Shield, Zap, ArrowUpRight } from "lucide-react";
 import api from "@/services/api";
 import NotificationMenu from "./NotificationMenu";
+import ActivityMenu from "./ActivityMenu";
 import ProfileMenu from "./ProfileMenu";
 import { useAuthStore } from "@/store/authStore";
 import { useDashboardStore } from "@/store/dashboardStore";
@@ -19,11 +20,7 @@ type SearchResult = {
   href: string;
 };
 
-interface TopNavbarProps {
-  onMenuClick?: () => void;
-}
-
-export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
+export default function TopNavbar() {
   const router = useRouter();
   const pathname = usePathname();
   const portal = getPortalKind(pathname);
@@ -76,42 +73,27 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
       suppressHydrationWarning
       className="
         relative z-20
-        mb-8
-        flex
-        flex-col
-        gap-4
-        rounded-2xl
+        mb-4 flex min-w-0 flex-row items-center justify-between gap-2 rounded-xl
         border
         border-white/10
         bg-[#070B14]/80
-        p-4
+        p-2
         backdrop-blur-xl
-        sm:flex-row
-        sm:items-center
-        sm:justify-between
+        sm:mb-8 sm:gap-4 sm:rounded-2xl sm:p-4
       "
     >
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onMenuClick}
-          className="lg:hidden rounded-xl border border-white/10 bg-white/5 p-2.5 text-white transition hover:bg-white/10"
-          aria-label="Open navigation menu"
-        >
-          <Menu size={20} />
-        </button>
-
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <Link
           href={logoHref}
           aria-label="SkillBattle home"
-          className="inline-flex items-center gap-2 rounded-xl px-1 py-1 text-left transition hover:opacity-90"
+          className="inline-flex shrink-0 items-center rounded-lg px-1 py-1 text-left transition hover:opacity-90"
         >
-          <span className="text-lg font-black tracking-tight text-white sm:text-xl">
+          <span className="text-base font-black tracking-tight text-white sm:text-xl">
             SkillBattle
           </span>
         </Link>
 
-        <div className="relative hidden w-full max-w-xs md:block">
+        <div className="relative hidden w-full max-w-xs lg:block">
           <div className="flex w-full flex-1 items-center gap-3 rounded-xl border border-white/10 bg-[#0F172A] px-4 py-2.5 transition focus-within:border-cyan-400">
             <Search size={18} className="shrink-0 text-slate-400" />
             <input
@@ -193,7 +175,7 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
 
       <div className="flex items-center justify-end gap-3 sm:gap-4">
         {user && portal === "student" && (
-          <div className="hidden md:flex items-center gap-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-cyan-300">
+          <div className="hidden xl:flex items-center gap-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-cyan-300">
             <div className="flex items-center gap-1.5">
               <Shield size={14} className="text-cyan-400" />
               <span>LVL {level}</span>
@@ -212,22 +194,14 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
         )}
 
         {user && portal !== "student" && (
-          <div className="hidden md:flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-slate-300">
+          <div className="hidden xl:flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-slate-300">
             <Shield size={14} className="text-cyan-400" />
             <span>{portal === "college" ? "College workspace" : portal === "company" ? "Company hiring" : "Admin workspace"}</span>
           </div>
         )}
 
-        <div className="flex items-center gap-2 sm:gap-3">
-          <Link
-            href="/activity"
-            aria-label="View activity"
-            title="Activity"
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2.5 py-2.5 text-slate-200 transition hover:border-cyan-400/60 hover:text-white"
-          >
-            <Activity className="h-4 w-4" />
-            <span className="hidden text-xs font-semibold uppercase tracking-[0.12em] sm:inline">Activity</span>
-          </Link>
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <ActivityMenu />
           <NotificationMenu />
           <ProfileMenu />
         </div>

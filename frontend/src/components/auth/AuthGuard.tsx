@@ -36,6 +36,16 @@ export function AuthGuard({ children }: AuthGuardProps) {
       return;
     }
 
+    if (isAuthenticated && user?.is_verified === false && pathname !== "/verify-email") {
+      router.replace("/verify-email");
+      return;
+    }
+
+    if (isAuthenticated && user && getPostLoginPath(user) === "/organization-setup" && pathname !== "/organization-setup") {
+      router.replace("/organization-setup");
+      return;
+    }
+
     if (isAuthenticated && pathname === "/login") {
       if (user) router.replace(getPostLoginPath(user));
       return;
@@ -54,6 +64,10 @@ export function AuthGuard({ children }: AuthGuardProps) {
       </div>
     );
   }
+
+  const isPublic = PUBLIC_ROUTES.includes(pathname);
+  const organizationSetupRequired = Boolean(user && getPostLoginPath(user) === "/organization-setup");
+  if (!isPublic && (!isAuthenticated || !user || user.is_verified === false || (organizationSetupRequired && pathname !== "/organization-setup"))) return null;
 
   return <>{children}</>;
 }

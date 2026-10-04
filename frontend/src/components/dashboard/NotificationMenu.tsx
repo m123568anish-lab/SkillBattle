@@ -30,13 +30,14 @@ export default function NotificationMenu() {
     let active = true;
     const fetchNotifications = async () => {
       try {
-        const [notificationResponse, countResponse] = await Promise.all([
-          api.get<NotificationItem[]>("/notifications", { params: { limit: 30 } }),
-          api.get<{ unread_count: number }>("/notifications/unread-count"),
-        ]);
+        const countResponse = await api.get<{ unread_count: number }>("/notifications/unread-count");
         if (!active) return;
-        setNotifs(notificationResponse.data);
         setUnreadCount(countResponse.data.unread_count);
+        if (open) {
+          const notificationResponse = await api.get<NotificationItem[]>("/notifications", { params: { limit: 30 } });
+          if (!active) return;
+          setNotifs(notificationResponse.data);
+        }
         setError(null);
       } catch {
         if (active) setError("Notifications could not be loaded.");
@@ -46,12 +47,12 @@ export default function NotificationMenu() {
     };
 
     void fetchNotifications();
-    const interval = setInterval(() => void fetchNotifications(), 30000);
+    const interval = open ? setInterval(() => void fetchNotifications(), 30000) : undefined;
     return () => {
       active = false;
-      clearInterval(interval);
+      if (interval) clearInterval(interval);
     };
-  }, [refreshToken]);
+  }, [open, refreshToken]);
 
   const markRead = async (notification: NotificationItem) => {
     if (notification.is_read) return;

@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getMobileNavigation, getPortalCategories, getPortalKind } from "@/data/dashboard";
+import { getMobileNavigation, getPortalKind } from "@/data/dashboard";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 
@@ -14,15 +14,13 @@ interface Props {
 }
 
 export default function DashboardLayout({ children }: Props) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const portal = getPortalKind(pathname);
-  const categories = getPortalCategories(portal);
   const mobileNavigation = getMobileNavigation(portal);
 
-  const quickAccessGroups = useMemo(() => {
+  const quickAccessGroups = (() => {
     if (portal === "student") {
       return [
         {
@@ -121,7 +119,7 @@ export default function DashboardLayout({ children }: Props) {
         ],
       },
     ];
-  }, [portal]);
+  })();
 
   const isActive = (href?: string) => {
     if (!href) return false;
@@ -135,72 +133,6 @@ export default function DashboardLayout({ children }: Props) {
   return (
     <main suppressHydrationWarning className="flex min-h-screen bg-[#050816] text-white">
       <Sidebar />
-
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setMobileMenuOpen(false)}
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
-            />
-            <motion.aside
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed bottom-0 left-0 top-0 z-50 w-72 bg-[#070B14] p-6 border-r border-white/10 lg:hidden flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between border-b border-white/5 pb-6">
-                  <span className="text-xl font-black bg-gradient-to-r from-cyan-400 to-violet-500 bg-clip-text text-transparent">
-                    SkillBattle
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="rounded-lg border border-white/10 p-1 text-slate-400 hover:text-white"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-                <nav className="mt-6 max-h-[calc(100dvh-9rem)] space-y-1.5 overflow-y-auto">
-                  {categories.flatMap((category) => category.items).map((item) => {
-                    const Icon = item.icon;
-                    const active = isActive(item.href);
-                    if (!item.available || !item.href) {
-                      return (
-                        <div key={item.title} aria-disabled="true" className="flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm text-slate-600">
-                          <Icon size={18} />
-                          <span className="flex-1">{item.title}</span>
-                          <span className="text-[9px] uppercase">Unavailable</span>
-                        </div>
-                      );
-                    }
-                    return (
-                      <Link
-                        key={item.title}
-                        href={item.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                          active
-                            ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
-                            : "text-slate-400 hover:text-white hover:bg-white/5"
-                        }`}
-                      >
-                        <Icon size={18} />
-                        {item.title}
-                      </Link>
-                    );
-                  })}
-                </nav>
-              </div>
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
 
       <AnimatePresence>
         {moreOpen && (
@@ -258,13 +190,13 @@ export default function DashboardLayout({ children }: Props) {
         )}
       </AnimatePresence>
 
-      <section className="flex-1 overflow-auto p-4 pb-24 sm:p-8 lg:pb-8">
-        <TopNavbar onMenuClick={() => setMobileMenuOpen(true)} />
+      <section className="min-w-0 flex-1 overflow-auto p-3 pb-24 sm:p-8 lg:pb-8">
+        <TopNavbar />
         {children}
       </section>
 
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#070B14]/90 p-3 backdrop-blur-lg lg:hidden">
-        <div className="mx-auto flex max-w-xl items-center justify-around gap-2">
+      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#070B14]/90 px-2 pb-[calc(env(safe-area-inset-bottom)+0.35rem)] pt-1.5 backdrop-blur-lg lg:hidden">
+        <div className="mx-auto flex h-12 max-w-xl items-center justify-around gap-1">
           {mobileNavigation.map((tab) => {
             const active = isActive(tab.href);
             if (!tab.available || !tab.href) {
@@ -274,7 +206,7 @@ export default function DashboardLayout({ children }: Props) {
                   type="button"
                   aria-label={tab.title}
                   onClick={() => setMoreOpen(true)}
-                  className="flex min-w-[64px] flex-col items-center gap-1 rounded-xl px-2 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400"
+                  className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[9px] font-semibold uppercase leading-none tracking-normal text-slate-400"
                 >
                   <tab.icon size={20} />
                   <span>{tab.title}</span>
@@ -285,12 +217,12 @@ export default function DashboardLayout({ children }: Props) {
               <Link
                 key={tab.title}
                 href={tab.href}
-                className={`flex min-w-[64px] flex-col items-center gap-1 rounded-xl px-2 py-2 text-[10px] font-bold tracking-[0.12em] uppercase transition ${
+                className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[9px] font-semibold uppercase leading-none tracking-normal transition ${
                   active ? "scale-105 text-cyan-400" : "text-slate-400 hover:text-slate-200"
                 }`}
               >
                 <tab.icon size={20} />
-                <span>{tab.title}</span>
+                <span className="max-w-full truncate">{tab.title}</span>
               </Link>
             );
           })}

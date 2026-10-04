@@ -16,6 +16,7 @@ export interface User {
     requested_role?: string | null;
     onboarding_completed?: boolean;
     status?: string;
+    is_verified: boolean;
     is_superuser?: boolean;
     level?: number;
 

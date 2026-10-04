@@ -7,6 +7,8 @@ import { toast } from "react-hot-toast";
 
 import GradientButton from "@/components/ui/gradient-button";
 import VerificationSuccess from "./VerificationSuccess";
+import { useAuthStore } from "@/store/authStore";
+import { getPostLoginPath } from "@/lib/auth-routing";
 
 import {
   verifyOTP,
@@ -136,13 +138,15 @@ export default function OTPForm() {
       setLoading(true);
 
       await verifyOTP(code);
+      await useAuthStore.getState().loadUser();
+      const user = useAuthStore.getState().user;
 
       setVerified(true);
 
       toast.success("Email verified successfully 🎉");
 
       setTimeout(() => {
-        router.push("/onboarding");
+        router.push(user ? getPostLoginPath(user) : "/login");
       }, 2200);
     } catch (error) {
       console.error(error);
