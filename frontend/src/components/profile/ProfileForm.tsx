@@ -138,7 +138,7 @@ export default function ProfileForm() {
               <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-violet-500 rounded-full blur opacity-75 group-hover:opacity-100 transition" />
               <img
                 src={profile.avatar || `https://ui-avatars.com/api/?name=${profile.full_name || 'User'}&background=06b6d4&color=fff`}
-                alt="Avatar Preview"
+                alt={`Profile photo for ${profile.full_name || "your account"}`}
                 className="relative h-32 w-32 rounded-full border-4 border-slate-950 object-cover shadow-xl"
               />
               <div className="absolute bottom-2 right-2 rounded-full bg-cyan-500 p-2 text-slate-950 font-bold">

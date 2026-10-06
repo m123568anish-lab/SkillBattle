@@ -27,6 +27,7 @@ from app.models.user_stats import UserStats
 from app.models.battle import BattleRoom, BattleParticipant, BattleSubmission, BattleResult
 from app.models.question import Question, UserSubmission
 from app.models.user_skill_stat import UserSkillStat
+from app.models.quest_map import QuestProgress
 from app.models.company import CandidateApplication, Company
 from app.models.college import CollegeStudent
 
@@ -65,6 +66,10 @@ class BattleService:
         db: AsyncSession,
         current_user: User,
         request: CreateBattleRequest,
+        *,
+        sections_override: list[dict[str, Any]] | None = None,
+        start_immediately: bool = False,
+        commit: bool = True,
     ) -> BattleRoom:
 
         battle_type_val = request.battle_type.value if hasattr(request.battle_type, "value") else str(request.battle_type)
@@ -119,12 +124,17 @@ class BattleService:
             sections_config = tmpl["sections"]
             difficulty = request.difficulty
 
+        if sections_override is not None:
+            sections_config = sections_override
+
         # Resolve Questions for each section in the configuration
         resolved_sections = await question_engine.resolve_questions_for_sections(
             db, sections_config, difficulty=difficulty
         )
 
         is_solo_assessment = db_config is not None and db_config.battle_type in {"company", "college"} and request.max_players == 1
+        starts_now = request.max_players == 1 or (start_immediately and request.max_players == 1)
+        started_at = datetime.utcnow() if starts_now else None
         battle = BattleRoom(
             config_id=request.config_id,
             title=request.title,
@@ -135,10 +145,10 @@ class BattleService:
             current_section_index=0,
             sections_config=sections_config,
             questions_data=resolved_sections,
-            status="running" if is_solo_assessment else "waiting",
+            status="running" if starts_now else "waiting",
             company_id=str(db_config.company_id) if db_config and db_config.company_id is not None else None,
             college_id=str(db_config.college_id) if db_config and db_config.college_id is not None else None,
-            started_at=datetime.utcnow() if is_solo_assessment else None,
+            started_at=started_at,
             created_at=datetime.utcnow(),
         )
 
@@ -186,7 +196,8 @@ class BattleService:
                 questions_data=resolved_sections,
             )
 
-        await db.commit()
+        if commit:
+            await db.commit()
         return battle
 
     async def get_or_create_daily_battle(
@@ -357,6 +368,18 @@ class BattleService:
         participant = await battle_repository.get_participant(db, request.battle_id, current_user.id)
         if participant is None:
             raise ValueError("Player is not a participant in this battle.")
+        if battle.status != "running":
+            raise ValueError("This battle is not accepting submissions.")
+        duration_seconds = sum(
+            max(0, int(section.get("duration_minutes", 0))) * 60
+            for section in (battle.sections_config or [])
+        )
+        if battle.started_at is not None and duration_seconds:
+            elapsed_seconds = (datetime.utcnow() - battle.started_at).total_seconds()
+            if elapsed_seconds >= duration_seconds:
+                battle.status = "expired"
+                await db.commit()
+                raise ValueError("This battle has expired and no longer accepts submissions.")
 
         qtype = request.question_type.value if hasattr(request.question_type, "value") else str(request.question_type)
         if request.question_id is None:
@@ -400,7 +423,7 @@ class BattleService:
             raise ValueError("Question was not found.")
 
         # Evaluate based on Question Type
-        if qtype == "mcq":
+        if qtype in {"mcq", "aptitude"}:
             correct_opt = q_obj.correct_option
             neg_marking = False
             if battle.sections_config and request.section_index < len(battle.sections_config):
@@ -457,6 +480,8 @@ class BattleService:
             verdict = "Evaluated"
             passed_tests = 1 if score_earned > 0 else 0
             total_tests = 1
+        else:
+            raise ValueError(f"Question type '{qtype}' is not supported by the battle evaluator.")
 
         # Create Battle Submission Record
         sub = BattleSubmission(
@@ -703,6 +728,10 @@ class BattleService:
         stmt_existing = select(BattleResult).where(BattleResult.battle_id == battle_id)
         existing_res = (await db.execute(stmt_existing)).scalar_one_or_none()
 
+        quest_progress = await db.scalar(
+            select(QuestProgress).where(QuestProgress.battle_id == battle_id)
+        )
+
         participants = await battle_repository.get_participants(db, battle_id)
         stmt_subs = select(BattleSubmission).where(BattleSubmission.battle_id == battle_id)
         submissions = list((await db.execute(stmt_subs)).scalars().all())
@@ -723,7 +752,8 @@ class BattleService:
         if existing_res is not None:
             return res_data
 
-        if battle.adaptive_owner_id is not None:
+        if battle.adaptive_owner_id is not None or quest_progress is not None:
+            owner_id = battle.adaptive_owner_id or quest_progress.user_id
             expected_question_ids = {
                 question.get("id")
                 for section in battle.questions_data or []
@@ -733,11 +763,11 @@ class BattleService:
             submitted_question_ids = {
                 submission.question_id
                 for submission in submissions
-                if submission.user_id == battle.adaptive_owner_id
+                if submission.user_id == owner_id
                 and submission.question_id is not None
             }
             if not expected_question_ids.issubset(submitted_question_ids):
-                raise ValueError("Complete every question before finishing the daily battle.")
+                raise ValueError("Complete every question before finishing this battle.")
 
         battle.status = "completed"
         battle.ended_at = datetime.utcnow()
@@ -792,6 +822,16 @@ class BattleService:
         if company_application:
             company_application.assessment_status = "completed"
             company_application.assessment_score = float(res_data["accuracy_percentage"])
+
+        if quest_progress is not None and quest_progress.status == "IN_PROGRESS":
+            from app.modules.quest_map.scoring import stars_for_accuracy
+
+            accuracy = float(res_data["accuracy_percentage"])
+            quest_progress.status = "COMPLETED"
+            quest_progress.best_accuracy = accuracy
+            quest_progress.stars = stars_for_accuracy(accuracy)
+            quest_progress.completed_at = datetime.utcnow()
+            quest_progress.updated_at = quest_progress.completed_at
 
         for participant in participants:
             is_winner = participant.user_id == res_data.get("winner_id") and not res_data["is_draw"]

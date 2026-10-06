@@ -3,7 +3,7 @@ from datetime import datetime
 
 from fastapi import HTTPException
 from pydantic import ValidationError
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.roadmap import Roadmap, RoadmapTask, RoadmapWeek
 from app.models.user import User
@@ -17,8 +17,8 @@ from app.modules.xp.service import xp_service
 class RoadmapService:
     """Business logic for AI-generated roadmaps."""
 
-    def generate_ai_roadmap(self, db: Session, current_user: User, duration: int) -> AIRoadmap:
-        profile = profile_service.get_profile(db, current_user)
+    async def generate_ai_roadmap(self, db: AsyncSession, current_user: User, duration: int) -> AIRoadmap:
+        profile = await profile_service.get_profile(db, current_user)
 
         prompt = RoadmapPromptBuilder.build(
             profile={
@@ -43,8 +43,8 @@ class RoadmapService:
         except ValidationError as exc:
             raise ValueError(f"Roadmap validation failed.\n{exc}") from exc
 
-    def save_roadmap(self, db: Session, current_user: User, roadmap_data: AIRoadmap) -> Roadmap:
-        roadmap_repository.delete_user_roadmaps(db, current_user.id)
+    async def save_roadmap(self, db: AsyncSession, current_user: User, roadmap_data: AIRoadmap) -> Roadmap:
+        await roadmap_repository.delete_user_roadmaps(db, current_user.id)
 
         roadmap = Roadmap(
             user_id=current_user.id,
@@ -55,7 +55,7 @@ class RoadmapService:
             progress=0,
             status="ACTIVE",
         )
-        roadmap = roadmap_repository.create_roadmap(db, roadmap)
+        roadmap = await roadmap_repository.create_roadmap(db, roadmap)
 
         for week_data in roadmap_data.weeks:
             week = RoadmapWeek(
@@ -65,7 +65,7 @@ class RoadmapService:
                 objective=week_data.objective,
                 completion=0,
             )
-            week = roadmap_repository.create_week(db, week)
+            week = await roadmap_repository.create_week(db, week)
 
             for task_data in week_data.tasks:
                 task = RoadmapTask(
@@ -77,33 +77,33 @@ class RoadmapService:
                     reward_xp=task_data.reward_xp,
                     completed=False,
                 )
-                roadmap_repository.create_task(db, task)
+                await roadmap_repository.create_task(db, task)
 
-        roadmap_repository.commit(db)
-        roadmap_repository.refresh(db, roadmap)
+        await db.commit()
+        await db.refresh(roadmap)
         return roadmap
 
-    def generate(self, db: Session, current_user: User, duration: int) -> Roadmap:
-        roadmap_json = self.generate_ai_roadmap(db, current_user, duration)
-        return self.save_roadmap(db, current_user, roadmap_json)
+    async def generate(self, db: AsyncSession, current_user: User, duration: int) -> Roadmap:
+        roadmap_json = await self.generate_ai_roadmap(db, current_user, duration)
+        return await self.save_roadmap(db, current_user, roadmap_json)
 
-    def get_roadmap(self, db: Session, current_user: User) -> Roadmap | None:
-        return roadmap_repository.get_active_roadmap(db, current_user.id)
+    async def get_roadmap(self, db: AsyncSession, current_user: User) -> Roadmap | None:
+        return await roadmap_repository.get_active_roadmap(db, current_user.id)
 
-    def get_current_week(self, db: Session, current_user: User):
-        roadmap = self.get_roadmap(db, current_user)
+    async def get_current_week(self, db: AsyncSession, current_user: User):
+        roadmap = await self.get_roadmap(db, current_user)
         if roadmap is None:
             return None
-        return roadmap_repository.get_current_week(db, roadmap.id)
+        return await roadmap_repository.get_current_week(db, roadmap.id)
 
-    def get_today_task(self, db: Session, current_user: User):
-        roadmap = self.get_roadmap(db, current_user)
+    async def get_today_task(self, db: AsyncSession, current_user: User):
+        roadmap = await self.get_roadmap(db, current_user)
         if roadmap is None:
             return None
-        return roadmap_repository.get_today_task(db, roadmap.id)
+        return await roadmap_repository.get_today_task(db, roadmap.id)
 
-    def get_progress(self, db: Session, current_user: User):
-        roadmap = self.get_roadmap(db, current_user)
+    async def get_progress(self, db: AsyncSession, current_user: User):
+        roadmap = await self.get_roadmap(db, current_user)
         if roadmap is None:
             return {"progress": 0, "completed": 0, "remaining": 0}
 
@@ -119,8 +119,8 @@ class RoadmapService:
             "remaining": total_tasks - completed_tasks,
         }
 
-    def complete_task(self, db: Session, current_user: User, task_id: int):
-        task = roadmap_repository.get_task(db, task_id)
+    async def complete_task(self, db: AsyncSession, current_user: User, task_id: int):
+        task = await roadmap_repository.get_task(db, task_id)
         if task is None:
             raise HTTPException(status_code=404, detail="Task not found")
         if task.completed:
@@ -128,18 +128,22 @@ class RoadmapService:
 
         task.completed = True
         task.completed_at = datetime.utcnow()
-        roadmap_repository.commit(db)
+        await db.commit()
 
-        roadmap = self.get_roadmap(db, current_user)
+        roadmap = await self.get_roadmap(db, current_user)
         if roadmap is not None:
-            roadmap_repository.update_progress(db, roadmap)
+            roadmap.progress = self.calculate_progress(roadmap)
+            for week in roadmap.weeks:
+                total = len(week.tasks)
+                week.completion = 0 if total == 0 else int(sum(1 for task in week.tasks if task.completed) / total * 100)
+            await db.commit()
 
         try:
-            xp_service.add_xp(db, current_user, task.reward_xp)
+            await xp_service.add_xp(db, current_user, task.reward_xp)
         except Exception:
             pass
 
-        progress = self.get_progress(db, current_user)
+        progress = await self.get_progress(db, current_user)
         return {
             "task_id": task.id,
             "topic": task.topic,
@@ -147,6 +151,16 @@ class RoadmapService:
             "progress": progress,
             "message": "Task completed successfully.",
         }
+
+    def calculate_progress(self, roadmap: Roadmap) -> int:
+        total_tasks = 0
+        completed_tasks = 0
+        for week in roadmap.weeks:
+            total_tasks += len(week.tasks)
+            completed_tasks += len([task for task in week.tasks if task.completed])
+        if total_tasks == 0:
+            return 0
+        return int(completed_tasks / total_tasks * 100)
 
 
 roadmap_service = RoadmapService()

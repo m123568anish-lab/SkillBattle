@@ -1,6 +1,8 @@
 from typing import Optional
 
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from app.models.roadmap import (
     Roadmap,
@@ -18,137 +20,103 @@ class RoadmapRepository:
     # ROADMAP
     # ======================================================
 
-    def create_roadmap(
+    async def create_roadmap(
         self,
-        db: Session,
+        db: AsyncSession,
         roadmap: Roadmap,
     ) -> Roadmap:
-
         db.add(roadmap)
-        db.flush()
-
+        await db.flush()
         return roadmap
 
-    def get_active_roadmap(
+    async def get_active_roadmap(
         self,
-        db: Session,
+        db: AsyncSession,
         user_id: str,
     ) -> Optional[Roadmap]:
-
-        return (
-            db.query(Roadmap)
-            .options(
-                joinedload(Roadmap.weeks)
-                .joinedload(RoadmapWeek.tasks)
-            )
-            .filter(
-                Roadmap.user_id == user_id,
-                Roadmap.status == "ACTIVE",
-            )
-            .first()
+        result = await db.execute(
+            select(Roadmap)
+            .options(joinedload(Roadmap.weeks).joinedload(RoadmapWeek.tasks))
+            .where(Roadmap.user_id == user_id, Roadmap.status == "ACTIVE")
+            .limit(1)
         )
+        return result.scalar_one_or_none()
 
-    def delete_user_roadmaps(
+    async def delete_user_roadmaps(
         self,
-        db: Session,
+        db: AsyncSession,
         user_id: str,
     ):
-
-        (
-            db.query(Roadmap)
-            .filter(Roadmap.user_id == user_id)
-            .delete()
+        await db.execute(
+            Roadmap.__table__.delete().where(Roadmap.user_id == user_id)
         )
 
     # ======================================================
     # WEEK
     # ======================================================
 
-    def create_week(
+    async def create_week(
         self,
-        db: Session,
+        db: AsyncSession,
         week: RoadmapWeek,
     ) -> RoadmapWeek:
-
         db.add(week)
-        db.flush()
-
+        await db.flush()
         return week
 
-    def get_current_week(
+    async def get_current_week(
         self,
-        db: Session,
+        db: AsyncSession,
         roadmap_id: int,
     ) -> Optional[RoadmapWeek]:
-
-        return (
-            db.query(RoadmapWeek)
-            .filter(
-                RoadmapWeek.roadmap_id == roadmap_id,
-                RoadmapWeek.completion < 100,
-            )
-            .order_by(
-                RoadmapWeek.week_number.asc()
-            )
-            .first()
+        result = await db.execute(
+            select(RoadmapWeek)
+            .where(RoadmapWeek.roadmap_id == roadmap_id, RoadmapWeek.completion < 100)
+            .order_by(RoadmapWeek.week_number.asc())
+            .limit(1)
         )
+        return result.scalar_one_or_none()
 
     # ======================================================
     # TASK
     # ======================================================
 
-    def create_task(
+    async def create_task(
         self,
-        db: Session,
+        db: AsyncSession,
         task: RoadmapTask,
     ) -> RoadmapTask:
-
         db.add(task)
-        db.flush()
-
+        await db.flush()
         return task
 
-    def get_task(
+    async def get_task(
         self,
-        db: Session,
+        db: AsyncSession,
         task_id: int,
     ) -> Optional[RoadmapTask]:
-
-        return (
-            db.query(RoadmapTask)
-            .filter(
-                RoadmapTask.id == task_id
-            )
-            .first()
+        result = await db.execute(
+            select(RoadmapTask).where(RoadmapTask.id == task_id).limit(1)
         )
+        return result.scalar_one_or_none()
 
-    def get_today_task(
+    async def get_today_task(
         self,
-        db: Session,
+        db: AsyncSession,
         roadmap_id: int,
     ) -> Optional[RoadmapTask]:
-
-        weeks = (
-            db.query(RoadmapWeek)
-            .options(
-                joinedload(RoadmapWeek.tasks)
-            )
-            .filter(
-                RoadmapWeek.roadmap_id == roadmap_id
-            )
-            .order_by(
-                RoadmapWeek.week_number
-            )
-            .all()
+        result = await db.execute(
+            select(RoadmapWeek)
+            .options(joinedload(RoadmapWeek.tasks))
+            .where(RoadmapWeek.roadmap_id == roadmap_id)
+            .order_by(RoadmapWeek.week_number)
         )
+        weeks = result.scalars().all()
 
         for week in weeks:
-
             for task in week.tasks:
-
                 if not task.completed:
                     return task
-
         return None
 
     # ======================================================
@@ -159,64 +127,37 @@ class RoadmapRepository:
         self,
         roadmap: Roadmap,
     ) -> int:
-
         total_tasks = 0
         completed_tasks = 0
 
         for week in roadmap.weeks:
-
             total_tasks += len(week.tasks)
-
-            completed_tasks += len(
-                [
-                    task
-                    for task in week.tasks
-                    if task.completed
-                ]
-            )
+            completed_tasks += len([
+                task for task in week.tasks if task.completed
+            ])
 
         if total_tasks == 0:
             return 0
 
-        return int(
-            completed_tasks
-            / total_tasks
-            * 100
-        )
+        return int(completed_tasks / total_tasks * 100)
 
     def update_progress(
         self,
-        db: Session,
+        db: AsyncSession,
         roadmap: Roadmap,
     ):
-
-        roadmap.progress = self.calculate_progress(
-            roadmap
-        )
+        roadmap.progress = self.calculate_progress(roadmap)
 
         for week in roadmap.weeks:
-
             total = len(week.tasks)
-
             if total == 0:
-
                 week.completion = 0
-
                 continue
 
-            completed = len(
-                [
-                    task
-                    for task in week.tasks
-                    if task.completed
-                ]
-            )
-
-            week.completion = int(
-                completed
-                / total
-                * 100
-            )
+            completed = len([
+                task for task in week.tasks if task.completed
+            ])
+            week.completion = int(completed / total * 100)
 
         db.commit()
 
@@ -228,27 +169,24 @@ class RoadmapRepository:
     # SAVE
     # ======================================================
 
-    def commit(
+    async def commit(
         self,
-        db: Session,
+        db: AsyncSession,
     ):
+        await db.commit()
 
-        db.commit()
-
-    def rollback(
+    async def rollback(
         self,
-        db: Session,
+        db: AsyncSession,
     ):
+        await db.rollback()
 
-        db.rollback()
-
-    def refresh(
+    async def refresh(
         self,
-        db: Session,
+        db: AsyncSession,
         obj,
     ):
-
-        db.refresh(obj)
+        await db.refresh(obj)
 
 
 roadmap_repository = RoadmapRepository()

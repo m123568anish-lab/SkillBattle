@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Query
+from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -225,14 +226,13 @@ async def waiting_battles(
 async def battle_details(
     battle_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User | None = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     battle = await battle_service.get_battle(db, battle_id)
     if battle is None:
         raise HTTPException(status_code=404, detail="Battle not found.")
-    if battle.adaptive_owner_id is not None and (
-        current_user is None or current_user.id != battle.adaptive_owner_id
-    ):
+    participant = await battle_repository.get_participant(db, battle_id, current_user.id)
+    if participant is None and not (current_user.is_superuser or current_user.role.lower() == "admin"):
         raise HTTPException(status_code=404, detail="Battle not found.")
 
     # Sanitize payload questions if running
@@ -244,7 +244,16 @@ async def battle_details(
             is_completed=is_completed,
         )
 
-    return battle
+    response = BattleResponse.model_validate(battle)
+    submissions_result = await db.execute(
+        select(BattleSubmission.question_id).where(
+            BattleSubmission.battle_id == battle.id,
+            BattleSubmission.user_id == current_user.id,
+            BattleSubmission.question_id.is_not(None),
+        )
+    )
+    response.submitted_question_ids = list(submissions_result.scalars().all())
+    return response
 
 
 @router.get("/{battle_id}/participants", response_model=list[BattleParticipantResponse])
@@ -438,10 +447,29 @@ async def leave_queue(
 # ==========================================================
 
 @router.get("/{battle_id}/timer")
-def timer(battle_id: str):
+async def timer(
+    battle_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    battle = await battle_service.get_battle(db, battle_id)
+    participant = await battle_repository.get_participant(db, battle_id, current_user.id) if battle else None
+    if battle is None or (participant is None and not (current_user.is_superuser or current_user.role.lower() == "admin")):
+        raise HTTPException(status_code=404, detail="Battle not found.")
+    duration_seconds = sum(
+        max(0, int(section.get("duration_minutes", 0))) * 60
+        for section in (battle.sections_config or [])
+    )
+    if battle.started_at is not None and duration_seconds:
+        elapsed_seconds = max(0, int((datetime.utcnow() - battle.started_at).total_seconds()))
+        remaining_seconds = max(0, duration_seconds - elapsed_seconds)
+        running = battle.status == "running" and remaining_seconds > 0
+    else:
+        remaining_seconds = battle_timer.remaining(battle_id)
+        running = battle.status == "running" and battle_timer.is_running(battle_id)
     return {
-        "remaining_seconds": battle_timer.remaining(battle_id),
-        "running": battle_timer.is_running(battle_id),
+        "remaining_seconds": remaining_seconds,
+        "running": running,
     }
 
 

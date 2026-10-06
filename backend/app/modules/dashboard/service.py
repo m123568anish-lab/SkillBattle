@@ -54,7 +54,7 @@ class DashboardService:
         user_xp = await xp_service.get_user_xp(db, current_user)
         total_xp = int(getattr(user_xp, "total_xp", 0) or 0)
         current_streak = await dashboard_repository.get_current_streak(db, user_id)
-        roadmap = roadmap_service.get_roadmap(db, current_user)
+        roadmap = await roadmap_service.get_roadmap(db, current_user)
         roadmap_summary = None
         if roadmap is not None:
             roadmap_summary = {
@@ -66,10 +66,9 @@ class DashboardService:
         # Collect real evidence from the canonical skill intelligence system.
         evidence = []
         from sqlalchemy import select
-        from app.models.question import Question
+        from app.models.question import Question, UserSubmission
         from app.models.assessment_engine import AssessmentQuestionSubmission
         from app.models.battle.battle_submission import BattleSubmission
-        from app.models.user_submission import UserSubmission
 
         practice_stmt = select(UserSubmission, Question).join(Question, Question.id == UserSubmission.question_id).where(UserSubmission.user_id == user_id)
         for submission, question in (await db.execute(practice_stmt)).all():

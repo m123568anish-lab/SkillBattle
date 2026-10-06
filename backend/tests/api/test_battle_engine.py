@@ -1,6 +1,11 @@
 import pytest
 from uuid import uuid4
 from httpx import AsyncClient
+from sqlalchemy import select
+
+from app.database.session import AsyncSessionLocal
+from app.models.battle.battle_room import BattleRoom
+from app.models.user import User
 
 
 @pytest.mark.asyncio
@@ -133,7 +138,7 @@ async def test_advanced_battle_engine_workflow(client: AsyncClient, monkeypatch)
             "problem_id": 1,
             "config_id": config_id,
             "battle_type": "placement",
-            "max_players": 2,
+            "max_players": 1,
         },
     )
     assert battle_resp.status_code == 200, battle_resp.text
@@ -141,7 +146,9 @@ async def test_advanced_battle_engine_workflow(client: AsyncClient, monkeypatch)
     battle_id = battle_data["id"]
 
     # 4. Fetch Battle Details & verify sanitized question payload
-    details_resp = await client.get(f"/battle/{battle_id}")
+    anonymous_details = await client.get(f"/battle/{battle_id}")
+    assert anonymous_details.status_code == 401
+    details_resp = await client.get(f"/battle/{battle_id}", headers=headers)
     assert details_resp.status_code == 200
     sections = details_resp.json()["questions_data"]
     assert len(sections) > 0
@@ -205,3 +212,43 @@ async def test_advanced_battle_engine_workflow(client: AsyncClient, monkeypatch)
     res_payload = result_resp.json()
     assert res_payload["battle_type"] == "placement"
     assert "overall_status" in res_payload["placement_readiness"]
+
+
+@pytest.mark.asyncio
+async def test_daily_inventory_shortage_does_not_create_active_battle(client: AsyncClient, monkeypatch):
+    unique_id = uuid4().hex[:8].lower()
+    email = f"shortage_{unique_id}@example.com"
+    registration = await client.post(
+        "/auth/register",
+        json={
+            "username": f"shortage_{unique_id}",
+            "email": email,
+            "full_name": "Battle Inventory Test",
+            "password": "StrongPass#123",
+        },
+    )
+    assert registration.status_code == 201, registration.text
+    login = await client.post("/auth/login", json={"email": email, "password": "StrongPass#123"})
+    assert login.status_code == 200, login.text
+    headers = {"Authorization": f"Bearer {login.json()['tokens']['access_token']}"}
+
+    async def insufficient_inventory(*args, **kwargs):
+        raise ValueError("Not enough validated mcq questions for this battle section (required 3, available 2).")
+
+    from app.modules.battle.question_engine import question_engine
+
+    monkeypatch.setattr(question_engine, "get_adaptive_questions_for_user", insufficient_inventory)
+    response = await client.post("/battle/daily", headers=headers)
+    assert response.status_code == 409, response.text
+    assert response.json()["detail"] == "Not enough validated mcq questions for this battle section (required 3, available 2)."
+
+    async with AsyncSessionLocal() as db:
+        user_result = await db.execute(select(User).where(User.email == email))
+        user = user_result.scalar_one()
+        battle_result = await db.execute(
+            select(BattleRoom).where(
+                BattleRoom.adaptive_owner_id == user.id,
+                BattleRoom.adaptive_date.is_not(None),
+            )
+        )
+        assert battle_result.scalar_one_or_none() is None

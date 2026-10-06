@@ -17,6 +17,9 @@ const pageTitles: Record<string, string> = {
   "/career/dashboard": "Career Dashboard",
   "/career/resume": "Resume Coach",
   "/career/roadmap": "Career Roadmap",
+  "/faq": "Help and FAQ",
+  "/privacy": "Privacy Policy",
+  "/terms": "Terms of Service",
 };
 
 export default function PageMetadata() {
@@ -25,10 +28,6 @@ export default function PageMetadata() {
   useEffect(() => {
     const title = pageTitles[pathname] || "SkillBattle";
     document.title = `${title} | SkillBattle`;
-    document.querySelector('meta[name="description"]')?.setAttribute(
-      "content",
-      "Practice coding, compete in live battles, and build interview-ready skills with SkillBattle."
-    );
   }, [pathname]);
 
   return null;

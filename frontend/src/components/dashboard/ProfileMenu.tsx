@@ -122,7 +122,7 @@ export default function ProfileMenu() {
           {avatarUrl ? (
             <Image
               src={avatarUrl}
-              alt="Profile"
+              alt={`${displayName} profile photo`}
               width={36}
               height={36}
               unoptimized
@@ -153,7 +153,7 @@ export default function ProfileMenu() {
       >
           <div className="mb-2 flex items-center gap-3 border-b border-white/5 px-3 py-3">
             {avatarUrl ? (
-              <Image src={avatarUrl} alt="Profile preview" width={44} height={44} unoptimized className="h-11 w-11 rounded-full border border-white/20 object-cover" />
+              <Image src={avatarUrl} alt={`${displayName} profile photo`} width={44} height={44} unoptimized className="h-11 w-11 rounded-full border border-white/20 object-cover" />
             ) : (
               <div className="grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-slate-800 text-sm font-black text-cyan-200">
                 {initials}

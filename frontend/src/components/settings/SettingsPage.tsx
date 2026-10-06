@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
 import { toast } from "react-hot-toast";
-import { Lock, Bell, Eye, Volume2, Shield, Zap, Check, AlertCircle } from "lucide-react";
+import { Lock, Shield, Zap, Check, AlertCircle } from "lucide-react";
+import { useAuthStore } from "@/store/authStore";
 
 type SettingTab = "security" | "preferences" | "privacy";
 
@@ -15,6 +16,20 @@ interface TabConfig {
   description: string;
 }
 
+type SharingSettings = {
+  share_contact_info: boolean;
+  share_skill_profile: boolean;
+  share_assessment_results: boolean;
+  allow_recruiter_search: boolean;
+};
+
+const defaultSharing: SharingSettings = {
+  share_contact_info: false,
+  share_skill_profile: false,
+  share_assessment_results: false,
+  allow_recruiter_search: false,
+};
+
 const TABS: TabConfig[] = [
   { id: "security", label: "Security", icon: <Lock className="h-4 w-4" />, description: "Password and account security" },
   { id: "preferences", label: "Preferences", icon: <Zap className="h-4 w-4" />, description: "Battle and gameplay settings" },
@@ -22,6 +37,7 @@ const TABS: TabConfig[] = [
 ];
 
 export default function SettingsPage() {
+  const user = useAuthStore((state) => state.user);
   const [activeTab, setActiveTab] = useState<SettingTab>("security");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -30,21 +46,93 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Preferences state
-  const [preferences, setPreferences] = useState({
-    battleMode: "squad",
-    voiceChat: true,
-    notifications: true,
-    showAds: false,
-  });
+  const [sharing, setSharing] = useState<SharingSettings>(defaultSharing);
+  const [sharingLoading, setSharingLoading] = useState(true);
+  const [sharingSaving, setSharingSaving] = useState<keyof SharingSettings | null>(null);
+  const [sharingError, setSharingError] = useState<string | null>(null);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [twoFactorPassword, setTwoFactorPassword] = useState("");
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [twoFactorSecret, setTwoFactorSecret] = useState<string | null>(null);
+  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
 
-  // Privacy state
-  const [privacy, setPrivacy] = useState({
-    profilePublic: true,
-    showStats: true,
-    allowFriendRequests: true,
-    showActivityStatus: true,
-  });
+  useEffect(() => {
+    let active = true;
+    async function loadSettings() {
+      const [privacyResult, userResult] = await Promise.allSettled([
+        api.get<SharingSettings>("/profile/sharing-settings"),
+        api.get<{ two_factor_enabled?: boolean }>("/auth/me"),
+      ]);
+      if (!active) return;
+      if (privacyResult.status === "fulfilled") setSharing(privacyResult.value.data);
+      else setSharingError("Candidate-sharing settings could not be loaded.");
+      if (userResult.status === "fulfilled") setTwoFactorEnabled(Boolean(userResult.value.data.two_factor_enabled));
+      setSharingLoading(false);
+    }
+    void loadSettings();
+    return () => { active = false; };
+  }, []);
+
+  async function updateSharing(key: keyof SharingSettings, value: boolean) {
+    setSharingSaving(key);
+    setSharingError(null);
+    try {
+      const response = await api.put<SharingSettings>("/profile/sharing-settings", { ...sharing, [key]: value });
+      setSharing(response.data);
+    } catch (err) {
+      const message = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setSharingError(typeof message === "string" ? message : "Sharing settings could not be saved.");
+    } finally {
+      setSharingSaving(null);
+    }
+  }
+
+  async function startTwoFactorSetup() {
+    if (!user?.email || !twoFactorPassword) {
+      setError("Enter your current password to configure two-factor authentication.");
+      return;
+    }
+    setTwoFactorLoading(true);
+    setError(null);
+    try {
+      const response = await api.post<{ secret: string; recovery_codes: string[]; otpauth_url: string }>("/auth/2fa/setup", {
+        email: user.email,
+        password: twoFactorPassword,
+      });
+      setTwoFactorSecret(response.data.secret);
+      setRecoveryCodes(response.data.recovery_codes);
+      toast.success("Authenticator setup created. Verify a code to enable 2FA.");
+    } catch (err) {
+      const message = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setError(typeof message === "string" ? message : "Two-factor setup could not be started.");
+    } finally {
+      setTwoFactorLoading(false);
+    }
+  }
+
+  async function verifyTwoFactorSetup() {
+    if (!user?.email || !/^\d{6}$/.test(twoFactorCode)) {
+      setError("Enter the current six-digit authenticator code.");
+      return;
+    }
+    setTwoFactorLoading(true);
+    setError(null);
+    try {
+      await api.post("/auth/2fa/verify", { email: user.email, code: twoFactorCode });
+      setTwoFactorEnabled(true);
+      setTwoFactorSecret(null);
+      setTwoFactorPassword("");
+      setTwoFactorCode("");
+      setSuccess(true);
+      toast.success("Two-factor authentication enabled.");
+    } catch (err) {
+      const message = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setError(typeof message === "string" ? message : "The authenticator code could not be verified.");
+    } finally {
+      setTwoFactorLoading(false);
+    }
+  }
 
   async function handlePasswordChange() {
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -84,16 +172,6 @@ export default function SettingsPage() {
       setLoading(false);
     }
   }
-
-  const togglePreference = (key: keyof typeof preferences) => {
-    setPreferences((prev) => ({ ...prev, [key]: !prev[key] }));
-    toast.success("Preference updated!");
-  };
-
-  const togglePrivacy = (key: keyof typeof privacy) => {
-    setPrivacy((prev) => ({ ...prev, [key]: !prev[key] }));
-    toast.success("Privacy setting updated!");
-  };
 
   return (
     <div className="space-y-6">
@@ -256,231 +334,55 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   <div className="rounded-full bg-slate-900/80 border border-white/10 px-4 py-2">
-                    <span className="text-xs font-bold text-slate-400">Not Enabled</span>
+                    <span className={`text-xs font-bold ${twoFactorEnabled ? "text-emerald-300" : "text-slate-400"}`}>{twoFactorEnabled ? "Enabled" : "Not enabled"}</span>
                   </div>
                 </div>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="mt-6 w-full rounded-2xl border-2 border-violet-500/30 bg-violet-500/10 px-6 py-3 font-bold text-violet-300 hover:border-violet-500/60 transition"
-                >
-                  Enable 2FA
-                </motion.button>
+                {!twoFactorEnabled && !twoFactorSecret && <div className="mt-5 space-y-3">
+                  <label className="block text-xs font-semibold text-slate-300" htmlFor="two-factor-password">Confirm your password to begin setup</label>
+                  <input id="two-factor-password" type="password" autoComplete="current-password" value={twoFactorPassword} onChange={(event) => setTwoFactorPassword(event.target.value)} className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-violet-400" />
+                  <button type="button" disabled={twoFactorLoading} onClick={() => void startTwoFactorSetup()} className="w-full rounded-xl border-2 border-violet-500/30 bg-violet-500/10 px-5 py-3 font-bold text-violet-200 hover:border-violet-500/60 disabled:opacity-50">{twoFactorLoading ? "Preparing setup…" : "Set up authenticator"}</button>
+                </div>}
+                {twoFactorSecret && <div className="mt-5 space-y-4 rounded-xl border border-violet-400/20 bg-violet-400/5 p-4">
+                  <p className="text-sm text-slate-200">Add this secret to an authenticator app, then enter its current six-digit code.</p>
+                  <code className="block break-all rounded-lg bg-slate-950 p-3 text-sm text-violet-200">{twoFactorSecret}</code>
+                  <div><p className="text-xs font-semibold text-slate-300">Recovery codes. Store them securely; they are shown only during setup.</p><ul className="mt-2 grid gap-1 sm:grid-cols-2">{recoveryCodes.map((recoveryCode) => <li key={recoveryCode} className="font-mono text-xs text-slate-200">{recoveryCode}</li>)}</ul></div>
+                  <label className="block text-xs font-semibold text-slate-300" htmlFor="two-factor-code">Authenticator code</label>
+                  <input id="two-factor-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value.replace(/\D/g, ""))} className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 font-mono text-white outline-none focus:border-violet-400" />
+                  <button type="button" disabled={twoFactorLoading || twoFactorCode.length !== 6} onClick={() => void verifyTwoFactorSetup()} className="w-full rounded-xl bg-violet-500 px-5 py-3 font-bold text-white disabled:opacity-50">{twoFactorLoading ? "Verifying…" : "Verify and enable 2FA"}</button>
+                </div>}
               </motion.div>
             </>
           )}
 
           {/* Preferences Tab */}
           {activeTab === "preferences" && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="space-y-4"
-            >
-              {/* Battle Mode Card */}
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-white shadow-2xl backdrop-blur-xl">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-start gap-4">
-                    <div className="rounded-full bg-cyan-500/20 border border-cyan-500/30 p-3">
-                      <Zap className="h-6 w-6 text-cyan-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold">Battle Mode</h3>
-                      <p className="text-sm text-slate-400 mt-1">Choose your preferred battle mode</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                  {[
-                    { value: "solo", label: "Solo" },
-                    { value: "squad", label: "Squad" },
-                    { value: "tournament", label: "Tournament" },
-                  ].map((mode) => (
-                    <motion.button
-                      key={mode.value}
-                      onClick={() => setPreferences((prev) => ({ ...prev, battleMode: mode.value }))}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className={`rounded-2xl border-2 p-4 transition-all ${
-                        preferences.battleMode === mode.value
-                          ? "border-cyan-400 bg-cyan-400/10"
-                          : "border-white/10 hover:border-white/20"
-                      }`}
-                    >
-                      <div className="font-semibold text-white">{mode.label}</div>
-                      {preferences.battleMode === mode.value && (
-                        <Check className="h-4 w-4 text-cyan-400 mt-2" />
-                      )}
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Audio Settings */}
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-white shadow-2xl backdrop-blur-xl">
-                <h3 className="text-xl font-bold mb-6">Audio Settings</h3>
-
-                <div className="space-y-4">
-                  {/* Voice Chat Toggle */}
-                  <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                    <div className="flex items-center gap-3">
-                      <Volume2 className="h-5 w-5 text-cyan-400" />
-                      <div>
-                        <div className="font-semibold">Voice Chat</div>
-                        <div className="text-xs text-slate-400">Enable in-game voice communication</div>
-                      </div>
-                    </div>
-                    <motion.button
-                      onClick={() => togglePreference("voiceChat")}
-                      whileTap={{ scale: 0.95 }}
-                      className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all ${
-                        preferences.voiceChat ? "bg-cyan-500" : "bg-slate-600"
-                      }`}
-                    >
-                      <motion.div
-                        layout
-                        className="h-6 w-6 rounded-full bg-white shadow-lg"
-                        animate={{ x: preferences.voiceChat ? 28 : 2 }}
-                      />
-                    </motion.button>
-                  </div>
-
-                  {/* Notifications Toggle */}
-                  <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                    <div className="flex items-center gap-3">
-                      <Bell className="h-5 w-5 text-violet-400" />
-                      <div>
-                        <div className="font-semibold">Notifications</div>
-                        <div className="text-xs text-slate-400">Receive battle and achievement alerts</div>
-                      </div>
-                    </div>
-                    <motion.button
-                      onClick={() => togglePreference("notifications")}
-                      whileTap={{ scale: 0.95 }}
-                      className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all ${
-                        preferences.notifications ? "bg-cyan-500" : "bg-slate-600"
-                      }`}
-                    >
-                      <motion.div
-                        layout
-                        className="h-6 w-6 rounded-full bg-white shadow-lg"
-                        animate={{ x: preferences.notifications ? 28 : 2 }}
-                      />
-                    </motion.button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
+            <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border border-white/10 bg-white/5 p-8 text-white">
+              <h2 className="text-xl font-bold">Gameplay preferences</h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Battle mode and audio preferences are not currently persisted account settings. Choose a supported mode when starting a battle; this screen does not claim to save preferences it cannot apply.</p>
+            </motion.section>
           )}
 
           {/* Privacy Tab */}
           {activeTab === "privacy" && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="rounded-3xl border border-white/10 bg-white/5 p-8 text-white shadow-2xl backdrop-blur-xl"
-            >
-              <h2 className="text-2xl font-bold mb-8">Privacy Controls</h2>
-
-              <div className="space-y-4">
-                {/* Profile Visibility */}
-                <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                  <div className="flex items-center gap-3">
-                    <Eye className="h-5 w-5 text-emerald-400" />
-                    <div>
-                      <div className="font-semibold">Public Profile</div>
-                      <div className="text-xs text-slate-400">Let others view your profile</div>
-                    </div>
-                  </div>
-                  <motion.button
-                    onClick={() => togglePrivacy("profilePublic")}
-                    whileTap={{ scale: 0.95 }}
-                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all ${
-                      privacy.profilePublic ? "bg-cyan-500" : "bg-slate-600"
-                    }`}
-                  >
-                    <motion.div
-                      layout
-                      className="h-6 w-6 rounded-full bg-white shadow-lg"
-                      animate={{ x: privacy.profilePublic ? 28 : 2 }}
-                    />
-                  </motion.button>
-                </div>
-
-                {/* Show Statistics */}
-                <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                  <div className="flex items-center gap-3">
-                    <Zap className="h-5 w-5 text-yellow-400" />
-                    <div>
-                      <div className="font-semibold">Show Statistics</div>
-                      <div className="text-xs text-slate-400">Display your battle stats publicly</div>
-                    </div>
-                  </div>
-                  <motion.button
-                    onClick={() => togglePrivacy("showStats")}
-                    whileTap={{ scale: 0.95 }}
-                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all ${
-                      privacy.showStats ? "bg-cyan-500" : "bg-slate-600"
-                    }`}
-                  >
-                    <motion.div
-                      layout
-                      className="h-6 w-6 rounded-full bg-white shadow-lg"
-                      animate={{ x: privacy.showStats ? 28 : 2 }}
-                    />
-                  </motion.button>
-                </div>
-
-                {/* Friend Requests */}
-                <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                  <div className="flex items-center gap-3">
-                    <Bell className="h-5 w-5 text-pink-400" />
-                    <div>
-                      <div className="font-semibold">Allow Friend Requests</div>
-                      <div className="text-xs text-slate-400">Let others send you friend requests</div>
-                    </div>
-                  </div>
-                  <motion.button
-                    onClick={() => togglePrivacy("allowFriendRequests")}
-                    whileTap={{ scale: 0.95 }}
-                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all ${
-                      privacy.allowFriendRequests ? "bg-cyan-500" : "bg-slate-600"
-                    }`}
-                  >
-                    <motion.div
-                      layout
-                      className="h-6 w-6 rounded-full bg-white shadow-lg"
-                      animate={{ x: privacy.allowFriendRequests ? 28 : 2 }}
-                    />
-                  </motion.button>
-                </div>
-
-                {/* Activity Status */}
-                <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-3 w-3 rounded-full bg-emerald-400" />
-                    <div>
-                      <div className="font-semibold">Show Activity Status</div>
-                      <div className="text-xs text-slate-400">Show when you're online or in a battle</div>
-                    </div>
-                  </div>
-                  <motion.button
-                    onClick={() => togglePrivacy("showActivityStatus")}
-                    whileTap={{ scale: 0.95 }}
-                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all ${
-                      privacy.showActivityStatus ? "bg-cyan-500" : "bg-slate-600"
-                    }`}
-                  >
-                    <motion.div
-                      layout
-                      className="h-6 w-6 rounded-full bg-white shadow-lg"
-                      animate={{ x: privacy.showActivityStatus ? 28 : 2 }}
-                    />
-                  </motion.button>
-                </div>
-              </div>
-            </motion.div>
+            <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border border-white/10 bg-white/5 p-8 text-white">
+              <h2 className="text-2xl font-bold">Candidate sharing controls</h2>
+              <p className="mt-2 text-sm text-slate-400">These saved settings govern recruiter visibility. Application consent is also required before a company can review candidate details.</p>
+              {sharingError && <p role="alert" className="mt-4 text-sm text-rose-200">{sharingError}</p>}
+              {sharingLoading ? <p role="status" className="mt-6 text-sm text-slate-400">Loading saved privacy settings…</p> : <div className="mt-6 space-y-3">
+                {([
+                  ["share_contact_info", "Share contact information", "Let recruiters see your name and contact details when application consent is active."],
+                  ["share_skill_profile", "Share skill profile", "Allow verified skill evidence to be used for recruiter matching."],
+                  ["share_assessment_results", "Share assessment results", "Allow assessment results to be considered in company applications."],
+                  ["allow_recruiter_search", "Allow recruiter discovery", "Allow your shared skill profile to appear in company candidate discovery."],
+                ] as const).map(([key, label, description]) => (
+                  <label key={key} className="flex items-start justify-between gap-4 rounded-xl border border-white/10 bg-slate-950/40 p-4">
+                    <span><span className="block font-semibold">{label}</span><span className="mt-1 block text-xs leading-5 text-slate-400">{description}</span></span>
+                    <input type="checkbox" checked={sharing[key]} disabled={sharingSaving !== null} onChange={(event) => void updateSharing(key, event.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-cyan-400" />
+                  </label>
+                ))}
+                {sharingSaving && <p role="status" className="text-xs text-cyan-200">Saving privacy setting…</p>}
+              </div>}
+            </motion.section>
           )}
         </motion.div>
       </AnimatePresence>

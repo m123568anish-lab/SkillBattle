@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,7 +11,7 @@ from app.database.session import get_db
 from app.models.company import JobPosting
 from app.models.user import User
 from app.models.battle.battle_config import BattleConfig
-from app.modules.company.schemas import CandidateApplicationConsentRequest, CandidateApplicationRequest, CandidateApplicationStatusRequest, CompanyAssessmentCreate, CompanyDashboardResponse, CompanyRegisterRequest, CompanyStatusRequest, CompanySummary, JobPostingRequest, JobPostingResponse
+from app.modules.company.schemas import CandidateApplicationConsentRequest, CandidateApplicationRequest, CandidateApplicationStatusRequest, CompanyAssessmentCreate, CompanyDashboardResponse, CompanyRegisterRequest, CompanyStatusRequest, CompanySummary, InterviewScheduleRequest, JobPostingRequest, JobPostingResponse
 from app.modules.battle.schemas import BattleConfigResponse, BattleResponse, CreateBattleRequest
 from app.modules.battle.service import battle_service
 from app.modules.company.service import company_service
@@ -66,6 +68,26 @@ async def dashboard(
 ):
     data = await company_service.get_dashboard(db, current_user)
     return CompanyDashboardResponse(**data)
+
+
+@router.get("/command-center")
+async def command_center(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await company_service.get_company_command_center(db, current_user)
+
+
+@router.get("/candidates/{candidate_id}/match")
+async def candidate_match(
+    candidate_id: str,
+    job_id: int = 0,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if job_id <= 0:
+        raise HTTPException(status_code=400, detail="job_id is required.")
+    return await company_service.get_candidate_match(db, current_user, candidate_id, job_id)
 
 
 @router.post("/jobs", response_model=JobPostingResponse)
@@ -201,6 +223,48 @@ async def update_application_status(
         db, current_user, application_id, payload.status
     )
     return {"application_id": application.id, "status": application.status}
+
+
+@router.post("/applications/{application_id}/interview")
+async def schedule_interview(
+    application_id: int,
+    payload: InterviewScheduleRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    interview = await company_service.schedule_interview(
+        db, current_user, application_id, payload.model_dump()
+    )
+    return {
+        "id": interview.id,
+        "application_id": interview.application_id,
+        "scheduled_at": interview.scheduled_at.replace(tzinfo=timezone.utc).isoformat(),
+        "duration_minutes": interview.duration_minutes,
+        "meeting_url": interview.meeting_url,
+        "status": interview.status,
+    }
+
+
+@router.get("/interviews")
+async def list_interviews(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await company_service.list_company_interviews(db, current_user)
+
+
+@router.post("/interviews/{interview_id}/complete")
+async def complete_interview(
+    interview_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    interview = await company_service.complete_interview(db, current_user, interview_id)
+    return {
+        "id": interview.id,
+        "application_id": interview.application_id,
+        "status": interview.status,
+    }
 
 
 @router.post("/applications")

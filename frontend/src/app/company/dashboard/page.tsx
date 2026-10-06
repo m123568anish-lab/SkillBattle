@@ -8,6 +8,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
   CompanyCandidate,
   CompanyDashboardData,
+  CompanyInterview,
   CompanyJob,
   DiscoverableCandidate,
   organizationDashboardService,
@@ -53,6 +54,7 @@ export default function CompanyDashboardPage() {
   const [jobs, setJobs] = useState<CompanyJob[]>([]);
   const [candidates, setCandidates] = useState<CompanyCandidate[]>([]);
   const [discoverable, setDiscoverable] = useState<DiscoverableCandidate[]>([]);
+  const [interviews, setInterviews] = useState<CompanyInterview[]>([]);
   const [selectedJobId, setSelectedJobId] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -69,6 +71,11 @@ export default function CompanyDashboardPage() {
         const summary = await organizationDashboardService.getCompanyDashboard();
         if (!active) return;
         setDashboard(summary);
+
+        if (view === "overview" || view === "analytics") {
+          const interviewRows = await organizationDashboardService.getCompanyInterviews();
+          if (active) setInterviews(interviewRows);
+        }
 
         if (["jobs", "candidates", "discover", "assessments"].includes(view)) {
           const jobRows = await organizationDashboardService.getCompanyJobs();
@@ -112,13 +119,56 @@ export default function CompanyDashboardPage() {
     }
   }
 
-  async function updateApplication(applicationId: number, status: "shortlisted" | "rejected") {
+  async function updateApplication(applicationId: number, status: "shortlisted" | "offer" | "hired" | "rejected") {
     setSubmitting(true);
     setError(null);
     setNotice(null);
     try {
       await organizationDashboardService.updateApplicationStatus(applicationId, status);
-      setNotice(status === "shortlisted" ? "Candidate shortlisted." : "Application rejected.");
+      const messages = {
+        shortlisted: "Candidate shortlisted.",
+        offer: "Offer recorded.",
+        hired: "Candidate marked as hired.",
+        rejected: "Application rejected.",
+      };
+      setNotice(messages[status]);
+      setRefreshVersion((version) => version + 1);
+    } catch (actionError) {
+      setError(errorMessage(actionError));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function completeInterview(interviewId: number) {
+    setSubmitting(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await organizationDashboardService.completeInterview(interviewId);
+      setNotice("Interview marked complete.");
+      setRefreshVersion((version) => version + 1);
+    } catch (actionError) {
+      setError(errorMessage(actionError));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function scheduleInterview(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setSubmitting(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await organizationDashboardService.scheduleInterview(Number(form.get("application_id")), {
+        scheduled_at: new Date(String(form.get("scheduled_at") || "")).toISOString(),
+        duration_minutes: Number(form.get("duration_minutes") || 45),
+        meeting_url: String(form.get("meeting_url") || ""),
+        notes: String(form.get("notes") || ""),
+      });
+      setNotice("Interview scheduled and candidate notified.");
       setRefreshVersion((version) => version + 1);
     } catch (actionError) {
       setError(errorMessage(actionError));
@@ -192,7 +242,9 @@ export default function CompanyDashboardPage() {
                     {dashboard.recent_applications.length === 0 ? <EmptyState>No recent applications.</EmptyState> : <div className="divide-y divide-white/5">{dashboard.recent_applications.map((application, index) => <div key={`${application.job}-${index}`} className="flex items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-medium text-white">{application.candidate}</p><p className="truncate text-xs text-slate-400">{application.job}</p></div><span className="shrink-0 text-xs capitalize text-slate-300">{application.status.replaceAll("_", " ")}</span></div>)}</div>}
                   </Panel>
                 </div>
-                <Panel title="Interviews" subtitle="Interview scheduling is not exposed by the current company API."><EmptyState>No interview records are available from the backend yet.</EmptyState></Panel>
+                <Panel title="Interviews" subtitle="Scheduled interviews and completed interview records.">
+                  {interviews.length === 0 ? <EmptyState>No interviews are scheduled.</EmptyState> : <div className="divide-y divide-white/5">{interviews.map((interview) => <article key={interview.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-medium text-white">{interview.candidate_name} · {interview.job_title}</p><p className="mt-1 text-xs text-slate-400">{new Date(interview.scheduled_at).toLocaleString()} · {interview.duration_minutes} min · {interview.status}</p></div><div className="flex flex-wrap items-center gap-3">{interview.meeting_url && <a className="text-sm text-cyan-200 underline underline-offset-4" href={interview.meeting_url} target="_blank" rel="noreferrer">Join meeting</a>}{interview.status === "scheduled" && <button type="button" className="min-h-9 rounded-lg border border-white/10 px-3 text-xs font-semibold text-slate-200 hover:border-cyan-400/40 disabled:opacity-50" disabled={submitting} onClick={() => void completeInterview(interview.id)}>Mark complete</button>}</div></article>)}</div>}
+                </Panel>
               </>
             )}
 
@@ -226,9 +278,24 @@ export default function CompanyDashboardPage() {
             )}
 
             {view === "candidates" && (
+              <>
               <Panel title={`${filterStatus === "shortlisted" ? "Shortlisted" : "Applicants"} · ${visibleCandidates.length}`} subtitle="Contact and skill details follow each candidate's consent settings.">
                 {visibleCandidates.length === 0 ? <EmptyState>No candidates match this view.</EmptyState> : <div className="space-y-3">{visibleCandidates.map((candidate) => <article key={candidate.application_id} className="rounded-xl border border-white/10 bg-white/[0.02] p-4 sm:p-5"><div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h2 className="font-semibold text-white">{candidate.candidate_name || "Private candidate"}</h2><span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] capitalize text-slate-300">{candidate.status.replaceAll("_", " ")}</span></div><p className="mt-1 text-sm text-slate-400">{candidate.job_title} · {candidate.candidate_email || "Contact hidden by privacy settings"}</p><p className="mt-2 text-xs text-slate-500">Assessment: {candidate.assessment_status.replaceAll("_", " ")}{candidate.assessment_score !== null ? ` · ${candidate.assessment_score}%` : ""}</p>{candidate.skill_profile?.skills?.length ? <div className="mt-3 flex flex-wrap gap-2">{candidate.skill_profile.skills.slice(0, 8).map((skill) => <span key={skill.skill} className="rounded-full border border-cyan-400/15 bg-cyan-400/5 px-2.5 py-1 text-xs text-cyan-100">{skill.skill} · {skill.score}</span>)}</div> : <p className="mt-3 text-xs text-slate-500">Skill profile not shared.</p>}</div><div className="flex shrink-0 flex-wrap gap-2"><button type="button" className={buttonClass} disabled={submitting || !candidate.consent || !candidate.eligible || candidate.assessment_status !== "completed"} onClick={() => void updateApplication(candidate.application_id, "shortlisted")}>Shortlist</button><button type="button" className="min-h-10 rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-300 hover:border-rose-300/30 hover:text-rose-200 disabled:opacity-50" disabled={submitting} onClick={() => void updateApplication(candidate.application_id, "rejected")}>Reject</button></div></div>{(!candidate.consent || !candidate.eligible || candidate.assessment_status !== "completed") && <p className="mt-3 text-xs text-amber-200/80">Shortlisting requires candidate consent, eligible shared skills, and a completed assessment.</p>}</article>)}</div>}
               </Panel>
+              <Panel title="Schedule an interview" subtitle="Only shortlisted applicants with current contact-sharing consent can be scheduled.">
+                {candidates.filter((candidate) => candidate.status === "shortlisted" && candidate.consent && candidate.candidate_email).length === 0 ? <EmptyState>No shortlisted candidates with shared contact details are available.</EmptyState> : <form className="grid gap-3 md:grid-cols-2" onSubmit={(event) => void scheduleInterview(event)}>
+                  <label className="text-xs text-slate-400">Candidate and role<select name="application_id" required className={`${inputClass} mt-2`}>{candidates.filter((candidate) => candidate.status === "shortlisted" && candidate.consent && candidate.candidate_email).map((candidate) => <option key={candidate.application_id} value={candidate.application_id}>{candidate.candidate_name} · {candidate.job_title}</option>)}</select></label>
+                  <label className="text-xs text-slate-400">Date and time<input name="scheduled_at" type="datetime-local" required className={`${inputClass} mt-2`} /></label>
+                  <label className="text-xs text-slate-400">Duration<select name="duration_minutes" className={`${inputClass} mt-2`} defaultValue="45"><option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60">60 minutes</option><option value="90">90 minutes</option></select></label>
+                  <label className="text-xs text-slate-400">Meeting link<input name="meeting_url" type="url" className={`${inputClass} mt-2`} placeholder="https://" /></label>
+                  <label className="text-xs text-slate-400 md:col-span-2">Interview notes<input name="notes" className={`${inputClass} mt-2`} placeholder="Interview focus or preparation notes" /></label>
+                  <button className={`${buttonClass} md:col-span-2`} disabled={submitting}>{submitting ? "Scheduling…" : "Schedule interview"}</button>
+                </form>}
+              </Panel>
+              <Panel title="Offers and hiring decisions" subtitle="Offers require a completed interview; hire is recorded only after an offer.">
+                {candidates.filter((candidate) => candidate.status === "interview" || candidate.status === "offer").length === 0 ? <EmptyState>No interview-stage decisions are pending.</EmptyState> : <div className="divide-y divide-white/5">{candidates.filter((candidate) => candidate.status === "interview" || candidate.status === "offer").map((candidate) => <div key={candidate.application_id} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-medium text-white">{candidate.candidate_name} · {candidate.job_title}</p><p className="text-xs capitalize text-slate-400">Application: {candidate.status} · Interview: {candidate.interview_status || "not scheduled"}</p></div>{candidate.status === "interview" && candidate.interview_status === "completed" ? <button type="button" className={buttonClass} disabled={submitting} onClick={() => void updateApplication(candidate.application_id, "offer")}>Record offer</button> : candidate.status === "offer" ? <button type="button" className={buttonClass} disabled={submitting} onClick={() => void updateApplication(candidate.application_id, "hired")}>Mark hired</button> : <span className="text-xs text-slate-500">Complete the scheduled interview to continue.</span>}</div>)}</div>}
+              </Panel>
+              </>
             )}
 
             {view === "discover" && (

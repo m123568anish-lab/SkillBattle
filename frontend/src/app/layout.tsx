@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     default: "SkillBattle | AI Coding Battles",
     template: "%s | SkillBattle",
   },
-  description: "Practice coding, compete in live battles, and build interview-ready skills with SkillBattle.",
+  description: "Practice real coding problems, compete in supported battles, develop evidence-backed skills, and connect learning to assessment and hiring workflows.",
   applicationName: "SkillBattle",
   keywords: ["coding practice", "coding battles", "interview preparation", "DSA", "AI coach"],
   icons: { icon: "/icon.svg" },
@@ -34,6 +34,13 @@ export const metadata: Metadata = {
     description: "Practice coding, compete in live battles, and build interview-ready skills.",
     type: "website",
     siteName: "SkillBattle",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "SkillBattle coding practice, battles, and hiring platform" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SkillBattle | AI Coding Battles",
+    description: "Practice coding, compete in live battles, and build interview-ready skills.",
+    images: ["/opengraph-image"],
   },
 };
 

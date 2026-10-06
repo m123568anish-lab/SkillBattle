@@ -142,9 +142,14 @@ Click **"Environment"** on the left sidebar, then **"Add Environment Variables"*
 ENVIRONMENT=production
 SECRET_KEY=<generate-below>
 DATABASE_URL=<from-neon-step-1>
+PLATFORM_ADMIN_EMAIL=<your-admin-email>
+PLATFORM_ADMIN_PASSWORD=<strong-unique-password>
+PLATFORM_ADMIN_USERNAME=platform-admin
 ALLOWED_ORIGINS=<you'll-update-after-vercel>
 DEBUG=false
 ```
+
+Set the three `PLATFORM_ADMIN_*` values as Render environment variables, not in source control. On backend startup, SkillBattle creates or verifies this admin account in the PostgreSQL database. The account and password remain available after service restarts as long as the same persistent `DATABASE_URL` and admin environment values are retained. No local file runner is needed after deployment.
 
 #### Generate SECRET_KEY
 

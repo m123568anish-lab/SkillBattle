@@ -228,6 +228,18 @@ class UserRepository:
 
         return result.scalar_one_or_none()
 
+    async def list_user_refresh_tokens(
+        self,
+        db: AsyncSession,
+        user_id: str,
+    ) -> list[RefreshToken]:
+        result = await db.execute(
+            select(RefreshToken)
+            .where(RefreshToken.user_id == user_id)
+            .order_by(RefreshToken.created_at.desc())
+        )
+        return list(result.scalars().all())
+
     # --------------------------------------------------
 
     async def revoke_refresh_token(

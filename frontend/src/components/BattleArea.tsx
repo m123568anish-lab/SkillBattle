@@ -2,6 +2,7 @@
 
 import Editor from "@monaco-editor/react";
 import axios from "axios";
+import Link from "next/link";
 import {
   AlertTriangle,
   Check,
@@ -50,6 +51,7 @@ type BattleQuestion = {
   options: QuestionOption[];
   topicTags: string[];
   expectedComplexity?: string;
+  buggyCode?: string;
 };
 
 type ApiBattleQuestion = {
@@ -64,6 +66,7 @@ type ApiBattleQuestion = {
   options?: QuestionOption[] | null;
   topic_tags?: string[] | null;
   expected_complexity?: string;
+  buggy_code?: string;
 };
 
 type DailyBattle = {
@@ -73,6 +76,7 @@ type DailyBattle = {
   questions_data: Array<{
     section_index: number;
     question_type: string;
+    duration_minutes?: number;
     questions: ApiBattleQuestion[];
   }>;
   submitted_question_ids: number[];
@@ -169,12 +173,18 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "The request could not be completed.";
 }
 
+function getInventoryShortage(message: string | null): { questionType: string; required: number; available: number } | null {
+  const match = message?.match(/Not enough validated ([\w-]+) questions.*\(required (\d+), available (\d+)\)/i);
+  if (!match) return null;
+  return { questionType: match[1].toUpperCase(), required: Number(match[2]), available: Number(match[3]) };
+}
+
 function optionLabel(option: QuestionOption): { key: string; text: string } {
   if (typeof option === "string") return { key: option, text: option };
   return { key: option.key || option.text || "", text: option.text || option.key || "" };
 }
 
-export default function BattleArea() {
+export default function BattleArea({ battleId }: { battleId?: string } = {}) {
   // Battle state
   const [battle, setBattle] = useState<DailyBattle | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -184,6 +194,7 @@ export default function BattleArea() {
   const [language, setLanguage] = useState<Language>("python");
   const [code, setCode] = useState(boilerplate.python);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [technicalResponse, setTechnicalResponse] = useState("");
   const [autoSaveStatus, setAutoSaveStatus] = useState<"saved" | "saving" | "unsaved">("saved");
 
   // Layout & View State
@@ -203,7 +214,7 @@ export default function BattleArea() {
   const [pastSubmissions, setPastSubmissions] = useState<PastSubmission[]>([]);
   const [finalResult, setFinalResult] = useState<Record<string, unknown> | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [executing, setExecuting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -226,49 +237,72 @@ export default function BattleArea() {
           options: q.options || [],
           topicTags: q.topic_tags || [],
           expectedComplexity: q.expected_complexity || "O(N) Time, O(1) Space",
+          buggyCode: q.buggy_code || "",
         })),
       ),
     [battle],
   );
 
   const question = questions[activeIndex] || null;
+  const questionType = question?.questionType.toLowerCase() || "";
+  const isChoiceQuestion = questionType === "mcq" || questionType === "aptitude";
+  const isEditorQuestion = questionType === "coding" || questionType === "debugging";
+  const isTechnicalQuestion = questionType === "technical";
   const completedCount = submittedIds.size;
   const allQuestionsSubmitted = questions.length > 0 && completedCount >= questions.length;
   const isQuestionSubmitted = question ? submittedIds.has(question.id) : false;
 
   // Load Daily Battle & History
-  const loadDailyBattle = useCallback(async () => {
+  const loadBattle = useCallback(async () => {
     setLoading(true);
     setErrorMessage(null);
     try {
-      const response = await api.post<DailyBattle>("/battle/daily");
+      const response = battleId
+        ? await api.get<DailyBattle>(`/battle/${encodeURIComponent(battleId)}`)
+        : await api.post<DailyBattle>("/battle/daily");
       const dailyBattle = response.data;
       const completed = new Set(dailyBattle.submitted_question_ids || []);
-      const items = dailyBattle.questions_data.flatMap((section) => section.questions);
+      const sections = Array.isArray(dailyBattle.questions_data) ? dailyBattle.questions_data : [];
+      const items = sections.flatMap((section) => section.questions || []);
+      if (!(["running", "completed"].includes(dailyBattle.status)) || items.length === 0) {
+        throw new Error("Battle unavailable. The saved battle is not playable or has no valid question snapshot.");
+      }
+
+      const durationMinutes = sections.reduce((total, section) => total + (Number(section.duration_minutes) || 0), 0);
+      let remainingSeconds = Math.max(1, durationMinutes || dailyBattle.duration_minutes || 30) * 60;
+      if (dailyBattle.status === "running") {
+        const timerResponse = await api.get<{ remaining_seconds: number; running: boolean }>(`/battle/${dailyBattle.id}/timer`);
+        if (!timerResponse.data.running) {
+          throw new Error("This battle has expired and can no longer be resumed.");
+        }
+        remainingSeconds = Math.max(0, timerResponse.data.remaining_seconds);
+      }
 
       setBattle(dailyBattle);
       setSubmittedIds(completed);
       setActiveIndex(Math.max(0, items.findIndex((item) => !completed.has(item.id))));
-      setSecondsRemaining((dailyBattle.duration_minutes || 30) * 60);
+      setSecondsRemaining(remainingSeconds);
 
       if (dailyBattle.status === "completed") {
         const resultResponse = await api.get<Record<string, unknown>>(`/battle/${dailyBattle.id}/result`);
         setFinalResult(resultResponse.data);
       }
     } catch (error) {
+      setBattle(null);
+      setSubmittedIds(new Set());
       setErrorMessage(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [battleId]);
 
   useEffect(() => {
-    void loadDailyBattle();
-  }, [loadDailyBattle]);
+    void loadBattle();
+  }, [loadBattle]);
 
   // Server Countdown Timer
   useEffect(() => {
-    if (finalResult || secondsRemaining <= 0) return;
+    if (!battle || !question || finalResult || secondsRemaining <= 0) return;
     const timer = setInterval(() => {
       setSecondsRemaining((prev) => Math.max(0, prev - 1));
     }, 1000);
@@ -282,10 +316,14 @@ export default function BattleArea() {
     setSelectedOption(null);
     setSelectedTestCaseIndex(0);
 
+    setTechnicalResponse("");
     if (question?.id) {
       // Check local session storage draft
       const savedDraft = localStorage.getItem(`sb_code_${question.id}_${language}`);
-      if (savedDraft) {
+      if (question.questionType === "debugging" && question.buggyCode) {
+        setCode(question.buggyCode);
+        setAutoSaveStatus("saved");
+      } else if (savedDraft) {
         setCode(savedDraft);
         setAutoSaveStatus("saved");
       } else {
@@ -395,8 +433,12 @@ export default function BattleArea() {
   // Submit Answer (Official Server Evaluation)
   const submitAnswer = async () => {
     if (!battle || !question || submitting || isQuestionSubmitted) return;
-    if (question.questionType === "mcq" && selectedOption === null) {
+    if (isChoiceQuestion && selectedOption === null) {
       setErrorMessage("Please choose an option before submitting.");
+      return;
+    }
+    if (isTechnicalQuestion && technicalResponse.trim().length < 10) {
+      setErrorMessage("Enter a response of at least 10 characters before submitting.");
       return;
     }
 
@@ -414,7 +456,7 @@ export default function BattleArea() {
         question_type: question.questionType,
         mcq_option: selectedOption,
         language,
-        source_code: code,
+        source_code: isTechnicalQuestion ? technicalResponse : code,
       });
 
       const result = response.data;
@@ -522,6 +564,13 @@ export default function BattleArea() {
             <p className="whitespace-pre-wrap">{question.description}</p>
           </div>
 
+          {question.questionType === "debugging" && question.buggyCode && (
+            <div className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-200">Code to debug</h3>
+              <pre className="mt-3 overflow-x-auto whitespace-pre rounded-lg bg-slate-950 p-3 font-mono text-xs text-slate-200">{question.buggyCode}</pre>
+            </div>
+          )}
+
           {/* Constraints */}
           {question.constraints && (
             <div className="rounded-2xl border border-white/10 bg-slate-950/80 p-4">
@@ -533,7 +582,7 @@ export default function BattleArea() {
           )}
 
           {/* MCQ Options (if MCQ question) */}
-          {question.questionType === "mcq" && (
+          {isChoiceQuestion && (
             <fieldset className="space-y-3 rounded-2xl border border-white/10 bg-slate-950/60 p-5">
               <legend className="mb-2 text-sm font-bold text-slate-200">Select the correct option:</legend>
               {question.options.map((option, index) => {
@@ -563,6 +612,22 @@ export default function BattleArea() {
                 );
               })}
             </fieldset>
+          )}
+
+          {isTechnicalQuestion && (
+            <label className="block text-sm font-semibold text-slate-200" htmlFor={`technical-response-${question.id}`}>
+              Your response
+              <textarea
+                id={`technical-response-${question.id}`}
+                value={technicalResponse}
+                onChange={(event) => setTechnicalResponse(event.target.value)}
+                disabled={isQuestionSubmitted}
+                minLength={10}
+                rows={8}
+                className="mt-2 w-full resize-y rounded-xl border border-white/10 bg-slate-950 p-4 text-sm font-normal leading-6 text-white outline-none focus:border-cyan-400 disabled:opacity-60"
+                placeholder="Explain your reasoning and the key trade-offs."
+              />
+            </label>
           )}
 
           {/* Examples */}
@@ -977,6 +1042,54 @@ export default function BattleArea() {
   // MAIN COMPONENT RETURN
   // =========================================================
 
+  if (loading && !battle) {
+    return (
+      <section role="status" aria-live="polite" className="flex min-h-[60vh] flex-col items-center justify-center rounded-3xl border border-white/10 bg-[#0b0f17] px-6 text-center text-white">
+        <Sparkles className="mb-4 animate-pulse text-cyan-300" size={28} aria-hidden="true" />
+        <h2 className="text-xl font-bold">Checking battle availability</h2>
+        <p className="mt-2 max-w-md text-sm text-slate-400">The battle will start only after a valid question set is ready.</p>
+      </section>
+    );
+  }
+
+  if (!battle || (!finalResult && (!question || questions.length === 0))) {
+    const shortage = getInventoryShortage(errorMessage);
+    return (
+      <section className="flex min-h-[60vh] flex-col items-center justify-center rounded-3xl border border-amber-300/20 bg-[#0b0f17] px-6 py-10 text-center text-white">
+        <AlertTriangle className="mb-4 text-amber-300" size={32} aria-hidden="true" />
+        <h2 className="text-2xl font-bold">{battleId ? "Battle unavailable" : "Daily battle unavailable"}</h2>
+        <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
+          {shortage
+            ? `There are not enough validated ${shortage.questionType} questions to start this battle.`
+            : errorMessage || (battle ? "The active question could not be loaded safely." : "No valid questions are available for this battle.")}
+        </p>
+        {shortage && (
+          <dl className="mt-5 grid grid-cols-2 gap-6 rounded-xl border border-white/10 bg-white/[0.03] px-6 py-4 text-left">
+            <div><dt className="text-xs uppercase text-slate-400">Required</dt><dd className="mt-1 text-2xl font-semibold tabular-nums">{shortage.required}</dd></div>
+            <div><dt className="text-xs uppercase text-slate-400">Available</dt><dd className="mt-1 text-2xl font-semibold tabular-nums">{shortage.available}</dd></div>
+          </dl>
+        )}
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <button type="button" onClick={() => void loadBattle()} disabled={loading} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-cyan-500 px-5 font-semibold text-slate-950 hover:bg-cyan-400 disabled:opacity-50">
+            <RotateCcw size={16} aria-hidden="true" /> Retry
+          </button>
+          <Link href="/battle" className="inline-flex min-h-11 items-center rounded-xl border border-white/15 px-5 font-semibold text-white hover:border-cyan-300/50">Choose another battle</Link>
+        </div>
+      </section>
+    );
+  }
+
+  if (question && !["mcq", "aptitude", "coding", "debugging", "technical"].includes(questionType)) {
+    return (
+      <section role="alert" className="flex min-h-[60vh] flex-col items-center justify-center rounded-3xl border border-amber-300/20 bg-[#0b0f17] px-6 py-10 text-center text-white">
+        <AlertTriangle className="mb-4 text-amber-300" size={32} aria-hidden="true" />
+        <h2 className="text-2xl font-bold">Question type unavailable</h2>
+        <p className="mt-2 max-w-lg text-sm leading-6 text-slate-300">This battle contains a {questionType.toUpperCase()} question, but the current battle evaluator does not support that type. No editor or submission has been started.</p>
+        <Link href="/battle" className="mt-6 inline-flex min-h-11 items-center rounded-xl border border-white/15 px-5 font-semibold text-white hover:border-cyan-300/50">Choose another battle</Link>
+      </section>
+    );
+  }
+
   return (
     <section
       className={`${
@@ -1096,7 +1209,7 @@ export default function BattleArea() {
           {/* --------------------------------------------------------- */}
           {/* MOBILE CONTENT TAB NAVIGATION                             */}
           {/* --------------------------------------------------------- */}
-          <nav className="grid grid-cols-3 border-b border-white/10 bg-slate-900 text-xs font-extrabold md:hidden">
+          {isEditorQuestion && <nav className="grid grid-cols-3 border-b border-white/10 bg-slate-900 text-xs font-extrabold md:hidden">
             <button
               type="button"
               onClick={() => setMobileTab("problem")}
@@ -1124,23 +1237,23 @@ export default function BattleArea() {
             >
               ⚡ Tests & Output
             </button>
-          </nav>
+          </nav>}
 
           {/* --------------------------------------------------------- */}
           {/* DESKTOP & MOBILE IDE WORKSPACE BODY                       */}
           {/* --------------------------------------------------------- */}
-          <div className="grid flex-1 min-w-0 md:grid-cols-12 min-h-[500px]">
+          <div className={`grid flex-1 min-w-0 min-h-[500px] ${isEditorQuestion ? "md:grid-cols-12" : "md:grid-cols-1"}`}>
             {/* LEFT PANEL: PROBLEM STATEMENT (5/12 cols on desktop) */}
             <div
               className={`${
                 mobileTab === "problem" ? "block" : "hidden"
-              } min-w-0 border-r border-white/10 md:col-span-5 md:block h-full overflow-hidden`}
+              } min-w-0 border-r border-white/10 ${isEditorQuestion ? "md:col-span-5" : "md:col-span-1"} md:block h-full overflow-hidden`}
             >
               {renderProblemPanel()}
             </div>
 
             {/* CENTER & RIGHT PANELS (7/12 cols on desktop) */}
-            <div
+            {isEditorQuestion && <div
               className={`${
                 mobileTab === "code" || mobileTab === "test" ? "flex" : "hidden"
               } min-w-0 md:col-span-7 md:flex flex-col h-full overflow-hidden`}
@@ -1154,7 +1267,7 @@ export default function BattleArea() {
               <div className={`${mobileTab === "test" ? "block flex-1" : "hidden"} md:block md:h-[40%]`}>
                 {renderOutputPanel()}
               </div>
-            </div>
+            </div>}
           </div>
 
           {/* --------------------------------------------------------- */}

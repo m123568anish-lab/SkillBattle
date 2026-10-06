@@ -97,3 +97,24 @@ class CandidateApplication(Base):
     assessment_status: Mapped[str] = mapped_column(String(30), default="not_started", nullable=False)
     assessment_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class CompanyInterview(Base):
+    __tablename__ = "company_interviews"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    application_id: Mapped[int] = mapped_column(
+        ForeignKey("candidate_applications.id", ondelete="CASCADE"), nullable=False, unique=True, index=True
+    )
+    scheduled_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    duration_minutes: Mapped[int] = mapped_column(Integer, default=45, nullable=False)
+    meeting_url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    notes: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    status: Mapped[str] = mapped_column(String(30), default="scheduled", nullable=False)
+    created_by_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )

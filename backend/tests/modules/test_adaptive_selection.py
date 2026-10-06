@@ -166,6 +166,31 @@ def test_sql_and_aptitude_questions_use_canonical_validation_rules():
     assert question_engine.validate_question_data(aptitude_question)
 
 
+def test_adaptive_aptitude_question_uses_choice_validation():
+    aptitude_question = candidate()
+    aptitude_question.question_type = "aptitude"
+    assert question_engine._is_adaptively_eligible(aptitude_question)
+
+
+def test_running_battle_sanitization_hides_answer_bearing_fields():
+    question_payload = {
+        "id": 1,
+        "correct_option": "A",
+        "fixed_code_reference": "print('answer')",
+        "hidden_test_cases": [{"input": "secret", "output": "secret"}],
+        "rubric": {"key_concepts": ["secret answer"]},
+        "explanation": "The correct answer is A.",
+        "buggy_code": "print('bug')",
+    }
+    sections = [{"section_index": 0, "question_type": "technical", "questions": [question_payload]}]
+
+    sanitized = question_engine.sanitize_sections_for_client(sections, is_completed=False)
+    assert sanitized[0]["questions"][0] == {"id": 1, "buggy_code": "print('bug')"}
+
+    completed = question_engine.sanitize_sections_for_client(sections, is_completed=True)
+    assert completed[0]["questions"][0]["correct_option"] == "A"
+
+
 def test_default_assessment_sections_follow_canonical_question_mix():
     sections = question_engine.get_default_assessment_sections("practice")
     assert sections

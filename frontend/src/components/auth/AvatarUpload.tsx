@@ -49,7 +49,7 @@ export default function AvatarUpload({ value, onChange }: AvatarUploadProps) {
           {currentDisplay ? (
             <img
               src={currentDisplay}
-              alt="Avatar"
+              alt="Selected profile avatar"
               className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
             />
           ) : (

@@ -143,6 +143,21 @@ export interface CompanyCandidate {
   skill_profile: { skills: Array<{ skill: string; score: number; attempts: number }> } | null;
   assessment_status: string;
   assessment_score: number | null;
+  interview_status: string | null;
+}
+
+export interface CompanyInterview {
+  id: number;
+  application_id: number;
+  job_id: number;
+  job_title: string;
+  candidate_name: string;
+  candidate_email: string;
+  scheduled_at: string;
+  duration_minutes: number;
+  meeting_url: string;
+  notes: string;
+  status: string;
 }
 
 export interface DiscoverableCandidate {
@@ -251,8 +266,25 @@ class OrganizationDashboardService {
     })).data;
   }
 
-  async updateApplicationStatus(applicationId: number, status: "shortlisted" | "rejected") {
+  async updateApplicationStatus(applicationId: number, status: "shortlisted" | "offer" | "hired" | "rejected") {
     return (await api.patch(`/company/applications/${applicationId}/status`, { status })).data;
+  }
+
+  async completeInterview(interviewId: number) {
+    return (await api.post(`/company/interviews/${interviewId}/complete`)).data;
+  }
+
+  async scheduleInterview(applicationId: number, data: {
+    scheduled_at: string;
+    duration_minutes: number;
+    meeting_url?: string;
+    notes?: string;
+  }) {
+    return (await api.post(`/company/applications/${applicationId}/interview`, data)).data;
+  }
+
+  async getCompanyInterviews() {
+    return (await api.get<CompanyInterview[]>("/company/interviews")).data;
   }
 
   async createJobAssessment(jobId: number, data: {

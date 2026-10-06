@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -17,6 +18,7 @@ import {
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import BattleMatchmakingClient from "@/components/battle/BattleMatchmakingClient";
+import BattleQuestMap from "@/components/battle/BattleQuestMap";
 import { api } from "@/lib/api";
 import { battleService } from "@/services/battle.service";
 
@@ -41,46 +43,39 @@ type WaitingBattle = {
   created_at?: string;
 };
 
-const fallbackSkills: Skill[] = [
-  { skill: "Python", score: 82, attempts: 18, verified: true, sources: ["battle", "practice"] },
-  { skill: "Data Structures", score: 74, attempts: 16, verified: true, sources: ["practice"] },
-  { skill: "DBMS", score: 69, attempts: 12, verified: true, sources: ["assessment"] },
-  { skill: "Algorithms", score: 65, attempts: 13, verified: true, sources: ["battle"] },
-  { skill: "System Design", score: 56, attempts: 8, verified: true, sources: ["interview"] },
-];
-
 export default function BattlePage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<SkillProfile>({ skills: fallbackSkills });
+  const [profile, setProfile] = useState<SkillProfile | null>(null);
   const [waitingBattles, setWaitingBattles] = useState<WaitingBattle[]>([]);
+  const [profileLoadFailed, setProfileLoadFailed] = useState(false);
+  const [waitingLoadFailed, setWaitingLoadFailed] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
 
     async function loadArenaData() {
-      try {
-        const [profileResponse, waitingResponse] = await Promise.all([
-          api.get<SkillProfile>("/profile/skill-profile").catch(() => ({ data: { skills: fallbackSkills } })),
-          battleService.getWaitingBattles().catch(() => []),
-        ]);
+      const [profileResult, waitingResult] = await Promise.allSettled([
+        api.get<SkillProfile>("/profile/skill-profile"),
+        battleService.getWaitingBattles(),
+      ]);
 
-        if (!active) return;
+      if (!active) return;
 
-        setProfile(profileResponse.data ?? { skills: fallbackSkills });
-        setWaitingBattles(Array.isArray(waitingResponse) ? waitingResponse : []);
-      } catch {
-        if (active) {
-          setProfile({ skills: fallbackSkills });
-          setWaitingBattles([]);
-        }
-      } finally {
-        if (active) setLoading(false);
+      if (profileResult.status === "fulfilled") {
+        setProfile(profileResult.value.data ?? { skills: [] });
+      } else {
+        setProfileLoadFailed(true);
       }
+      if (waitingResult.status === "fulfilled") {
+        setWaitingBattles(Array.isArray(waitingResult.value) ? waitingResult.value : []);
+      } else {
+        setWaitingLoadFailed(true);
+      }
+      setLoading(false);
     }
 
     void loadArenaData();
-
     return () => {
       active = false;
     };
@@ -88,7 +83,7 @@ export default function BattlePage() {
 
   const skillList = useMemo(() => {
     const scored = [...(profile?.skills ?? [])].sort((a, b) => b.score - a.score);
-    return scored.length ? scored : fallbackSkills;
+    return scored;
   }, [profile]);
 
   const averageSkill = useMemo(() => {
@@ -97,19 +92,8 @@ export default function BattlePage() {
     return Math.round(value);
   }, [skillList]);
 
-  const topSkills = skillList.slice(0, 3);
   const weakSkills = [...skillList].sort((a, b) => a.score - b.score).slice(0, 3);
-  const recommendedBattle =
-    waitingBattles[0] ?? {
-      id: "placement-sprint",
-      title: "Placement Sprint",
-      difficulty: "Medium",
-      status: "Ready",
-      max_players: 1,
-      created_at: new Date().toISOString(),
-    };
-
-  const placementReadiness = Math.min(98, Math.max(42, averageSkill + 8));
+  const recommendedBattle = waitingBattles[0] ?? null;
 
   return (
     <DashboardLayout>
@@ -157,6 +141,24 @@ export default function BattlePage() {
           </div>
         </motion.section>
 
+        <nav aria-label="Battle Arena sections" className="flex gap-2 overflow-x-auto border-b border-white/10 pb-3 text-sm">
+          {[
+            { label: "Solo Battle", href: "/battle/solo" },
+            { label: "Multiplayer", href: "/battle/queue" },
+            { label: "Quest Map", href: "#quest-map" },
+            { label: "Daily Battle", href: "/battle/solo" },
+            { label: "Skill Battles", href: "/battle/create" },
+            { label: "Placement Battles", href: "/battle/placement-prep" },
+            { label: "Battle History", href: "/analytics" },
+          ].map((item) => (
+            <Link key={`${item.label}-${item.href}`} href={item.href} className="shrink-0 rounded-md border border-white/10 px-3 py-2 text-slate-300 transition hover:border-cyan-300/30 hover:text-cyan-100">
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        <BattleQuestMap />
+
         <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
           <motion.article
             initial={{ opacity: 0, y: 18 }}
@@ -169,12 +171,12 @@ export default function BattlePage() {
                 <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-violet-300">Recommended battle</p>
                 <h2 className="mt-2 text-2xl font-black text-white">{recommendedBattle.title}</h2>
               </div>
-              <div className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-emerald-200">
-                {recommendedBattle.status ?? "Ready"}
+              <div className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] ${recommendedBattle ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200" : "border-white/10 bg-white/5 text-slate-400"}`}>
+                {recommendedBattle?.status ?? (waitingLoadFailed ? "Unavailable" : "No open battle")}
               </div>
             </div>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-3">
+            {recommendedBattle ? <div className="mt-5 grid gap-4 sm:grid-cols-3">
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Mode</p>
                 <p className="mt-2 text-lg font-bold text-white">{recommendedBattle.max_players && recommendedBattle.max_players > 1 ? "Multiplayer" : "Solo"}</p>
@@ -187,7 +189,7 @@ export default function BattlePage() {
                 <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Players</p>
                 <p className="mt-2 text-lg font-bold text-white">{recommendedBattle.max_players ?? 1}</p>
               </div>
-            </div>
+            </div> : <p className="mt-5 text-sm text-slate-400">{waitingLoadFailed ? "Open battles could not be loaded." : "There are no open multiplayer battles to join right now. You can still try a solo battle."}</p>}
 
             <div className="mt-6 flex flex-wrap gap-3">
               <button
@@ -216,8 +218,8 @@ export default function BattlePage() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-200">Placement readiness</p>
-                <h3 className="mt-2 text-3xl font-black text-white">{placementReadiness}%</h3>
+                <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-200">Average recorded skill</p>
+                <h3 className="mt-2 text-3xl font-black text-white">{profileLoadFailed ? "Unavailable" : skillList.length ? `${averageSkill}%` : "No data"}</h3>
               </div>
               <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/15 p-3 text-emerald-200">
                 <Gauge size={22} />
@@ -226,23 +228,17 @@ export default function BattlePage() {
 
             <div className="mt-6 space-y-4">
               <div>
-                <div className="mb-2 flex items-center justify-between text-sm text-slate-300">
-                  <span>Performance trajectory</span>
-                  <span className="font-semibold text-white">+12%</span>
-                </div>
-                <div className="h-2.5 rounded-full bg-white/10">
-                  <div className="h-full w-[76%] rounded-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-violet-500" />
-                </div>
+                <p className="text-sm text-slate-300">Skill evidence is calculated from completed practice and assessment activity.</p>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                 <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                  <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Average skill</p>
-                  <p className="mt-2 text-xl font-black text-white">{averageSkill}%</p>
+                  <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Verified skill signals</p>
+                  <p className="mt-2 text-xl font-black text-white">{profileLoadFailed ? "Unavailable" : skillList.length}</p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                  <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Battle streak</p>
-                  <p className="mt-2 text-xl font-black text-white">{Math.max(3, Math.round(averageSkill / 15))} wins</p>
+                  <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Recorded attempts</p>
+                  <p className="mt-2 text-xl font-black text-white">{profileLoadFailed ? "Unavailable" : skillList.reduce((total, skill) => total + skill.attempts, 0)}</p>
                 </div>
               </div>
             </div>
@@ -253,19 +249,19 @@ export default function BattlePage() {
           {[
             {
               label: "Total skill score",
-              value: `${averageSkill}%`,
+              value: profileLoadFailed ? "Unavailable" : skillList.length ? `${averageSkill}%` : "No data",
               icon: TrendingUp,
               className: "border-cyan-400/20 bg-cyan-500/10 text-cyan-200",
             },
             {
               label: "Verified attempts",
-              value: `${skillList.reduce((total, skill) => total + skill.attempts, 0)}`,
+              value: profileLoadFailed ? "Unavailable" : `${skillList.reduce((total, skill) => total + skill.attempts, 0)}`,
               icon: BadgeCheck,
               className: "border-violet-400/20 bg-violet-500/10 text-violet-200",
             },
             {
               label: "Focus area",
-              value: weakSkills[0]?.skill ?? "Algorithms",
+              value: profileLoadFailed ? "Unavailable" : weakSkills[0]?.skill ?? "No data",
               icon: Target,
               className: "border-amber-400/20 bg-amber-500/10 text-amber-200",
             },
@@ -302,7 +298,7 @@ export default function BattlePage() {
             </div>
 
             <div className="space-y-4">
-              {skillList.map((skill) => (
+              {profileLoadFailed ? <p role="alert" className="text-sm text-rose-200">Skill evidence could not be loaded.</p> : skillList.length === 0 ? <p className="text-sm text-slate-400">No verified skill evidence yet. Complete a practice problem or assessment to build your profile.</p> : skillList.map((skill) => (
                 <div key={skill.skill} className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
                   <div className="mb-2 flex items-center justify-between gap-3 text-sm">
                     <div className="flex items-center gap-2">
@@ -338,7 +334,7 @@ export default function BattlePage() {
             </div>
 
             <div className="mt-5 space-y-3">
-              {weakSkills.map((skill) => (
+              {profileLoadFailed ? <p role="alert" className="text-sm text-rose-200">Skill guidance is unavailable because the profile could not be loaded.</p> : weakSkills.length === 0 ? <p className="text-sm text-slate-400">Complete practice or an assessment to receive a data-based focus area.</p> : weakSkills.map((skill) => (
                 <div key={skill.skill} className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -354,10 +350,10 @@ export default function BattlePage() {
             <div className="mt-5 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4">
               <div className="flex items-center gap-2 text-cyan-200">
                 <Flame size={16} />
-                <span className="text-sm font-bold uppercase tracking-[0.2em]">Next action</span>
+                  <span className="text-sm font-bold uppercase tracking-[0.2em]">Practice focus</span>
               </div>
               <p className="mt-3 text-sm leading-6 text-slate-200">
-                Prioritize {weakSkills[0]?.skill ?? "Algorithms"} drills for the next 20-minute round to push your placement readiness above the current threshold.
+                {weakSkills[0] ? `Review ${weakSkills[0].skill}, currently at ${weakSkills[0].score}% across ${weakSkills[0].attempts} recorded attempts.` : "No practice recommendation is available until verified skill evidence exists."}
               </p>
             </div>
           </motion.aside>

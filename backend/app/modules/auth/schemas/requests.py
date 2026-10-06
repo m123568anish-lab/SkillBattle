@@ -84,6 +84,8 @@ class RegisterRequest(BaseModel):
     @classmethod
     def validate_account_type(cls, v: str) -> str:
         account_type = (v or "STUDENT").strip().upper()
+        if account_type in {"PLATFORM_ADMIN", "PLATFORM_SUPPORT", "PLATFORM_ANALYST"}:
+            raise ValueError("Platform administrator accounts may only be created through the secure bootstrap flow.")
         if account_type not in {"STUDENT", "COLLEGE", "COMPANY"}:
             raise ValueError("Account type must be one of: STUDENT, COLLEGE, COMPANY.")
         return account_type

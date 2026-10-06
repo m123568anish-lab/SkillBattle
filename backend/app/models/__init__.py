@@ -26,6 +26,7 @@ from .user_stats import UserSettings, UserStats
 from .matchmaking import MatchmakingMatch, PlacementPrepSession
 from .user_skill_stat import UserSkillStat
 from .skill_intelligence import SkillEvidence, CompanySkillRequirement
+from .quest_map import QuestMapLevel, QuestProgress
 from .xp import XP
 from .college import (
     College,
@@ -36,7 +37,7 @@ from .college import (
     CollegeAssessmentQuestion,
     CollegeAssessmentSubmission,
 )
-from .company import Company, CompanyMember, CandidateApplication, CandidatePrivacySettings, JobPosting
+from .company import Company, CompanyMember, CandidateApplication, CandidatePrivacySettings, CompanyInterview, JobPosting
 from .battle import BattleConfig, BattleRoom, BattleParticipant, BattleSubmission, BattleResult
 from .assessment_engine import UnifiedAssessment, AssessmentAttempt, AssessmentQuestionSubmission, StudentSkillProfile
 from .notification import Notification
@@ -75,6 +76,8 @@ __all__ = [
     "UserSkillStat",
     "SkillEvidence",
     "CompanySkillRequirement",
+    "QuestMapLevel",
+    "QuestProgress",
     "XP",
     "College",
     "Department",
@@ -88,6 +91,7 @@ __all__ = [
     "CandidatePrivacySettings",
     "JobPosting",
     "CandidateApplication",
+    "CompanyInterview",
     "Notification",
     "AuditLog",
     "BattleConfig",

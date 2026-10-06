@@ -12,10 +12,14 @@ export default function Footer() {
         </div>
 
         <div className="flex flex-wrap items-center gap-5">
-          <Link href="#home" className="transition hover:text-white">Home</Link>
-          <Link href="#features" className="transition hover:text-white">Features</Link>
-          <Link href="#battles" className="transition hover:text-white">Battles</Link>
-          <Link href="/leaderboard" className="transition hover:text-white">Leaderboard</Link>
+          <Link href="/#home" className="transition hover:text-white">Home</Link>
+          <Link href="/#features" className="transition hover:text-white">Features</Link>
+          <Link href="/#battles" className="transition hover:text-white">Battles</Link>
+          <Link href="/faq" className="transition hover:text-white">Help</Link>
+          <Link href="/privacy" className="transition hover:text-white">Privacy</Link>
+          <Link href="/terms" className="transition hover:text-white">Terms</Link>
+          <Link href="/login" className="transition hover:text-white">Log in</Link>
+          <Link href="/register" className="transition hover:text-white">Register</Link>
           <a href="mailto:support@skillbattle.app" className="transition hover:text-white">support@skillbattle.app</a>
         </div>
 

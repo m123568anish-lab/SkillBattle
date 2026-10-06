@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 from app.modules.battle.schemas import BattleSectionConfig
@@ -87,7 +89,14 @@ class CandidateApplicationConsentRequest(BaseModel):
 
 
 class CandidateApplicationStatusRequest(BaseModel):
-    status: str = Field(..., pattern="^(applied|shortlisted|rejected)$")
+    status: str = Field(..., pattern="^(shortlisted|offer|hired|rejected)$")
+
+
+class InterviewScheduleRequest(BaseModel):
+    scheduled_at: datetime
+    duration_minutes: int = Field(default=45, ge=15, le=180)
+    meeting_url: str = Field(default="", max_length=500)
+    notes: str = Field(default="", max_length=2000)
 
 
 class CompanyAssessmentCreate(BaseModel):

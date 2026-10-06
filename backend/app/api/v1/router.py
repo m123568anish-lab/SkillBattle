@@ -21,6 +21,7 @@ from app.modules.career.router import router as career_router
 from app.modules.notification.router import router as notification_router
 from app.modules.achievements.router import router as achievements_router
 from app.modules.campaign.router import router as campaign_router
+from app.modules.quest_map.router import router as quest_map_router
 from app.modules.college.router import router as college_router
 from app.modules.company.router import router as company_router
 from app.modules.search.router import router as search_router
@@ -48,6 +49,7 @@ api_router.include_router(career_router)
 api_router.include_router(notification_router)
 api_router.include_router(achievements_router)
 api_router.include_router(campaign_router)
+api_router.include_router(quest_map_router)
 api_router.include_router(college_router)
 api_router.include_router(company_router)
 api_router.include_router(search_router)

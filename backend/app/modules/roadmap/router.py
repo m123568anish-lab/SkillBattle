@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_current_user
 from app.database.database import get_db
@@ -11,12 +11,12 @@ router = APIRouter(prefix="/roadmap", tags=["Roadmap"])
 
 
 @router.post("/generate")
-def generate(
+async def generate(
     request: GenerateRoadmapRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    roadmap = roadmap_service.generate(db, current_user, request.duration_weeks)
+    roadmap = await roadmap_service.generate(db, current_user, request.duration_weeks)
     return {
         "success": True,
         "roadmap_id": roadmap.id,
@@ -25,9 +25,9 @@ def generate(
 
 
 @router.post("/task/{task_id}/complete")
-def complete_task(
+async def complete_task(
     task_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return roadmap_service.complete_task(db, current_user, task_id)
+    return await roadmap_service.complete_task(db, current_user, task_id)

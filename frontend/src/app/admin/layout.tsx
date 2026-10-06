@@ -23,7 +23,15 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  const isAdmin = user?.role === "admin" || user?.is_superuser;
+  const normalizedRole = (user?.role || "").toLowerCase();
+  const normalizedAccountType = (user?.account_type || user?.requested_role || "").toLowerCase();
+  const isAdmin = Boolean(
+    user?.is_superuser ||
+      normalizedRole.includes("admin") ||
+      normalizedRole.includes("platform") ||
+      normalizedAccountType.includes("admin") ||
+      normalizedAccountType.includes("platform")
+  );
 
   if (!isAdmin) {
     return (

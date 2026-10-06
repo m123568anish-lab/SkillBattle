@@ -16,7 +16,22 @@ const PUBLIC_ROUTES = [
   "/forgot-password",
   "/verify-email",
   "/reset-password",
+  "/faq",
+  "/privacy",
+  "/terms",
 ];
+
+const PROTECTED_ROUTE_PREFIXES = [
+  "/achievements", "/activity", "/admin", "/analytics", "/assessments", "/battle",
+  "/calendar", "/campaign", "/career", "/challenge", "/college", "/company",
+  "/coach", "/dashboard", "/interview", "/leaderboard", "/onboarding",
+  "/opportunities", "/organization-setup", "/placement", "/profile", "/settings",
+  "/tasks", "/tournament",
+];
+
+function isProtectedRoute(pathname: string): boolean {
+  return PROTECTED_ROUTE_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
 
 export function AuthGuard({ children }: AuthGuardProps) {
   const pathname = usePathname();
@@ -29,9 +44,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
   useEffect(() => {
     if (loading) return; // wait until auth resolved
 
-    const isPublic = PUBLIC_ROUTES.includes(pathname);
-
-    if (!isAuthenticated && !isPublic) {
+    if (!isAuthenticated && isProtectedRoute(pathname)) {
       router.replace("/login");
       return;
     }
@@ -70,9 +83,9 @@ export function AuthGuard({ children }: AuthGuardProps) {
     );
   }
 
-  const isPublic = PUBLIC_ROUTES.includes(pathname);
+  const isProtected = isProtectedRoute(pathname);
   const organizationSetupRequired = Boolean(user && getPostLoginPath(user) === "/organization-setup");
-  if (!isPublic && (!isAuthenticated || !user || user.is_verified === false || (organizationSetupRequired && pathname !== "/organization-setup"))) return null;
+  if (isProtected && (!isAuthenticated || !user || user.is_verified === false || (organizationSetupRequired && pathname !== "/organization-setup"))) return null;
 
   return <>{children}</>;
 }

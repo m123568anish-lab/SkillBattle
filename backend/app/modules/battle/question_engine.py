@@ -154,7 +154,7 @@ class QuestionEngine:
         if not question.title or not question.description or not question.is_active or not question.is_validated:
             return False
         question_type = (question.question_type or "").casefold()
-        if question_type == "mcq":
+        if question_type in {"mcq", "aptitude"}:
             return isinstance(question.options, list) and len(question.options) >= 2 and bool(question.correct_option)
         if question_type == "coding":
             cases = question.hidden_test_cases or question.examples or []
@@ -745,6 +745,8 @@ class QuestionEngine:
                     q_copy.pop("correct_option", None)
                     q_copy.pop("fixed_code_reference", None)
                     q_copy.pop("hidden_test_cases", None)
+                    q_copy.pop("rubric", None)
+                    q_copy.pop("explanation", None)
                 clean_qs.append(q_copy)
 
             sanitized.append({

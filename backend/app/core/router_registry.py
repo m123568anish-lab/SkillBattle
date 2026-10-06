@@ -17,6 +17,7 @@ from app.modules.interview.router import router as interview_router
 from app.modules.learning_engine.router import router as learning_engine_router
 from app.modules.matchmaking.router import router as matchmaking_router
 from app.modules.problem_generator.router import router as problem_generator_router
+from app.modules.quest_map.router import router as quest_map_router
 from app.modules.profile.router import router as profile_router
 from app.modules.recruiter.router import router as recruiter_router
 from app.modules.roadmap.router import router as roadmap_router
@@ -62,6 +63,7 @@ ROUTERS: list[tuple[str, APIRouter]] = [
     ("matchmaking", matchmaking_router),
     ("career", career_router),
     ("campaign", campaign_router),
+    ("quest_map", quest_map_router),
     ("questions", questions_router),
     ("execution", execution_router),
     ("assessment", assessment_router),

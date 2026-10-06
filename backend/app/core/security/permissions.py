@@ -22,7 +22,7 @@ class RoleChecker:
 
     ):
 
-        self.roles = set(roles)
+        self.roles = {str(role).strip().upper() for role in roles}
 
     async def __call__(
 
@@ -32,15 +32,7 @@ class RoleChecker:
 
     ):
 
-        role = getattr(
-
-            current_user,
-
-            "role",
-
-            "user",
-
-        )
+        role = str(getattr(current_user, "role", "user") or "user").strip().upper()
 
         if role not in self.roles:
 
@@ -55,11 +47,13 @@ class RoleChecker:
         return current_user
 
 
-AdminOnly = RoleChecker("admin")
+AdminOnly = RoleChecker("admin", "PLATFORM_ADMIN")
 
 ModeratorOnly = RoleChecker(
 
     "admin",
+
+    "PLATFORM_ADMIN",
 
     "moderator",
 
@@ -68,6 +62,8 @@ ModeratorOnly = RoleChecker(
 UserOnly = RoleChecker(
 
     "admin",
+
+    "PLATFORM_ADMIN",
 
     "moderator",
 

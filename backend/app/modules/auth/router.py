@@ -11,6 +11,7 @@ Authentication Router
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 
 from fastapi import APIRouter
 from fastapi import Depends
@@ -18,6 +19,7 @@ from fastapi import Header
 from fastapi import HTTPException
 from fastapi import status
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy import select
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -45,6 +47,7 @@ from app.modules.auth.repositories.user_repository import user_repository
 from app.core.dependencies import get_current_user
 
 from app.models.user import User
+from app.models.refresh_token import RefreshToken
 
 logger = logging.getLogger(__name__)
 
@@ -373,3 +376,51 @@ async def health():
         "status": "healthy",
 
     }
+
+
+@router.get("/sessions")
+async def list_sessions(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    sessions = await user_repository.list_user_refresh_tokens(db, current_user.id)
+    return [
+        {
+            "id": session.id,
+            "device_name": session.device_name,
+            "device_os": session.device_os,
+            "browser": session.browser,
+            "ip_address": session.ip_address,
+            "user_agent": session.user_agent,
+            "created_at": session.created_at.isoformat(),
+            "last_used_at": session.last_used_at.isoformat() if session.last_used_at else None,
+            "expires_at": session.expires_at.isoformat(),
+            "revoked": session.revoked,
+            "revoked_at": session.revoked_at.isoformat() if session.revoked_at else None,
+            "active": session.active,
+        }
+        for session in sessions
+    ]
+
+
+@router.delete("/sessions/{session_id}")
+async def revoke_session(
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(RefreshToken).where(
+            RefreshToken.id == session_id,
+            RefreshToken.user_id == current_user.id,
+        )
+    )
+    session = result.scalar_one_or_none()
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found.")
+    if not session.revoked:
+        session.revoked = True
+        session.revoked_at = datetime.utcnow()
+        session.revoke_reason = "revoked_by_user"
+        await db.commit()
+    return {"session_id": session.id, "revoked": True}
