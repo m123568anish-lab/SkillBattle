@@ -15,21 +15,10 @@ export async function saveOnboarding(
     daily_hours: typeof data.dailyHours === "number" ? Math.max(1, Math.min(10, data.dailyHours)) : 2,
   };
 
-  try {
-    const response = await api.post(
-      "/career/roadmap/onboarding",
-      payload
-    );
-    return response.data;
-  } catch (err) {
-    try {
-      const fallback = await api.post(
-        "/onboarding",
-        payload
-      );
-      return fallback.data;
-    } catch {
-      throw err;
-    }
-  }
+  const response = await api.post(
+    "/career/roadmap/onboarding",
+    payload
+  );
+
+  return response.data;
 }

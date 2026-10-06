@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { useAuthStore } from "@/store/authStore";
 import { useOnboarding } from "@/hooks/use-onboarding";
+import { getPostLoginPath } from "@/lib/auth-routing";
 
 import { saveOnboarding } from "@/services/onboarding.service";
 
@@ -33,13 +34,19 @@ export default function OnboardingPage() {
   async function handleFinish() {
     try {
       await saveOnboarding(data);
-      useAuthStore.getState().updateUserPartial({ onboarding_completed: true });
+      await useAuthStore.getState().loadUser();
+      const refreshedUser = useAuthStore.getState().user;
+
+      if (!refreshedUser) {
+        throw new Error("User session is missing after onboarding completion.");
+      }
+
       toast.success("Welcome to SkillBattle! Your personalized journey is ready.");
-      router.replace("/dashboard");
+      router.replace(getPostLoginPath(refreshedUser));
     } catch (error) {
       console.error("Onboarding finish error:", error);
-      useAuthStore.getState().updateUserPartial({ onboarding_completed: true });
-      router.replace("/dashboard");
+      const message = error instanceof Error ? error.message : "The onboarding flow could not be saved. Please try again.";
+      toast.error(message);
     }
   }
 

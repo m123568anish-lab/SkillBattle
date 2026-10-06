@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
+import { getPostLoginPath, hasCompletedOnboarding } from "@/lib/auth-routing";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -23,6 +24,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   const loading = useAuthStore((s) => s.loading);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
     if (loading) return; // wait until auth resolved
@@ -34,11 +36,26 @@ export function AuthGuard({ children }: AuthGuardProps) {
       return;
     }
 
-    if (isAuthenticated && (pathname === "/login" || pathname === "/register")) {
-      router.replace("/dashboard");
-      return;
+    if (isAuthenticated && user) {
+      const isOnboardingComplete = hasCompletedOnboarding(user);
+      const destination = getPostLoginPath(user);
+
+      if (["/login", "/register"].includes(pathname)) {
+        router.replace(destination);
+        return;
+      }
+
+      if (pathname === "/onboarding" && isOnboardingComplete) {
+        router.replace(destination);
+        return;
+      }
+
+      if (!isPublic && !isOnboardingComplete && pathname !== "/onboarding") {
+        router.replace("/onboarding");
+        return;
+      }
     }
-  }, [loading, isAuthenticated, pathname, router]);
+  }, [loading, isAuthenticated, pathname, router, user]);
 
   if (loading) {
     return (
@@ -51,6 +68,12 @@ export function AuthGuard({ children }: AuthGuardProps) {
         </div>
       </div>
     );
+  }
+
+  const isPublic = PUBLIC_ROUTES.includes(pathname);
+  const userRequiresOnboarding = Boolean(user && !hasCompletedOnboarding(user) && !isPublic && pathname !== "/onboarding");
+  if (!isPublic && (!isAuthenticated || !user || userRequiresOnboarding)) {
+    return null;
   }
 
   return <>{children}</>;

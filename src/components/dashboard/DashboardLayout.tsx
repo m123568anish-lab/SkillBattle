@@ -38,11 +38,20 @@ export default function DashboardLayout({ children }: Props) {
   const authLoading = useAuthStore((s) => s.loading);
 
   useEffect(() => {
-    const accountType = (user?.account_type || user?.role || "").toUpperCase();
-    if (!authLoading && user && accountType === "STUDENT" && user.onboarding_completed === false) {
+    if (authLoading || !user) return;
+
+    const accountType = (user.account_type || user.role || "").toUpperCase();
+    const onboardingComplete = user.onboarding_completed === true;
+
+    if (accountType === "STUDENT" && !onboardingComplete && pathname !== "/onboarding") {
       router.replace("/onboarding");
+      return;
     }
-  }, [authLoading, user, router]);
+
+    if (pathname === "/onboarding" && onboardingComplete) {
+      router.replace("/dashboard");
+    }
+  }, [authLoading, pathname, router, user]);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [quickAccessOpen, setQuickAccessOpen] = useState(false);
