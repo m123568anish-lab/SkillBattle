@@ -656,6 +656,7 @@ class QuestionEngine:
     ) -> List[Dict[str, Any]]:
         """
         Resolves a set of validated questions for each section in the battle configuration.
+        Shortages are treated as real inventory problems, not silently filled with generated data.
         """
         resolved_sections = []
 
@@ -665,7 +666,6 @@ class QuestionEngine:
             count = int(sec.get("question_count", 1))
             sec_title = sec.get("title", f"Section {sec_idx + 1}")
 
-            # Fetch matching questions from DB
             filters = [
                 Question.question_type == qtype,
                 Question.is_active == True,
@@ -685,18 +685,14 @@ class QuestionEngine:
                 if self._is_adaptively_eligible(question)
             ]
 
-            # If not enough questions in DB, generate AI questions or get fallback
-            while len(qs) < count:
-                new_q = await self.generate_and_validate_ai_question(
-                    db,
-                    question_type=qtype,
-                    difficulty=difficulty,
-                    topic=skill_category or ("DSA" if qtype == "coding" else "CS Fundamentals"),
+            if len(qs) < count:
+                raise ValueError(
+                    f"Not enough validated {qtype} questions for this battle section "
+                    f"(required {count}, available {len(qs)})."
                 )
-                qs.append(new_q)
 
             section_questions = []
-            for q in qs:
+            for q in qs[:count]:
                 section_questions.append({
                     "id": q.id,
                     "title": q.title,

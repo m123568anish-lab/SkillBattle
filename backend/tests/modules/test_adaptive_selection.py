@@ -244,6 +244,21 @@ async def test_insufficient_adaptive_questions_fail_with_a_clear_message():
         raise AssertionError("Insufficient questions should not be replaced with synthetic content.")
 
 
+async def test_resolve_questions_for_sections_rejects_shortage_instead_of_generating_fallback():
+    db = AsyncMock()
+    db.execute.return_value = FakeResult([candidate()])
+
+    with pytest.raises(ValueError, match="required 2, available 1"):
+        await question_engine.resolve_questions_for_sections(
+            db,
+            [{"title": "Knowledge", "question_type": "mcq", "question_count": 2}],
+            difficulty="medium",
+        )
+
+    db.add.assert_not_called()
+    db.commit.assert_not_awaited()
+
+
 async def test_coding_fallback_never_creates_an_untestable_question():
     db = AsyncMock()
     db.execute.return_value = FakeResult([])
