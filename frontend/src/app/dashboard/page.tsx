@@ -10,6 +10,7 @@ import DashboardHero from "@/components/dashboard/DashboardHero";
 import StatsGrid from "@/components/dashboard/StatsGrid";
 
 import AICoachCard from "@/components/dashboard/AICoachCard";
+import CommandCenterCard from "@/components/dashboard/CommandCenterCard";
 
 function DashboardPlaceholder({ minHeight }: { minHeight: string }) {
   return <div aria-hidden="true" className="animate-pulse rounded-2xl bg-white/[0.02]" style={{ minHeight }} />;
@@ -147,6 +148,10 @@ export default function DashboardPage() {
           <StatsGrid
             stats={dashboard.stats}
           />
+        </div>
+
+        <div className="mt-8">
+          <CommandCenterCard commandCenter={dashboard.command_center} />
         </div>
 
         {/* AI Coach + Server Status Row */}

@@ -100,3 +100,35 @@ class DashboardResponse(BaseModel):
     ai_recommendation: AIRecommendation
 
     daily_challenge: DailyChallenge
+
+    command_center: Optional[dict] = None
+
+
+class CommandCenterAction(BaseModel):
+    type: str
+    title: str
+    description: str
+    time: str
+    priority: str = "MEDIUM"
+
+
+class CommandCenterGap(BaseModel):
+    skill_id: str
+    skill_name: str
+    mastery: str = "UNKNOWN"
+    confidence: str = "LOW"
+    trend: str = "INSUFFICIENT_DATA"
+    priority: str = "UNKNOWN"
+    reason: str = ""
+
+
+class CommandCenterResponse(BaseModel):
+    student_state: dict
+    next_best_action: dict
+    daily_actions: List[CommandCenterAction]
+    placement_readiness: dict
+    skill_gaps: List[CommandCenterGap]
+    roadmap: dict
+    study_hours: dict
+    summary: dict
+    members: dict = {"strong_skills": [], "weak_skills": []}
