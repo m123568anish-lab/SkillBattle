@@ -553,18 +553,23 @@ export default function SoloBattlePage() {
   const allDone = mcqDone && codingSolved;
 
   const handleFinishSession = async () => {
+    const payload = {
+      xp_earned: totalXp,
+      mcq_results: sessionQuestions.map((q) => ({
+        category: q.category,
+        correct: answeredMap[q.id] === true,
+      })),
+      coding_solved: codingSolved,
+    };
+
     setSessionComplete(true);
+
     try {
-      await api.post("/battle/solo/finish", {
-        xp_earned: totalXp,
-        mcq_results: sessionQuestions.map((q) => ({
-          category: q.category,
-          correct: answeredMap[q.id] === true
-        })),
-        coding_solved: codingSolved
-      });
-    } catch (e) {
-      console.error(e);
+      await api.post("/battle/solo/finish", payload);
+    } catch (e: any) {
+      if (e?.response?.status !== 410) {
+        console.error("Solo battle finish sync failed:", e);
+      }
     }
   };
 
