@@ -8,8 +8,12 @@ SMTP Email Provider
 
 from __future__ import annotations
 
-import aiosmtplib
 from email.message import EmailMessage
+
+try:
+    import aiosmtplib
+except ImportError:  # pragma: no cover - optional dependency for local/dev setups
+    aiosmtplib = None
 
 from app.core.config import settings
 
@@ -27,6 +31,9 @@ class EmailProvider:
         body: str,
 
     ):
+
+        if aiosmtplib is None:
+            raise RuntimeError("aiosmtplib is not installed. Install the email dependency to send SMTP messages.")
 
         message = EmailMessage()
 
