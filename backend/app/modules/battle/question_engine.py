@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from collections import defaultdict
 from datetime import datetime
 from typing import Dict, Any, List
@@ -33,6 +34,118 @@ from app.modules.battle.adaptive_selection import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class QuestionValidationService:
+    """Canonical validation rules for all question types used across battle, practice, and placement flows."""
+
+    QUESTION_TYPE_ALIASES = {
+        "multiple_choice": "mcq",
+        "mcq": "mcq",
+        "multiple-choice": "mcq",
+        "coding": "coding",
+        "debugging": "debugging",
+        "technical": "technical",
+        "sql": "sql",
+        "sql_query": "sql",
+        "aptitude": "aptitude",
+        "quantitative": "aptitude",
+        "logical": "aptitude",
+    }
+
+    @staticmethod
+    def normalize_question_type(question_type: Any) -> str:
+        value = str(question_type or "").strip().lower().replace(" ", "_")
+        return QuestionValidationService.QUESTION_TYPE_ALIASES.get(value, value)
+
+    @staticmethod
+    def _json_list(value: Any) -> list[Any]:
+        if isinstance(value, list):
+            return value
+        if isinstance(value, tuple):
+            return list(value)
+        return []
+
+    @staticmethod
+    def _normalize_text(value: Any) -> str:
+        return " ".join(str(value or "").strip().split())
+
+    @staticmethod
+    def _token_set(value: Any) -> set[str]:
+        normalized = QuestionValidationService._normalize_text(value).lower()
+        return set(re.findall(r"\w+", normalized)) if normalized else set()
+
+    @classmethod
+    def validate_question_data(cls, data: Dict[str, Any] | Any) -> bool:
+        if not hasattr(data, "__dict__") and not isinstance(data, dict):
+            return False
+        payload = data.__dict__ if hasattr(data, "__dict__") else dict(data)
+
+        title = cls._normalize_text(payload.get("title"))
+        description = cls._normalize_text(payload.get("description"))
+        if len(title) < 3 or len(description) < 10:
+            return False
+
+        qtype = cls.normalize_question_type(payload.get("question_type"))
+        if not qtype:
+            return False
+
+        if qtype == "mcq":
+            options = cls._json_list(payload.get("options"))
+            return len(options) >= 2 and bool(payload.get("correct_option"))
+
+        if qtype == "coding":
+            test_cases = cls._json_list(payload.get("hidden_test_cases")) or cls._json_list(payload.get("examples"))
+            return any(
+                isinstance(case, dict) and "input" in case and "output" in case
+                for case in test_cases
+            )
+
+        if qtype == "debugging":
+            buggy_code = payload.get("buggy_code")
+            fixed_reference = payload.get("fixed_code_reference")
+            return bool(buggy_code and str(buggy_code).strip() and fixed_reference is not None)
+
+        if qtype == "technical":
+            rubric = payload.get("rubric") or {}
+            explanation = payload.get("explanation") or ""
+            return bool(rubric) or len(cls._normalize_text(explanation)) >= 10
+
+        if qtype == "sql":
+            expected_output = payload.get("expected_output") or payload.get("expected_query") or payload.get("schema")
+            return bool(expected_output) or bool(payload.get("database_schema"))
+
+        if qtype == "aptitude":
+            options = cls._json_list(payload.get("options"))
+            if len(options) < 2:
+                return False
+            if isinstance(payload.get("correct_option"), (int, str)):
+                return bool(payload.get("correct_option"))
+            return bool(payload.get("answer"))
+
+        return False
+
+    @staticmethod
+    def find_duplicate_question(data: Dict[str, Any], existing_candidates: List[Dict[str, Any]]) -> bool:
+        if not existing_candidates:
+            return False
+        payload = dict(data)
+        title_tokens = QuestionValidationService._token_set(payload.get("title"))
+        description_tokens = QuestionValidationService._token_set(payload.get("description"))
+        if not title_tokens and not description_tokens:
+            return False
+
+        for candidate in existing_candidates:
+            candidate_tokens = QuestionValidationService._token_set(candidate.get("title")) | QuestionValidationService._token_set(candidate.get("description"))
+            if not candidate_tokens:
+                continue
+            overlap = len(title_tokens.intersection(candidate_tokens)) + len(description_tokens.intersection(candidate_tokens))
+            if overlap == 0:
+                continue
+            jaccard = overlap / max(1, len(title_tokens | description_tokens | candidate_tokens))
+            if jaccard >= 0.55:
+                return True
+        return False
 
 
 class QuestionEngine:
@@ -354,41 +467,41 @@ class QuestionEngine:
 
 
     def validate_question_data(self, data: Dict[str, Any]) -> bool:
-        """
-        Validate question completeness and correctness before storing or using.
-        Must contain required fields depending on question_type.
-        """
-        if not data.get("title") or len(str(data["title"]).strip()) < 3:
-            return False
-        if not data.get("description") or len(str(data["description"]).strip()) < 10:
-            return False
+        """Canonical validation for all supported question types in battle and assessment flows."""
+        return QuestionValidationService.validate_question_data(data)
 
-        qtype = str(data.get("question_type", "coding")).lower()
+    def get_default_assessment_sections(self, assessment_type: str = "practice") -> List[Dict[str, Any]]:
+        """Return a canonical section mix used for practice, battle, and placement assessments."""
+        normalized = (assessment_type or "practice").strip().lower()
+        section_templates = {
+            "practice": [
+                {"title": "Warm-up", "question_type": "mcq", "question_count": 2, "skill_category": "Problem Solving", "weight": 0.2, "duration_minutes": 8, "negative_marking": False},
+                {"title": "Coding", "question_type": "coding", "question_count": 2, "skill_category": "Data Structures", "weight": 0.5, "duration_minutes": 18, "negative_marking": False},
+                {"title": "Concept Review", "question_type": "technical", "question_count": 1, "skill_category": "System Design", "weight": 0.3, "duration_minutes": 10, "negative_marking": False},
+            ],
+            "battle": [
+                {"title": "Quick Recall", "question_type": "mcq", "question_count": 2, "skill_category": "Problem Solving", "weight": 0.2, "duration_minutes": 10, "negative_marking": False},
+                {"title": "Implementation", "question_type": "coding", "question_count": 2, "skill_category": "Algorithms", "weight": 0.5, "duration_minutes": 20, "negative_marking": False},
+                {"title": "Debugging", "question_type": "debugging", "question_count": 1, "skill_category": "Bug Analysis", "weight": 0.3, "duration_minutes": 10, "negative_marking": False},
+            ],
+            "placement": [
+                {"title": "Aptitude", "question_type": "aptitude", "question_count": 2, "skill_category": "Aptitude", "weight": 0.25, "duration_minutes": 10, "negative_marking": False},
+                {"title": "SQL", "question_type": "sql", "question_count": 1, "skill_category": "SQL", "weight": 0.2, "duration_minutes": 10, "negative_marking": False},
+                {"title": "Coding", "question_type": "coding", "question_count": 2, "skill_category": "Data Structures", "weight": 0.4, "duration_minutes": 18, "negative_marking": False},
+                {"title": "Technical", "question_type": "technical", "question_count": 1, "skill_category": "Core CS", "weight": 0.15, "duration_minutes": 8, "negative_marking": False},
+            ],
+            "reassessment": [
+                {"title": "Concept Check", "question_type": "technical", "question_count": 2, "skill_category": "Core CS", "weight": 0.25, "duration_minutes": 10, "negative_marking": False},
+                {"title": "Bug Fix", "question_type": "debugging", "question_count": 1, "skill_category": "Bug Analysis", "weight": 0.2, "duration_minutes": 8, "negative_marking": False},
+                {"title": "Implementation", "question_type": "coding", "question_count": 2, "skill_category": "Algorithms", "weight": 0.4, "duration_minutes": 18, "negative_marking": False},
+                {"title": "Logic", "question_type": "mcq", "question_count": 1, "skill_category": "Problem Solving", "weight": 0.15, "duration_minutes": 8, "negative_marking": False},
+            ],
+        }
+        return section_templates.get(normalized, section_templates["practice"]) 
 
-        if qtype == "mcq":
-            options = data.get("options")
-            if not isinstance(options, list) or len(options) < 2:
-                return False
-            if not data.get("correct_option"):
-                return False
-
-        elif qtype == "debugging":
-            if not data.get("buggy_code") or len(str(data["buggy_code"]).strip()) < 5:
-                return False
-
-        elif qtype == "technical":
-            if not data.get("rubric") and not data.get("explanation"):
-                return False
-
-        elif qtype == "coding":
-            test_cases = data.get("hidden_test_cases") or data.get("examples") or []
-            if not any(
-                isinstance(case, dict) and "input" in case and "output" in case
-                for case in test_cases
-            ):
-                return False
-
-        return True
+    def is_question_duplicate(self, data: Dict[str, Any], existing_candidates: List[Dict[str, Any]]) -> bool:
+        """Offer a shared duplicate-detection hook without forcing a new question model."""
+        return QuestionValidationService.find_duplicate_question(data, existing_candidates)
 
     async def generate_and_validate_ai_question(
         self,

@@ -146,6 +146,33 @@ def test_coding_question_validation_requires_real_test_cases():
     })
 
 
+def test_sql_and_aptitude_questions_use_canonical_validation_rules():
+    sql_question = {
+        "title": "Select top employees",
+        "description": "Write the SQL query to fetch top employees by salary.",
+        "question_type": "sql",
+        "difficulty": "medium",
+        "expected_output": "SELECT * FROM employees ORDER BY salary DESC LIMIT 5;",
+    }
+    aptitude_question = {
+        "title": "Percentage puzzle",
+        "description": "A student scores 80% in quiz and 60% in project.",
+        "question_type": "aptitude",
+        "difficulty": "easy",
+        "options": [{"key": "A", "text": "70%"}, {"key": "B", "text": "72%"}],
+        "correct_option": "A",
+    }
+    assert question_engine.validate_question_data(sql_question)
+    assert question_engine.validate_question_data(aptitude_question)
+
+
+def test_default_assessment_sections_follow_canonical_question_mix():
+    sections = question_engine.get_default_assessment_sections("practice")
+    assert sections
+    question_types = {section["question_type"] for section in sections}
+    assert {"coding", "mcq", "technical"}.issubset(question_types)
+
+
 async def test_adaptive_selection_uses_persisted_weak_skill_evidence():
     weak_question = candidate("graphs")
     strong_question = candidate("arrays")

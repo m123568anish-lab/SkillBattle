@@ -20,8 +20,10 @@ class BattleTypeEnum(str, Enum):
 class QuestionTypeEnum(str, Enum):
     MCQ = "mcq"
     CODING = "coding"
+    SQL = "sql"
     DEBUGGING = "debugging"
     TECHNICAL = "technical"
+    APTITUDE = "aptitude"
 
 
 class BattleStateEnum(str, Enum):
