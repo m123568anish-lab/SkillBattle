@@ -46,6 +46,11 @@ export function AuthGuard({ children }: AuthGuardProps) {
       return;
     }
 
+    if (isAuthenticated && user && getPostLoginPath(user) === "/onboarding" && pathname !== "/onboarding") {
+      router.replace("/onboarding");
+      return;
+    }
+
     if (isAuthenticated && pathname === "/login") {
       if (user) router.replace(getPostLoginPath(user));
       return;

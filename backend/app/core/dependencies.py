@@ -164,17 +164,17 @@ async def get_current_admin(
 
 ) -> User:
 
-    if not (current_user.is_superuser or getattr(current_user, "role", None) == "admin"):
+    role = (getattr(current_user, "role", "") or "").strip().lower()
+    if current_user.is_superuser or role in {"admin", "platform_admin", "platform_support", "platform_analyst"}:
+        return current_user
 
-        raise HTTPException(
+    raise HTTPException(
 
-            status_code=status.HTTP_403_FORBIDDEN,
+        status_code=status.HTTP_403_FORBIDDEN,
 
-            detail="Administrator privileges required.",
+        detail="Administrator privileges required.",
 
-        )
-
-    return current_user
+    )
 
 
 # ==========================================================

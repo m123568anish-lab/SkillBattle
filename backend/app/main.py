@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from app.bootstrap.startup import ensure_platform_admin
 from app.core.config import get_settings
 from app.core.middleware import register_middleware
 from app.core.router_registry import register_routers
@@ -59,6 +60,14 @@ async def lifespan(app: FastAPI):
         logger.info("✅ Database initialized successfully")
     except Exception as e:
         logger.error(f"❌ Database initialization failed: {e}", exc_info=True)
+        raise
+
+    try:
+        logger.info("🔐 Ensuring platform admin bootstrap...")
+        await ensure_platform_admin()
+        logger.info("✅ Platform admin bootstrap checked")
+    except Exception as e:
+        logger.error(f"❌ Platform admin bootstrap failed: {e}", exc_info=True)
         raise
 
     logger.info("✅ Application startup complete")

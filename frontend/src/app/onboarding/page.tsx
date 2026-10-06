@@ -15,6 +15,7 @@ import RoadmapStep from "@/components/onboarding/RoadmapStep";
 import RoadmapPreview from "@/components/onboarding/RoadmapPreview";
 
 import { useOnboarding } from "@/hooks/use-onboarding";
+import { useAuthStore } from "@/store/authStore";
 
 import { OnboardingRoadmapResult, saveOnboarding } from "@/services/onboarding.service";
 
@@ -26,12 +27,18 @@ export default function OnboardingPage() {
     previousStep,
     updateData,
   } = useOnboarding();
+  const updateUserPartial = useAuthStore((state) => state.updateUserPartial);
   const [roadmapResult, setRoadmapResult] = useState<OnboardingRoadmapResult | null>(null);
-  const generateRoadmap = useCallback(() => saveOnboarding(data), [data]);
+  const generateRoadmap = useCallback(async () => {
+    const result = await saveOnboarding(data);
+    updateUserPartial({ onboarding_completed: true });
+    return result;
+  }, [data, updateUserPartial]);
   const finishRoadmapStep = useCallback((result: OnboardingRoadmapResult | null) => {
+    updateUserPartial({ onboarding_completed: true });
     setRoadmapResult(result);
     nextStep();
-  }, [nextStep]);
+  }, [nextStep, updateUserPartial]);
   const retryRoadmap = useCallback(async () => {
     const result = await generateRoadmap();
     setRoadmapResult(result);
