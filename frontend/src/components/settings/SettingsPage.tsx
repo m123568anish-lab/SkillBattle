@@ -4,10 +4,25 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
 import { toast } from "react-hot-toast";
-import { Lock, Shield, Zap, Check, AlertCircle } from "lucide-react";
+import { Lock, Shield, Zap, Check, AlertCircle, LogOut, MonitorSmartphone, Trash2 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 
 type SettingTab = "security" | "preferences" | "privacy";
+
+type ActiveSession = {
+  id: string;
+  device_name: string;
+  device_os: string;
+  browser: string;
+  ip_address: string | null;
+  user_agent: string;
+  created_at: string;
+  last_used_at: string | null;
+  expires_at: string;
+  revoked: boolean;
+  revoked_at: string | null;
+  active: boolean;
+};
 
 interface TabConfig {
   id: SettingTab;
@@ -56,6 +71,9 @@ export default function SettingsPage() {
   const [twoFactorSecret, setTwoFactorSecret] = useState<string | null>(null);
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+  const [sessions, setSessions] = useState<ActiveSession[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [sessionsSaving, setSessionsSaving] = useState<string | null | "all">(null);
 
   useEffect(() => {
     let active = true;
@@ -71,6 +89,24 @@ export default function SettingsPage() {
       setSharingLoading(false);
     }
     void loadSettings();
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadSessions() {
+      try {
+        const response = await api.get<ActiveSession[]>("/auth/sessions");
+        if (active) setSessions(response.data);
+      } catch {
+        if (active) setSessions([]);
+      } finally {
+        if (active) setSessionsLoading(false);
+      }
+    }
+
+    void loadSessions();
     return () => { active = false; };
   }, []);
 
@@ -131,6 +167,34 @@ export default function SettingsPage() {
       setError(typeof message === "string" ? message : "The authenticator code could not be verified.");
     } finally {
       setTwoFactorLoading(false);
+    }
+  }
+
+  async function revokeSession(sessionId: string) {
+    setSessionsSaving(sessionId);
+    try {
+      await api.delete(`/auth/sessions/${sessionId}`);
+      setSessions((current) => current.filter((session) => session.id !== sessionId));
+      toast.success("Session revoked.");
+    } catch (err) {
+      const message = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      toast.error(typeof message === "string" ? message : "The session could not be revoked.");
+    } finally {
+      setSessionsSaving(null);
+    }
+  }
+
+  async function signOutAllDevices() {
+    setSessionsSaving("all");
+    try {
+      await api.post("/auth/logout-all");
+      setSessions([]);
+      toast.success("All other devices have been signed out.");
+    } catch (err) {
+      const message = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      toast.error(typeof message === "string" ? message : "Sessions could not be revoked.");
+    } finally {
+      setSessionsSaving(null);
     }
   }
 
@@ -350,6 +414,76 @@ export default function SettingsPage() {
                   <input id="two-factor-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value.replace(/\D/g, ""))} className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 font-mono text-white outline-none focus:border-violet-400" />
                   <button type="button" disabled={twoFactorLoading || twoFactorCode.length !== 6} onClick={() => void verifyTwoFactorSetup()} className="w-full rounded-xl bg-violet-500 px-5 py-3 font-bold text-white disabled:opacity-50">{twoFactorLoading ? "Verifying…" : "Verify and enable 2FA"}</button>
                 </div>}
+              </motion.div>
+
+              {/* Active Sessions Card */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.15 }}
+                className="rounded-3xl border border-white/10 bg-white/5 p-8 text-white shadow-2xl backdrop-blur-xl"
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex items-start gap-4">
+                    <div className="rounded-full bg-cyan-500/20 border border-cyan-500/30 p-3">
+                      <MonitorSmartphone className="h-6 w-6 text-cyan-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">Active sessions</h3>
+                      <p className="mt-1 text-sm text-slate-400">Review devices signed in to your account. Refresh tokens are never displayed.</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void signOutAllDevices()}
+                    disabled={sessionsSaving !== null || sessions.length === 0}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-2.5 text-sm font-bold text-rose-200 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    {sessionsSaving === "all" ? "Signing out…" : "Sign out all devices"}
+                  </button>
+                </div>
+
+                {sessionsLoading ? (
+                  <p className="mt-6 text-sm text-slate-400" role="status">Loading active sessions…</p>
+                ) : sessions.length === 0 ? (
+                  <div className="mt-6 rounded-2xl border border-dashed border-white/10 bg-slate-950/30 p-6 text-center text-sm text-slate-400">
+                    No other active sessions were found.
+                  </div>
+                ) : (
+                  <div className="mt-6 space-y-3">
+                    {sessions.map((session) => (
+                      <div key={session.id} className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-slate-950/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="truncate font-semibold text-white">{session.device_name || session.browser || session.device_os}</p>
+                            {session.revoked && <span className="rounded-full bg-slate-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-300">Revoked</span>}
+                          </div>
+                          <p className="mt-1 text-xs text-slate-400">
+                            {session.browser} · {session.device_os} · {session.ip_address || "Unknown location"}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            Last active {session.last_used_at ? new Date(session.last_used_at).toLocaleString() : "never"} · Expires {new Date(session.expires_at).toLocaleString()}
+                          </p>
+                        </div>
+                        {!session.revoked && (
+                          <button
+                            type="button"
+                            onClick={() => void revokeSession(session.id)}
+                            disabled={sessionsSaving !== null}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-slate-300 transition hover:border-rose-400/40 hover:bg-rose-500/10 hover:text-rose-200 disabled:opacity-40"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            {sessionsSaving === session.id ? "Revoking…" : "Revoke session"}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="mt-5 text-xs leading-5 text-slate-500">
+                  Revoking the current session does not immediately invalidate an already-issued access token; it remains valid until it expires. Sign out through the account menu to clear the active browser session.
+                </p>
               </motion.div>
             </>
           )}
