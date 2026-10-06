@@ -26,9 +26,13 @@ export interface DashboardCommandCenter {
         matrix?: Record<string, any>;
     };
     skill_gaps: Array<{
+        skill_id?: string;
         skill_name: string;
         priority: string;
         reason: string;
+        mastery?: string;
+        confidence?: string;
+        trend?: string;
     }>;
     roadmap: {
         title: string;

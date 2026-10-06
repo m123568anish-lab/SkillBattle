@@ -212,3 +212,28 @@ class CollegeDashboardResponse(BaseModel):
     weak_areas: List[str]
     department_analytics: List[DepartmentAnalyticsItem]
     placement_prep_progress: Optional[float] = None
+
+
+class RiskSignal(BaseModel):
+    student_id: str
+    student_name: str
+    department_name: Optional[str] = None
+    batch_name: Optional[str] = None
+    severity: str
+    readiness: str
+    signals: List[str]
+
+
+class CollegeCommandCenterResponse(BaseModel):
+    college_id: int
+    college_name: str
+    organization_snapshot: Dict[str, Any]
+    cohort_health: Dict[str, Any]
+    priority_interventions: List[Dict[str, Any]]
+    at_risk_students: List[RiskSignal]
+    active_assessments: List[Dict[str, Any]]
+    placement_pipeline: Dict[str, Any]
+    generated_at: datetime
+
+    class Config:
+        from_attributes = True

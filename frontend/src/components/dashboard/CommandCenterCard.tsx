@@ -71,7 +71,7 @@ export default function CommandCenterCard({ commandCenter }: { commandCenter?: D
               <p className="text-sm text-slate-400">No active skill gap signals yet.</p>
             ) : (
               gaps.slice(0, 3).map((gap) => (
-                <div key={gap.skill_id} className="rounded-xl border border-slate-700 bg-slate-950/60 p-3">
+                <div key={gap.skill_id ?? gap.skill_name} className="rounded-xl border border-slate-700 bg-slate-950/60 p-3">
                   <div className="flex items-center justify-between gap-3">
                     <span className="font-medium text-white">{gap.skill_name}</span>
                     <span className="text-[10px] uppercase tracking-[0.2em] text-amber-300">{gap.priority}</span>

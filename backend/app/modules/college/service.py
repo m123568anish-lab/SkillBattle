@@ -5,12 +5,20 @@ SkillBattle - College Platform Service
 """
 
 import logging
+from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_
 from sqlalchemy.orm import selectinload
+
+from app.modules.skill_intelligence.service import (
+    CANONICAL_SKILL_TREE,
+    display_name_for_skill,
+    skill_intelligence_service,
+)
+from app.models.skill_intelligence import SkillEvidence
 
 from app.core.security import hash_password
 from app.models.user import User
@@ -672,6 +680,224 @@ class CollegeService:
             "weak_areas": [],
             "department_analytics": dept_analytics,
             "placement_prep_progress": None,
+        }
+
+    async def get_college_command_center(
+        self,
+        db: AsyncSession,
+        user: User,
+        *,
+        department_id: Optional[int] = None,
+        batch_id: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        college = await self.get_user_college(db, user)
+        if not college:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="College record not found for your account.",
+            )
+
+        filters = [CollegeStudent.college_id == college.id]
+        if department_id is not None:
+            filters.append(CollegeStudent.department_id == department_id)
+        if batch_id is not None:
+            filters.append(CollegeStudent.batch_id == batch_id)
+
+        student_links = (await db.execute(select(CollegeStudent).where(*filters))).scalars().all()
+        student_user_ids = [link.user_id for link in student_links]
+
+        evidence_query = select(SkillEvidence).where(SkillEvidence.user_id.in_(student_user_ids))
+        evidence_rows = (await db.execute(evidence_query)).scalars().all()
+
+        evidence_by_user: dict[str, list[SkillEvidence]] = defaultdict(list)
+        for row in evidence_rows:
+            evidence_by_user[row.user_id].append(row)
+
+        skill_group: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for rows in evidence_by_user.values():
+            for row in rows:
+                skill_group[row.skill_id].append({
+                    "user_id": row.user_id,
+                    "skill_id": row.skill_id,
+                    "skill": row.skill_name,
+                    "source_type": row.source_type,
+                    "source_id": row.source_id,
+                    "submission_id": row.submission_id,
+                    "question_id": row.question_id,
+                    "score": row.score,
+                    "max_score": row.max_score,
+                    "correct": row.correct,
+                    "timestamp": row.timestamp.isoformat() if row.timestamp else datetime.utcnow().isoformat(),
+                    "difficulty": row.difficulty,
+                })
+
+        cohort_skill_map: list[dict[str, Any]] = []
+        observed_skill_ids = set(skill_group)
+        for skill_id, records in sorted(skill_group.items()):
+            state = skill_intelligence_service.calculate_skill_state(records)
+            mastery = state["mastery"]
+            if mastery in {"MASTERED", "STRONG"}:
+                level = "Strong"
+            elif mastery in {"COMPETENT", "DEVELOPING"}:
+                level = "Developing"
+            elif mastery in {"LEARNING", "UNKNOWN"}:
+                level = "Weak" if state["evidence_count"] else "Unknown"
+            else:
+                level = "Unknown"
+            cohort_skill_map.append({
+                "skill_id": skill_id,
+                "skill_name": display_name_for_skill(skill_id),
+                "state": level,
+                "share": round((state["accuracy"] * 100), 1),
+                "evidence_count": state["evidence_count"],
+                "confidence": state["confidence"],
+                "trend": state["trend"],
+            })
+
+        canonical_skill_names = []
+        for skills in CANONICAL_SKILL_TREE.values():
+            canonical_skill_names.extend(skills)
+        for canonical_name in sorted(set(canonical_skill_names)):
+            canonical_id = skill_intelligence_service.normalize_evidence({"skill": canonical_name})["skill_id"]
+            if canonical_id not in observed_skill_ids:
+                cohort_skill_map.append({
+                    "skill_id": canonical_id,
+                    "skill_name": canonical_name,
+                    "state": "Unknown",
+                    "share": 0.0,
+                    "evidence_count": 0,
+                    "confidence": "LOW",
+                    "trend": "INSUFFICIENT_DATA",
+                })
+
+        readiness_counts: dict[str, int] = defaultdict(int)
+        readiness_by_student: list[dict[str, Any]] = []
+        for link in student_links:
+            user_evidence = evidence_by_user.get(link.user_id, [])
+            if not user_evidence:
+                readiness = {"state": "BUILDING", "confidence": "LOW", "matrix": {}}
+                user_name = link.user.full_name if getattr(link, "user", None) is not None else "Student"
+                readiness_counts["BUILDING"] += 1
+                readiness_by_student.append({
+                    "student_id": link.user_id,
+                    "student_name": user_name,
+                    "department_name": None,
+                    "batch_name": None,
+                    "readiness": readiness,
+                })
+                continue
+            grouped = defaultdict(list)
+            for row in user_evidence:
+                grouped[row.skill_id].append({
+                    "user_id": row.user_id,
+                    "skill_id": row.skill_id,
+                    "skill": row.skill_name,
+                    "source_type": row.source_type,
+                    "source_id": row.source_id,
+                    "submission_id": row.submission_id,
+                    "question_id": row.question_id,
+                    "score": row.score,
+                    "max_score": row.max_score,
+                    "correct": row.correct,
+                    "timestamp": row.timestamp.isoformat() if row.timestamp else datetime.utcnow().isoformat(),
+                    "difficulty": row.difficulty,
+                })
+            readiness = skill_intelligence_service.calculate_placement_readiness(grouped)
+            readiness_counts[readiness["state"]] += 1
+            readiness_by_student.append({
+                "student_id": link.user_id,
+                "student_name": link.user.full_name if getattr(link, "user", None) is not None else "Student",
+                "department_name": None,
+                "batch_name": None,
+                "readiness": readiness,
+            })
+
+        active_assessments = []
+        assessment_rows = (await db.execute(
+            select(CollegeAssessment)
+            .where(CollegeAssessment.college_id == college.id)
+            .order_by(CollegeAssessment.start_time.desc().nullslast())
+            .limit(5)
+        )).scalars().all()
+        for assessment in assessment_rows:
+            active_assessments.append({
+                "id": assessment.id,
+                "title": assessment.title,
+                "status": assessment.status,
+                "department_id": assessment.department_id,
+                "batch_id": assessment.batch_id,
+                "start_time": assessment.start_time.isoformat() if assessment.start_time else None,
+                "pass_marks": assessment.pass_marks,
+                "total_marks": assessment.total_marks,
+            })
+
+        priority_interventions = []
+        for item in sorted(cohort_skill_map, key=lambda entry: (0 if entry["state"] in {"Weak", "Unknown"} else 1, -entry["evidence_count"], entry["skill_name"]))[:5]:
+            if item["state"] in {"Strong", "Developing"}:
+                continue
+            priority_interventions.append({
+                "skill_id": item["skill_id"],
+                "skill_name": item["skill_name"],
+                "state": item["state"],
+                "evidence_count": item["evidence_count"],
+                "reason": "Cohort evidence indicates this skill needs coaching before the next placement readiness pass." if item["state"] in {"Weak", "Unknown"} else "Needs close monitoring.",
+            })
+
+        at_risk_students = []
+        for student in readiness_by_student:
+            risk_signals: list[str] = []
+            readiness = student["readiness"]
+            if readiness["state"] in {"BUILDING", "DEVELOPING"}:
+                risk_signals.append(f"placement readiness = {readiness['state']}")
+            if not evidence_by_user.get(student["student_id"]):
+                risk_signals.append("no recent skill evidence")
+            for item in cohort_skill_map:
+                if item["state"] in {"Weak", "Unknown"} and item["skill_name"]:
+                    risk_signals.append(f"{item['skill_name']} requires attention")
+            if risk_signals:
+                severity = "HIGH" if readiness["state"] == "BUILDING" else "MEDIUM"
+                at_risk_students.append({
+                    "student_id": student["student_id"],
+                    "student_name": student["student_name"],
+                    "department_name": student["department_name"],
+                    "batch_name": student["batch_name"],
+                    "severity": severity,
+                    "readiness": readiness["state"],
+                    "signals": risk_signals[:3],
+                })
+
+        placement_pipeline = {
+            "eligible": sum(1 for student in readiness_by_student if student["readiness"]["state"] in {"NEAR_READY", "PLACEMENT_READY"}),
+            "building": sum(1 for student in readiness_by_student if student["readiness"]["state"] == "BUILDING"),
+            "developing": sum(1 for student in readiness_by_student if student["readiness"]["state"] == "DEVELOPING"),
+            "unknown": sum(1 for student in readiness_by_student if student["readiness"]["state"] == "UNKNOWN"),
+            "total_students": len(student_links),
+        }
+
+        return {
+            "college_id": college.id,
+            "college_name": college.name,
+            "organization_snapshot": {
+                "students": len(student_links),
+                "active_assessments": len(active_assessments),
+                "training_programs": len(priority_interventions),
+                "placement_drives": 0,
+            },
+            "cohort_health": {
+                "skill_distribution": sorted(cohort_skill_map, key=lambda item: item["skill_name"]),
+                "readiness_distribution": {
+                    "BUILDING": readiness_counts.get("BUILDING", 0),
+                    "DEVELOPING": readiness_counts.get("DEVELOPING", 0),
+                    "NEAR_READY": readiness_counts.get("NEAR_READY", 0),
+                    "PLACEMENT_READY": readiness_counts.get("PLACEMENT_READY", 0),
+                },
+                "at_risk_count": len(at_risk_students),
+            },
+            "priority_interventions": priority_interventions,
+            "at_risk_students": at_risk_students,
+            "active_assessments": active_assessments,
+            "placement_pipeline": placement_pipeline,
+            "generated_at": datetime.utcnow(),
         }
 
 

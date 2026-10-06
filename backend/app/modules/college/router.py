@@ -27,6 +27,7 @@ from app.modules.college.schemas import (
     SubmitAssessmentRequest,
     SubmissionResultResponse,
     CollegeDashboardResponse,
+    CollegeCommandCenterResponse,
 )
 from app.modules.college.service import college_service
 
@@ -410,3 +411,18 @@ async def get_college_dashboard(
         raise HTTPException(status_code=403, detail="College staff permissions required. Students cannot access college dashboard analytics.")
 
     return await college_service.get_college_dashboard(db, current_user)
+
+
+@router.get("/command-center", response_model=CollegeCommandCenterResponse)
+async def get_college_command_center(
+    department_id: Optional[int] = None,
+    batch_id: Optional[int] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return the organization-level command center using persisted cohort evidence."""
+    role = getattr(current_user, "role", "user").lower()
+    if role not in ["college_admin", "placement_officer", "faculty", "admin"] and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="College staff permissions required.")
+
+    return await college_service.get_college_command_center(db, current_user, department_id=department_id, batch_id=batch_id)
