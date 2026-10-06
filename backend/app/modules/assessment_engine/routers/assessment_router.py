@@ -11,11 +11,17 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
 
+from sqlalchemy import select
+
 from app.core.dependencies import get_current_user
 from app.database.session import get_db
+from app.models.assessment_engine import AssessmentQuestionSubmission
+from app.models.battle import BattleSubmission
+from app.models.question import Question, UserSubmission
 from app.models.user import User
 from app.modules.assessment_engine.services.assessment_service import assessment_service
 from app.modules.assessment_engine.services.skill_evaluation_service import skill_engine
+from app.modules.skill_intelligence.service import normalize_skill_id, skill_intelligence_service
 
 router = APIRouter(
     prefix="/assessments",
@@ -233,14 +239,114 @@ skills_router = APIRouter(
 )
 
 
+async def _collect_canonical_skill_evidence(db: AsyncSession, user_id: str) -> list[dict[str, Any]]:
+    evidence: list[dict[str, Any]] = []
+
+    practice_stmt = (
+        select(UserSubmission, Question)
+        .join(Question, Question.id == UserSubmission.question_id)
+        .where(UserSubmission.user_id == user_id)
+    )
+    for submission, question in (await db.execute(practice_stmt)).all():
+        evidence.append({
+            "user_id": user_id,
+            "skill_id": normalize_skill_id(question.skill_category if question else "Problem Solving"),
+            "source_type": "PRACTICE",
+            "source_id": f"practice:{submission.id}",
+            "submission_id": str(submission.id),
+            "question_id": str(submission.question_id),
+            "difficulty": (question.difficulty if question else "medium").lower(),
+            "correct": bool(submission.solved),
+            "score": 1.0 if submission.solved else 0.0,
+            "max_score": 1.0,
+            "response_time_ms": submission.execution_time_ms,
+            "attempt_number": 1,
+            "timestamp": submission.created_at.isoformat(),
+        })
+
+    battle_stmt = (
+        select(BattleSubmission, Question)
+        .outerjoin(Question, Question.id == BattleSubmission.question_id)
+        .where(BattleSubmission.user_id == user_id)
+    )
+    for submission, question in (await db.execute(battle_stmt)).all():
+        total_tests = submission.total_tests or 1
+        score_ratio = round((submission.passed_tests / total_tests) if total_tests else 1.0, 4)
+        correct = bool(submission.accepted or score_ratio >= 0.5)
+        evidence.append({
+            "user_id": user_id,
+            "skill_id": normalize_skill_id(question.skill_category if question else submission.question_type),
+            "source_type": "BATTLE",
+            "source_id": f"battle:{submission.id}",
+            "submission_id": str(submission.id),
+            "question_id": str(submission.question_id or submission.id),
+            "difficulty": "medium",
+            "correct": correct,
+            "score": score_ratio,
+            "max_score": 1.0,
+            "response_time_ms": int(submission.time_taken_seconds * 1000),
+            "attempt_number": 1,
+            "timestamp": submission.submitted_at.isoformat(),
+        })
+
+    assessment_stmt = (
+        select(AssessmentQuestionSubmission, Question)
+        .join(Question, Question.id == AssessmentQuestionSubmission.question_id)
+        .where(AssessmentQuestionSubmission.user_id == user_id)
+    )
+    for submission, question in (await db.execute(assessment_stmt)).all():
+        evidence.append({
+            "user_id": user_id,
+            "skill_id": normalize_skill_id(question.skill_category if question else "Problem Solving"),
+            "source_type": "ASSESSMENT",
+            "source_id": f"assessment:{submission.attempt_id}",
+            "submission_id": str(submission.id),
+            "question_id": str(submission.question_id),
+            "difficulty": (question.difficulty if question else "medium").lower(),
+            "correct": submission.score_awarded >= (submission.max_score * 0.5),
+            "score": submission.score_awarded / submission.max_score if submission.max_score else 1.0,
+            "max_score": 1.0,
+            "response_time_ms": submission.execution_time_ms,
+            "attempt_number": 1,
+            "timestamp": submission.created_at.isoformat(),
+        })
+
+    return skill_intelligence_service.dedupe_records([skill_intelligence_service.normalize_evidence(item) for item in evidence])
+
+
 @skills_router.get("/profile")
 async def get_student_skill_profile(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Retrieve evidence-based skill scores across programming, CS, and practical domains."""
-    profile = await skill_engine.get_or_create_profile(db=db, user_id=current_user.id)
-    return profile
+    """Retrieve evidence-based skill scores across the canonical taxonomy."""
+    evidence = await _collect_canonical_skill_evidence(db, current_user.id)
+    profile = skill_intelligence_service.build_profile(evidence)
+    compatibility = []
+    for skill in profile["skills"]:
+        compatibility.append({
+            "skill": skill["skill_name"],
+            "score": skill["score"],
+            "attempts": skill["evidence_count"],
+            "verified": True,
+            "sources": ["battle", "practice", "assessment"],
+        })
+    return {
+        "skills": compatibility,
+        "gaps": profile["gaps"],
+        "placement_readiness": profile["placement_readiness"],
+        "next_best_action": profile["next_best_action"],
+    }
+
+
+@skills_router.get("/gaps")
+async def get_skill_gaps(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    evidence = await _collect_canonical_skill_evidence(db, current_user.id)
+    profile = skill_intelligence_service.build_profile(evidence)
+    return {"gaps": profile["gaps"], "next_best_action": profile["next_best_action"]}
 
 
 @skills_router.get("/placement-readiness")
@@ -248,13 +354,13 @@ async def get_placement_readiness(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Retrieve evidence-driven placement readiness score, weak areas, and recommendations."""
-    profile = await skill_engine.get_or_create_profile(db=db, user_id=current_user.id)
+    """Retrieve evidence-driven placement readiness and the canonical readiness matrix."""
+    evidence = await _collect_canonical_skill_evidence(db, current_user.id)
+    profile = skill_intelligence_service.build_profile(evidence)
     return {
-        "user_id": profile.user_id,
-        "placement_readiness_score": profile.placement_readiness_score,
-        "confidence_level": profile.confidence_level,
-        "weak_areas": profile.weak_areas,
-        "recommended_actions": profile.recommended_actions,
-        "last_updated": profile.updated_at,
+        "user_id": current_user.id,
+        "state": profile["placement_readiness"]["state"],
+        "confidence": profile["placement_readiness"]["confidence"],
+        "matrix": profile["placement_readiness"]["matrix"],
+        "next_best_action": profile["next_best_action"],
     }

@@ -25,6 +25,7 @@ from .question_exposure import QuestionExposure
 from .user_stats import UserSettings, UserStats
 from .matchmaking import MatchmakingMatch, PlacementPrepSession
 from .user_skill_stat import UserSkillStat
+from .skill_intelligence import SkillEvidence, CompanySkillRequirement
 from .xp import XP
 from .college import (
     College,
@@ -72,6 +73,8 @@ __all__ = [
     "MatchmakingMatch",
     "PlacementPrepSession",
     "UserSkillStat",
+    "SkillEvidence",
+    "CompanySkillRequirement",
     "XP",
     "College",
     "Department",

@@ -66,6 +66,7 @@ from app.models.battle import (
     BattleSubmission,
 )
 from app.models.user_skill_stat import UserSkillStat
+from app.models.skill_intelligence import SkillEvidence, CompanySkillRequirement
 from app.models.xp import XP
 
 
@@ -91,6 +92,8 @@ __all__ = [
     "BattleRoom",
     "BattleSubmission",
     "UserSkillStat",
+    "SkillEvidence",
+    "CompanySkillRequirement",
     "XP",
     "Question",
     "UserSubmission",
