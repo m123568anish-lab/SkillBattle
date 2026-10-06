@@ -539,10 +539,6 @@ def _seed_initial_questions() -> None:
         return
 
     with engine.begin() as connection:
-        count = connection.execute(text("SELECT COUNT(*) FROM questions")).scalar()
-        if count and count > 0:
-            return
-
         logger.info("Seeding initial MCQ, Debugging, and Technical questions...")
         import json
 

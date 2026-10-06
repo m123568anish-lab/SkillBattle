@@ -5,6 +5,9 @@ from httpx import AsyncClient
 
 @pytest.mark.asyncio
 async def test_advanced_battle_engine_workflow(client: AsyncClient, monkeypatch):
+    from app.database.init_db import init_db
+    init_db()
+
     from app.modules.compiler.judge import judge_engine
     from app.modules.compiler.schemas import JudgeResult
 
