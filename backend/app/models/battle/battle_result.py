@@ -23,6 +23,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     JSON,
+    UniqueConstraint,
 )
 
 from sqlalchemy.orm import (
@@ -37,6 +38,9 @@ from app.database.base import Base
 class BattleResult(Base):
 
     __tablename__ = "battle_results"
+    __table_args__ = (
+        UniqueConstraint("battle_id", "participant_id", name="uq_battle_result_battle_participant"),
+    )
 
     # Primary Key
     id: Mapped[str] = mapped_column(
@@ -54,6 +58,16 @@ class BattleResult(Base):
         ),
         nullable=False,
         unique=True,
+        index=True,
+    )
+
+    participant_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey(
+            "users.id",
+            ondelete="CASCADE",
+        ),
+        nullable=True,
         index=True,
     )
 
@@ -110,6 +124,48 @@ class BattleResult(Base):
         nullable=False,
     )
 
+    knowledge_score: Mapped[float] = mapped_column(
+        Float,
+        default=0.0,
+        nullable=False,
+    )
+
+    coding_score: Mapped[float] = mapped_column(
+        Float,
+        default=0.0,
+        nullable=False,
+    )
+
+    overall_score: Mapped[float] = mapped_column(
+        Float,
+        default=0.0,
+        nullable=False,
+    )
+
+    accuracy: Mapped[float] = mapped_column(
+        Float,
+        default=0.0,
+        nullable=False,
+    )
+
+    completion_status: Mapped[str] = mapped_column(
+        String(30),
+        default="pending",
+        nullable=False,
+    )
+
+    result_status: Mapped[str] = mapped_column(
+        String(30),
+        default="result",
+        nullable=False,
+    )
+
+    rank: Mapped[str | None] = mapped_column(
+        String(30),
+        default="PENDING",
+        nullable=True,
+    )
+
     # Detailed Section & Skill Analysis
     section_scores: Mapped[dict] = mapped_column(
         JSON,
@@ -160,6 +216,18 @@ class BattleResult(Base):
         nullable=False,
     )
 
+    finalized_at: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        default=None,
+        nullable=True,
+    )
+
+    scoring_metadata: Mapped[dict] = mapped_column(
+        JSON,
+        default=dict,
+        nullable=False,
+    )
+
     # Relationships
     battle = relationship(
         "BattleRoom",
@@ -168,6 +236,12 @@ class BattleResult(Base):
 
     winner = relationship(
         "User",
+        foreign_keys=[winner_id],
+    )
+
+    participant = relationship(
+        "User",
+        foreign_keys=[participant_id],
     )
 
     @property

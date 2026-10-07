@@ -23,6 +23,7 @@ from sqlalchemy import (
     JSON,
     ForeignKey,
     UniqueConstraint,
+    Boolean,
 )
 
 from sqlalchemy.orm import (
@@ -72,6 +73,20 @@ class BattleRoom(Base):
         nullable=True,
     )
 
+    creator_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    battle_mode: Mapped[str] = mapped_column(
+        String(30),
+        default="solo",
+        nullable=False,
+        index=True,
+    )
+
     # Battle Information
     title: Mapped[str] = mapped_column(
         String(120),
@@ -100,9 +115,33 @@ class BattleRoom(Base):
 
     status: Mapped[str] = mapped_column(
         String(30),
-        default="waiting",
+        default="created",
         nullable=False,
         index=True,
+    )
+
+    current_round: Mapped[int] = mapped_column(
+        Integer,
+        default=1,
+        nullable=False,
+    )
+
+    round_status: Mapped[str] = mapped_column(
+        String(30),
+        default="created",
+        nullable=False,
+    )
+
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        default=None,
+        nullable=True,
+    )
+
+    last_transition_at: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        default=None,
+        nullable=True,
     )
 
     max_players: Mapped[int] = mapped_column(
@@ -144,6 +183,12 @@ class BattleRoom(Base):
     )
 
     anti_cheat_logs: Mapped[list] = mapped_column(
+        JSON,
+        default=list,
+        nullable=False,
+    )
+
+    state_history: Mapped[list] = mapped_column(
         JSON,
         default=list,
         nullable=False,
@@ -198,8 +243,24 @@ class BattleRoom(Base):
     )
 
     @property
+    def mode(self) -> str:
+        return self.battle_mode or "solo"
+
+    @property
+    def round_state(self) -> str:
+        return self.round_status or "created"
+
+    @property
+    def type(self) -> str:
+        return self.battle_type or "general"
+
+    @property
+    def round_state(self) -> str:
+        return self.round_status or "created"
+
+    @property
     def is_running(self) -> bool:
-        return self.status == "running"
+        return self.status in {"running", "ready", "countdown", "knowledge_round", "coding_round"}
 
     @property
     def is_finished(self) -> bool:

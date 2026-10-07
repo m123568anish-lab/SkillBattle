@@ -12,14 +12,39 @@ from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
-from functools import lru_cache
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
 logger = logging.getLogger(__name__)
+
+
+def load_environment_file_values() -> None:
+    """Load local admin/runtime env values into os.environ without requiring hardcoded secrets."""
+    env_paths = (
+        Path(".env.local"),
+        Path(".env"),
+        Path(".env.admin"),
+        Path(".env.admin.local"),
+    )
+
+    for env_path in env_paths:
+        if not env_path.exists():
+            continue
+
+        for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"\'')
+            if key and key not in os.environ:
+                os.environ[key] = value
 
 
 def normalize_async_database_url(url: str) -> str:
@@ -160,7 +185,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         # Production configuration must be supplied by the deployment
         # environment, not loaded from a local placeholder file.
-        env_file=(".env.local", ".env"),
+        # The platform admin bootstrap also uses a dedicated .env.admin file
+        # so environment-based credentials are available without hardcoding.
+        env_file=(".env.local", ".env", ".env.admin", ".env.admin.local"),
         case_sensitive=True,
         extra="ignore",
     )
@@ -174,6 +201,12 @@ class Settings(BaseSettings):
             if values:
                 return values
         return self.CORS_ORIGINS
+
+    @model_validator(mode="before")
+    @classmethod
+    def load_runtime_secrets(cls, data):
+        load_environment_file_values()
+        return data
 
     @model_validator(mode="after")
     def populate_database_urls(self):
@@ -248,8 +281,8 @@ class Settings(BaseSettings):
         return self
 
 
-@lru_cache
 def get_settings() -> Settings:
+    load_environment_file_values()
     return Settings()
 
 

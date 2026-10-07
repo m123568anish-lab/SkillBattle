@@ -137,32 +137,17 @@ async def get_system_health(
     admin: User = Depends(get_current_admin),
 ):
     database_status = "healthy"
+    migration_version = "baseline"
     try:
         await db.execute(text("SELECT 1"))
-        migration_version = await db.scalar(text("SELECT version_num FROM alembic_version LIMIT 1"))
+        try:
+            migration_version = await db.scalar(text("SELECT version_num FROM alembic_version LIMIT 1"))
+        except SQLAlchemyError:
+            migration_version = "baseline"
     except SQLAlchemyError:
         database_status = "unhealthy"
-        migration_version = None
         await db.rollback()
-        return {
-            "api": "healthy",
-            "database": database_status,
-            "migration_version": migration_version,
-            "total_users": None,
-            "active_users": None,
-            "assessment_attempts": None,
-            "active_battles": None,
-            "completed_battles": None,
-            "ai_providers": {
-                "openai": bool(settings.OPENAI_API_KEY),
-                "anthropic": bool(settings.ANTHROPIC_API_KEY),
-                "gemini": bool(settings.GEMINI_API_KEY),
-                "deepseek": bool(settings.DEEPSEEK_API_KEY),
-            },
-            "websocket": "initialized",
-            "failed_jobs": None,
-            "notification_queue": "not_configured",
-        }
+        migration_version = "baseline"
 
     total_users = await db.scalar(select(func.count()).select_from(User))
     active_users = await db.scalar(

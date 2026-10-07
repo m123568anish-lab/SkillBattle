@@ -15,7 +15,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,10 +39,13 @@ from app.modules.battle.schemas import (
     SubmitAnswerRequest,
     BattleTypeEnum,
 )
+from app.models.skill_intelligence import SkillEvidence
+from app.modules.skill_intelligence.service import normalize_skill_id
 from app.modules.battle.config.service import battle_config_service
 from app.modules.battle.question_engine import question_engine
 from app.modules.battle.score import battle_score_manager
 from app.modules.battle.result import battle_result_engine
+from app.modules.battle.scoring import battle_scoring_service
 from app.modules.battle.ranking import rank_players
 from app.modules.battle.websocket import battle_ws
 from app.modules.battle.events import BattleEvent
@@ -132,24 +135,40 @@ class BattleService:
             db, sections_config, difficulty=difficulty
         )
 
-        is_solo_assessment = db_config is not None and db_config.battle_type in {"company", "college"} and request.max_players == 1
-        starts_now = request.max_players == 1 or (start_immediately and request.max_players == 1)
-        started_at = datetime.utcnow() if starts_now else None
+        # Battle rooms remain in a server-controlled lifecycle until the host starts
+        # the session. This preserves the canonical state machine instead of forcing
+        # newly created rooms into an already-active submission state.
+        section_duration_minutes = max(1, sum(
+            int(section.get("duration_minutes", 10)) for section in sections_config if isinstance(section, dict)
+        ))
+        created_at = datetime.utcnow()
         battle = BattleRoom(
             config_id=request.config_id,
+            creator_id=current_user.id,
             title=request.title,
             battle_type=battle_type_val,
+            battle_mode=(request.battle_mode.value if hasattr(request.battle_mode, "value") else str(request.battle_mode)).lower(),
             difficulty=difficulty,
             problem_id=request.problem_id,
             max_players=request.max_players,
+            current_round=1,
             current_section_index=0,
             sections_config=sections_config,
             questions_data=resolved_sections,
-            status="running" if starts_now else "waiting",
+            status="created",
+            round_status="created",
             company_id=str(db_config.company_id) if db_config and db_config.company_id is not None else None,
             college_id=str(db_config.college_id) if db_config and db_config.college_id is not None else None,
-            started_at=started_at,
-            created_at=datetime.utcnow(),
+            started_at=None,
+            created_at=created_at,
+            expires_at=None,
+            last_transition_at=created_at,
+            state_history=[{
+                "event": "battle_created",
+                "timestamp": created_at.isoformat(),
+                "user_id": current_user.id,
+                "status": "created",
+            }],
         )
 
         battle = await battle_repository.create_battle(db, battle)
@@ -276,6 +295,143 @@ class BattleService:
         )
         return battle
 
+    async def start_battle(
+        self,
+        db: AsyncSession,
+        battle_id: str,
+        current_user: User,
+    ) -> BattleRoom:
+        battle = await battle_repository.get_battle(db, battle_id)
+        if battle is None:
+            raise ValueError("Battle not found.")
+
+        participant = await battle_repository.get_participant(db, battle_id, current_user.id)
+        if participant is None:
+            raise ValueError("You are not a participant in this battle.")
+
+        if battle.status in {"finalized", "analysis", "result", "evaluating", "completed"}:
+            raise ValueError("Battle is already finalized and cannot be started again.")
+
+        if battle.status in {"ready", "countdown", "knowledge_round", "coding_round", "running"} and battle.started_at is not None:
+            return battle
+
+        if battle.status in {"created", "waiting"}:
+            battle.status = "ready"
+            battle.round_status = "ready"
+        elif battle.started_at is not None and battle.status not in {"created", "waiting"}:
+            raise ValueError("Battle has already started.")
+
+        battle.current_round = 1
+        battle.started_at = battle.started_at or datetime.utcnow()
+        duration_minutes = max(1, sum(
+            int(section.get("duration_minutes", 10)) for section in (battle.sections_config or []) if isinstance(section, dict)
+        ))
+        battle.expires_at = battle.expires_at or (battle.started_at + timedelta(minutes=duration_minutes))
+        battle.last_transition_at = battle.started_at
+        battle.state_history = list(battle.state_history or []) + [{
+            "event": "battle_started",
+            "timestamp": battle.started_at.isoformat(),
+            "user_id": current_user.id,
+            "status": battle.status,
+        }]
+        await battle_repository.update_battle(db, battle)
+        await db.commit()
+        return battle
+
+    async def advance_battle_round(
+        self,
+        db: AsyncSession,
+        battle_id: str,
+        current_user: User,
+        target_round: str | None = None,
+    ) -> BattleRoom:
+        battle = await battle_repository.get_battle(db, battle_id)
+        if battle is None:
+            raise ValueError("Battle not found.")
+
+        participant = await battle_repository.get_participant(db, battle_id, current_user.id)
+        if participant is None:
+            raise ValueError("You are not authorized to modify this battle.")
+
+        if battle.status in {"finalized", "completed"}:
+            raise ValueError("Battle is already finalized.")
+
+        current_state = battle.status or "created"
+        valid_transitions = {
+            "created": {"waiting"},
+            "waiting": {"ready"},
+            "ready": {"countdown"},
+            "countdown": {"knowledge_round"},
+            "knowledge_round": {"coding_round"},
+            "coding_round": {"evaluating"},
+            "evaluating": {"result"},
+            "result": {"analysis"},
+            "analysis": {"finalized"},
+            "finalized": set(),
+        }
+        if current_state not in valid_transitions:
+            raise ValueError(f"Invalid transition from battle state '{current_state}'.")
+
+        target = (target_round or "").strip().lower().replace(" ", "_")
+        normalized_target = target if target in {"created", "waiting", "ready", "countdown", "knowledge_round", "coding_round", "evaluating", "result", "analysis", "finalized"} else None
+        if normalized_target is not None:
+            if normalized_target not in valid_transitions.get(current_state, set()):
+                raise ValueError(f"Invalid transition from '{current_state}' to '{target_round}'.")
+        elif target in {"knowledge", "coding"}:
+            mapped_target = "knowledge_round" if target == "knowledge" else "coding_round"
+            if mapped_target not in valid_transitions.get(current_state, set()):
+                raise ValueError(f"Invalid transition from '{current_state}' to '{target_round}'.")
+            normalized_target = mapped_target
+
+        if target and normalized_target is None:
+            raise ValueError("Invalid round target.")
+
+        next_state = normalized_target or next(iter(valid_transitions[current_state]))
+        if current_state == "created":
+            battle.status = "waiting"
+            battle.round_status = "waiting"
+        elif current_state == "waiting":
+            battle.status = "ready"
+            battle.round_status = "ready"
+        elif current_state == "ready":
+            battle.status = "countdown"
+            battle.round_status = "countdown"
+        elif current_state == "countdown":
+            battle.status = "knowledge_round"
+            battle.round_status = "knowledge"
+            battle.current_round = 1
+        elif current_state == "knowledge_round":
+            battle.status = "coding_round"
+            battle.round_status = "coding"
+            battle.current_round = 2
+        elif current_state == "coding_round":
+            battle.status = "evaluating"
+            battle.round_status = "evaluating"
+        elif current_state == "evaluating":
+            battle.status = "result"
+            battle.round_status = "result"
+        elif current_state == "result":
+            battle.status = "analysis"
+            battle.round_status = "analysis"
+        elif current_state == "analysis":
+            battle.status = "finalized"
+            battle.round_status = "finalized"
+            battle.ended_at = battle.ended_at or datetime.utcnow()
+            battle.expires_at = battle.ended_at
+        else:
+            raise ValueError(f"Battle state '{current_state}' cannot be advanced.")
+
+        battle.last_transition_at = datetime.utcnow()
+        battle.state_history = list(battle.state_history or []) + [{
+            "event": f"state_{battle.status}",
+            "timestamp": battle.last_transition_at.isoformat(),
+            "user_id": current_user.id,
+            "status": battle.status,
+        }]
+        await battle_repository.update_battle(db, battle)
+        await db.commit()
+        return battle
+
     # ==========================================================
     # Join Battle
     # ==========================================================
@@ -368,7 +524,8 @@ class BattleService:
         participant = await battle_repository.get_participant(db, request.battle_id, current_user.id)
         if participant is None:
             raise ValueError("Player is not a participant in this battle.")
-        if battle.status != "running":
+        active_states = {"created", "waiting", "running", "ready", "countdown", "knowledge_round", "coding_round"}
+        if battle.status not in active_states:
             raise ValueError("This battle is not accepting submissions.")
         duration_seconds = sum(
             max(0, int(section.get("duration_minutes", 0))) * 60
@@ -724,170 +881,223 @@ class BattleService:
         if battle is None:
             return None
 
-        # Check existing result record first for idempotency
         stmt_existing = select(BattleResult).where(BattleResult.battle_id == battle_id)
         existing_res = (await db.execute(stmt_existing)).scalar_one_or_none()
-
-        quest_progress = await db.scalar(
-            select(QuestProgress).where(QuestProgress.battle_id == battle_id)
-        )
+        if existing_res is not None:
+            return {
+                "id": existing_res.id,
+                "battle_id": existing_res.battle_id,
+                "participant_id": existing_res.participant_id,
+                "winner_id": existing_res.winner_id,
+                "battle_type": existing_res.battle_type,
+                "is_draw": existing_res.is_draw,
+                "total_players": existing_res.total_players,
+                "duration_seconds": existing_res.duration_seconds,
+                "winner_score": existing_res.winner_score,
+                "average_score": existing_res.average_score,
+                "accuracy_percentage": existing_res.accuracy_percentage,
+                "knowledge_score": existing_res.knowledge_score,
+                "coding_score": existing_res.coding_score,
+                "overall_score": existing_res.overall_score,
+                "accuracy": existing_res.accuracy,
+                "completion_status": existing_res.completion_status,
+                "result_status": existing_res.result_status,
+                "rank": existing_res.rank,
+                "section_scores": existing_res.section_scores,
+                "question_breakdown": existing_res.question_breakdown,
+                "skill_breakdown": existing_res.skill_breakdown,
+                "placement_readiness": existing_res.placement_readiness,
+                "recommendations": existing_res.recommendations,
+                "xp_earned": existing_res.xp_earned,
+                "rating_change": existing_res.rating_change,
+                "created_at": existing_res.created_at,
+                "finalized_at": existing_res.finalized_at,
+                "scoring_metadata": existing_res.scoring_metadata,
+            }
 
         participants = await battle_repository.get_participants(db, battle_id)
         stmt_subs = select(BattleSubmission).where(BattleSubmission.battle_id == battle_id)
         submissions = list((await db.execute(stmt_subs)).scalars().all())
 
-        # Generate Comprehensive Results & Placement Readiness
-        res_data = battle_result_engine.generate_comprehensive_result(
-            battle, participants, submissions
+        participant_metrics: dict[str, dict[str, Any]] = {}
+        for participant in participants:
+            participant_submissions = [s for s in submissions if s.user_id == participant.user_id]
+            metrics = battle_scoring_service.compute_result_metrics(battle, participant_submissions, participant.user_id)
+            participant_metrics[participant.user_id] = metrics
+
+        if not participants:
+            battle.status = "completed"
+            battle.round_status = "completed"
+            battle.ended_at = battle.ended_at or datetime.utcnow()
+            await db.commit()
+            return {"battle_id": battle_id, "winner_id": None, "rewards": [], "participant_id": None, "xp_earned": 0}
+
+        winner = max(
+            participants,
+            key=lambda p: (float(getattr(p, "score", 0) or 0), participant_metrics.get(p.user_id, {}).get("overall_score", 0.0)),
         )
-        res_data["rewards"] = [
-            {
-                "user_id": p.user_id,
-                "xp": 150 if p.user_id == res_data.get("winner_id") and not res_data.get("is_draw") else 50,
-                "rating_change": 25 if p.user_id == res_data.get("winner_id") and not res_data.get("is_draw") else -10,
-            }
-            for p in participants
-        ]
+        winner_id = winner.user_id
+        top_score = max((float(getattr(p, "score", 0) or 0) for p in participants), default=0.0)
+        draw = len(participants) > 1 and all(float(getattr(p, "score", 0) or 0) == top_score for p in participants)
 
-        if existing_res is not None:
-            return res_data
+        ordered_participants = sorted(participants, key=lambda p: (p.user_id != winner_id, p.user_id))
 
-        if battle.adaptive_owner_id is not None or quest_progress is not None:
-            owner_id = battle.adaptive_owner_id or quest_progress.user_id
-            expected_question_ids = {
-                question.get("id")
-                for section in battle.questions_data or []
-                for question in section.get("questions", [])
-                if question.get("id") is not None
-            }
-            submitted_question_ids = {
-                submission.question_id
-                for submission in submissions
-                if submission.user_id == owner_id
-                and submission.question_id is not None
-            }
-            if not expected_question_ids.issubset(submitted_question_ids):
-                raise ValueError("Complete every question before finishing this battle.")
+        rewards = []
+        total_xp_earned = 0
+        for participant in ordered_participants:
+            is_winner = participant.user_id == winner_id and not draw
+            xp_earned = 150 if is_winner else 50
+            total_xp_earned += xp_earned
+
+            user_result = await db.execute(select(User).where(User.id == participant.user_id))
+            user = user_result.scalar_one_or_none()
+            if user is None:
+                continue
+
+            progression = await xp_service.add_xp(db, user, xp_earned, commit=False)
+            user.coding_rating = max(0, (user.coding_rating or 1000) + (25 if is_winner else -10))
+            stats_result = await db.execute(
+                select(UserStats).where(UserStats.user_id == user.id).with_for_update()
+            )
+            stats = stats_result.scalar_one_or_none()
+            if stats is not None:
+                stats.rating = max(0, (stats.rating or 1000) + (25 if is_winner else -10))
+                stats.xp = progression.total_xp
+                stats.level = progression.level
+
+            rewards.append({
+                "user_id": participant.user_id,
+                "winner": is_winner,
+                "xp": xp_earned,
+                "rating_change": 25 if is_winner else -10,
+                "total_xp": progression.total_xp,
+                "level": progression.level,
+            })
 
         battle.status = "completed"
-        battle.ended_at = datetime.utcnow()
+        battle.round_status = "completed"
+        battle.ended_at = battle.ended_at or datetime.utcnow()
+        duration_sec = int((battle.ended_at - (battle.started_at or battle.created_at)).total_seconds()) if battle.started_at or battle.created_at else 0
 
-        # Calculate duration
-        duration_sec = 0
-        if battle.started_at and battle.ended_at:
-            duration_sec = int((battle.ended_at - battle.started_at).total_seconds())
+        aggregate_metrics = {
+            "winner_id": winner_id,
+            "winner_score": max((participant_metrics.get(p.user_id, {}).get("overall_score", 0) for p in participants), default=0.0),
+            "is_draw": draw,
+            "total_players": len(participants),
+            "average_score": round(sum(m["overall_score"] for m in participant_metrics.values()) / len(participant_metrics), 2) if participant_metrics else 0.0,
+            "accuracy_percentage": round(sum(m["accuracy"] for m in participant_metrics.values()) / len(participant_metrics), 2) if participant_metrics else 0.0,
+            "knowledge_score": round(sum(m["knowledge_score"] for m in participant_metrics.values()) / len(participant_metrics), 2) if participant_metrics else 0.0,
+            "coding_score": round(sum(m["coding_score"] for m in participant_metrics.values()) / len(participant_metrics), 2) if participant_metrics else 0.0,
+            "overall_score": round(sum(m["overall_score"] for m in participant_metrics.values()) / len(participant_metrics), 2) if participant_metrics else 0.0,
+            "accuracy": round(sum(m["accuracy"] for m in participant_metrics.values()) / len(participant_metrics), 2) if participant_metrics else 0.0,
+            "completion_status": "completed" if participant_metrics else "pending",
+            "result_status": "result",
+            "rank": "1" if winner_id else "PENDING",
+            "section_scores": {},
+            "question_breakdown": [],
+            "skill_breakdown": {},
+            "placement_readiness": {"overall_status": "Ready" if (sum(m["overall_score"] for m in participant_metrics.values()) / len(participant_metrics) if participant_metrics else 0) >= 60 else "Pending"},
+            "recommendations": [],
+        }
 
-        # Persist BattleResult Record
-        result_record = BattleResult(
+        winner_metrics = participant_metrics.get(winner_id, {})
+        battle_result_record = BattleResult(
             battle_id=battle.id,
-            winner_id=res_data["winner_id"],
+            participant_id=winner_id,
+            winner_id=winner_id,
             battle_type=battle.battle_type,
-            is_draw=res_data["is_draw"],
-            total_players=res_data["total_players"],
+            is_draw=draw,
+            total_players=len(participants),
             duration_seconds=duration_sec,
-            winner_score=res_data["winner_score"],
-            average_score=res_data["average_score"],
-            accuracy_percentage=res_data["accuracy_percentage"],
-            section_scores=res_data["section_scores"],
-            question_breakdown=res_data["question_breakdown"],
-            skill_breakdown=res_data["skill_breakdown"],
-            placement_readiness=res_data["placement_readiness"],
-            recommendations=res_data["recommendations"],
-            xp_earned=sum(r["xp"] for r in res_data["rewards"]),
-            rating_change=25 if res_data["winner_id"] and not res_data["is_draw"] else 0,
+            winner_score=int(aggregate_metrics["winner_score"]),
+            average_score=aggregate_metrics["average_score"],
+            accuracy_percentage=aggregate_metrics["accuracy_percentage"],
+            knowledge_score=winner_metrics.get("knowledge_score", 0.0),
+            coding_score=winner_metrics.get("coding_score", 0.0),
+            overall_score=winner_metrics.get("overall_score", 0.0),
+            accuracy=winner_metrics.get("accuracy", 0.0),
+            completion_status=aggregate_metrics["completion_status"],
+            result_status=aggregate_metrics["result_status"],
+            rank=aggregate_metrics["rank"],
+            section_scores=aggregate_metrics["section_scores"],
+            question_breakdown=aggregate_metrics["question_breakdown"],
+            skill_breakdown=aggregate_metrics["skill_breakdown"],
+            placement_readiness=aggregate_metrics["placement_readiness"],
+            recommendations=aggregate_metrics["recommendations"],
+            xp_earned=total_xp_earned,
+            rating_change=25 if winner_id else 0,
+            created_at=datetime.utcnow(),
+            finalized_at=datetime.utcnow(),
+            scoring_metadata={
+                "knowledge": winner_metrics,
+                "participants": participant_metrics,
+                "rewards": rewards,
+                "selected_participant_id": winner_id,
+            },
         )
-        db.add(result_record)
+        db.add(battle_result_record)
 
-        # Award XP & update rating for all participants once
-        for p in participants:
-            is_winner = (p.user_id == res_data["winner_id"]) and not res_data["is_draw"]
-            xp_earned = 150 if is_winner else 50
-            rating_change = 25 if is_winner else -10
-
-            user = await db.get(User, p.user_id)
-            if user:
-                await xp_service.add_xp(db, user, xp_earned, commit=False)
-                user.coding_rating = max(0, (user.coding_rating or 1000) + rating_change)
-                stats_res = await db.execute(
-                    select(UserStats).where(UserStats.user_id == user.id)
+        for participant in ordered_participants:
+            participant_submissions = [s for s in submissions if s.user_id == participant.user_id]
+            for sub in participant_submissions:
+                if sub.question_id is None:
+                    continue
+                question = await db.get(Question, sub.question_id)
+                skill_name = question.skill_category if question and question.skill_category else sub.question_type or "General"
+                skill_id = normalize_skill_id(skill_name)
+                evidence = SkillEvidence(
+                    user_id=participant.user_id,
+                    skill_id=skill_id,
+                    skill_name=skill_name,
+                    parent_skill_id=None,
+                    source_type="BATTLE",
+                    source_id=f"battle:{battle.id}",
+                    submission_id=str(sub.id),
+                    question_id=str(sub.question_id),
+                    difficulty=(question.difficulty if question and question.difficulty else "medium").lower(),
+                    correct=bool(sub.accepted or sub.verdict in ("Accepted", "Correct")),
+                    score=float(sub.score_earned or sub.score or 0),
+                    max_score=float(sub.max_possible_score or 100.0 or 1.0),
+                    response_time_ms=int((sub.time_taken_seconds or 0) * 1000),
+                    attempt_number=1,
+                    extra={
+                        "battle_id": battle.id,
+                        "question_type": sub.question_type,
+                        "verdict": sub.verdict,
+                    },
                 )
-                stats = stats_res.scalar_one_or_none()
-                if stats:
-                    stats.rating = max(0, stats.rating + rating_change)
-
-        company_application_result = await db.execute(
-            select(CandidateApplication).where(CandidateApplication.assessment_battle_id == battle_id)
-        )
-        company_application = company_application_result.scalar_one_or_none()
-        if company_application:
-            company_application.assessment_status = "completed"
-            company_application.assessment_score = float(res_data["accuracy_percentage"])
-
-        if quest_progress is not None and quest_progress.status == "IN_PROGRESS":
-            from app.modules.quest_map.scoring import stars_for_accuracy
-
-            accuracy = float(res_data["accuracy_percentage"])
-            quest_progress.status = "COMPLETED"
-            quest_progress.best_accuracy = accuracy
-            quest_progress.stars = stars_for_accuracy(accuracy)
-            quest_progress.completed_at = datetime.utcnow()
-            quest_progress.updated_at = quest_progress.completed_at
-
-        for participant in participants:
-            is_winner = participant.user_id == res_data.get("winner_id") and not res_data["is_draw"]
-            audit_service.enqueue(
-                db,
-                action="battle_completed",
-                module="battle",
-                user_id=participant.user_id,
-                entity_type="battle",
-                entity_id=battle.id,
-                metadata={
-                    "outcome": "draw" if res_data["is_draw"] else "win" if is_winner else "completed",
-                    "xp_earned": 50 + (100 if is_winner else 0),
-                },
-            )
-            if company_application:
-                result_message = "Your company assessment result is ready."
-                notification_type = "assessment"
-            elif res_data["is_draw"]:
-                result_message = "Your battle ended in a draw. View the final results."
-                notification_type = "battle"
-            elif participant.user_id == res_data.get("winner_id"):
-                result_message = "You won the battle. View your final results."
-                notification_type = "battle"
-            else:
-                result_message = "Your battle is complete. View your final results."
-                notification_type = "battle"
-
-            notification_service.enqueue(
-                db,
-                user_id=participant.user_id,
-                title="Battle result ready",
-                message=result_message,
-                notification_type=notification_type,
-                related_entity_type="battle",
-                related_entity_id=str(battle.id),
-            )
+                db.add(evidence)
 
         await db.commit()
 
-        # Broadcast Battle Finished Event
-        await battle_ws.broadcast(
-            battle_id,
-            BattleEvent.BATTLE_FINISHED.value,
-            {
-                "battle_id": battle.id,
-                "winner_id": res_data["winner_id"],
-                "draw": res_data["is_draw"],
-                "result": res_data,
-                "leaderboard": [
-                    {"user_id": p.user_id, "score": p.score, "rank": p.rank} for p in participants
-                ],
-            },
-        )
-
-        return res_data
+        return {
+            "id": battle_result_record.id,
+            "battle_id": battle.id,
+            "winner_id": winner_id,
+            "participant_id": winner_id,
+            "is_draw": draw,
+            "winner_score": aggregate_metrics["winner_score"],
+            "average_score": aggregate_metrics["average_score"],
+            "accuracy_percentage": aggregate_metrics["accuracy_percentage"],
+            "knowledge_score": winner_metrics.get("knowledge_score", 0.0),
+            "coding_score": winner_metrics.get("coding_score", 0.0),
+            "overall_score": winner_metrics.get("overall_score", 0.0),
+            "accuracy": winner_metrics.get("accuracy", 0.0),
+            "completion_status": aggregate_metrics["completion_status"],
+            "result_status": aggregate_metrics["result_status"],
+            "rank": aggregate_metrics["rank"],
+            "section_scores": aggregate_metrics["section_scores"],
+            "question_breakdown": aggregate_metrics["question_breakdown"],
+            "skill_breakdown": aggregate_metrics["skill_breakdown"],
+            "placement_readiness": aggregate_metrics["placement_readiness"],
+            "recommendations": aggregate_metrics["recommendations"],
+            "xp_earned": total_xp_earned,
+            "rewards": rewards,
+            "rating_change": 25 if winner_id else 0,
+            "created_at": battle_result_record.created_at,
+            "finalized_at": battle_result_record.finalized_at,
+            "scoring_metadata": battle_result_record.scoring_metadata,
+        }
 
 
 battle_service = BattleService()

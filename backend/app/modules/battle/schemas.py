@@ -8,6 +8,12 @@ from pydantic import BaseModel, Field
 # Enums
 # ==========================================================
 
+class BattleModeEnum(str, Enum):
+    SOLO = "solo"
+    MULTIPLAYER = "multiplayer"
+    TOURNAMENT = "tournament"
+
+
 class BattleTypeEnum(str, Enum):
     GENERAL = "general"
     PLACEMENT = "placement"
@@ -15,6 +21,9 @@ class BattleTypeEnum(str, Enum):
     COLLEGE = "college"
     TOURNAMENT = "tournament"
     PRACTICE = "practice"
+    DAILY = "daily"
+    ADAPTIVE = "adaptive"
+    CODING = "coding"
 
 
 class QuestionTypeEnum(str, Enum):
@@ -31,12 +40,18 @@ class BattleStateEnum(str, Enum):
     WAITING = "waiting"
     MATCHED = "matched"
     READY = "ready"
-    RUNNING = "running"
-    PAUSED = "paused"
-    COMPLETED = "completed"
+    COUNTDOWN = "countdown"
+    KNOWLEDGE_ROUND = "knowledge_round"
+    CODING_ROUND = "coding_round"
     EVALUATING = "evaluating"
     RESULT = "result"
+    ANALYSIS = "analysis"
     FINALIZED = "finalized"
+
+
+class BattleRoundEnum(str, Enum):
+    KNOWLEDGE = "knowledge"
+    CODING = "coding"
 
 
 # Legacy compatibility enum
@@ -109,7 +124,16 @@ class CreateBattleRequest(BaseModel):
     problem_id: int = Field(default=1)
     config_id: Optional[str] = None
     battle_type: BattleTypeEnum = Field(default=BattleTypeEnum.GENERAL)
+    battle_mode: BattleModeEnum = Field(default=BattleModeEnum.SOLO)
     max_players: int = Field(default=2, ge=1, le=16)
+
+
+class StartBattleRequest(BaseModel):
+    pass
+
+
+class AdvanceRoundRequest(BaseModel):
+    target_round: Optional[str] = None
 
 
 class JoinBattleRequest(BaseModel):
@@ -127,9 +151,13 @@ class LeaveBattleRequest(BaseModel):
 class BattleResponse(BaseModel):
     id: str
     title: str
+    mode: str = "solo"
+    type: str = "general"
     difficulty: str
     problem_id: int
     status: str
+    current_round: int = 1
+    round_state: str = "created"
     max_players: int
     config_id: Optional[str] = None
     battle_type: str = "general"
@@ -137,6 +165,7 @@ class BattleResponse(BaseModel):
     sections_config: List[Dict[str, Any]] = Field(default_factory=list)
     questions_data: List[Dict[str, Any]] = Field(default_factory=list)
     started_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
     ended_at: Optional[datetime] = None
     created_at: datetime
     submitted_question_ids: List[int] = Field(default_factory=list)
@@ -205,6 +234,7 @@ class BattleSubmissionResponse(BaseModel):
 class BattleResultResponse(BaseModel):
     id: str
     battle_id: str
+    participant_id: Optional[str] = None
     winner_id: Optional[str] = None
     battle_type: str = "general"
     is_draw: bool = False
@@ -213,6 +243,13 @@ class BattleResultResponse(BaseModel):
     winner_score: int = 0
     average_score: float = 0.0
     accuracy_percentage: float = 0.0
+    knowledge_score: float = 0.0
+    coding_score: float = 0.0
+    overall_score: float = 0.0
+    accuracy: float = 0.0
+    completion_status: str = "pending"
+    result_status: str = "result"
+    rank: Optional[str] = "PENDING"
     section_scores: Dict[str, Any] = Field(default_factory=dict)
     question_breakdown: List[Dict[str, Any]] = Field(default_factory=list)
     skill_breakdown: Dict[str, Any] = Field(default_factory=dict)
@@ -221,6 +258,8 @@ class BattleResultResponse(BaseModel):
     xp_earned: int = 0
     rating_change: int = 0
     created_at: datetime
+    finalized_at: Optional[datetime] = None
+    scoring_metadata: Dict[str, Any] = Field(default_factory=dict)
 
     class Config:
         from_attributes = True

@@ -41,6 +41,33 @@ router = APIRouter(
     tags=["Battle"],
 )
 
+
+def battle_to_response(battle, *, submitted_question_ids: list[int] | None = None) -> BattleResponse:
+    response = BattleResponse(
+        id=battle.id,
+        title=battle.title,
+        mode=getattr(battle, "mode", getattr(battle, "battle_mode", "solo")) or "solo",
+        type=getattr(battle, "type", getattr(battle, "battle_type", "general")) or "general",
+        difficulty=battle.difficulty,
+        problem_id=battle.problem_id,
+        status=battle.status,
+        current_round=battle.current_round,
+        round_state=getattr(battle, "round_state", getattr(battle, "round_status", "created")) or "created",
+        max_players=battle.max_players,
+        config_id=battle.config_id,
+        battle_type=battle.battle_type,
+        current_section_index=battle.current_section_index,
+        sections_config=battle.sections_config or [],
+        questions_data=battle.questions_data or [],
+        started_at=battle.started_at,
+        expires_at=battle.expires_at,
+        ended_at=battle.ended_at,
+        created_at=battle.created_at,
+        submitted_question_ids=submitted_question_ids or [],
+    )
+    return response
+
+
 @router.get("/health")
 async def health():
     return {
@@ -158,7 +185,7 @@ async def create_battle(
                 current_section_index=battle.current_section_index,
                 is_completed=False,
             )
-        return battle
+        return battle_to_response(battle)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -184,9 +211,38 @@ async def get_daily_adaptive_battle(
             BattleSubmission.question_id.is_not(None),
         )
     )
-    response = BattleResponse.model_validate(battle)
-    response.submitted_question_ids = list(submissions_result.scalars().all())
+    response = battle_to_response(battle, submitted_question_ids=list(submissions_result.scalars().all()))
     return response
+
+
+@router.post("/{battle_id}/start", response_model=BattleResponse)
+async def start_battle(
+    battle_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        battle = await battle_service.start_battle(db, battle_id, current_user)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return battle_to_response(battle)
+
+
+@router.post("/{battle_id}/advance-round", response_model=BattleResponse)
+async def advance_round(
+    battle_id: str,
+    request: dict | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    target_round = None
+    if request:
+        target_round = request.get("target_round")
+    try:
+        battle = await battle_service.advance_battle_round(db, battle_id, current_user, target_round)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return battle_to_response(battle)
 
 
 @router.post("/join", response_model=BattleResponse)
@@ -244,7 +300,6 @@ async def battle_details(
             is_completed=is_completed,
         )
 
-    response = BattleResponse.model_validate(battle)
     submissions_result = await db.execute(
         select(BattleSubmission.question_id).where(
             BattleSubmission.battle_id == battle.id,
@@ -252,8 +307,7 @@ async def battle_details(
             BattleSubmission.question_id.is_not(None),
         )
     )
-    response.submitted_question_ids = list(submissions_result.scalars().all())
-    return response
+    return battle_to_response(battle, submitted_question_ids=list(submissions_result.scalars().all()))
 
 
 @router.get("/{battle_id}/participants", response_model=list[BattleParticipantResponse])
@@ -460,13 +514,14 @@ async def timer(
         max(0, int(section.get("duration_minutes", 0))) * 60
         for section in (battle.sections_config or [])
     )
+    active_states = {"created", "waiting", "ready", "countdown", "knowledge_round", "coding_round", "running"}
     if battle.started_at is not None and duration_seconds:
         elapsed_seconds = max(0, int((datetime.utcnow() - battle.started_at).total_seconds()))
         remaining_seconds = max(0, duration_seconds - elapsed_seconds)
-        running = battle.status == "running" and remaining_seconds > 0
+        running = battle.status in active_states and remaining_seconds > 0
     else:
         remaining_seconds = battle_timer.remaining(battle_id)
-        running = battle.status == "running" and battle_timer.is_running(battle_id)
+        running = battle.status in active_states and battle_timer.is_running(battle_id)
     return {
         "remaining_seconds": remaining_seconds,
         "running": running,

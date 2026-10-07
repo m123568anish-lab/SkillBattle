@@ -34,6 +34,8 @@ export const API_ENDPOINTS = {
     UPDATE: (battleId: string) => `/battle/${battleId}`,
     JOIN: "/battle/join",
     LEAVE: "/battle/leave",
+    START: (battleId: string) => `/battle/${battleId}/start`,
+    ADVANCE_ROUND: (battleId: string) => `/battle/${battleId}/advance-round`,
     SUBMIT: (battleId: string) => `/battle/${battleId}/submit`,
     RESULT: (battleId: string) => `/battle/${battleId}/result`,
     USER_BATTLES: (userId: string) => `/battle/user/${userId}`,

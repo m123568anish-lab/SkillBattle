@@ -1,7 +1,9 @@
+import os
 from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
+from pydantic_settings import BaseSettings
 from sqlalchemy import select
 
 from app.bootstrap.startup import ensure_platform_admin
@@ -18,6 +20,33 @@ async def test_platform_admin_role_alias_is_authorized():
     result = await get_current_admin(current_user=user)
 
     assert result is user
+
+
+def test_settings_loads_platform_admin_env_file(tmp_path, monkeypatch):
+    email = f"bootstrap_file_{uuid4().hex[:8]}@example.com"
+    password = "BootstrapFilePass#123"
+    username = f"bootstrap_file_{uuid4().hex[:8]}"
+
+    env_file = tmp_path / ".env.admin"
+    env_file.write_text(
+        f"PLATFORM_ADMIN_EMAIL={email}\n"
+        f"PLATFORM_ADMIN_PASSWORD={password}\n"
+        f"PLATFORM_ADMIN_USERNAME={username}\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("PLATFORM_ADMIN_EMAIL", raising=False)
+    monkeypatch.delenv("PLATFORM_ADMIN_PASSWORD", raising=False)
+    monkeypatch.delenv("PLATFORM_ADMIN_USERNAME", raising=False)
+
+    from app.core.config import Settings
+
+    Settings()
+
+    assert os.getenv("PLATFORM_ADMIN_EMAIL") == email
+    assert os.getenv("PLATFORM_ADMIN_USERNAME") == username
+    assert os.getenv("PLATFORM_ADMIN_PASSWORD") == password
 
 
 @pytest.mark.asyncio
