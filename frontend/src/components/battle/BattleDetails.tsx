@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { battleService, type BattleParticipant, type BattleRecord, type BattleTimerData } from "@/services/battle.service";
 import BattleDetailClient from "@/components/battle/BattleDetailClient";
-import BattleArea from "@/components/BattleArea";
 
 interface BattleDetailsProps {
   battleId: string;
@@ -57,7 +56,6 @@ export default function BattleDetails({ battleId }: BattleDetailsProps) {
   if (loading) return <p className="text-slate-400">Loading battle details...</p>;
   if (error) return <p className="text-red-400">{error}</p>;
   if (!battle) return <p className="text-slate-400">Battle not found.</p>;
-  if (battle.max_players === 1 && battle.status === "running") return <BattleArea battleId={battleId} />;
 
   return (
     <div className="space-y-6">

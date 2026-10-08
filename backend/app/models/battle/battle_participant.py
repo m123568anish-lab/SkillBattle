@@ -20,7 +20,6 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
-    Boolean,
 )
 
 from sqlalchemy.orm import (
@@ -73,19 +72,6 @@ class BattleParticipant(Base):
     # ==========================================================
     # Battle Stats
     # ==========================================================
-
-    status: Mapped[str] = mapped_column(
-        String(30),
-        default="joined",
-        nullable=False,
-        index=True,
-    )
-
-    is_ready: Mapped[bool] = mapped_column(
-        Boolean,
-        default=False,
-        nullable=False,
-    )
 
     score: Mapped[int] = mapped_column(
         Integer,

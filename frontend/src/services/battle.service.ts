@@ -11,18 +11,6 @@ export interface BattleRecord {
   created_at?: string;
 }
 
-export interface BattleConfigItem {
-  id?: string;
-  title?: string;
-  description?: string;
-  battle_type?: string;
-  difficulty?: string;
-  duration_minutes?: number;
-  question_count?: number;
-  sections?: Array<Record<string, unknown>>;
-  status?: string;
-}
-
 export interface BattleParticipant {
   id: string;
   battle_id: string;
@@ -70,18 +58,6 @@ class BattleService {
     return response.data;
   }
 
-  async getBattleTypes() {
-    const response = await api.get<{ types: Array<Record<string, string>> }>("/battle/types");
-    return response.data.types ?? [];
-  }
-
-  async getBattleConfigs(battleType?: string) {
-    const response = await api.get<BattleConfigItem[]>("/battle/configs", {
-      params: battleType ? { battle_type: battleType } : undefined,
-    });
-    return response.data ?? [];
-  }
-
   async getWaitingBattles() {
     const response = await api.get<BattleRecord[]>(API_ENDPOINTS.BATTLE.WAITING);
     return response.data;
@@ -104,16 +80,6 @@ class BattleService {
 
   async getBattle(battleId: string) {
     const response = await api.get<BattleRecord>(API_ENDPOINTS.BATTLE.GET(battleId));
-    return response.data;
-  }
-
-  async startBattle(battleId: string) {
-    const response = await api.post<BattleRecord>(`${API_ENDPOINTS.BATTLE.GET(battleId)}/start`);
-    return response.data;
-  }
-
-  async advanceBattleRound(battleId: string, targetRound?: string) {
-    const response = await api.post<BattleRecord>(`${API_ENDPOINTS.BATTLE.GET(battleId)}/advance-round`, targetRound ? { target_round: targetRound } : {});
     return response.data;
   }
 

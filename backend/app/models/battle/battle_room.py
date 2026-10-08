@@ -13,17 +13,14 @@ Production SQLAlchemy 2.x Model with Advanced Battle Engine support
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime
+from datetime import datetime
 
 from sqlalchemy import (
     String,
     DateTime,
-    Date,
     Integer,
     JSON,
     ForeignKey,
-    UniqueConstraint,
-    Boolean,
 )
 
 from sqlalchemy.orm import (
@@ -38,13 +35,6 @@ from app.database.base import Base
 class BattleRoom(Base):
 
     __tablename__ = "battle_rooms"
-    __table_args__ = (
-        UniqueConstraint(
-            "adaptive_owner_id",
-            "adaptive_date",
-            name="uq_battle_rooms_adaptive_owner_date",
-        ),
-    )
 
     # Primary Key
     id: Mapped[str] = mapped_column(
@@ -58,32 +48,6 @@ class BattleRoom(Base):
         String(36),
         ForeignKey("battle_configs.id", ondelete="SET NULL"),
         nullable=True,
-        index=True,
-    )
-
-    adaptive_owner_id: Mapped[str | None] = mapped_column(
-        String(36),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=True,
-        index=True,
-    )
-
-    adaptive_date: Mapped[date | None] = mapped_column(
-        Date,
-        nullable=True,
-    )
-
-    creator_id: Mapped[str | None] = mapped_column(
-        String(36),
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True,
-        index=True,
-    )
-
-    battle_mode: Mapped[str] = mapped_column(
-        String(30),
-        default="solo",
-        nullable=False,
         index=True,
     )
 
@@ -115,33 +79,9 @@ class BattleRoom(Base):
 
     status: Mapped[str] = mapped_column(
         String(30),
-        default="created",
+        default="waiting",
         nullable=False,
         index=True,
-    )
-
-    current_round: Mapped[int] = mapped_column(
-        Integer,
-        default=1,
-        nullable=False,
-    )
-
-    round_status: Mapped[str] = mapped_column(
-        String(30),
-        default="created",
-        nullable=False,
-    )
-
-    expires_at: Mapped[datetime | None] = mapped_column(
-        DateTime,
-        default=None,
-        nullable=True,
-    )
-
-    last_transition_at: Mapped[datetime | None] = mapped_column(
-        DateTime,
-        default=None,
-        nullable=True,
     )
 
     max_players: Mapped[int] = mapped_column(
@@ -183,12 +123,6 @@ class BattleRoom(Base):
     )
 
     anti_cheat_logs: Mapped[list] = mapped_column(
-        JSON,
-        default=list,
-        nullable=False,
-    )
-
-    state_history: Mapped[list] = mapped_column(
         JSON,
         default=list,
         nullable=False,
@@ -243,24 +177,8 @@ class BattleRoom(Base):
     )
 
     @property
-    def mode(self) -> str:
-        return self.battle_mode or "solo"
-
-    @property
-    def round_state(self) -> str:
-        return self.round_status or "created"
-
-    @property
-    def type(self) -> str:
-        return self.battle_type or "general"
-
-    @property
-    def round_state(self) -> str:
-        return self.round_status or "created"
-
-    @property
     def is_running(self) -> bool:
-        return self.status in {"running", "ready", "countdown", "knowledge_round", "coding_round"}
+        return self.status == "running"
 
     @property
     def is_finished(self) -> bool:

@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Query
-from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -7,8 +6,8 @@ import json
 
 from app.database.session import get_db
 from app.models.user import User
-from app.core.dependencies import get_current_user, get_optional_current_user
-from app.models.battle import BattleResult, BattleSubmission
+from app.core.dependencies import get_current_user
+from app.models.battle import BattleResult
 
 from app.modules.battle.schemas import (
     CreateBattleRequest,
@@ -33,6 +32,7 @@ from app.modules.battle.events import BattleEvent
 from app.modules.battle.replay import battle_replay_service
 from app.modules.battle.timer import battle_timer
 from app.modules.battle.repository import battle_repository
+from app.modules.xp.service import xp_service
 from app.modules.company.service import company_service
 from app.modules.college.service import college_service
 
@@ -40,33 +40,6 @@ router = APIRouter(
     prefix="/battle",
     tags=["Battle"],
 )
-
-
-def battle_to_response(battle, *, submitted_question_ids: list[int] | None = None) -> BattleResponse:
-    response = BattleResponse(
-        id=battle.id,
-        title=battle.title,
-        mode=getattr(battle, "mode", getattr(battle, "battle_mode", "solo")) or "solo",
-        type=getattr(battle, "type", getattr(battle, "battle_type", "general")) or "general",
-        difficulty=battle.difficulty,
-        problem_id=battle.problem_id,
-        status=battle.status,
-        current_round=battle.current_round,
-        round_state=getattr(battle, "round_state", getattr(battle, "round_status", "created")) or "created",
-        max_players=battle.max_players,
-        config_id=battle.config_id,
-        battle_type=battle.battle_type,
-        current_section_index=battle.current_section_index,
-        sections_config=battle.sections_config or [],
-        questions_data=battle.questions_data or [],
-        started_at=battle.started_at,
-        expires_at=battle.expires_at,
-        ended_at=battle.ended_at,
-        created_at=battle.created_at,
-        submitted_question_ids=submitted_question_ids or [],
-    )
-    return response
-
 
 @router.get("/health")
 async def health():
@@ -185,64 +158,9 @@ async def create_battle(
                 current_section_index=battle.current_section_index,
                 is_completed=False,
             )
-        return battle_to_response(battle)
+        return battle
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-
-
-@router.post("/daily", response_model=BattleResponse)
-async def get_daily_adaptive_battle(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    try:
-        battle = await battle_service.get_or_create_daily_battle(db, current_user)
-    except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc))
-    battle.questions_data = question_engine.sanitize_sections_for_client(
-        battle.questions_data,
-        current_section_index=battle.current_section_index,
-        is_completed=battle.status in ("completed", "finished", "finalized"),
-    )
-    submissions_result = await db.execute(
-        select(BattleSubmission.question_id).where(
-            BattleSubmission.battle_id == battle.id,
-            BattleSubmission.user_id == current_user.id,
-            BattleSubmission.question_id.is_not(None),
-        )
-    )
-    response = battle_to_response(battle, submitted_question_ids=list(submissions_result.scalars().all()))
-    return response
-
-
-@router.post("/{battle_id}/start", response_model=BattleResponse)
-async def start_battle(
-    battle_id: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    try:
-        battle = await battle_service.start_battle(db, battle_id, current_user)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    return battle_to_response(battle)
-
-
-@router.post("/{battle_id}/advance-round", response_model=BattleResponse)
-async def advance_round(
-    battle_id: str,
-    request: dict | None = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    target_round = None
-    if request:
-        target_round = request.get("target_round")
-    try:
-        battle = await battle_service.advance_battle_round(db, battle_id, current_user, target_round)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    return battle_to_response(battle)
 
 
 @router.post("/join", response_model=BattleResponse)
@@ -282,13 +200,9 @@ async def waiting_battles(
 async def battle_details(
     battle_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
     battle = await battle_service.get_battle(db, battle_id)
     if battle is None:
-        raise HTTPException(status_code=404, detail="Battle not found.")
-    participant = await battle_repository.get_participant(db, battle_id, current_user.id)
-    if participant is None and not (current_user.is_superuser or current_user.role.lower() == "admin"):
         raise HTTPException(status_code=404, detail="Battle not found.")
 
     # Sanitize payload questions if running
@@ -300,28 +214,14 @@ async def battle_details(
             is_completed=is_completed,
         )
 
-    submissions_result = await db.execute(
-        select(BattleSubmission.question_id).where(
-            BattleSubmission.battle_id == battle.id,
-            BattleSubmission.user_id == current_user.id,
-            BattleSubmission.question_id.is_not(None),
-        )
-    )
-    return battle_to_response(battle, submitted_question_ids=list(submissions_result.scalars().all()))
+    return battle
 
 
 @router.get("/{battle_id}/participants", response_model=list[BattleParticipantResponse])
 async def participants(
     battle_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User | None = Depends(get_optional_current_user),
 ):
-    battle = await battle_service.get_battle(db, battle_id)
-    if battle is None or (
-        battle.adaptive_owner_id is not None
-        and (current_user is None or current_user.id != battle.adaptive_owner_id)
-    ):
-        raise HTTPException(status_code=404, detail="Battle not found.")
     return await battle_service.participants(db, battle_id)
 
 
@@ -375,10 +275,7 @@ async def finish_battle(
     if participant is None and not (current_user.is_superuser or current_user.role.lower() == "admin"):
         raise HTTPException(status_code=403, detail="Only battle participants or platform admins can finish this battle.")
 
-    try:
-        res = await battle_service.finish_battle(db, battle_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc))
+    res = await battle_service.finish_battle(db, battle_id)
     if res is None:
         raise HTTPException(status_code=404, detail="Battle not found or already finished.")
     return res
@@ -408,10 +305,7 @@ async def get_battle_result(
     res = (await db.execute(stmt)).scalar_one_or_none()
     if not res:
         # Generate result on the fly if needed
-        try:
-            res_data = await battle_service.finish_battle(db, battle_id)
-        except ValueError as exc:
-            raise HTTPException(status_code=409, detail=str(exc))
+        res_data = await battle_service.finish_battle(db, battle_id)
         if not res_data:
             raise HTTPException(status_code=404, detail="Battle result not found.")
         res = (await db.execute(stmt)).scalar_one_or_none()
@@ -501,30 +395,10 @@ async def leave_queue(
 # ==========================================================
 
 @router.get("/{battle_id}/timer")
-async def timer(
-    battle_id: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    battle = await battle_service.get_battle(db, battle_id)
-    participant = await battle_repository.get_participant(db, battle_id, current_user.id) if battle else None
-    if battle is None or (participant is None and not (current_user.is_superuser or current_user.role.lower() == "admin")):
-        raise HTTPException(status_code=404, detail="Battle not found.")
-    duration_seconds = sum(
-        max(0, int(section.get("duration_minutes", 0))) * 60
-        for section in (battle.sections_config or [])
-    )
-    active_states = {"created", "waiting", "ready", "countdown", "knowledge_round", "coding_round", "running"}
-    if battle.started_at is not None and duration_seconds:
-        elapsed_seconds = max(0, int((datetime.utcnow() - battle.started_at).total_seconds()))
-        remaining_seconds = max(0, duration_seconds - elapsed_seconds)
-        running = battle.status in active_states and remaining_seconds > 0
-    else:
-        remaining_seconds = battle_timer.remaining(battle_id)
-        running = battle.status in active_states and battle_timer.is_running(battle_id)
+def timer(battle_id: str):
     return {
-        "remaining_seconds": remaining_seconds,
-        "running": running,
+        "remaining_seconds": battle_timer.remaining(battle_id),
+        "running": battle_timer.is_running(battle_id),
     }
 
 
@@ -539,7 +413,30 @@ async def solo_finish(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    raise HTTPException(
-        status_code=410,
-        detail="Client-reported battle results are no longer accepted. Submit answers through a server-created battle.",
-    )
+    for res in request.mcq_results or []:
+        from app.models.user_skill_stat import UserSkillStat
+        stmt = select(UserSkillStat).where(
+            UserSkillStat.user_id == current_user.id,
+            UserSkillStat.subject == res.category,
+        )
+        stat = (await db.execute(stmt)).scalar_one_or_none()
+        if not stat:
+            stat = UserSkillStat(
+                user_id=current_user.id,
+                subject=res.category,
+                correct_attempts=0,
+                total_attempts=0,
+            )
+            db.add(stat)
+        stat.total_attempts += 1
+        if res.correct:
+            stat.correct_attempts += 1
+
+    await db.commit()
+    progression = await xp_service.get_user_xp(db, current_user)
+    return {
+        "status": "success",
+        "xp_added": 0,
+        "total_xp": progression.total_xp,
+        "level": progression.level,
+    }

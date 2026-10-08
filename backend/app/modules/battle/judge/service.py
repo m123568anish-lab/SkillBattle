@@ -5,10 +5,13 @@ from app.models.battle import (
     BattleSubmission,
 )
 
+from app.modules.compiler.executors.manager import (
+    execution_manager,
+)
+
 from app.modules.compiler.judge import (
     judge_engine,
 )
-from app.models.question import Question
 
 from app.modules.battle.repository import (
     battle_repository,
@@ -32,86 +35,157 @@ class BattleJudgeService:
         self,
         language: str,
         source_code: str,
-        question: Question,
+        problem_id: int = 1,
     ) -> dict:
-        cases = question.hidden_test_cases or question.examples or []
-        test_cases = [
-            {"input": case["input"], "output": case["output"]}
-            for case in cases
-            if isinstance(case, dict) and "input" in case and "output" in case
-        ]
-        if not test_cases:
-            raise ValueError("This coding question does not have valid test cases.")
-        result = judge_engine.judge(
-            language=language.lower(),
+        result = execution_manager.execute(
+            language=language,
             source_code=source_code,
-            testcases=test_cases,
+            stdin="",
         )
+        verdict = "Accepted" if result.return_code == 0 else "Wrong Answer"
         return {
-            "verdict": result.verdict,
-            "passed_tests": result.passed_tests,
-            "total_tests": result.total_tests,
-            "runtime_ms": result.runtime_ms,
-            "memory_mb": result.memory_mb,
+            "verdict": verdict,
+            "passed_tests": 1 if verdict == "Accepted" else 0,
+            "total_tests": 1,
+            "runtime_ms": float(getattr(result, "execution_time", 10.0)),
+            "memory_mb": float(getattr(result, "memory_used", 5.0)),
         }
 
     async def submit(
+
         self,
+
         db: AsyncSession,
+
         battle,
+
         current_user: User,
+
         language: str,
+
         source_code: str,
+
         test_cases,
+
     ):
-        normalized_cases = []
-        for test_case in test_cases:
-            if isinstance(test_case, dict):
-                input_data = test_case.get("input", test_case.get("input_data"))
-                expected_output = test_case.get("output", test_case.get("expected_output"))
-            else:
-                input_data = getattr(test_case, "input_data", None)
-                expected_output = getattr(test_case, "expected_output", None)
-            if input_data is not None and expected_output is not None:
-                normalized_cases.append({
-                    "input": str(input_data),
-                    "output": str(expected_output),
-                })
-        if not normalized_cases:
-            raise ValueError("At least one valid test case is required.")
+
+        execution_results = []
+
+        for test in test_cases:
+
+            result = execution_manager.execute(
+
+                language=language,
+
+                source_code=source_code,
+
+                stdin=test.input_data,
+
+            )
+
+            execution_results.append({
+
+                "status":
+
+                "SUCCESS"
+
+                if result.return_code == 0
+
+                else "FAILED",
+
+                "expected_output":
+
+                test.expected_output,
+
+                "actual_output":
+
+                result.stdout,
+
+                "execution_time":
+
+                result.execution_time,
+
+                "memory_used":
+
+                result.memory_used,
+
+            })
 
         judge_result = judge_engine.judge(
-            language=language.lower(),
-            source_code=source_code,
-            testcases=normalized_cases,
+
+            execution_results,
+
         )
+
         submission = BattleSubmission(
+
             battle_id=battle.id,
+
             user_id=current_user.id,
+
             language=language,
+
             verdict=judge_result.verdict,
+
             passed_tests=judge_result.passed_tests,
+
             total_tests=judge_result.total_tests,
-            runtime_ms=judge_result.runtime_ms,
-            memory_mb=judge_result.memory_mb,
-            score=judge_result.score,
-            score_earned=judge_result.score,
+
         )
-        await battle_repository.create_submission(db, submission)
+
+        await battle_repository.create_submission(
+
+            db,
+
+            submission,
+
+        )
+
         await db.commit()
 
         participant = await battle_repository.get_participant(
+
             db,
+
             battle.id,
+
             current_user.id,
+
         )
+
         if participant:
-            participant.score += judge_result.score
-            await battle_repository.update_participant(db, participant)
+
+            participant.score += (
+
+                judge_result.passed_tests * 100
+
+            )
+
+            await battle_repository.update_participant(
+
+                db,
+
+                participant,
+
+            )
+
             await db.commit()
 
-        await battle_leaderboard_service.update(db, battle.id)
-        return {"submission": submission, "judge": judge_result}
+        await battle_leaderboard_service.update(
+
+        db,
+
+        battle.id,
+
+      )
+
+        return {
+
+            "submission": submission,
+
+            "judge": judge_result,
+
+        }
 
 
 battle_judge_service = BattleJudgeService()

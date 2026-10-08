@@ -1,39 +1,10 @@
 import pytest
 from uuid import uuid4
 from httpx import AsyncClient
-from sqlalchemy import select
-
-from app.database.session import AsyncSessionLocal
-from app.models.battle.battle_room import BattleRoom
-from app.models.user import User
 
 
 @pytest.mark.asyncio
-async def test_advanced_battle_engine_workflow(client: AsyncClient, monkeypatch):
-    from app.database.init_db import init_db
-    init_db()
-
-    from app.modules.compiler.judge import judge_engine
-    from app.modules.compiler.schemas import JudgeResult
-
-    def accepted_judgement(language, source_code, testcases):
-        assert language == "python"
-        assert source_code
-        assert testcases
-        assert all({"input", "output"} <= set(testcase) for testcase in testcases)
-        return JudgeResult(
-            verdict="Accepted",
-            passed_tests=len(testcases),
-            total_tests=len(testcases),
-            execution_time=10,
-            memory_used=1,
-            runtime_ms=10,
-            memory_mb=1,
-            score=100,
-        )
-
-    monkeypatch.setattr(judge_engine, "judge", accepted_judgement)
-
+async def test_advanced_battle_engine_workflow(client: AsyncClient):
     unique_id = uuid4().hex[:6].lower()
     email = f"student_{unique_id}@example.com"
     username = f"battle_user_{unique_id}"
@@ -57,25 +28,6 @@ async def test_advanced_battle_engine_workflow(client: AsyncClient, monkeypatch)
     assert login_resp.status_code == 200, login_resp.text
     token = login_resp.json()["tokens"]["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
-
-    daily_resp = await client.post("/battle/daily", headers=headers)
-    assert daily_resp.status_code == 200, daily_resp.text
-    daily_battle = daily_resp.json()
-    daily_question_ids = [
-        question["id"]
-        for section in daily_battle["questions_data"]
-        for question in section["questions"]
-    ]
-    assert len(daily_question_ids) == 4
-    assert len(daily_question_ids) == len(set(daily_question_ids))
-    assert {section["question_type"] for section in daily_battle["questions_data"]} == {
-        "mcq",
-        "coding",
-    }
-
-    resumed_daily_resp = await client.post("/battle/daily", headers=headers)
-    assert resumed_daily_resp.status_code == 200, resumed_daily_resp.text
-    assert resumed_daily_resp.json()["id"] == daily_battle["id"]
 
     # 1. Fetch Battle Types
     types_resp = await client.get("/battle/types")
@@ -138,7 +90,7 @@ async def test_advanced_battle_engine_workflow(client: AsyncClient, monkeypatch)
             "problem_id": 1,
             "config_id": config_id,
             "battle_type": "placement",
-            "max_players": 1,
+            "max_players": 2,
         },
     )
     assert battle_resp.status_code == 200, battle_resp.text
@@ -146,9 +98,7 @@ async def test_advanced_battle_engine_workflow(client: AsyncClient, monkeypatch)
     battle_id = battle_data["id"]
 
     # 4. Fetch Battle Details & verify sanitized question payload
-    anonymous_details = await client.get(f"/battle/{battle_id}")
-    assert anonymous_details.status_code == 401
-    details_resp = await client.get(f"/battle/{battle_id}", headers=headers)
+    details_resp = await client.get(f"/battle/{battle_id}")
     assert details_resp.status_code == 200
     sections = details_resp.json()["questions_data"]
     assert len(sections) > 0
@@ -179,11 +129,7 @@ async def test_advanced_battle_engine_workflow(client: AsyncClient, monkeypatch)
             "question_id": coding_question_id,
             "section_index": 1,
             "question_type": "coding",
-            "source_code": (
-                "import sys\n"
-                "a, b = map(int, sys.stdin.read().split())\n"
-                "print(a + b)\n"
-            ),
+            "source_code": "def solution(a, b):\n    return a + b",
             "language": "python",
             "time_taken_seconds": 120,
         },
@@ -212,43 +158,3 @@ async def test_advanced_battle_engine_workflow(client: AsyncClient, monkeypatch)
     res_payload = result_resp.json()
     assert res_payload["battle_type"] == "placement"
     assert "overall_status" in res_payload["placement_readiness"]
-
-
-@pytest.mark.asyncio
-async def test_daily_inventory_shortage_does_not_create_active_battle(client: AsyncClient, monkeypatch):
-    unique_id = uuid4().hex[:8].lower()
-    email = f"shortage_{unique_id}@example.com"
-    registration = await client.post(
-        "/auth/register",
-        json={
-            "username": f"shortage_{unique_id}",
-            "email": email,
-            "full_name": "Battle Inventory Test",
-            "password": "StrongPass#123",
-        },
-    )
-    assert registration.status_code == 201, registration.text
-    login = await client.post("/auth/login", json={"email": email, "password": "StrongPass#123"})
-    assert login.status_code == 200, login.text
-    headers = {"Authorization": f"Bearer {login.json()['tokens']['access_token']}"}
-
-    async def insufficient_inventory(*args, **kwargs):
-        raise ValueError("Not enough validated mcq questions for this battle section (required 3, available 2).")
-
-    from app.modules.battle.question_engine import question_engine
-
-    monkeypatch.setattr(question_engine, "get_adaptive_questions_for_user", insufficient_inventory)
-    response = await client.post("/battle/daily", headers=headers)
-    assert response.status_code == 409, response.text
-    assert response.json()["detail"] == "Not enough validated mcq questions for this battle section (required 3, available 2)."
-
-    async with AsyncSessionLocal() as db:
-        user_result = await db.execute(select(User).where(User.email == email))
-        user = user_result.scalar_one()
-        battle_result = await db.execute(
-            select(BattleRoom).where(
-                BattleRoom.adaptive_owner_id == user.id,
-                BattleRoom.adaptive_date.is_not(None),
-            )
-        )
-        assert battle_result.scalar_one_or_none() is None
