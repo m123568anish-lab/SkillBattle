@@ -516,12 +516,24 @@ def _repair_battle_tables() -> None:
             existing = {c["name"] for c in inspector.get_columns("battle_results")}
             cols = {
                 "battle_type": "VARCHAR(50) DEFAULT 'general'",
+                "participant_id": "VARCHAR(36)",
+                "knowledge_score": "FLOAT DEFAULT 0.0",
+                "coding_score": "FLOAT DEFAULT 0.0",
+                "debugging_score": "FLOAT DEFAULT 0.0",
+                "technical_score": "FLOAT DEFAULT 0.0",
+                "overall_score": "FLOAT DEFAULT 0.0",
                 "accuracy_percentage": "FLOAT DEFAULT 0.0",
+                "accuracy": "FLOAT DEFAULT 0.0",
+                "completion_status": "VARCHAR(30) DEFAULT 'completed'",
+                "result_status": "VARCHAR(30) DEFAULT 'result'",
+                "rank": "VARCHAR(30)",
                 "section_scores": "JSON",
                 "question_breakdown": "JSON",
                 "skill_breakdown": "JSON",
                 "placement_readiness": "JSON",
                 "recommendations": "JSON",
+                "finalized_at": "DATETIME",
+                "scoring_metadata": "JSON DEFAULT '{}'",
             }
             for name, defn in cols.items():
                 if name not in existing:

@@ -99,6 +99,34 @@ class BattleResultEngine:
 
         accuracy = round((correct_qs / total_qs * 100.0), 1) if total_qs > 0 else (100.0 if winner else 0.0)
 
+        knowledge_score = round((correct_qs / total_qs * 100.0), 1) if total_qs > 0 else 0.0
+
+        coding_weight = 0.0
+        coding_points = 0.0
+        debugging_weight = 0.0
+        debugging_points = 0.0
+        technical_weight = 0.0
+        technical_points = 0.0
+
+        for sub in submissions:
+            question_type = str(getattr(sub, "question_type", "")).lower()
+            max_points = max(float(getattr(sub, "max_possible_score", 100.0) or 100.0), 1.0)
+            earned = float(getattr(sub, "score_earned", 0.0) or 0.0)
+            if question_type == "coding":
+                coding_weight += max_points
+                coding_points += earned
+            elif question_type == "debugging":
+                debugging_weight += max_points
+                debugging_points += earned
+            elif question_type == "technical":
+                technical_weight += max_points
+                technical_points += earned
+
+        coding_score = round((coding_points / coding_weight) * 100.0, 1) if coding_weight else 0.0
+        debugging_score = round((debugging_points / debugging_weight) * 100.0, 1) if debugging_weight else 0.0
+        technical_score = round((technical_points / technical_weight) * 100.0, 1) if technical_weight else 0.0
+        overall_score = round((knowledge_score * 0.6) + (coding_score * 0.4), 2)
+
         # Build Skill Breakdown
         skill_breakdown = {}
         recommendations = []
@@ -141,12 +169,34 @@ class BattleResultEngine:
             "is_draw": draw,
             "total_players": len(participants),
             "average_score": avg_score,
+            "knowledge_score": knowledge_score,
+            "coding_score": coding_score,
+            "debugging_score": debugging_score,
+            "technical_score": technical_score,
+            "overall_score": overall_score,
+            "accuracy": accuracy,
             "accuracy_percentage": accuracy,
+            "completion_status": "completed" if total_qs > 0 else "pending",
+            "result_status": "result",
+            "participant_id": (winner.user_id if winner else None),
+            "rank": "1" if winner else "PENDING",
             "section_scores": section_scores,
             "question_breakdown": question_breakdown,
             "skill_breakdown": skill_breakdown,
             "placement_readiness": placement_readiness,
             "recommendations": recommendations,
+            "scoring_metadata": {
+                "knowledge_score": knowledge_score,
+                "coding_score": coding_score,
+                "debugging_score": debugging_score,
+                "technical_score": technical_score,
+                "overall_score": overall_score,
+                "accuracy": accuracy,
+                "score_breakdown": {
+                    "knowledge_weight": 0.6,
+                    "coding_weight": 0.4,
+                },
+            },
         }
 
 

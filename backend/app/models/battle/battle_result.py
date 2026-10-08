@@ -67,6 +67,12 @@ class BattleResult(Base):
         index=True,
     )
 
+    participant_id: Mapped[str | None] = mapped_column(
+        String(36),
+        nullable=True,
+        index=True,
+    )
+
     battle_type: Mapped[str] = mapped_column(
         String(50),
         default="general",
@@ -104,10 +110,63 @@ class BattleResult(Base):
         nullable=False,
     )
 
+    knowledge_score: Mapped[float] = mapped_column(
+        Float,
+        default=0.0,
+        nullable=False,
+    )
+
+    coding_score: Mapped[float] = mapped_column(
+        Float,
+        default=0.0,
+        nullable=False,
+    )
+
+    debugging_score: Mapped[float] = mapped_column(
+        Float,
+        default=0.0,
+        nullable=False,
+    )
+
+    technical_score: Mapped[float] = mapped_column(
+        Float,
+        default=0.0,
+        nullable=False,
+    )
+
+    overall_score: Mapped[float] = mapped_column(
+        Float,
+        default=0.0,
+        nullable=False,
+    )
+
     accuracy_percentage: Mapped[float] = mapped_column(
         Float,
         default=0.0,
         nullable=False,
+    )
+
+    accuracy: Mapped[float] = mapped_column(
+        Float,
+        default=0.0,
+        nullable=False,
+    )
+
+    completion_status: Mapped[str] = mapped_column(
+        String(30),
+        default="completed",
+        nullable=False,
+    )
+
+    result_status: Mapped[str] = mapped_column(
+        String(30),
+        default="result",
+        nullable=False,
+    )
+
+    rank: Mapped[str | None] = mapped_column(
+        String(30),
+        nullable=True,
     )
 
     # Detailed Section & Skill Analysis
@@ -157,6 +216,18 @@ class BattleResult(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
+        nullable=False,
+    )
+
+    finalized_at: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True,
+        default=None,
+    )
+
+    scoring_metadata: Mapped[dict] = mapped_column(
+        JSON,
+        default=dict,
         nullable=False,
     )
 

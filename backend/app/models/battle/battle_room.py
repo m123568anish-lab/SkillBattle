@@ -21,6 +21,7 @@ from sqlalchemy import (
     Integer,
     JSON,
     ForeignKey,
+    Boolean,
 )
 
 from sqlalchemy.orm import (
@@ -64,6 +65,19 @@ class BattleRoom(Base):
         index=True,
     )
 
+    battle_mode: Mapped[str] = mapped_column(
+        String(30),
+        default="solo",
+        nullable=False,
+        index=True,
+    )
+
+    creator_id: Mapped[str | None] = mapped_column(
+        String(36),
+        nullable=True,
+        index=True,
+    )
+
     difficulty: Mapped[str] = mapped_column(
         String(30),
         nullable=False,
@@ -90,10 +104,23 @@ class BattleRoom(Base):
         nullable=False,
     )
 
+    current_round: Mapped[int] = mapped_column(
+        Integer,
+        default=1,
+        nullable=False,
+    )
+
     current_section_index: Mapped[int] = mapped_column(
         Integer,
         default=0,
         nullable=False,
+    )
+
+    round_status: Mapped[str] = mapped_column(
+        String(30),
+        default="created",
+        nullable=False,
+        index=True,
     )
 
     # Context IDs
@@ -128,8 +155,20 @@ class BattleRoom(Base):
         nullable=False,
     )
 
+    state_history: Mapped[list] = mapped_column(
+        JSON,
+        default=list,
+        nullable=False,
+    )
+
     # Battle Timing
     started_at: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True,
+        default=None,
+    )
+
+    expires_at: Mapped[datetime | None] = mapped_column(
         DateTime,
         nullable=True,
         default=None,
@@ -152,6 +191,12 @@ class BattleRoom(Base):
         default=datetime.utcnow,
         onupdate=datetime.utcnow,
         nullable=False,
+    )
+
+    last_transition_at: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True,
+        default=None,
     )
 
     # Relationships
