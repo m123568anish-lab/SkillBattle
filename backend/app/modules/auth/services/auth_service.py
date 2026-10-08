@@ -572,7 +572,8 @@ class AuthService:
         from app.models.battle import BattleSubmission, BattleParticipant
         from app.models.interview import InterviewSession
         from app.models.resume import Resume
-        from app.models.conversation import Conversation, Message
+        from app.models.conversation import Conversation
+        from app.models.message import Message
         from app.models.roadmap import Roadmap
 
         await db.execute(delete(Profile).where(Profile.user_id == user_id))
@@ -586,14 +587,12 @@ class AuthService:
         await db.execute(delete(CollegeStudent).where(CollegeStudent.user_id == user_id))
         await db.execute(delete(CollegeAssessmentSubmission).where(CollegeAssessmentSubmission.student_id == user_id))
         await db.execute(delete(CompanyMember).where(CompanyMember.user_id == user_id))
-        await db.execute(delete(CandidateApplication).where(CandidateApplication.user_id == user_id))
+        await db.execute(delete(CandidateApplication).where(CandidateApplication.candidate_user_id == user_id))
         await db.execute(delete(CandidatePrivacySettings).where(CandidatePrivacySettings.user_id == user_id))
         await db.execute(delete(BattleSubmission).where(BattleSubmission.user_id == user_id))
         await db.execute(delete(BattleParticipant).where(BattleParticipant.user_id == user_id))
         await db.execute(delete(InterviewSession).where(InterviewSession.user_id == user_id))
         await db.execute(delete(Resume).where(Resume.user_id == user_id))
-        await db.execute(delete(Message).where(Message.sender_id == user_id))
-        await db.execute(delete(Conversation).where(Conversation.user_id == user_id))
         await db.execute(delete(Roadmap).where(Roadmap.user_id == user_id))
 
         await db.delete(current_user)

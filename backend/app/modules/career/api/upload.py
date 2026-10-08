@@ -35,7 +35,7 @@ from app.modules.career.services.upload_service import (
 )
 
 router = APIRouter(
-    prefix="/career",
+    prefix="",
     tags=["Career"],
 )
 

@@ -1,4 +1,5 @@
 import api from "@/lib/api";
+import { Resume } from "@/types/resume";
 
 export interface RoadmapTask {
   id: number;
@@ -63,8 +64,8 @@ export interface UploadResumeResponse {
 }
 
 export const careerService = {
-  async getResumes(): Promise<ResumeData[]> {
-    const res = await api.get<ResumeData[]>("/career/resumes");
+  async getResumes(): Promise<Resume[]> {
+    const res = await api.get<Resume[]>("/career/resumes");
     return res.data;
   },
 

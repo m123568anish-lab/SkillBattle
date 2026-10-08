@@ -30,11 +30,8 @@ from app.modules.career.schemas.analysis import (
 )
 
 router = APIRouter(
-
-    prefix="/career",
-
+    prefix="",
     tags=["Career Analysis"],
-
 )
 
 
