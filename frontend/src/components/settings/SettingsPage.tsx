@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
-import { toast } from "react-hot-toast";
-import { Lock, Shield, Zap, Check, AlertCircle, LogOut, MonitorSmartphone, Trash2 } from "lucide-react";
+import { Lock, Shield, Zap, Check, AlertCircle, LogOut, MonitorSmartphone, Trash2, AlertTriangle, X } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import { authService } from "@/services/auth.service";
+import { toast } from "react-hot-toast";
 
 type SettingTab = "security" | "preferences" | "privacy";
 
@@ -74,6 +75,35 @@ export default function SettingsPage() {
   const [sessions, setSessions] = useState<ActiveSession[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [sessionsSaving, setSessionsSaving] = useState<string | null | "all">(null);
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmationInput, setDeleteConfirmationInput] = useState("");
+  const [deletePasswordInput, setDeletePasswordInput] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
+
+  async function handleDeleteAccount() {
+    if (deleteConfirmationInput.trim() !== "DELETE") {
+      setDeleteAccountError("You must type exact word DELETE to confirm account deletion.");
+      return;
+    }
+
+    setDeletingAccount(true);
+    setDeleteAccountError(null);
+
+    try {
+      await authService.deleteAccount(deleteConfirmationInput.trim(), deletePasswordInput || undefined);
+      toast.success("Account permanently deleted.");
+      useAuthStore.getState().logout();
+      window.location.href = "/login";
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail || "Failed to delete account. Please try again.";
+      setDeleteAccountError(msg);
+      toast.error(msg);
+    } finally {
+      setDeletingAccount(false);
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -516,10 +546,120 @@ export default function SettingsPage() {
                 ))}
                 {sharingSaving && <p role="status" className="text-xs text-cyan-200">Saving privacy setting…</p>}
               </div>}
-            </motion.section>
+              </motion.section>
           )}
         </motion.div>
+      </AnimatePresence>
+
+      {/* Danger Zone Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-3xl border border-rose-500/30 bg-gradient-to-br from-rose-950/20 to-slate-950/80 p-8 text-white shadow-2xl backdrop-blur-xl"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="flex items-start gap-4">
+            <div className="rounded-2xl bg-rose-500/20 border border-rose-500/30 p-3.5 text-rose-400">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-rose-200">Danger Zone</h3>
+              <p className="mt-1 text-sm text-slate-400 max-w-xl">
+                Permanently delete your SkillBattle account and associated personal data. This action cannot be undone.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setDeleteConfirmationInput("");
+              setDeleteAccountError(null);
+              setShowDeleteModal(true);
+            }}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-600 hover:bg-rose-500 px-6 py-3.5 font-bold text-white shadow-lg shadow-rose-600/30 transition shrink-0"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete Account
+          </button>
+        </div>
+      </motion.div>
+
+      {/* Delete Account Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-lg rounded-3xl border border-rose-500/40 bg-slate-950 p-8 shadow-2xl text-white space-y-6 relative"
+            >
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="absolute top-6 right-6 p-2 text-slate-400 hover:text-white rounded-full transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+
+              <div className="flex items-center gap-3 text-rose-400">
+                <AlertTriangle className="h-7 w-7" />
+                <h3 className="text-2xl font-black text-white">Permanently Delete Account</h3>
+              </div>
+
+              <div className="space-y-3 text-sm text-slate-300">
+                <p>
+                  This action is <strong className="text-rose-400">permanent and irreversible</strong>.
+                </p>
+                <p>
+                  Deleting your account will remove your profile, XP, achievements, battle history, skill scores, notifications, and personal data.
+                </p>
+              </div>
+
+              <div className="space-y-4 pt-2">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    Type <span className="text-rose-400 font-mono select-all">DELETE</span> to confirm
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirmationInput}
+                    onChange={(e) => setDeleteConfirmationInput(e.target.value)}
+                    placeholder="Type DELETE"
+                    className="w-full rounded-2xl border border-rose-500/40 bg-slate-900 px-4 py-3 text-sm text-white font-mono placeholder:text-slate-600 focus:border-rose-400 focus:ring-1 focus:ring-rose-400/50 outline-none transition"
+                  />
+                </div>
+
+                {deleteAccountError && (
+                  <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+                    {deleteAccountError}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteModal(false)}
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 py-3.5 text-sm font-bold text-slate-300 hover:bg-white/10 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteAccount}
+                  disabled={deleteConfirmationInput.trim() !== "DELETE" || deletingAccount}
+                  className="w-full rounded-2xl bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed py-3.5 text-sm font-bold text-white shadow-lg shadow-rose-600/30 transition flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {deletingAccount ? "Deleting..." : "Permanently Delete"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
     </div>
   );
 }
+

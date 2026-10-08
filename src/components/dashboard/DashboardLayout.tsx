@@ -36,6 +36,7 @@ export default function DashboardLayout({ children }: Props) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const authLoading = useAuthStore((s) => s.loading);
+  const pathname = usePathname();
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -56,7 +57,6 @@ export default function DashboardLayout({ children }: Props) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [quickAccessOpen, setQuickAccessOpen] = useState(false);
   const [menuSearch, setMenuSearch] = useState("");
-  const pathname = usePathname();
 
   // Close mobile drawer on ESC key
   useEffect(() => {

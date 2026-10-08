@@ -27,14 +27,16 @@ async def get_campaign_status(
 async def get_campaign_level(
     track: str,
     level_id: int,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     try:
-        return campaign_service.get_level(track, level_id)
+        return await campaign_service.get_level(db, current_user.id, track, level_id)
     except ValueError as e:
+        detail = str(e)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
+            status_code=status.HTTP_400_BAD_REQUEST if "CAMPAIGN_LEVEL_UNAVAILABLE" in detail else status.HTTP_404_NOT_FOUND,
+            detail=detail,
         )
 
 @router.post("/submit", response_model=LevelSubmitResponse)

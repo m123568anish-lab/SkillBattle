@@ -53,8 +53,67 @@ export interface ResumeData {
   ai_summary?: string;
 }
 
+export interface UploadResumeResponse {
+  success: boolean;
+  message: string;
+  resume_id?: string;
+  metadata?: Record<string, unknown> | null;
+  analysis?: Record<string, unknown> | null;
+  status?: string;
+}
+
 export const careerService = {
-  // Roadmap
+  async getResumes(): Promise<ResumeData[]> {
+    const res = await api.get<ResumeData[]>("/career/resumes");
+    return res.data;
+  },
+
+  async getResume(resumeId: string): Promise<ResumeData> {
+    const res = await api.get<ResumeData>(`/career/resume/${resumeId}`);
+    return res.data;
+  },
+
+  async getAnalysis(resumeId: string): Promise<any> {
+    const res = await api.get<any>(`/career/analysis/${resumeId}`);
+    return res.data;
+  },
+
+  async uploadResume(formData: FormData): Promise<UploadResumeResponse> {
+    const res = await api.post<any>("/career/upload-resume", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+
+    const payload = res.data?.upload ?? res.data ?? {};
+    return {
+      success: payload.success ?? true,
+      message: payload.message ?? "Resume uploaded successfully.",
+      resume_id: payload.resume_id ?? "",
+      status: payload.status ?? (payload.success === false ? "error" : "uploaded"),
+      metadata: payload.metadata ?? null,
+      analysis: payload.analysis ?? null,
+    };
+  },
+
+  async getUserResume(): Promise<ResumeData | null> {
+    const res = await api.get<ResumeData | null>("/career/resume");
+    return res.data;
+  },
+
+  async saveResume(data: ResumeData): Promise<ResumeData> {
+    const res = await api.post<ResumeData>("/career/resume", data);
+    return res.data;
+  },
+
+  async generateResumeFromProfile(): Promise<ResumeData> {
+    const res = await api.post<ResumeData>("/career/resume/generate");
+    return res.data;
+  },
+
+  async analyzeResume(data: ResumeData): Promise<any> {
+    const res = await api.post("/career/resume/analyze", data);
+    return res.data;
+  },
+
   async generateRoadmap(title: string, targetCompany: string, durationWeeks: number): Promise<Roadmap> {
     const res = await api.post<Roadmap>("/career/roadmap/generate", {
       title,
@@ -79,30 +138,13 @@ export const careerService = {
     return res.data;
   },
 
-  // Resume
-  async getUserResume(): Promise<ResumeData | null> {
-    const res = await api.get<ResumeData | null>("/career/resume");
-    return res.data;
-  },
-
-  async saveResume(data: ResumeData): Promise<ResumeData> {
-    const res = await api.post<ResumeData>("/career/resume", data);
-    return res.data;
-  },
-
-  async generateResumeFromProfile(): Promise<ResumeData> {
-    const res = await api.post<ResumeData>("/career/resume/generate");
-    return res.data;
-  },
-
-  async analyzeResume(data: ResumeData): Promise<any> {
-    const res = await api.post("/career/resume/analyze", data);
-    return res.data;
-  },
-
-  // Interview
-  async startInterview(company: string, role: string, difficulty: string): Promise<any> {
-    const res = await api.post("/career/interview/start", { company, role, difficulty });
+  async startInterview(company: string, role: string, difficulty: string, interviewType = "Technical"): Promise<any> {
+    const res = await api.post("/career/interview/start", {
+      company,
+      role,
+      difficulty,
+      interview_type: interviewType,
+    });
     return res.data;
   },
 

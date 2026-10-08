@@ -62,6 +62,7 @@ export default function PlayLevelPage({ params }: PageProps) {
 
   const currentQuestion = levelData.questions[currentIdx];
   const isLastQuestion = currentIdx === levelData.questions.length - 1;
+  const codingProblems = levelData.coding_problems ?? [];
 
   const handleSelectOption = (optIdx: number) => {
     setSelectedAnswers({
@@ -136,6 +137,32 @@ export default function PlayLevelPage({ params }: PageProps) {
                 Q: {currentIdx + 1} / {levelData.questions.length}
               </span>
             </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4">
+                <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-cyan-300">MCQ ROUND</div>
+                <div className="mt-2 text-xl font-black text-white">{levelData.questions.length} Questions</div>
+              </div>
+              <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4">
+                <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-violet-300">CODING ROUND</div>
+                <div className="mt-2 text-xl font-black text-white">{codingProblems.length} Challenges</div>
+              </div>
+            </div>
+
+            {codingProblems.length > 0 && (
+              <div className="rounded-3xl border border-white/10 bg-[#070B14]/60 p-5">
+                <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-slate-400">Selected Coding Problems</div>
+                <div className="mt-3 space-y-3">
+                  {codingProblems.map((problem, index) => (
+                    <div key={problem.id} className="rounded-2xl border border-white/5 bg-slate-900/60 p-3">
+                      <div className="text-xs font-semibold uppercase tracking-wider text-cyan-300">Challenge {index + 1}</div>
+                      <div className="mt-1 text-base font-bold text-white">{problem.title}</div>
+                      <div className="mt-1 text-sm text-slate-400">{problem.description}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Assessment Card */}
             <div className="rounded-3xl border border-white/10 bg-[#070B14]/80 p-8 backdrop-blur-xl space-y-8 shadow-xl shadow-black/30">

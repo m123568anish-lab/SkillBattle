@@ -6,11 +6,21 @@ class QuestionOption(BaseModel):
     text: str
     options: List[str]
 
+class CodingProblemOption(BaseModel):
+    id: int
+    title: str
+    description: str
+    difficulty: str
+    category: str
+
 class CampaignLevelResponse(BaseModel):
     level_id: int
     title: str
     description: str
     questions: List[QuestionOption]
+    coding_problems: List[CodingProblemOption] = Field(default_factory=list)
+    mcq_count: int = 0
+    coding_count: int = 0
 
 class LevelStatus(BaseModel):
     level_id: int

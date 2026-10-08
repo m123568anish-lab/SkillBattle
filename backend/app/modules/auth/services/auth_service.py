@@ -521,24 +521,84 @@ class AuthService:
         return {"enabled": True, "message": "Two-factor authentication enabled."}
 
     async def verify_email(
-
         self,
-
         db: AsyncSession,
-
         user: User,
-
     ) -> User:
-
         user.is_verified = True
-
         return await user_repository.update_user(
-
             db,
-
             user,
-
         )
+
+    async def delete_account(
+        self,
+        db: AsyncSession,
+        current_user: User,
+        request: DeleteAccountRequest,
+    ) -> None:
+        if (request.confirmation or "").strip() != "DELETE":
+            raise ValueError("Exact confirmation text 'DELETE' is required to delete your account.")
+
+        if request.password and current_user.password_hash:
+            from app.core.security import verify_password
+            if not verify_password(request.password, current_user.password_hash):
+                raise ValueError("Password is incorrect.")
+
+        user_id = current_user.id
+        import os
+        from sqlalchemy import delete
+
+        if current_user.avatar_url and "/uploads/avatars/" in current_user.avatar_url:
+            try:
+                filename = current_user.avatar_url.split("/uploads/avatars/")[-1]
+                filepath = os.path.join("uploads", "avatars", filename)
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+            except Exception as e:
+                logger.warning(f"Could not delete avatar file: {e}")
+
+        await db.execute(delete(RefreshToken).where(RefreshToken.user_id == user_id))
+
+        from app.models.profile import Profile
+        from app.models.xp import XP
+        from app.models.user_skill_stat import UserSkillStat
+        from app.models.user_stats import UserStats, UserSettings
+        from app.models.streak import Streak
+        from app.models.achievement import Achievement
+        from app.models.question import UserSubmission
+        from app.models.college import CollegeStudent, CollegeAssessmentSubmission
+        from app.models.company import CompanyMember, CandidateApplication, CandidatePrivacySettings
+        from app.models.battle import BattleSubmission, BattleParticipant
+        from app.models.interview import InterviewSession
+        from app.models.resume import Resume
+        from app.models.conversation import Conversation, Message
+        from app.models.roadmap import Roadmap
+
+        await db.execute(delete(Profile).where(Profile.user_id == user_id))
+        await db.execute(delete(XP).where(XP.user_id == user_id))
+        await db.execute(delete(UserSkillStat).where(UserSkillStat.user_id == user_id))
+        await db.execute(delete(UserStats).where(UserStats.user_id == user_id))
+        await db.execute(delete(UserSettings).where(UserSettings.user_id == user_id))
+        await db.execute(delete(Streak).where(Streak.user_id == user_id))
+        await db.execute(delete(Achievement).where(Achievement.user_id == user_id))
+        await db.execute(delete(UserSubmission).where(UserSubmission.user_id == user_id))
+        await db.execute(delete(CollegeStudent).where(CollegeStudent.user_id == user_id))
+        await db.execute(delete(CollegeAssessmentSubmission).where(CollegeAssessmentSubmission.student_id == user_id))
+        await db.execute(delete(CompanyMember).where(CompanyMember.user_id == user_id))
+        await db.execute(delete(CandidateApplication).where(CandidateApplication.user_id == user_id))
+        await db.execute(delete(CandidatePrivacySettings).where(CandidatePrivacySettings.user_id == user_id))
+        await db.execute(delete(BattleSubmission).where(BattleSubmission.user_id == user_id))
+        await db.execute(delete(BattleParticipant).where(BattleParticipant.user_id == user_id))
+        await db.execute(delete(InterviewSession).where(InterviewSession.user_id == user_id))
+        await db.execute(delete(Resume).where(Resume.user_id == user_id))
+        await db.execute(delete(Message).where(Message.sender_id == user_id))
+        await db.execute(delete(Conversation).where(Conversation.user_id == user_id))
+        await db.execute(delete(Roadmap).where(Roadmap.user_id == user_id))
+
+        await db.delete(current_user)
+        await db.commit()
+        logger.info("Account permanently deleted: user_id=%s", user_id)
 
 
 auth_service = AuthService()

@@ -281,12 +281,10 @@ class ResumeRepository:
         await db.refresh(resume)
 
         return resume
+
     # =====================================================
     # Analysis
     # =====================================================
-class ResumeRepository:
-    ...
-    # existing methods
 
     async def get_analysis(
         self,

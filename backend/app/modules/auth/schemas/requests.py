@@ -151,3 +151,12 @@ class ResetPasswordRequest(BaseModel):
     new_password: str = Field(min_length=8, max_length=128)
 
     model_config = ConfigDict(extra="forbid")
+
+
+class DeleteAccountRequest(BaseModel):
+
+    confirmation: str = Field(min_length=1, max_length=20)
+    password: str | None = Field(default=None, max_length=128)
+
+    model_config = ConfigDict(extra="forbid")
+

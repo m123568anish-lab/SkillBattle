@@ -5,6 +5,11 @@ import { authService } from "@/services/auth.service";
 
 interface RegisterFormData {
     account_type?: "STUDENT" | "COLLEGE" | "COMPANY";
+    organization_name?: string;
+    organization_code?: string;
+    industry?: string;
+    website?: string;
+    headquarters?: string;
     name: string;
     email: string;
     password: string;

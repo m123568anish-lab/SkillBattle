@@ -12,6 +12,7 @@ export interface User {
     level?: number;
     coding_rating?: number;
     onboarding_completed?: boolean;
+    is_superuser?: boolean;
 
 }
 

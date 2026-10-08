@@ -42,6 +42,21 @@ class ProfileService {
     const response = await api.put<Profile>(API_ENDPOINTS.PROFILE.UPDATE, payload);
     return response.data;
   }
+
+  async uploadAvatar(file: File): Promise<Profile> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await api.post<Profile>("/profile/avatar", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  }
+
+  async deleteAvatar(): Promise<Profile> {
+    const response = await api.delete<Profile>("/profile/avatar");
+    return response.data;
+  }
 }
 
 export const profileService = new ProfileService();
+

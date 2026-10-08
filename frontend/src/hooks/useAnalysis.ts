@@ -1,31 +1,29 @@
 import { useEffect } from "react";
 
-import { careerService } from "@/services/career";
-
+import { careerService } from "@/services/career.service";
 import { useCareerStore } from "@/stores/career-store";
 import { ResumeAnalysis } from "@/types/analysis";
 
 export function useAnalysis(resumeId?: string) {
-    const { analysis, setAnalysis } = useCareerStore();
+  const { analysis, setAnalysis } = useCareerStore();
 
-    const load = async () => {
-        if (!resumeId) return;
+  useEffect(() => {
+    if (!resumeId) return;
 
-        const data = await careerService.getAnalysis(resumeId);
-        setAnalysis(data as ResumeAnalysis);
-    };
+    void load();
+    const timer = setInterval(() => {
+      void load();
+    }, 2000);
 
-    useEffect(() => {
-        if (!resumeId) return;
+    return () => clearInterval(timer);
+  }, [resumeId, setAnalysis]);
 
-        void load();
+  async function load() {
+    if (!resumeId) return;
 
-        const timer = setInterval(() => {
-            void load();
-        }, 2000);
+    const data = await careerService.getAnalysis(resumeId);
+    setAnalysis(data as ResumeAnalysis);
+  }
 
-        return () => clearInterval(timer);
-    }, [resumeId, setAnalysis]);
-
-    return { analysis };
+  return { analysis };
 }

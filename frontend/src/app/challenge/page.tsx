@@ -111,7 +111,7 @@ export default function LeetCodeMobileChallengePage() {
         source_code: code,
         stdin: testInput,
       });
-      setOutput(res.data.output || res.data.stdout || res.data.stderr || "Execution completed successfully.\nOutput: [0, 1]");
+      setOutput(res.data.output || res.data.stdout || res.data.stderr || "Execution completed with no output.");
     } catch (err: any) {
       setOutput(`Error: ${err?.response?.data?.detail || err.message}`);
     } finally {

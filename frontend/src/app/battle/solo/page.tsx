@@ -613,29 +613,29 @@ export default function SoloBattlePage() {
 
   return (
     <DashboardLayout>
-      {/* ── Top Banner ── */}
-      <div className="mb-6 rounded-3xl border border-violet-500/20 bg-gradient-to-br from-violet-900/40 via-slate-900 to-cyan-900/40 p-5 backdrop-blur-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xl">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full border border-violet-500/30 bg-violet-500/20 px-3 py-1 text-xs font-bold text-violet-300">⚔️ Solo Battle</span>
-          <span className="rounded-full border border-cyan-500/30 bg-cyan-500/20 px-3 py-1 text-xs font-bold text-cyan-300">10 Placement MCQs</span>
-          <span className="rounded-full border border-amber-500/30 bg-amber-500/20 px-3 py-1 text-xs font-bold text-amber-300">1 Coding Challenge</span>
-        </div>
+      <header className="mb-6 rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.16),_transparent_18%),radial-gradient(circle_at_right,_rgba(168,85,247,0.18),_transparent_20%),linear-gradient(135deg,#0b1120,#111827_36%,#090d18)] p-5 shadow-[0_18px_50px_rgba(10,14,26,0.45)]">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-cyan-200">Solo coding arena</p>
+            <h1 className="mt-2 text-3xl font-black tracking-[-0.06em] text-white md:text-4xl">Placement battle</h1>
+          </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/70 px-4 py-2 text-sm font-bold text-white">
-            <Clock className="h-4 w-4 text-slate-400" /> {fmt(elapsed)}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/75 px-3.5 py-2 text-sm font-bold text-white">
+              <Clock className="h-4 w-4 text-slate-400" /> {fmt(elapsed)}
+            </div>
+            <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-3.5 py-2 text-sm font-bold text-yellow-300">
+              ⚡ {totalXp} XP
+            </div>
+            <button onClick={startSession} title="New session (fresh questions)" className="rounded-xl border border-white/10 bg-slate-800 p-2.5 text-slate-400 transition hover:text-white">
+              <RefreshCw className="h-4 w-4" />
+            </button>
+            <button onClick={() => router.push("/battle")} className="rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:text-white">
+              ← Leave
+            </button>
           </div>
-          <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-sm font-bold text-yellow-300">
-            ⚡ {totalXp} XP
-          </div>
-          <button onClick={startSession} title="New session (fresh questions)" className="rounded-xl border border-white/10 bg-slate-800 p-2 text-slate-400 hover:text-white transition">
-            <RefreshCw className="h-4 w-4" />
-          </button>
-          <button onClick={() => router.push("/battle")} className="rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white transition">
-            ← Leave
-          </button>
         </div>
-      </div>
+      </header>
 
       {/* ── Mode Tabs ── */}
       <div className="mb-6 flex gap-2 rounded-2xl border border-white/10 bg-slate-900/60 p-1.5 backdrop-blur-xl max-w-lg">

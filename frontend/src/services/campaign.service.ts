@@ -26,11 +26,22 @@ export interface QuestionOption {
   options: string[];
 }
 
+export interface CodingProblemOption {
+  id: number;
+  title: string;
+  description: string;
+  difficulty: string;
+  category: string;
+}
+
 export interface CampaignLevelResponse {
   level_id: number;
   title: string;
   description: string;
   questions: QuestionOption[];
+  coding_problems: CodingProblemOption[];
+  mcq_count: number;
+  coding_count: number;
 }
 
 export interface LevelAnswer {

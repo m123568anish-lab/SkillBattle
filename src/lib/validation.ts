@@ -15,6 +15,11 @@ export const loginSchema = z.object({
 export const registerSchema = z
   .object({
     account_type: z.enum(["STUDENT", "COLLEGE", "COMPANY"]).optional(),
+    organization_name: z.string().optional(),
+    organization_code: z.string().optional(),
+    industry: z.string().optional(),
+    website: z.string().optional(),
+    headquarters: z.string().optional(),
 
     name: z
       .string()

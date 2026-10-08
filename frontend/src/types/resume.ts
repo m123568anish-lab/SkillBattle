@@ -10,6 +10,8 @@ export interface UploadResponse {
     message: string;
     resume_id: string;
     status: string;
+    metadata?: ResumeMetadata | null;
+    analysis?: Record<string, any> | null;
 }
 
 export interface Resume {

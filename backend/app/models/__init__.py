@@ -3,6 +3,7 @@ from app.database.base import Base
 from .achievement import Achievement
 from .api_request_log import ApiRequestLog
 from .campaign import UserCampaignProgress
+from .campaign_attempt import CampaignAttempt
 from .compiler import CodeSubmission
 from .challenge import Challenge
 from .conversation import Conversation
@@ -66,6 +67,7 @@ __all__ = [
     "Streak",
     "User",
     "UserCampaignProgress",
+    "CampaignAttempt",
     "Question",
     "QuestionExposure",
     "UserSubmission",

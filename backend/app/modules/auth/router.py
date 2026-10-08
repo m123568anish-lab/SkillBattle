@@ -32,6 +32,7 @@ from app.modules.auth.schemas.requests import (
     ChangePasswordRequest,
     TwoFactorSetupRequest,
     TwoFactorVerifyRequest,
+    DeleteAccountRequest,
 )
 
 from app.modules.auth.schemas.responses import (
@@ -424,3 +425,27 @@ async def revoke_session(
         session.revoke_reason = "revoked_by_user"
         await db.commit()
     return {"session_id": session.id, "revoked": True}
+
+
+# ==========================================================
+# Delete Account
+# ==========================================================
+
+@router.delete(
+    "/account",
+    response_model=MessageResponse,
+)
+async def delete_account(
+    request: DeleteAccountRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """Permanently delete the authenticated user's account and personal data."""
+    try:
+        await auth_service.delete_account(db, current_user, request)
+        return {"message": "Account successfully and permanently deleted."}
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Account deletion failed")
+        raise HTTPException(status_code=500, detail="Failed to delete account. Please try again.")

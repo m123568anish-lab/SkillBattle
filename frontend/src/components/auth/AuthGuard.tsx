@@ -24,7 +24,7 @@ const PUBLIC_ROUTES = [
 const PROTECTED_ROUTE_PREFIXES = [
   "/achievements", "/activity", "/admin", "/analytics", "/assessments", "/battle",
   "/calendar", "/campaign", "/career", "/challenge", "/college", "/company",
-  "/coach", "/dashboard", "/interview", "/leaderboard", "/onboarding",
+  "/coach", "/dashboard", "/friends", "/interview", "/leaderboard", "/onboarding",
   "/opportunities", "/organization-setup", "/placement", "/profile", "/settings",
   "/tasks", "/tournament",
 ];

@@ -145,8 +145,10 @@ class UploadService:
 
         return {
 
-            "upload": upload,
-
+            "success": upload.success,
+            "message": upload.message,
+            "resume_id": upload.resume_id,
+            "metadata": upload.metadata.model_dump(mode="json"),
             "analysis": analysis,
 
         }

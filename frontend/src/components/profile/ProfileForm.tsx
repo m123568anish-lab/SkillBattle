@@ -2,11 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  Award,
+  Building,
+  Camera,
+  FileText,
+  GraduationCap,
+  Link2,
+  Sparkles,
+  Target,
+  User,
+} from "lucide-react";
 import { profileService, type Profile } from "@/services/profile.service";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "react-hot-toast";
-import { User, Sparkles, Building, Target, GraduationCap, Check, Camera, FileText, Link2, Award } from "lucide-react";
-import { AI_AVATARS } from "@/lib/avatars";
+import ProfilePhotoChooser from "./ProfilePhotoChooser";
 
 const defaultProfile: Profile = {
   full_name: "",
@@ -225,46 +235,11 @@ export default function ProfileForm() {
           {activeSection === "personal" && (
             <>
               <div>
-                <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
-                  <Camera className="h-3.5 w-3.5" /> Avatar Selection
-                </label>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
-                    {AI_AVATARS.map((avatarItem) => {
-                      const url = avatarItem.url;
-                      return (
-                        <motion.button
-                          key={avatarItem.id}
-                          onClick={() => setProfile({ ...profile, avatar: url })}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          className={`relative rounded-2xl border-2 p-1 transition overflow-hidden ${
-                            profile.avatar === url
-                              ? "border-cyan-400 ring-2 ring-cyan-400/50"
-                              : "border-white/10 hover:border-white/30"
-                          }`}
-                        >
-                          <img src={url} alt={avatarItem.name} className="h-14 w-14 rounded-xl object-cover" />
-                          {profile.avatar === url && (
-                            <motion.div layoutId="avatar-check" className="absolute inset-0 bg-cyan-500/20 flex items-center justify-center rounded-xl">
-                              <Check className="h-5 w-5 text-cyan-300" />
-                            </motion.div>
-                          )}
-                        </motion.button>
-                      );
-                    })}
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 mb-2">Custom Avatar URL</label>
-                    <input
-                      type="text"
-                      placeholder="https://..."
-                      value={profile.avatar ?? ""}
-                      onChange={(e) => setProfile({ ...profile, avatar: e.target.value })}
-                      className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 outline-none transition"
-                    />
-                  </div>
-                </div>
+                <ProfilePhotoChooser
+                  currentAvatar={profile.avatar}
+                  fullName={profile.full_name || "User"}
+                  onAvatarUpdated={(newUrl) => setProfile({ ...profile, avatar: newUrl })}
+                />
               </div>
 
               <div>

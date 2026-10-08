@@ -144,8 +144,8 @@ export function getMobileNavigation(portal: PortalKind): PortalNavItem[] {
   return [
     { title: "Home", href: "/dashboard", icon: Home, category: "mobile", available: true },
     { title: "Battle", href: "/battle", icon: Sword, category: "mobile", available: true },
-    { title: "Leaderboard", href: "/leaderboard", icon: Trophy, category: "mobile", available: true },
-    { title: "Friends", href: "/profile", icon: User, category: "mobile", available: true },
+    { title: "Career", href: "/career/roadmap", icon: Map, category: "mobile", available: true },
+    { title: "Coach", href: "/coach", icon: Bot, category: "mobile", available: true },
     { title: "More", icon: Layers3, category: "mobile", available: true },
   ];
 }
@@ -164,6 +164,7 @@ export const sidebarItems: SidebarItem[] = [
   { title: "College Assessments", href: "/assessments", icon: ClipboardCheck, category: "learn" },
   { title: "Company Opportunities", href: "/opportunities", icon: BriefcaseBusiness, category: "learn" },
   { title: "Resume Screening", href: "/career/resume", icon: FileText, category: "learn" },
+  { title: "Career Mentor", href: "/career/mentor", icon: Bot, category: "learn" },
   { title: "AI Mock Interview", href: "/interview", icon: Mic, category: "learn" },
   { title: "AI Coach", href: "/coach", icon: Bot, category: "learn" },
 

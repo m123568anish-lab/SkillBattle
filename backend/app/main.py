@@ -112,9 +112,14 @@ app.add_middleware(MaintenanceMiddleware)
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(XSSGuardMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+configure_cors(app)
 
 # CORS must be added LAST so it wraps all inner middlewares and exception responses
-configure_cors(app)
+import os
+from fastapi.staticfiles import StaticFiles
+
+os.makedirs("uploads/avatars", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.include_router(battle_ws_router)
 app.include_router(metrics_router)

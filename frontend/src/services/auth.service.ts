@@ -161,6 +161,15 @@ class AuthService {
 
     }
 
+    async deleteAccount(confirmation: string, password?: string) {
+        const response = await api.delete<{ message: string }>("/auth/account", {
+            data: { confirmation, password },
+        });
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        return response.data;
+    }
+
 }
 
-export const authService = new AuthService();
+export const authService = new AuthService();

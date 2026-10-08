@@ -1,43 +1,28 @@
-const weaknesses = [
+interface WeaknessesCardProps {
+  projectCount?: number;
+}
 
-    "Learn Docker",
+export default function WeaknessesCard({ projectCount = 0 }: WeaknessesCardProps) {
+  const recommendations: string[] = [];
 
-    "Improve DSA",
+  if (projectCount < 2) {
+    recommendations.push("Add at least 2 full-stack or system design projects to your resume");
+  }
+  if (projectCount === 0) {
+    recommendations.push("Include quantitative metrics (e.g., latency, user scale) in project bullet points");
+  }
+  recommendations.push("Complete practice coding battles to improve DSA accuracy");
 
-    "Earn AWS Certification",
-
-    "Deploy Projects",
-
-];
-
-export default function WeaknessesCard() {
-
-    return (
-
-        <div className="rounded-xl border bg-white p-6 shadow">
-
-            <h2 className="mb-4 text-xl font-semibold">
-
-                Improvement Areas
-
-            </h2>
-
-            <ul className="space-y-3">
-
-                {weaknesses.map((item) => (
-
-                    <li key={item}>
-
-                        ⚠️ {item}
-
-                    </li>
-
-                ))}
-
-            </ul>
-
-        </div>
-
-    );
-
+  return (
+    <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl shadow-xl text-white">
+      <h2 className="mb-4 text-xl font-bold text-amber-400">Targeted Improvement Areas</h2>
+      <ul className="space-y-2.5">
+        {recommendations.map((item) => (
+          <li key={item} className="flex items-center gap-2 text-xs font-medium text-amber-200">
+            <span>⚠️</span> {item}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }

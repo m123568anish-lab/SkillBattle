@@ -1,10 +1,41 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import MentorLayout from "@/components/mentor/MentorLayout";
 import Link from "next/link";
+import { careerService } from "@/services/career.service";
 
 export default function MentorPage() {
-    const resumeId = "";
+    const [resumeId, setResumeId] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadResume() {
+            try {
+                const resume = await careerService.getUserResume();
+                if (isMounted) setResumeId(resume?.id ?? null);
+            } catch {
+                if (isMounted) setResumeId(null);
+            } finally {
+                if (isMounted) setLoading(false);
+            }
+        }
+
+        loadResume();
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    if (loading) {
+        return (
+            <main className="flex min-h-screen items-center justify-center bg-[#050816] px-6 text-center text-white">
+                <div className="h-12 w-12 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
+            </main>
+        );
+    }
 
     if (!resumeId) {
         return (
@@ -18,12 +49,5 @@ export default function MentorPage() {
         );
     }
 
-    return (
-
-        <MentorLayout
-            resumeId={resumeId}
-        />
-
-    );
-
+    return <MentorLayout resumeId={resumeId} />;
 }

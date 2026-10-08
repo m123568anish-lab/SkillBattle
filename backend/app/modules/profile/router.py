@@ -207,3 +207,94 @@ async def create_profile(
         return await _profile_response(db, current_user, existing)
     profile = await profile_service.update_profile(db, current_user, payload)
     return await _profile_response(db, current_user, profile)
+
+
+# ==========================================================
+# Profile Photo Chooser / Avatar Upload System
+# ==========================================================
+
+from fastapi import File, UploadFile
+import os
+import time
+
+MAX_AVATAR_SIZE = 5 * 1024 * 1024  # 5 MB
+ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+
+
+@router.post("/avatar", response_model=ProfileResponse)
+async def upload_avatar(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProfileResponse:
+    """Upload a profile picture from device with validation."""
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file selected.")
+
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS or (file.content_type and file.content_type.lower() not in ALLOWED_MIME_TYPES):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid image type. Allowed formats: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
+        )
+
+    content = await file.read()
+    if len(content) > MAX_AVATAR_SIZE:
+        raise HTTPException(status_code=400, detail="File size exceeds maximum allowed limit of 5 MB.")
+
+    os.makedirs("uploads/avatars", exist_ok=True)
+    filename = f"avatar_{current_user.id}_{int(time.time())}{ext}"
+    filepath = os.path.join("uploads", "avatars", filename)
+
+    # Clean up previous custom avatar file if present
+    if current_user.avatar_url and "/uploads/avatars/" in current_user.avatar_url:
+        try:
+            old_filename = current_user.avatar_url.split("/uploads/avatars/")[-1]
+            old_filepath = os.path.join("uploads", "avatars", old_filename)
+            if os.path.exists(old_filepath):
+                os.remove(old_filepath)
+        except Exception:
+            pass
+
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    avatar_url = f"/uploads/avatars/{filename}"
+    current_user.avatar_url = avatar_url
+
+    profile = await profile_service.get_profile(db, current_user)
+    if profile:
+        profile.avatar = avatar_url
+
+    await db.commit()
+    await db.refresh(current_user)
+
+    return await _profile_response(db, current_user, profile)
+
+
+@router.delete("/avatar", response_model=ProfileResponse)
+async def delete_avatar(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProfileResponse:
+    """Remove current profile picture."""
+    if current_user.avatar_url and "/uploads/avatars/" in current_user.avatar_url:
+        try:
+            filename = current_user.avatar_url.split("/uploads/avatars/")[-1]
+            filepath = os.path.join("uploads", "avatars", filename)
+            if os.path.exists(filepath):
+                os.remove(filepath)
+        except Exception:
+            pass
+
+    current_user.avatar_url = None
+    profile = await profile_service.get_profile(db, current_user)
+    if profile:
+        profile.avatar = ""
+
+    await db.commit()
+    await db.refresh(current_user)
+
+    return await _profile_response(db, current_user, profile)
+

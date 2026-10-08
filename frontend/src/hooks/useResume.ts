@@ -1,39 +1,19 @@
 import { useEffect } from "react";
 
-import { careerService } from "@/services/career";
-
+import { careerService } from "@/services/career.service";
 import { useCareerStore } from "@/stores/career-store";
 
 export function useResume() {
+  const { resumes, setResumes } = useCareerStore();
 
-    const {
+  useEffect(() => {
+    void load();
+  }, []);
 
-        resumes,
+  async function load() {
+    const data = await careerService.getResumes();
+    setResumes(data);
+  }
 
-        setResumes,
-
-    } = useCareerStore();
-
-    useEffect(() => {
-
-        load();
-
-    }, []);
-
-    async function load() {
-
-        const data = await careerService.getResumes();
-
-        setResumes(data);
-
-    }
-
-    return {
-
-        resumes,
-
-        reload: load,
-
-    };
-
+  return { resumes, reload: load };
 }

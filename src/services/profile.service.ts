@@ -14,6 +14,10 @@ export interface Profile {
   target_package?: string;
   github?: string;
   linkedin?: string;
+  total_xp?: number;
+  level?: number;
+  onboarding_preferences?: Record<string, unknown>;
+  onboarding_completed?: boolean;
 }
 
 export interface ProfileUpdatePayload {
@@ -27,6 +31,7 @@ export interface ProfileUpdatePayload {
   target_package?: string;
   github?: string;
   linkedin?: string;
+  onboarding_preferences?: Record<string, unknown>;
 }
 
 class ProfileService {

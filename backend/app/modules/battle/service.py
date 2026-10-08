@@ -241,6 +241,31 @@ class BattleService:
     async def get_battle(self, db: AsyncSession, battle_id: str):
         return await battle_repository.get_battle(db, battle_id)
 
+    async def get_or_create_daily_battle(
+        self,
+        db: AsyncSession,
+        current_user: User,
+    ) -> BattleRoom:
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        result = await db.execute(
+            select(BattleRoom).where(
+                BattleRoom.creator_id == current_user.id,
+                BattleRoom.battle_type == "practice",
+                BattleRoom.created_at >= today_start,
+            ).order_by(BattleRoom.created_at.desc()).limit(1)
+        )
+        existing = result.scalar_one_or_none()
+        if existing is not None:
+            return existing
+
+        request = CreateBattleRequest(
+            title="Daily Battle",
+            difficulty="medium",
+            battle_type=BattleTypeEnum.PRACTICE,
+            max_players=1,
+        )
+        return await self.create_battle(db, current_user, request)
+
     async def participants(self, db: AsyncSession, battle_id: str):
         return await battle_repository.get_participants(db, battle_id)
 

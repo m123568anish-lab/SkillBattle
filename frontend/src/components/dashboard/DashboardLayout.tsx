@@ -5,7 +5,7 @@ import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getMobileNavigation, getPortalKind } from "@/data/dashboard";
+import { getMobileNavigation, getPortalKind, sidebarItems } from "@/data/dashboard";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 
@@ -21,43 +21,24 @@ export default function DashboardLayout({ children }: Props) {
   const mobileNavigation = getMobileNavigation(portal);
 
   const quickAccessGroups = (() => {
-    if (portal === "student") {
-      return [
-        {
-          title: "Learn",
-          items: [
-            { label: "Practice", href: "/battle" },
-            { label: "Career Roadmap", href: "/career/roadmap" },
-            { label: "AI Coach", href: "/coach" },
-            { label: "Mock Interview", href: "/interview" },
-          ],
-        },
-        {
-          title: "Compete",
-          items: [
-            { label: "Tournaments", href: "/tournament" },
-            { label: "Leaderboard", href: "/leaderboard" },
-            { label: "Achievements", href: "/achievements" },
-          ],
-        },
-        {
-          title: "Career",
-          items: [
-            { label: "Opportunities", href: "/opportunities" },
-            { label: "Placement", href: "/placement" },
-            { label: "Resume", href: "/career/resume" },
-            { label: "Skill Profile", href: "/profile" },
-          ],
-        },
-        {
-          title: "Personal",
-          items: [
-            { label: "Calendar", href: "/calendar" },
-            { label: "Profile", href: "/profile" },
-            { label: "Settings", href: "/settings" },
-          ],
-        },
-      ];
+    const categoryTitles: Record<string, string> = {
+      main: "Core",
+      compete: "Compete",
+      learn: "Grow",
+      track: "Track",
+      account: "Account",
+    };
+
+    const itemsByCategory = new Map<string, Array<{ label: string; href: string }>>();
+
+    for (const item of sidebarItems) {
+      const groupTitle = categoryTitles[item.category] ?? "Explore";
+      const targetHref = item.href || "/dashboard";
+      const existing = itemsByCategory.get(groupTitle) ?? [];
+      if (!existing.some((entry) => entry.href === targetHref)) {
+        existing.push({ label: item.title, href: targetHref });
+      }
+      itemsByCategory.set(groupTitle, existing);
     }
 
     if (portal === "college") {
@@ -102,29 +83,24 @@ export default function DashboardLayout({ children }: Props) {
       ];
     }
 
-    return [
-      {
-        title: "Administration",
-        items: [
-          { label: "Users", href: "/admin?tab=users" },
-          { label: "Organizations", href: "/admin?tab=organizations" },
-          { label: "Security", href: "/admin?tab=security" },
-        ],
-      },
-      {
-        title: "Account",
-        items: [
-          { label: "Profile", href: "/profile" },
-          { label: "Settings", href: "/settings" },
-        ],
-      },
-    ];
+    return Array.from(itemsByCategory.entries()).map(([title, items]) => ({
+      title,
+      items: items.slice(0, 6),
+    }));
   })();
 
   const isActive = (href?: string) => {
     if (!href) return false;
     const [targetPath, query = ""] = href.split("?");
-    if (pathname !== targetPath) return false;
+    const normalizedPath = pathname || "/";
+
+    if (targetPath === "/") {
+      return normalizedPath === "/";
+    }
+
+    const pathMatches = normalizedPath === targetPath || normalizedPath.startsWith(`${targetPath}/`);
+    if (!pathMatches) return false;
+
     const targetParams = new URLSearchParams(query);
     if (targetParams.get("view") !== searchParams.get("view")) return false;
     return Array.from(targetParams.entries()).every(([key, value]) => searchParams.get(key) === value);

@@ -13,11 +13,11 @@ export interface UploadResponse {
 }
 
 export interface Resume {
-    id: string;
-    filename: string;
-    uploaded_at: string;
+    id?: string;
+    filename?: string;
+    uploaded_at?: string;
     ats_score?: number;
     placement_score?: number;
-    parsed: boolean;
-    ai_processed: boolean;
+    parsed?: boolean;
+    ai_processed?: boolean;
 }
