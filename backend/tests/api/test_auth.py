@@ -122,3 +122,65 @@ async def test_refresh_token_rotates_and_old_access_token_cannot_authenticate(cl
     )
     assert refresh_as_access.status_code == 401
 
+
+
+@pytest.mark.asyncio
+async def test_clerk_linking_creates_user_with_onboarding_pending_and_profile(client):
+    from app.core.dependencies import _get_or_create_clerk_user
+    from app.models.profile import Profile
+    from app.models.xp import XP
+
+    unique_id = uuid4().hex[:8]
+    clerk_user_id = f"user_clerk_{unique_id}"
+    email = f"clerk_{unique_id}@example.com"
+
+    async with AsyncSessionLocal() as db:
+        user = await _get_or_create_clerk_user(
+            db,
+            {"sub": clerk_user_id, "email": email, "email_verified": True},
+        )
+        assert user.clerk_user_id == clerk_user_id
+        assert user.onboarding_completed is False
+
+        # Verify profile and xp were automatically instantiated
+        profile = (await db.execute(select(Profile).where(Profile.user_id == user.id))).scalar_one_or_none()
+        assert profile is not None
+        assert profile.onboarding_preferences == {}
+
+        xp = (await db.execute(select(XP).where(XP.user_id == user.id))).scalar_one_or_none()
+        assert xp is not None
+        assert xp.total_xp == 0
+        assert xp.level == 1
+
+
+@pytest.mark.asyncio
+async def test_clerk_linking_existing_user_preserves_onboarding_and_data(client):
+    from app.core.dependencies import _get_or_create_clerk_user
+
+    unique_id = uuid4().hex[:8]
+    email = f"legacy_{unique_id}@example.com"
+    password = "StrongPass#123"
+
+    reg = await client.post("/auth/register", json={
+        "username": f"legacy_{unique_id}",
+        "email": email,
+        "full_name": "Legacy User",
+        "password": password,
+    })
+    assert reg.status_code == 201
+    user_id = reg.json()["id"]
+
+    async with AsyncSessionLocal() as db:
+        u = await db.get(User, user_id)
+        u.onboarding_completed = True
+        await db.commit()
+
+    clerk_id = f"user_clerk_legacy_{unique_id}"
+    async with AsyncSessionLocal() as db:
+        linked_user = await _get_or_create_clerk_user(
+            db,
+            {"sub": clerk_id, "email": email, "email_verified": True},
+        )
+        assert linked_user.id == user_id
+        assert linked_user.clerk_user_id == clerk_id
+        assert linked_user.onboarding_completed is True

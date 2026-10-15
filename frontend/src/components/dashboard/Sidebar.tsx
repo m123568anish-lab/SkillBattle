@@ -34,11 +34,11 @@ export default function Sidebar() {
       initial={false}
       animate={{ width: isCollapsed ? 88 : 280 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="hidden lg:flex flex-col my-6 ml-6 rounded-3xl border border-white/10 bg-gradient-to-b from-[#0F172A] via-[#070B14] to-[#050816] backdrop-blur-2xl shadow-2xl shadow-black/50 relative overflow-hidden"
+      className="hidden lg:flex flex-col my-6 ml-6 rounded-3xl border border-white/[0.08] bg-[#0a0f1d] shadow-2xl shadow-black/60 relative overflow-hidden"
     >
-      {/* Aurora Ambient Light */}
-      <div className="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-cyan-500/10 blur-3xl" />
-      <div className="absolute -bottom-24 -right-24 h-48 w-48 rounded-full bg-violet-500/10 blur-3xl" />
+      {/* Restrained Ambient Light */}
+      <div className="pointer-events-none absolute -top-24 -left-24 h-48 w-48 rounded-full bg-cyan-500/5 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 -right-24 h-48 w-48 rounded-full bg-violet-500/5 blur-3xl" />
 
       {/* Collapse Button */}
       <button

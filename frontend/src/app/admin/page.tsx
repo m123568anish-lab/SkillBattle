@@ -39,7 +39,7 @@ function AdminPageContent() {
       </div>
 
       {/* Content Rendering based on Tab */}
-      <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-8 backdrop-blur-3xl shadow-2xl shadow-black/50">
+      <div className="rounded-3xl border border-white/[0.08] bg-[#0a0f1d] p-6 sm:p-8 shadow-2xl shadow-black/50">
         {activeTab === "overview" && <AdminOverview />}
         {activeTab === "challenge" && (
           <div className="max-w-2xl mx-auto">

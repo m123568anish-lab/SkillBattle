@@ -68,7 +68,10 @@ async def _get_or_create_clerk_user(
 
     profile = await get_clerk_user_profile(clerk_user_id)
     profile_email = profile.get("email") if profile else None
-    claim_email = claims.get("email")
+    claim_email = claims.get("email") or claims.get("email_address")
+    if not claim_email and isinstance(claims.get("email_addresses"), list) and claims["email_addresses"]:
+        first_email = claims["email_addresses"][0]
+        claim_email = first_email if isinstance(first_email, str) else first_email.get("email_address")
     email = profile_email or (claim_email if isinstance(claim_email, str) else None)
     email_verified = bool(profile and profile.get("email_verified")) or claims.get("email_verified") is True
 
@@ -126,20 +129,37 @@ async def _get_or_create_clerk_user(
         is_verified=True,
         onboarding_completed=False,
     )
-    db.add(user)
-    await db.flush()
-
-    # Match the records created by the legacy registration flow so a newly
-    # linked Clerk user can use dashboards immediately.
     from app.models.user_stats import UserSettings, UserStats
     from app.models.xp import XP
+    from app.models.profile import Profile
+    from sqlalchemy.exc import IntegrityError
 
-    db.add(UserStats(user_id=user.id, level=1, rating=1000, xp=0))
-    db.add(UserSettings(user_id=user.id, theme="dark", language="python"))
-    db.add(XP(user_id=user.id, total_xp=0, weekly_xp=0, daily_xp=0, level=1, rank=99999))
-    await db.commit()
-    await db.refresh(user)
-    return user
+    try:
+        db.add(user)
+        await db.flush()
+
+        db.add(UserStats(user_id=user.id, level=1, rating=1000, xp=0))
+        db.add(UserSettings(user_id=user.id, theme="dark", language="python"))
+        db.add(XP(user_id=user.id, total_xp=0, weekly_xp=0, daily_xp=0, level=1, rank=99999))
+        db.add(Profile(user_id=user.id, avatar=user.avatar_url or "", onboarding_preferences={}))
+        await db.commit()
+        await db.refresh(user)
+        return user
+    except IntegrityError:
+        await db.rollback()
+        existing = await user_repository.get_by_clerk_user_id(db, clerk_user_id)
+        if existing is not None:
+            return existing
+        existing = await user_repository.get_by_email(db, email)
+        if existing is not None:
+            if existing.clerk_user_id and existing.clerk_user_id != clerk_user_id:
+                raise ClerkAuthenticationError("The email is already linked to another Clerk identity.")
+            existing.clerk_user_id = clerk_user_id
+            existing.is_verified = True
+            await db.commit()
+            await db.refresh(existing)
+            return existing
+        raise
 
 async def get_current_user(
 

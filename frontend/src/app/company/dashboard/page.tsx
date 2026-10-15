@@ -28,16 +28,24 @@ function errorMessage(error: unknown): string {
 
 function Metric({ label, value, note, icon: Icon }: { label: string; value: string | number; note?: string; icon: typeof Users }) {
   return (
-    <section className="min-w-0 rounded-2xl border border-white/10 bg-[#0b1020] p-5">
-      <div className="flex items-start justify-between gap-3"><p className="text-sm font-medium text-slate-400">{label}</p><Icon className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" /></div>
-      <p className="mt-4 text-3xl font-semibold tabular-nums text-white">{value}</p>
-      {note && <p className="mt-1 text-xs text-slate-500">{note}</p>}
+    <section className="min-w-0 rounded-2xl border border-white/[0.08] bg-[#0a0f1d] p-5 shadow-lg shadow-black/30">
+      <div className="flex items-start justify-between gap-3"><p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{label}</p><Icon className="h-4 w-4 shrink-0 text-cyan-400" aria-hidden="true" /></div>
+      <p className="mt-3 text-2xl sm:text-3xl font-black tabular-nums text-white tracking-tight">{value}</p>
+      {note && <p className="mt-1 text-xs text-slate-400">{note}</p>}
     </section>
   );
 }
 
 function Panel({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
-  return <section className="min-w-0 rounded-2xl border border-white/10 bg-[#0b1020] p-5 sm:p-6"><div className="mb-5"><h2 className="text-base font-semibold text-white">{title}</h2>{subtitle && <p className="mt-1 text-sm text-slate-400">{subtitle}</p>}</div>{children}</section>;
+  return (
+    <section className="min-w-0 rounded-3xl border border-white/[0.08] bg-[#0a0f1d] p-5 sm:p-6 shadow-2xl shadow-black/40">
+      <div className="mb-5 border-b border-white/[0.06] pb-3">
+        <h2 className="text-base font-bold text-white">{title}</h2>
+        {subtitle && <p className="mt-1 text-xs text-slate-400">{subtitle}</p>}
+      </div>
+      {children}
+    </section>
+  );
 }
 
 function EmptyState({ children }: { children: React.ReactNode }) {

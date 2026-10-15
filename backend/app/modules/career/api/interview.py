@@ -321,7 +321,14 @@ async def submit_answer(
 
     # Grant XP for answering
     try:
-        await xp_service.add_xp(db, current_user, 50)
+        await xp_service.add_xp(
+            db,
+            current_user,
+            50,
+            source="interview_question",
+            reference_id=f"{session_id}:{req.question_id}",
+            description=f"Interview {session_id} question {req.question_id}",
+        )
     except Exception:
         pass
 

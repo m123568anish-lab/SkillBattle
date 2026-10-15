@@ -70,3 +70,24 @@ class SkillProfileResponse(BaseModel):
     assessment_performance: list[SkillActivity] = Field(default_factory=list)
     interview_results: list[SkillActivity] = Field(default_factory=list)
     achievements: list[SkillAchievement] = Field(default_factory=list)
+
+
+class UserPreferencesSchema(BaseModel):
+    theme: str = Field(default="dark", pattern="^(dark|light|system)$")
+    language: str = Field(default="python")
+    notification_preferences: dict[str, bool] = Field(
+        default_factory=lambda: {
+            "email_battles": True,
+            "email_achievements": True,
+            "email_marketing": False,
+            "in_app_tournaments": True,
+            "in_app_friend_requests": True,
+            "in_app_system": True,
+        }
+    )
+
+
+class UserPreferencesUpdate(BaseModel):
+    theme: Optional[str] = Field(None, pattern="^(dark|light|system)$")
+    language: Optional[str] = None
+    notification_preferences: Optional[dict[str, bool]] = None

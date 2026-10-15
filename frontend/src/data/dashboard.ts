@@ -113,20 +113,20 @@ export function getPortalCategories(portal: PortalKind): Array<{ id: string; lab
 export function getMobileNavigation(portal: PortalKind): PortalNavItem[] {
   if (portal === "college") {
     return [
-      collegeItems[0],
-      collegeItems[1],
-      collegeItems[5],
-      collegeItems[13],
+      { title: "Home", href: "/college/dashboard", icon: Home, category: "mobile", available: true },
+      { title: "Students", href: "/college/dashboard?view=students", icon: Users, category: "mobile", available: true },
+      { title: "Assessments", href: "/college/dashboard?view=assessments", icon: ClipboardCheck, category: "mobile", available: true },
+      { title: "Placement", href: "/placement/scorecard", icon: BriefcaseBusiness, category: "mobile", available: true },
       { title: "More", icon: Layers3, category: "mobile", available: true },
     ];
   }
 
   if (portal === "company") {
     return [
-      companyItems[0],
-      companyItems[1],
-      companyItems[3],
-      companyItems[5] || { title: "Interviews", icon: ClipboardCheck, category: "mobile", available: true },
+      { title: "Home", href: "/company/dashboard", icon: Home, category: "mobile", available: true },
+      { title: "Jobs", href: "/company/dashboard?view=jobs", icon: BriefcaseBusiness, category: "mobile", available: true },
+      { title: "Candidates", href: "/company/dashboard?view=candidates", icon: Users, category: "mobile", available: true },
+      { title: "Interviews", href: "/company/dashboard?view=interviews", icon: ClipboardCheck, category: "mobile", available: true },
       { title: "More", icon: Layers3, category: "mobile", available: true },
     ];
   }
@@ -144,8 +144,8 @@ export function getMobileNavigation(portal: PortalKind): PortalNavItem[] {
   return [
     { title: "Home", href: "/dashboard", icon: Home, category: "mobile", available: true },
     { title: "Battle", href: "/battle", icon: Sword, category: "mobile", available: true },
-    { title: "Career", href: "/career/roadmap", icon: Map, category: "mobile", available: true },
-    { title: "Coach", href: "/coach", icon: Bot, category: "mobile", available: true },
+    { title: "Leaderboard", href: "/leaderboard", icon: Trophy, category: "mobile", available: true },
+    { title: "Friends", href: "/friends", icon: Users, category: "mobile", available: true },
     { title: "More", icon: Layers3, category: "mobile", available: true },
   ];
 }

@@ -107,7 +107,7 @@ export default function DashboardLayout({ children }: Props) {
   };
 
   return (
-    <main suppressHydrationWarning className="flex min-h-screen bg-[#050816] text-white lg:h-dvh lg:min-h-0 lg:overflow-hidden">
+    <main suppressHydrationWarning className="flex min-h-screen bg-[#060913] text-white lg:h-dvh lg:min-h-0 lg:overflow-hidden">
       <Sidebar />
 
       <AnimatePresence>
@@ -120,14 +120,14 @@ export default function DashboardLayout({ children }: Props) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMoreOpen(false)}
-              className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
             />
             <motion.aside
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 24, stiffness: 220 }}
-              className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-xl rounded-t-[28px] border border-white/10 bg-[#070B14] p-5 shadow-2xl shadow-black/60 lg:hidden"
+              className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-xl rounded-t-[28px] border border-white/[0.08] bg-[#0a0f1d] p-5 shadow-2xl shadow-black/80 lg:hidden"
             >
               <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-white/15" />
               <div className="mb-4 flex items-center justify-between">
@@ -171,7 +171,7 @@ export default function DashboardLayout({ children }: Props) {
         {children}
       </section>
 
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#070B14]/90 px-2 pb-[calc(env(safe-area-inset-bottom)+0.35rem)] pt-1.5 backdrop-blur-lg lg:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/[0.08] bg-[#0a0f1d]/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.35rem)] pt-1.5 backdrop-blur-xl lg:hidden shadow-2xl shadow-black">
         <div className="mx-auto flex h-12 max-w-xl items-center justify-around gap-1">
           {mobileNavigation.map((tab) => {
             const active = isActive(tab.href);

@@ -123,7 +123,15 @@ async def submit_solution(
         if solved:
             from app.modules.xp.service import xp_service
 
-            await xp_service.add_xp(db, current_user, xp_earned, commit=False)
+            await xp_service.add_xp(
+                db,
+                current_user,
+                xp_earned,
+                commit=False,
+                source="problem_submission",
+                reference_id=str(question.id),
+                description=f"Problem {question.id} solved",
+            )
             stats = (
                 await db.execute(select(UserStats).where(UserStats.user_id == current_user.id))
             ).scalar_one_or_none()

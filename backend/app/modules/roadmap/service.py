@@ -139,7 +139,14 @@ class RoadmapService:
             await db.commit()
 
         try:
-            await xp_service.add_xp(db, current_user, task.reward_xp)
+            await xp_service.add_xp(
+                db,
+                current_user,
+                task.reward_xp,
+                source="roadmap_task",
+                reference_id=str(task.id),
+                description=f"Roadmap task: {task.topic}",
+            )
         except Exception:
             pass
 

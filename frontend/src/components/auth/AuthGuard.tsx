@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
-import { getPostLoginPath } from "@/lib/auth-routing";
+import { getDashboardPath, getPostLoginPath } from "@/lib/auth-routing";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -61,6 +61,11 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
     if (isAuthenticated && user && getPostLoginPath(user) === "/onboarding" && pathname !== "/onboarding") {
       router.replace("/onboarding");
+      return;
+    }
+
+    if (isAuthenticated && user && user.onboarding_completed === true && pathname === "/onboarding") {
+      router.replace(getDashboardPath(user));
       return;
     }
 

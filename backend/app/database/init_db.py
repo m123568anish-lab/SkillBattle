@@ -166,7 +166,8 @@ def init_db() -> None:
                 _seed_initial_questions()
                 logger.info(f"✅ Tables created: {list(Base.metadata.tables.keys())}")
             else:
-                logger.info("⚡ Database schema already initialized (%d tables found); skipping redundant DDL repairs for rapid boot.", len(existing_tables))
+                Base.metadata.create_all(bind=engine)
+                logger.info("⚡ Database schema already initialized (%d tables found); verified all registered model tables exist.", len(existing_tables))
         except Exception as e:
             # Some DB backends may raise an OperationalError on concurrent create_all
             # (e.g., multiple reload processes trying to create the same table).

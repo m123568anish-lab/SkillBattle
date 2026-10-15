@@ -488,6 +488,9 @@ async def complete_task(
             current_user,
             task.reward_xp,
             commit=False,
+            source="roadmap_task",
+            reference_id=str(task.id),
+            description=f"Roadmap task: {task.topic}",
         )
         await db.commit()
 

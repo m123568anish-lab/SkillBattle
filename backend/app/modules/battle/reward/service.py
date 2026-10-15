@@ -109,6 +109,9 @@ class BattleRewardService:
                 user,
                 xp_earned,
                 commit=False,
+                source="battle",
+                reference_id=str(battle.id),
+                description=f"Battle {battle.id} {'winner' if is_winner else 'participation'} reward",
             )
             user.coding_rating = max(0, (user.coding_rating or 1000) + rating_change)
             stats_result = await db.execute(

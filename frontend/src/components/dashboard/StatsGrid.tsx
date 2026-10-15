@@ -77,8 +77,8 @@ export default function StatsGrid({ stats }: StatsGridProps) {
   ];
 
   return (
-    <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-      {cards.map((card, idx) => {
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {cards.map((card) => {
         const Icon = card.icon;
 
         return (
@@ -86,41 +86,37 @@ export default function StatsGrid({ stats }: StatsGridProps) {
             key={card.title}
             className={`
               group
-              rounded-3xl
+              rounded-2xl
               border
-              border-white/10
-              bg-gradient-to-b
-              from-white/5
-              to-[#090D1A]/40
-              p-6
-              backdrop-blur-xl
+              border-white/[0.08]
+              bg-[#0a0f1d]
+              p-5
               transition-all
-              duration-300
+              duration-200
               relative
               overflow-hidden
+              hover:border-white/20
               ${card.borderGlow}
             `}
           >
-            {/* Soft inner glow behind card */}
-            <div className={`absolute -right-12 -bottom-12 h-32 w-32 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${card.bgGlow}`} />
+            {/* Subtle card glow */}
+            <div className={`absolute -right-12 -bottom-12 h-28 w-28 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${card.bgGlow}`} />
 
             <div className="flex items-start justify-between relative z-10">
-              <div className="space-y-4">
-                <div>
-                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${card.badgeColor}`}>
-                    {card.title}
-                  </span>
-                  <h2 className="mt-3.5 text-3.5xl font-black text-white tracking-tight">
-                    {card.value}
-                  </h2>
-                </div>
-                <p className="text-xs text-slate-500 leading-snug">
+              <div className="space-y-3">
+                <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${card.badgeColor}`}>
+                  {card.title}
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                  {card.value}
+                </h2>
+                <p className="text-xs text-slate-400 leading-snug">
                   {card.desc}
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-white/5 bg-[#0D1226]/80 p-3.5 shadow-md shadow-black/20 group-hover:border-white/15 transition-colors">
-                <Icon size={24} className={`${card.color} transition-transform duration-300 group-hover:scale-110`} />
+              <div className="rounded-xl border border-white/[0.06] bg-[#060913] p-3 shadow-md group-hover:border-white/15 transition-colors">
+                <Icon size={22} className={`${card.color} transition-transform duration-200 group-hover:scale-105`} />
               </div>
             </div>
           </div>

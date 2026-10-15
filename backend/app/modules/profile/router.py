@@ -26,11 +26,14 @@ from sqlalchemy import select
 
 from app.models.user import User
 from app.models.company import CandidatePrivacySettings
+from app.models.user_stats import UserSettings
 
 from app.modules.profile.schemas import (
     ProfileResponse,
     ProfileUpdateRequest,
     SkillProfileResponse,
+    UserPreferencesSchema,
+    UserPreferencesUpdate,
 )
 
 from app.modules.profile.service import (
@@ -70,7 +73,11 @@ async def _profile_response(
         onboarding_preferences=profile.onboarding_preferences or {},
         github=profile.github or current_user.github_url or "",
         linkedin=profile.linkedin or current_user.linkedin_url or "",
-        onboarding_completed=bool(getattr(current_user, "onboarding_completed", True)),
+        onboarding_completed=(
+            True
+            if getattr(current_user, "onboarding_completed", None) is None
+            else bool(current_user.onboarding_completed)
+        ),
     )
 
 
@@ -173,11 +180,11 @@ async def update_profile(
     current_user: User = Depends(get_current_user),
 ):
     try:
-        payload = payload.model_copy(update={
-            "onboarding_preferences": (
-                await profile_service.get_profile(db, current_user)
-            ).onboarding_preferences or {}
-        })
+        if payload.onboarding_preferences is None:
+            existing_profile = await profile_service.get_profile(db, current_user)
+            payload = payload.model_copy(update={
+                "onboarding_preferences": existing_profile.onboarding_preferences or {}
+            })
         profile = await profile_service.update_profile(
             db,
             current_user,
@@ -190,6 +197,22 @@ async def update_profile(
             status_code=400,
             detail=str(exc),
         )
+
+
+@router.post(
+    "/onboarding/complete",
+    response_model=ProfileResponse,
+)
+async def complete_onboarding(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProfileResponse:
+    current_user.onboarding_completed = True
+    db.add(current_user)
+    await db.commit()
+    await db.refresh(current_user)
+    profile = await profile_service.get_profile(db, current_user)
+    return await _profile_response(db, current_user, profile)
 
 
 @router.post(
@@ -207,6 +230,87 @@ async def create_profile(
         return await _profile_response(db, current_user, existing)
     profile = await profile_service.update_profile(db, current_user, payload)
     return await _profile_response(db, current_user, profile)
+
+
+@router.get("/preferences", response_model=UserPreferencesSchema)
+async def get_user_preferences(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> UserPreferencesSchema:
+    settings_result = await db.execute(select(UserSettings).where(UserSettings.user_id == current_user.id))
+    user_settings = settings_result.scalar_one_or_none()
+
+    profile = await profile_service.get_profile(db, current_user)
+    onboarding_prefs = (profile.onboarding_preferences or {}) if profile else {}
+    notif_prefs = onboarding_prefs.get("notifications")
+
+    default_notifs = {
+        "email_battles": True,
+        "email_achievements": True,
+        "email_marketing": False,
+        "in_app_tournaments": True,
+        "in_app_friend_requests": True,
+        "in_app_system": True,
+    }
+    if isinstance(notif_prefs, dict):
+        default_notifs.update(notif_prefs)
+
+    return UserPreferencesSchema(
+        theme=user_settings.theme if user_settings else "dark",
+        language=user_settings.language if user_settings else "python",
+        notification_preferences=default_notifs,
+    )
+
+
+@router.put("/preferences", response_model=UserPreferencesSchema)
+async def update_user_preferences(
+    payload: UserPreferencesUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> UserPreferencesSchema:
+    settings_result = await db.execute(select(UserSettings).where(UserSettings.user_id == current_user.id))
+    user_settings = settings_result.scalar_one_or_none()
+    if not user_settings:
+        user_settings = UserSettings(
+            user_id=current_user.id,
+            theme=payload.theme or "dark",
+            language=payload.language or "python",
+        )
+        db.add(user_settings)
+    else:
+        if payload.theme is not None:
+            user_settings.theme = payload.theme
+        if payload.language is not None:
+            user_settings.language = payload.language
+
+    profile = await profile_service.get_profile(db, current_user)
+    default_notifs = {
+        "email_battles": True,
+        "email_achievements": True,
+        "email_marketing": False,
+        "in_app_tournaments": True,
+        "in_app_friend_requests": True,
+        "in_app_system": True,
+    }
+    if profile:
+        prefs = dict(profile.onboarding_preferences or {})
+        existing_notifs = prefs.get("notifications")
+        if isinstance(existing_notifs, dict):
+            default_notifs.update(existing_notifs)
+        if payload.notification_preferences is not None:
+            default_notifs.update(payload.notification_preferences)
+        prefs["notifications"] = default_notifs
+        profile.onboarding_preferences = prefs
+
+    await db.commit()
+    if user_settings:
+        await db.refresh(user_settings)
+
+    return UserPreferencesSchema(
+        theme=user_settings.theme,
+        language=user_settings.language,
+        notification_preferences=default_notifs,
+    )
 
 
 # ==========================================================

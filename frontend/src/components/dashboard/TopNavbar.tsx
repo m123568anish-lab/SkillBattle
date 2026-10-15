@@ -75,10 +75,12 @@ export default function TopNavbar() {
         relative z-20
         mb-4 flex min-w-0 flex-row items-center justify-between gap-2 rounded-xl
         border
-        border-white/10
-        bg-[#070B14]/80
+        border-white/[0.08]
+        bg-[#0a0f1d]/90
         p-2
         backdrop-blur-xl
+        shadow-lg
+        shadow-black/30
         sm:mb-8 sm:gap-4 sm:rounded-2xl sm:p-4
       "
     >

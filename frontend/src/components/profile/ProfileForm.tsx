@@ -133,61 +133,83 @@ export default function ProfileForm() {
     );
   }
 
+  const initials = (profile.full_name || "User")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("") || "SB";
+
   return (
     <div className="space-y-6">
       {/* Hero Card */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 to-violet-950/10 p-8 text-white shadow-2xl backdrop-blur-xl"
+        className="rounded-3xl border border-white/[0.08] bg-[#0a0f1d] p-6 sm:p-8 text-white shadow-2xl shadow-black/50 relative overflow-hidden"
       >
-        <div className="flex flex-col sm:flex-row items-center gap-8">
+        <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-cyan-500/5 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-violet-500/5 blur-3xl" />
+
+        <div className="relative z-10 flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
           {/* Avatar Section */}
           <div className="relative group flex-shrink-0">
-            <motion.div whileHover={{ scale: 1.05 }} className="relative">
-              <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-violet-500 rounded-full blur opacity-75 group-hover:opacity-100 transition" />
-              <img
-                src={profile.avatar || `https://ui-avatars.com/api/?name=${profile.full_name || 'User'}&background=06b6d4&color=fff`}
-                alt={`Profile photo for ${profile.full_name || "your account"}`}
-                className="relative h-32 w-32 rounded-full border-4 border-slate-950 object-cover shadow-xl"
-              />
-              <div className="absolute bottom-2 right-2 rounded-full bg-cyan-500 p-2 text-slate-950 font-bold">
-                <Camera className="h-4 w-4" />
-              </div>
-            </motion.div>
+            <div className="relative h-28 w-28 rounded-2xl border-2 border-white/10 bg-[#060913] overflow-hidden shadow-xl">
+              {profile.avatar ? (
+                <img
+                  src={profile.avatar}
+                  alt={`Profile photo for ${profile.full_name || "your account"}`}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-cyan-600 to-violet-700 text-white font-black text-3xl">
+                  {initials}
+                </div>
+              )}
+            </div>
+            <span className="absolute -bottom-2 -right-2 rounded-lg bg-cyan-500 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-950 shadow-md">
+              LVL {profile.level}
+            </span>
           </div>
 
           {/* Profile Info */}
-          <div className="flex-1 text-center sm:text-left">
-            <h2 className="text-3xl font-black text-white">{profile.full_name || "Battle Warrior"}</h2>
-            <p className="mt-1 text-sm text-cyan-400">{profile.email}</p>
-            <div className="mt-4 flex flex-wrap gap-2 justify-center sm:justify-start">
+          <div className="flex-1 text-center sm:text-left space-y-2">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
+              <h2 className="text-2xl sm:text-3xl font-black text-white">{profile.full_name || "SkillBattle Player"}</h2>
+              <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-0.5 text-xs font-bold text-cyan-300">
+                Verified Profile
+              </span>
+            </div>
+            <p className="text-sm font-medium text-slate-400">{profile.email}</p>
+
+            <div className="mt-3 flex flex-wrap gap-2 justify-center sm:justify-start pt-1">
               {profile.college && (
-                <span className="inline-flex items-center gap-2 rounded-full bg-violet-500/20 border border-violet-500/30 px-3 py-1.5 text-xs font-semibold text-violet-300">
-                  <Building className="h-3.5 w-3.5" /> {profile.college}
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] px-2.5 py-1 text-xs font-semibold text-slate-300">
+                  <Building className="h-3.5 w-3.5 text-violet-400" /> {profile.college}
                 </span>
               )}
               {profile.target_company && (
-                <span className="inline-flex items-center gap-2 rounded-full bg-cyan-500/20 border border-cyan-500/30 px-3 py-1.5 text-xs font-semibold text-cyan-300">
-                  <Target className="h-3.5 w-3.5" /> {profile.target_company}
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] px-2.5 py-1 text-xs font-semibold text-slate-300">
+                  <Target className="h-3.5 w-3.5 text-cyan-400" /> {profile.target_company}
                 </span>
               )}
               {profile.graduation_year && (
-                <span className="inline-flex items-center gap-2 rounded-full bg-amber-500/20 border border-amber-500/30 px-3 py-1.5 text-xs font-semibold text-amber-300">
-                  <GraduationCap className="h-3.5 w-3.5" /> {profile.graduation_year}
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] px-2.5 py-1 text-xs font-semibold text-slate-300">
+                  <GraduationCap className="h-3.5 w-3.5 text-amber-400" /> Class of {profile.graduation_year}
                 </span>
               )}
             </div>
           </div>
         </div>
-        <div className="mt-6 grid grid-cols-2 gap-3 border-t border-white/10 pt-5 sm:max-w-sm">
+
+        <div className="mt-6 grid grid-cols-2 gap-3 border-t border-white/[0.06] pt-5 sm:max-w-xs">
           <div>
-            <p className="text-xs font-semibold uppercase text-slate-400">Persisted XP</p>
-            <p className="mt-1 text-xl font-bold text-white">{profile.total_xp.toLocaleString()}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total XP</p>
+            <p className="mt-1 text-xl font-black text-white">{profile.total_xp.toLocaleString()}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase text-slate-400">Level</p>
-            <p className="mt-1 text-xl font-bold text-white">{profile.level}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Ranked Level</p>
+            <p className="mt-1 text-xl font-black text-cyan-300">Level {profile.level}</p>
           </div>
         </div>
       </motion.div>
@@ -195,30 +217,30 @@ export default function ProfileForm() {
       {/* Section Tabs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {SECTIONS.map((section) => (
-          <motion.button
+          <button
             key={section.id}
+            type="button"
             onClick={() => setActiveSection(section.id)}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className={`relative rounded-2xl border-2 p-4 transition-all ${
+            className={`relative rounded-2xl border p-4 text-left transition-all ${
               activeSection === section.id
-                ? "border-cyan-400 bg-cyan-400/10 shadow-lg shadow-cyan-400/20"
-                : "border-white/10 bg-white/5 hover:border-white/20"
+                ? "border-cyan-500/40 bg-cyan-500/10 shadow-lg shadow-cyan-500/5 text-cyan-300"
+                : "border-white/[0.08] bg-[#0a0f1d] hover:border-white/20 text-slate-400"
             }`}
           >
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center sm:items-start gap-1.5">
               <div className={activeSection === section.id ? "text-cyan-400" : "text-slate-400"}>
                 {section.icon}
               </div>
-              <div className="text-xs font-semibold text-white text-center">{section.label}</div>
+              <div className="text-xs font-bold text-white mt-1">{section.label}</div>
+              <p className="text-[10px] text-slate-400 hidden sm:block leading-tight">{section.description}</p>
             </div>
             {activeSection === section.id && (
               <motion.div
                 layoutId="active-indicator"
-                className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-400 to-violet-500 rounded-b-2xl"
+                className="absolute bottom-0 left-0 right-0 h-1 bg-cyan-400 rounded-b-2xl"
               />
             )}
-          </motion.button>
+          </button>
         ))}
       </div>
 
@@ -226,11 +248,11 @@ export default function ProfileForm() {
       <AnimatePresence mode="wait">
         <motion.div
           key={activeSection}
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.2 }}
-          className="rounded-3xl border border-white/10 bg-white/5 p-8 text-white shadow-2xl backdrop-blur-xl space-y-6"
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.15 }}
+          className="rounded-3xl border border-white/[0.08] bg-[#0a0f1d] p-6 sm:p-8 text-white shadow-2xl shadow-black/50 space-y-6"
         >
           {activeSection === "personal" && (
             <>

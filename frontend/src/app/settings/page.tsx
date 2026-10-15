@@ -7,10 +7,10 @@ export default function SettingsRoutePage() {
     return (
         <DashboardLayout>
             <section className="space-y-6">
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-white shadow-2xl shadow-violet-950/20">
-                    <p className="text-sm uppercase tracking-[0.3em] text-violet-300">Settings</p>
-                    <h1 className="mt-2 text-4xl font-black">Account security and battle controls</h1>
-                    <p className="mt-3 max-w-2xl text-slate-400">Manage your password, customize match settings, and keep your account tuned for high-stakes matchmaking.</p>
+                <div className="rounded-3xl border border-white/[0.08] bg-[#0a0f1d] p-6 sm:p-8 text-white shadow-2xl shadow-black/50">
+                    <p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan-400">Platform Settings</p>
+                    <h1 className="mt-2 text-3xl sm:text-4xl font-black tracking-tight">Account & Experience Controls</h1>
+                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">Manage security credentials, two-factor authentication, appearance themes, notifications, and candidate sharing controls.</p>
                 </div>
 
                 <SettingsPage />

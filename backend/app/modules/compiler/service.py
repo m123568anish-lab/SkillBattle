@@ -342,6 +342,9 @@ class CompilerService:
                     db,
                     current_user,
                     xp_earned,
+                    source="problem_submission",
+                    reference_id=str(submission.id),
+                    description=f"Problem {problem.id} submission {submission.id}",
                 )
                 xp_status = "granted"
             except Exception:

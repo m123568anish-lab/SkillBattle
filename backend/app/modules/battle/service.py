@@ -863,7 +863,15 @@ class BattleService:
 
             user = await db.get(User, p.user_id)
             if user:
-                await xp_service.add_xp(db, user, xp_earned, commit=False)
+                await xp_service.add_xp(
+                    db,
+                    user,
+                    xp_earned,
+                    commit=False,
+                    source="battle",
+                    reference_id=str(battle_id),
+                    description=f"Battle {battle_id} {'winner' if is_winner else 'participant'} reward",
+                )
                 user.coding_rating = max(0, (user.coding_rating or 1000) + rating_change)
                 stats_res = await db.execute(
                     select(UserStats).where(UserStats.user_id == user.id)

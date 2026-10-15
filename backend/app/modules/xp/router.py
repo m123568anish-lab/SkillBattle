@@ -34,6 +34,7 @@ from app.models.user import User
 from app.modules.xp.schemas import (
     XPResponse,
     AddXPRequest,
+    XPLedgerEntryResponse,
 )
 
 from app.modules.xp.service import (
@@ -94,6 +95,36 @@ async def get_xp(
         current_user,
 
     )
+
+
+# ==========================================================
+# Get XP History (Ledger)
+# ==========================================================
+
+@router.get(
+    "/history",
+    response_model=list[XPLedgerEntryResponse],
+)
+async def get_xp_history(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await xp_service.get_ledger(db, current_user)
+
+
+# ==========================================================
+# Reconcile XP
+# ==========================================================
+
+@router.post(
+    "/reconcile",
+    response_model=XPResponse,
+)
+async def reconcile_xp(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await xp_service.reconcile_xp(db, current_user)
 
 
 # ==========================================================

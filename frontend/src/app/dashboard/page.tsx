@@ -84,22 +84,24 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="space-y-8 animate-pulse" aria-label="Loading dashboard...">
+        <div className="space-y-6 animate-pulse" aria-label="Loading dashboard...">
           {/* Hero Skeleton */}
-          <div className="h-44 rounded-3xl bg-white/[0.03] border border-white/5" />
-          {/* Stats Grid Skeleton */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="h-28 rounded-2xl bg-white/[0.03] border border-white/5" />
-            <div className="h-28 rounded-2xl bg-white/[0.03] border border-white/5" />
-            <div className="h-28 rounded-2xl bg-white/[0.03] border border-white/5" />
-            <div className="h-28 rounded-2xl bg-white/[0.03] border border-white/5" />
+          <div className="h-44 rounded-3xl bg-[#0a0f1d] border border-white/[0.06]" />
+          {/* Stats Grid Skeleton (6 cards) */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="h-28 rounded-2xl bg-[#0a0f1d] border border-white/[0.06]" />
+            <div className="h-28 rounded-2xl bg-[#0a0f1d] border border-white/[0.06]" />
+            <div className="h-28 rounded-2xl bg-[#0a0f1d] border border-white/[0.06]" />
+            <div className="h-28 rounded-2xl bg-[#0a0f1d] border border-white/[0.06]" />
+            <div className="h-28 rounded-2xl bg-[#0a0f1d] border border-white/[0.06]" />
+            <div className="h-28 rounded-2xl bg-[#0a0f1d] border border-white/[0.06]" />
           </div>
           {/* Command Center Skeleton */}
-          <div className="h-56 rounded-3xl bg-white/[0.03] border border-white/5" />
+          <div className="h-64 rounded-3xl bg-[#0a0f1d] border border-white/[0.06]" />
           {/* AI Coach + Server Status Row Skeleton */}
           <div className="grid gap-6 lg:grid-cols-2">
-            <div className="h-48 rounded-2xl bg-white/[0.03] border border-white/5" />
-            <div className="h-48 rounded-2xl bg-white/[0.03] border border-white/5" />
+            <div className="h-48 rounded-2xl bg-[#0a0f1d] border border-white/[0.06]" />
+            <div className="h-48 rounded-2xl bg-[#0a0f1d] border border-white/[0.06]" />
           </div>
         </div>
       </DashboardLayout>
