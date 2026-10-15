@@ -96,8 +96,16 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=128)
     role: str | None = Field(default=None, max_length=50)
+    two_factor_code: str | None = Field(default=None, min_length=6, max_length=6)
 
     model_config = ConfigDict(extra="ignore")
+
+    @field_validator("two_factor_code")
+    @classmethod
+    def validate_two_factor_code(cls, v: str | None) -> str | None:
+        if v is not None and not v.isdigit():
+            raise ValueError("Two-factor code must contain six digits.")
+        return v
 
 
 class RefreshTokenRequest(BaseModel):
@@ -151,6 +159,13 @@ class ResetPasswordRequest(BaseModel):
     new_password: str = Field(min_length=8, max_length=128)
 
     model_config = ConfigDict(extra="forbid")
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, v: str) -> str:
+        if not any(c.isdigit() for c in v) or not any(c.isalpha() for c in v):
+            raise ValueError("New password must contain at least one digit and one letter.")
+        return v
 
 
 class DeleteAccountRequest(BaseModel):

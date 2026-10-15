@@ -6,8 +6,10 @@ import {
     useEffect,
     ReactNode,
 } from "react";
+import { useAuth as useClerkAuth } from "@clerk/nextjs";
 
 import { useAuthStore } from "../store/authStore";
+import { configureClerkTokenProvider } from "@/lib/api";
 
 interface AuthContextType {
     loading: boolean;
@@ -26,6 +28,11 @@ export function AuthProvider({
     children: ReactNode;
 
 }) {
+    const {
+        isLoaded: clerkLoaded,
+        isSignedIn,
+        getToken,
+    } = useClerkAuth();
 
     const {
 
@@ -36,9 +43,23 @@ export function AuthProvider({
     } = useAuthStore();
 
     useEffect(() => {
+        configureClerkTokenProvider(
+            isSignedIn ? getToken : null,
+            isSignedIn === true,
+        );
+
+        return () => configureClerkTokenProvider(null, false);
+    }, [getToken, isSignedIn]);
+
+    useEffect(() => {
+            if (!clerkLoaded) {
+                useAuthStore.setState({ loading: true });
+                return;
+            }
+
             const token = localStorage.getItem("access_token");
 
-            if (token) {
+            if (isSignedIn || token) {
                 void loadUser();
             } else {
                 useAuthStore.setState({
@@ -47,7 +68,7 @@ export function AuthProvider({
                     loading: false,
                 });
             }
-        }, [loadUser]);
+        }, [clerkLoaded, isSignedIn, loadUser]);
 
     return (
 

@@ -10,6 +10,7 @@ Security Package
 
 from .password import hash_password, password_manager, verify_password, hash_password_async, verify_password_async
 from .jwt import JWTManager, jwt_manager
+from .clerk import ClerkAuthenticationError, get_clerk_user_profile, verify_clerk_token
 
 # Token helpers
 create_access_token = jwt_manager.create_access_token
@@ -39,4 +40,7 @@ __all__ = [
     "jwt_manager",
     "verify_password",
     "verify_password_async",
+    "ClerkAuthenticationError",
+    "get_clerk_user_profile",
+    "verify_clerk_token",
 ]

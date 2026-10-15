@@ -87,3 +87,38 @@ async def test_user_can_list_and_revoke_only_own_sessions(client):
 
     still_works = await client.get("/auth/me", headers=first_headers)
     assert still_works.status_code == 200, still_works.text
+
+
+@pytest.mark.asyncio
+async def test_refresh_token_rotates_and_old_access_token_cannot_authenticate(client):
+    unique_id = uuid4().hex[:8]
+    password = "StrongPass#123"
+    register = await client.post("/auth/register", json={
+        "username": f"rotate_{unique_id}",
+        "email": f"rotate_{unique_id}@example.com",
+        "full_name": "Rotation User",
+        "password": password,
+    })
+    assert register.status_code == 201, register.text
+
+    login = await client.post("/auth/login", json={
+        "email": f"rotate_{unique_id}@example.com",
+        "password": password,
+    })
+    assert login.status_code == 200, login.text
+    old_refresh = login.json()["tokens"]["refresh_token"]
+
+    refreshed = await client.post("/auth/refresh", json={"refresh_token": old_refresh})
+    assert refreshed.status_code == 200, refreshed.text
+    new_refresh = refreshed.json()["refresh_token"]
+    assert new_refresh != old_refresh
+
+    replay = await client.post("/auth/refresh", json={"refresh_token": old_refresh})
+    assert replay.status_code == 401
+
+    refresh_as_access = await client.get(
+        "/auth/me",
+        headers={"Authorization": f"Bearer {new_refresh}"},
+    )
+    assert refresh_as_access.status_code == 401
+

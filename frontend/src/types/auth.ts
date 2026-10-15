@@ -30,6 +30,8 @@ export interface LoginRequest {
     password: string;
     role?: string;
 
+    two_factor_code?: string;
+
 }
 
 export interface RegisterRequest {
@@ -66,6 +68,8 @@ export interface LoginResponse {
 export interface RefreshResponse {
 
     access_token: string;
+
+    refresh_token: string;
 
     expires_in: number;
 

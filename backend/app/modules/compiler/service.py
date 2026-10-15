@@ -311,12 +311,18 @@ class CompilerService:
 
         )
 
+        # Persist the evaluator's authoritative result before reward work.
+        # This keeps a verified wrong answer/compile error available even if
+        # the separate XP or notification integrations are temporarily down.
+        await db.commit()
+
         # ------------------------------------------------------
         # Award XP once, inside the accepted submission flow
         # ------------------------------------------------------
 
         xp_earned = 0
 
+        xp_status = "not_eligible"
         if judge_result.verdict == "Accepted" and not previous_accepted:
             difficulty_xp = {
                 "easy": 100,
@@ -331,21 +337,30 @@ class CompilerService:
             if judge_result.runtime_ms <= 200:
                 xp_earned += 50
 
-            await xp_service.add_xp(
-                db,
-                current_user,
-                xp_earned,
+            try:
+                await xp_service.add_xp(
+                    db,
+                    current_user,
+                    xp_earned,
+                )
+                xp_status = "granted"
+            except Exception:
+                # The evaluated submission remains committed and can be
+                # finalized/retried by a future reward worker.
+                logger.exception("XP finalization failed for submission=%s", submission.id)
+                xp_earned = 0
+                xp_status = "pending"
+
+        try:
+            await self.notify_battle(
+
+                getattr(request, "battle_id", None),
+
+                submission.verdict,
+
             )
-        else:
-            await db.commit()
-
-        await self.notify_battle(
-
-    getattr(request, "battle_id", None),
-
-    submission.verdict,
-
-)
+        except Exception:
+            logger.exception("Battle notification failed for submission=%s", submission.id)
 
         # ------------------------------------------------------
         # Response
@@ -366,6 +381,10 @@ class CompilerService:
             memory_used=submission.memory_used,
 
             xp_earned=xp_earned,
+
+            evaluation_status="evaluated",
+
+            xp_status=xp_status,
 
         )
     

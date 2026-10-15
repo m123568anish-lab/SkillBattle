@@ -24,16 +24,20 @@ from collections import defaultdict, deque
 from datetime import datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.core.config import settings
+from app.core.redis.rate_limiter import rate_limiter
 from app.core.security import (
     create_access_token,
     create_refresh_token,
     hash_password_async,
+    jwt_manager,
     verify_password_async,
 )
 
 from app.models.refresh_token import RefreshToken
+from app.models.password_reset_token import PasswordResetToken
 from app.models.user import User
 from app.models.user_stats import UserSettings, UserStats
 from app.models.xp import XP
@@ -44,9 +48,12 @@ from app.modules.auth.repositories.user_repository import (
 
 from app.modules.auth.schemas.requests import (
     ChangePasswordRequest,
+    ForgotPasswordRequest,
     LoginRequest,
     RegisterRequest,
+    ResetPasswordRequest,
 )
+from app.modules.email.service import email_service
 
 logger = logging.getLogger(__name__)
 
@@ -186,6 +193,13 @@ class AuthService:
 
     ) -> dict:
 
+        ip_key = _normalize_login_key(ip_address)
+        email_key = _normalize_login_key(request.email)
+        if not await rate_limiter.allow(f"auth-login-ip:{ip_key}", 30, 900):
+            raise ValueError("Too many login attempts. Please try again later.")
+        if not await rate_limiter.allow(f"auth-login-account:{email_key}", 12, 900):
+            raise ValueError("Too many login attempts. Please try again later.")
+
         if not _is_login_allowed(request.email, ip_address):
             raise ValueError("Too many login attempts. Please try again later.")
 
@@ -236,7 +250,12 @@ class AuthService:
         _clear_login_failures(request.email, ip_address)
 
         if user.two_factor_enabled:
-            raise ValueError("Two-factor authentication is enabled for this account. Please complete the verification challenge.")
+            if not request.two_factor_code:
+                raise ValueError("Two-factor verification code required.")
+            if not await rate_limiter.allow(f"auth-2fa-login:{_normalize_login_key(request.email)}", 5, 900):
+                raise ValueError("Too many two-factor verification attempts. Please try again later.")
+            if not user.two_factor_secret or _totp_code(user.two_factor_secret) != request.two_factor_code:
+                raise ValueError("Invalid two-factor code.")
 
         # Validate selected portal role against stored user account role
         if request.role:
@@ -384,19 +403,42 @@ class AuthService:
 
             )
 
+        try:
+            claims = jwt_manager.decode(refresh_token)
+        except Exception as exc:
+            raise ValueError("Invalid refresh token.") from exc
+        if claims.get("type") != "refresh" or claims.get("sub") != stored.user_id:
+            raise ValueError("Invalid refresh token.")
+
+        # Rotate refresh credentials on every use. The previous value is
+        # permanently revoked, so replaying a stolen token cannot mint a new
+        # access token after the legitimate client has refreshed.
+        stored.revoked = True
+        stored.revoked_at = datetime.utcnow()
+        stored.revoke_reason = "rotated"
         stored.last_used_at = datetime.utcnow()
-
-        await db.commit()
-
-        access = create_access_token(
-
-            stored.user_id,
-
+        replacement_value = create_refresh_token(stored.user_id)
+        replacement = RefreshToken(
+            user_id=stored.user_id,
+            token=replacement_value,
+            device_name=stored.device_name,
+            device_os=stored.device_os,
+            browser=stored.browser,
+            ip_address=stored.ip_address,
+            user_agent=stored.user_agent,
+            expires_at=datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
         )
+        db.add(replacement)
+        await db.commit()
+        await db.refresh(replacement)
+
+        access = create_access_token(stored.user_id)
 
         return {
 
             "access_token": access,
+
+            "refresh_token": replacement_value,
 
             "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
 
@@ -456,12 +498,9 @@ class AuthService:
 
     ) -> User:
 
-        if not verify_password(
-
+        if not await verify_password_async(
             request.current_password,
-
             user.password_hash,
-
         ):
 
             raise ValueError(
@@ -470,19 +509,62 @@ class AuthService:
 
             )
 
-        user.password_hash = hash_password(
+        user.password_hash = await hash_password_async(request.new_password)
+        updated = await user_repository.update_user(db, user)
+        await user_repository.revoke_all_user_tokens(db, user.id)
+        return updated
 
-            request.new_password,
+    async def request_password_reset(self, db: AsyncSession, request: ForgotPasswordRequest) -> None:
+        """Create a short-lived reset credential without revealing account existence."""
+        allowed = await rate_limiter.allow(f"auth-password-reset:{request.email.lower()}", 3, 900)
+        if not allowed:
+            return
 
+        user = await user_repository.get_by_email(db, request.email)
+        if user is None or not user.is_active:
+            return
+
+        # Invalidate outstanding credentials before issuing a new one.
+        existing = await db.execute(
+            select(PasswordResetToken).where(
+                PasswordResetToken.user_id == user.id,
+                PasswordResetToken.used_at.is_(None),
+            )
         )
+        for token in existing.scalars().all():
+            token.used_at = datetime.utcnow()
 
-        return await user_repository.update_user(
-
-            db,
-
-            user,
-
+        raw_token = secrets.token_urlsafe(48)
+        record = PasswordResetToken(
+            user_id=user.id,
+            token_hash=hashlib.sha256(raw_token.encode("utf-8")).hexdigest(),
+            expires_at=datetime.utcnow() + timedelta(minutes=30),
         )
+        db.add(record)
+        await db.commit()
+        try:
+            reset_url = f"{settings.FRONTEND_URL.rstrip('/')}/reset-password?token={raw_token}"
+            await email_service.send_password_reset_email(user.email, user.full_name, reset_url)
+        except Exception:
+            # Do not turn a generic response into an account-enumeration oracle
+            # when the optional email provider is unavailable.
+            logger.warning("Password reset email delivery failed", exc_info=True)
+
+    async def reset_password(self, db: AsyncSession, request: ResetPasswordRequest) -> None:
+        digest = hashlib.sha256(request.token.encode("utf-8")).hexdigest()
+        result = await db.execute(select(PasswordResetToken).where(PasswordResetToken.token_hash == digest))
+        reset = result.scalar_one_or_none()
+        if reset is None or not reset.usable:
+            raise ValueError("Invalid or expired password reset token.")
+
+        user = await user_repository.get_by_id(db, reset.user_id)
+        if user is None or not user.is_active:
+            raise ValueError("Invalid or expired password reset token.")
+
+        user.password_hash = await hash_password_async(request.new_password)
+        reset.used_at = datetime.utcnow()
+        await user_repository.revoke_all_user_tokens(db, user.id)
+        await db.commit()
 
     # --------------------------------------------------
 
@@ -508,6 +590,8 @@ class AuthService:
         }
 
     async def verify_two_factor(self, db: AsyncSession, email: str, code: str) -> dict:
+        if not await rate_limiter.allow(f"auth-2fa:{_normalize_login_key(email)}", 5, 900):
+            raise ValueError("Too many two-factor verification attempts. Please try again later.")
         user = await user_repository.get_by_email(db, email)
         if user is None or not user.two_factor_secret:
             raise ValueError("Two-factor authentication is not configured for this account.")

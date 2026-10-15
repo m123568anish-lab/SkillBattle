@@ -45,11 +45,7 @@ class JWTManager:
 
                 timezone.utc,
 
-            ) + timedelta(
-
-                minutes=self.ACCESS_MINUTES,
-
-            ),
+            ) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
 
         }
 
@@ -82,11 +78,7 @@ class JWTManager:
 
                 timezone.utc,
 
-            ) + timedelta(
-
-                days=self.REFRESH_DAYS,
-
-            ),
+            ) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
 
         }
 

@@ -1,3 +1,4 @@
+import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
@@ -56,23 +57,25 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full scroll-smooth`}
     >
       <body className="min-h-screen bg-[#070B14] text-white">
-        <AuthProvider>
-          <div className="relative">
-            <PageMetadata />
-            <AuthGuard>{children}</AuthGuard>
-          </div>
-        </AuthProvider>
+        <ClerkProvider>
+          <AuthProvider>
+            <div className="relative">
+              <PageMetadata />
+              <AuthGuard>{children}</AuthGuard>
+            </div>
+          </AuthProvider>
 
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            style: {
-              background: "#111827",
-              color: "#fff",
-              border: "1px solid rgba(255,255,255,0.1)",
-            },
-          }}
-        />
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: "#111827",
+                color: "#fff",
+                border: "1px solid rgba(255,255,255,0.1)",
+              },
+            }}
+          />
+        </ClerkProvider>
       </body>
     </html>
   );

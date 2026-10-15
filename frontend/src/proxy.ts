@@ -1,19 +1,24 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+/**
+ * Keep the existing lightweight Next proxy during the dual-session rollout.
+ * ClerkProvider/useAuth owns browser sessions, while AuthGuard and FastAPI
+ * enforce access until legacy localStorage sessions are retired. Server-side
+ * Clerk helpers can be added when the rollout switches to Clerk-only routes.
+ */
 export function proxy(_request: NextRequest) {
-  const response = NextResponse.next();
-  response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
-  return response;
+    const response = NextResponse.next();
+    response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+    return response;
 }
 
 export const config = {
   matcher: [
-    "/achievements/:path*", "/activity/:path*", "/admin/:path*", "/analytics/:path*",
-    "/assessments/:path*", "/battle/:path*", "/calendar/:path*", "/campaign/:path*",
-    "/career/:path*", "/challenge/:path*", "/college/:path*", "/company/:path*",
-    "/coach/:path*", "/dashboard/:path*", "/interview/:path*", "/leaderboard/:path*",
-    "/onboarding/:path*", "/opportunities/:path*", "/organization-setup/:path*",
-    "/placement/:path*", "/profile/:path*", "/settings/:path*", "/tasks/:path*",
-    "/tournament/:path*", "/verify-email/:path*",
+    // Run Clerk on application and API requests so server components and
+    // route handlers can access the Clerk session during the migration.
+    // Authorization remains enforced by AuthGuard and the FastAPI API until
+    // all legacy sessions have been migrated.
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/(api|trpc)(.*)",
   ],
 };

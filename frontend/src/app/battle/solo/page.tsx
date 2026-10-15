@@ -412,6 +412,8 @@ export default function SoloBattlePage() {
   // ── Session state ──────────────────────────────────────────────────────
   const [sessionQuestions, setSessionQuestions] = useState<MCQQuestion[]>([]);
   const [sessionProblem,   setSessionProblem]   = useState<CodingProblem>(CODING_PROBLEMS[0]);
+  const [serverProblems, setServerProblems] = useState<Array<{ id: number; title: string; difficulty: string; description: string; constraints: string }>>([]);
+  const [problemLoading, setProblemLoading] = useState(true);
   const [sessionStarted,   setSessionStarted]   = useState(false);
   const [sessionComplete,  setSessionComplete]  = useState(false);
 
@@ -439,14 +441,27 @@ export default function SoloBattlePage() {
 
   // ── 30-min rotation timer: auto-rotate coding problem ─────────────────
   const rotateCodingProblem = useCallback(() => {
-    const newProb = CODING_PROBLEMS[Math.floor(Math.random() * CODING_PROBLEMS.length)];
+    const serverProblem = serverProblems[Math.floor(Math.random() * serverProblems.length)];
+    const localProblem = serverProblem
+      ? CODING_PROBLEMS.find((candidate) => candidate.title.toLowerCase() === serverProblem.title.toLowerCase())
+      : undefined;
+    const newProb = serverProblem
+      ? {
+          ...(localProblem || CODING_PROBLEMS[0]),
+          id: serverProblem.id,
+          title: serverProblem.title,
+          difficulty: serverProblem.difficulty as CodingProblem["difficulty"],
+          description: serverProblem.description,
+          constraints: serverProblem.constraints.split("\n").filter(Boolean),
+        }
+      : CODING_PROBLEMS[0];
     setSessionProblem(newProb);
     setCode(newProb.starterCode[language] || newProb.starterCode.python);
     setCodingSolved(false);
     setCodingXp(0);
     setPersistedProgress(null);
     setOutput("");
-  }, [language]);
+  }, [language, serverProblems]);
 
   const { remaining: rotationRemaining, fmt: rotFmt, urgency: rotUrgency } = useRotationTimer(
     sessionStarted && !sessionComplete,
@@ -456,7 +471,20 @@ export default function SoloBattlePage() {
   // ── Start / Restart session ────────────────────────────────────────────
   const startSession = useCallback(() => {
     const qs = pickRandom(ALL_MCQ_QUESTIONS, 10);
-    const prob = CODING_PROBLEMS[Math.floor(Math.random() * CODING_PROBLEMS.length)];
+    const serverProblem = serverProblems[Math.floor(Math.random() * serverProblems.length)];
+    const localProblem = serverProblem
+      ? CODING_PROBLEMS.find((candidate) => candidate.title.toLowerCase() === serverProblem.title.toLowerCase())
+      : undefined;
+    const prob = serverProblem
+      ? {
+          ...(localProblem || CODING_PROBLEMS[0]),
+          id: serverProblem.id,
+          title: serverProblem.title,
+          difficulty: serverProblem.difficulty as CodingProblem["difficulty"],
+          description: serverProblem.description,
+          constraints: serverProblem.constraints.split("\n").filter(Boolean),
+        }
+      : CODING_PROBLEMS[0];
     setSessionQuestions(qs);
     setSessionProblem(prob);
     setSessionStarted(true);
@@ -473,9 +501,26 @@ export default function SoloBattlePage() {
     setCodingSolved(false);
     setCodingXp(0);
     setRewardModal(null);
+  }, [serverProblems]);
+
+  useEffect(() => {
+    let active = true;
+    api.get<Array<{ id: number; title: string; difficulty: string; description: string; constraints: string }>>("/problems?limit=100")
+      .then(({ data }) => {
+        if (active) setServerProblems(data.filter((problem) => problem.id && problem.title));
+      })
+      .catch(() => {
+        if (active) setOutput("Unable to load the coding problem bank.");
+      })
+      .finally(() => {
+        if (active) setProblemLoading(false);
+      });
+    return () => { active = false; };
   }, []);
 
-  useEffect(() => { startSession(); }, []);  // auto-start on mount
+  useEffect(() => {
+    if (!problemLoading && serverProblems.length > 0) startSession();
+  }, [problemLoading, serverProblems, startSession]);
 
   // ── MCQ handlers ───────────────────────────────────────────────────────
   const currentMcq       = sessionQuestions[mcqIndex];
@@ -533,7 +578,13 @@ export default function SoloBattlePage() {
       if (passed) {
         const xpEarned = Number(res.data.xp_earned || 0);
         setCodingSolved(true);
-        setCodingXp(xpEarned);
+        const xpStatus = res.data.xp_status || (xpEarned > 0 ? "granted" : "not_eligible");
+        setCodingXp(xpStatus === "granted" ? xpEarned : 0);
+        if (xpStatus === "pending") {
+          setOutput("ACCEPTED — All test cases passed!\nReward processing is temporarily delayed; your evaluated result is saved.");
+        } else if (xpStatus !== "granted") {
+          setOutput("ACCEPTED — All test cases passed!\nNo reward is eligible for this submission.");
+        }
         setOutput(`✅ ACCEPTED — All test cases passed!\n🏆 +${xpEarned} verified XP Earned!`);
       } else {
         setOutput(`❌ ${res.data.verdict || "Wrong Answer"} — ${res.data.passed_tests ?? 0}/${res.data.total_tests ?? 3} tests passed.`);
@@ -543,7 +594,13 @@ export default function SoloBattlePage() {
       setCodingXp(0);
       const message = error?.response?.data?.detail || error?.message || "Submission failed.";
       setOutput(`Submission failed: ${message}`);
-      toast.error("The server could not verify this submission. No XP was awarded.");
+       if (error?.response?.status === 404) {
+         toast.error("This coding problem is no longer available. Please start a new battle.");
+       } else if (error?.response?.status === 422) {
+         toast.error("The submission payload was rejected. Please review the selected language and code.");
+       } else {
+         toast.error("The submission could not be finalized. No XP was awarded.");
+       }
     } finally {
       setSubmitting(false);
     }

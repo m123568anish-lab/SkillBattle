@@ -106,6 +106,16 @@ class Settings(BaseSettings):
 
     SECRET_KEY: str = Field(default="CHANGE_ME")
 
+    # Clerk migration. Keep these empty to leave the legacy JWT path active
+    # until the backend deployment has been configured with the selected
+    # Clerk instance's verification settings.
+    CLERK_SECRET_KEY: str = ""
+    CLERK_JWT_KEY: str = ""
+    CLERK_ISSUER_URL: str = ""
+    CLERK_JWKS_URL: str = ""
+    CLERK_AUDIENCE: str = ""
+    CLERK_ALLOWED_PARTIES: str = ""
+
     # --------------------------------------------------
     # CORS
     # --------------------------------------------------
@@ -124,6 +134,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+    FRONTEND_URL: str = "http://localhost:3000"
 
     # --------------------------------------------------
     # AI Providers
@@ -147,6 +158,11 @@ class Settings(BaseSettings):
 
     RESEND_API_KEY: str = ""
     EMAIL_FROM: str = "SkillBattle Verification <no-reply@skillbattle.com>"
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = "SkillBattle <no-reply@skillbattle.com>"
 
     CLOUDINARY_CLOUD_NAME: str = ""
     CLOUDINARY_API_KEY: str = ""

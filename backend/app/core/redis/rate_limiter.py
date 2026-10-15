@@ -9,6 +9,7 @@ Redis Rate Limiter
 from __future__ import annotations
 
 import time
+from collections import defaultdict, deque
 
 from app.core.redis.client import (
     redis_manager,
@@ -16,6 +17,22 @@ from app.core.redis.client import (
 
 
 class RateLimiter:
+
+    def __init__(self) -> None:
+        # Development and single-process deployments still get protection
+        # when Redis is unavailable. Redis remains the authoritative shared
+        # counter whenever it is configured and reachable.
+        self._local_hits: dict[str, deque[float]] = defaultdict(deque)
+
+    def _allow_local(self, key: str, limit: int, window: int) -> bool:
+        now = time.monotonic()
+        hits = self._local_hits[key]
+        while hits and now - hits[0] >= window:
+            hits.popleft()
+        if len(hits) >= limit:
+            return False
+        hits.append(now)
+        return True
 
     async def allow(
 
@@ -28,6 +45,9 @@ class RateLimiter:
         window: int,
 
     ) -> bool:
+
+        if not getattr(redis_manager, "_available", False):
+            return self._allow_local(key, limit, window)
 
         now = int(time.time())
 
@@ -45,8 +65,7 @@ class RateLimiter:
 
             return count <= limit
         except Exception:
-            # If Redis is unavailable, default to allowing the request
-            return True
+            return self._allow_local(key, limit, window)
 
 
 rate_limiter = RateLimiter()

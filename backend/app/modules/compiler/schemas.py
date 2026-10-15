@@ -66,6 +66,10 @@ class SubmitCodeResponse(BaseModel):
 
     xp_earned: int
 
+    evaluation_status: str = "evaluated"
+
+    xp_status: str = "not_eligible"
+
 
 # ==========================================================
 # Problem

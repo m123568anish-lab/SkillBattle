@@ -74,6 +74,17 @@ class User(Base):
         nullable=False,
     )
 
+    # Stable identity from the external Clerk application. This is nullable
+    # during the dual-session migration so existing local-JWT users remain
+    # valid until their Clerk session is linked.
+    clerk_user_id: Mapped[str | None] = mapped_column(
+        String(64),
+        unique=True,
+        index=True,
+        default=None,
+        nullable=True,
+    )
+
     password_hash: Mapped[str] = mapped_column(
         String(255),
         nullable=False,

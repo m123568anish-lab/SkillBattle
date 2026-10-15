@@ -3,6 +3,7 @@ import DesktopNavbar from "./DesktopNavbar";
 import MobileNavbar from "./MobileNavbar";
 import NavButton from "./NavButton";
 import NavContainer from "./NavContainer";
+import ClerkAuthControls from "./ClerkAuthControls";
 
 export default function Navbar() {
   return (
@@ -15,7 +16,7 @@ export default function Navbar() {
           <DesktopNavbar />
 
           <div className="hidden lg:flex items-center gap-4">
-            <NavButton title="Login" variant="ghost" />
+            <ClerkAuthControls />
             <div className="h-6 w-[1px] bg-white/10" />
             <NavButton title="Start Battle" />
           </div>

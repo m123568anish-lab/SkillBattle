@@ -6,7 +6,7 @@ export type { ApiResponse, ApiValidationError, PaginatedResponse } from "@/types
 const normalizeBaseUrl = (value: string | undefined): string => {
     const defaultUrl =
         process.env.NODE_ENV === "production"
-            ? "https://skillbattle-api.onrender.com"
+            ? "https://skillbattle-api-2026.onrender.com"
             : "http://localhost:8000";
     const base = (value || defaultUrl).trim().replace(/\/+$/, "");
     return base.replace(/\/api\/v1$/, "");
@@ -23,6 +23,24 @@ const api = axios.create({
     },
 });
 
+type ClerkTokenGetter = () => Promise<string | null>;
+
+let clerkTokenGetter: ClerkTokenGetter | null = null;
+let clerkSessionActive = false;
+
+/**
+ * Clerk owns the browser session, while legacy users may still have the
+ * application's access/refresh token pair. Keep both paths available during
+ * the migration and prefer the Clerk token whenever a Clerk session exists.
+ */
+export function configureClerkTokenProvider(
+    getToken: ClerkTokenGetter | null,
+    active = false,
+) {
+    clerkTokenGetter = getToken;
+    clerkSessionActive = active;
+}
+
 let isRefreshing = false;
 let pendingRequests: Array<(token: string) => void> = [];
 
@@ -31,9 +49,23 @@ const processQueue = (token: string | null) => {
     pendingRequests = [];
 };
 
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
     if (typeof window !== "undefined") {
-        const token = localStorage.getItem("access_token");
+        let clerkToken: string | null = null;
+
+        if (clerkTokenGetter) {
+            try {
+                clerkToken = await clerkTokenGetter();
+            } catch {
+                // Let the request fail normally. Do not fall back to a legacy
+                // token while a Clerk session is active.
+            }
+        }
+
+        const token = clerkToken || (
+            clerkSessionActive ? null : localStorage.getItem("access_token")
+        );
+
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -70,7 +102,7 @@ api.interceptors.response.use(
             (api.defaults.baseURL?.includes("localhost") || originalRequest.baseURL?.includes("localhost") || originalRequest.url?.includes("localhost"))
         ) {
             originalRequest._fallbackRetry = true;
-            originalRequest.baseURL = "https://skillbattle-api.onrender.com/api/v1";
+            originalRequest.baseURL = "https://skillbattle-api-2026.onrender.com/api/v1";
             originalRequest.timeout = 60_000; // Allow 60s for Render cold start
             try {
                 return await axios(originalRequest);
@@ -83,6 +115,7 @@ api.interceptors.response.use(
             originalRequest &&
             error.response?.status === 401 &&
             !originalRequest._retry &&
+            !clerkSessionActive &&
             !url.includes("/auth/login") &&
             !url.includes("/auth/register") &&
             !url.includes("/auth/refresh")

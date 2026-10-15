@@ -130,21 +130,27 @@ async def submit_solution(
 
     except ValueError as exc:
 
+        detail = str(exc)
+        response_status = status.HTTP_404_NOT_FOUND if "not found" in detail.lower() else status.HTTP_422_UNPROCESSABLE_ENTITY
+
         raise HTTPException(
 
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=response_status,
 
-            detail=str(exc),
+            detail=detail,
 
         )
 
     except Exception as exc:
 
+        import logging
+        logging.getLogger(__name__).exception("Compiler submission failed")
+
         raise HTTPException(
 
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
 
-            detail=str(exc),
+            detail="Submission evaluation failed. Please retry.",
 
         )
 

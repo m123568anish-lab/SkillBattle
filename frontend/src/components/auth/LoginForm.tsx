@@ -26,6 +26,8 @@ export default function LoginForm() {
   const router = useRouter();
   const [selectedRole, setSelectedRole] = useState<(typeof roleOptions)[number]["role"]>("STUDENT");
   const [showPassword, setShowPassword] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [twoFactorRequired, setTwoFactorRequired] = useState(false);
   const { loading, signIn } = useLogin();
 
   const {
@@ -38,13 +40,15 @@ export default function LoginForm() {
 
   async function onSubmit(data: LoginFormData) {
     try {
-      const result = await signIn({ ...data, role: selectedRole });
+      const result = await signIn({ ...data, role: selectedRole, ...(twoFactorCode ? { two_factor_code: twoFactorCode } : {}) });
       if (!result?.tokens?.access_token) {
         throw new Error("No access token received.");
       }
       toast.success("Welcome back to SkillBattle");
       router.replace(getPostLoginPath(result.user));
     } catch (error: unknown) {
+      const detail = (error as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+      if (typeof detail === "string" && detail.toLowerCase().includes("two-factor")) setTwoFactorRequired(true);
       console.error("Login submission error:", error);
     }
   }
@@ -56,6 +60,7 @@ export default function LoginForm() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-300">Returning user</p>
           <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-white">Welcome back.</h1>
         </div>
+
         <div className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200">
           Secure
         </div>
@@ -136,6 +141,14 @@ export default function LoginForm() {
           </div>
           {errors.password && <p className="mt-2 text-sm text-red-400">{errors.password.message}</p>}
         </div>
+
+        {twoFactorRequired && (
+          <div>
+            <label htmlFor="login-two-factor" className="mb-2 block text-sm font-medium text-slate-300">Authenticator code</label>
+            <input id="login-two-factor" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value.replace(/\D/g, "").slice(0, 6))} className="h-14 w-full rounded-2xl border border-violet-400/40 bg-violet-400/5 px-4 text-center text-xl tracking-[0.35em] text-white outline-none focus:border-violet-300" placeholder="000000" />
+            <p className="mt-2 text-xs text-slate-400">Enter the current six-digit code from your authenticator app.</p>
+          </div>
+        )}
 
         <div className="flex items-center justify-between gap-3 text-sm">
           <label className="flex items-center gap-2 text-slate-300">

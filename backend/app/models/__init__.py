@@ -17,6 +17,7 @@ from .problem_tag import ProblemTag
 from .problem_testcase import ProblemTestCase
 from .profile import Profile
 from .refresh_token import RefreshToken
+from .password_reset_token import PasswordResetToken
 from .resume import Resume
 from .roadmap import Roadmap, RoadmapTask, RoadmapWeek
 from .streak import Streak
@@ -60,6 +61,7 @@ __all__ = [
     "ProblemTestCase",
     "Profile",
     "RefreshToken",
+    "PasswordResetToken",
     "Resume",
     "Roadmap",
     "RoadmapTask",

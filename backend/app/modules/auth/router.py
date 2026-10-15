@@ -17,6 +17,7 @@ from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import Header
 from fastapi import HTTPException
+from fastapi import Request
 from fastapi import status
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import select
@@ -33,6 +34,8 @@ from app.modules.auth.schemas.requests import (
     TwoFactorSetupRequest,
     TwoFactorVerifyRequest,
     DeleteAccountRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
 )
 
 from app.modules.auth.schemas.responses import (
@@ -114,6 +117,8 @@ async def login(
 
     request: LoginRequest,
 
+    http_request: Request,
+
     db: AsyncSession = Depends(get_db),
 
     user_agent: str | None = Header(default=None),
@@ -129,6 +134,8 @@ async def login(
             request,
 
             user_agent=user_agent,
+
+            ip_address=http_request.client.host if http_request.client else None,
 
         )
 
@@ -198,6 +205,20 @@ async def refresh(
 
         )
 
+
+@router.post("/forgot-password", response_model=MessageResponse)
+async def forgot_password(request: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)) -> dict:
+    await auth_service.request_password_reset(db, request)
+    return {"message": "If an account matches that email, password reset instructions have been sent."}
+
+
+@router.post("/reset-password", response_model=MessageResponse)
+async def reset_password(request: ResetPasswordRequest, db: AsyncSession = Depends(get_db)) -> dict:
+    try:
+        await auth_service.reset_password(db, request)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    return {"message": "Password reset successfully. Please sign in again."}
 
 # ==========================================================
 # Logout
@@ -448,4 +469,4 @@ async def delete_account(
         raise HTTPException(status_code=422, detail=str(exc))
     except Exception as exc:
         logger.exception("Account deletion failed")
-        raise HTTPException(status_code=500, detail="Failed to delete account. Please try again.")
+        raise HTTPException(status_code=500, detail="Failed to delete account. Please try again.")

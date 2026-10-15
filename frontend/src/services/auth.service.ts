@@ -111,6 +111,14 @@ class AuthService {
 
         );
 
+        localStorage.setItem(
+
+            "refresh_token",
+
+            response.data.refresh_token,
+
+        );
+
         return response.data;
 
     }
@@ -172,4 +180,4 @@ class AuthService {
 
 }
 
-export const authService = new AuthService();
+export const authService = new AuthService();

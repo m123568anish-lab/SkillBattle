@@ -41,6 +41,7 @@ from app.models import (
     InterviewAnswer,
     Resume,
     RefreshToken,
+    PasswordResetToken,
     Streak,
     Question,
     UserSubmission,
@@ -86,6 +87,7 @@ __all__ = [
     "InterviewAnswer",
     "Resume",
     "RefreshToken",
+    "PasswordResetToken",
     "Streak",
     "BattleParticipant",
     "BattleResult",
@@ -181,6 +183,7 @@ def _repair_users_table() -> None:
     existing = {column["name"] for column in inspector.get_columns("users")}
     missing_columns = {
         "username": "VARCHAR(30) DEFAULT 'player'",
+        "clerk_user_id": "VARCHAR(64)",
         "role": "VARCHAR(50) DEFAULT 'user'",
         "account_type": "VARCHAR(30) DEFAULT 'STUDENT'",
         "requested_role": "VARCHAR(50)",
