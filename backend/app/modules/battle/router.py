@@ -192,6 +192,43 @@ async def waiting_battles(
     return await battle_service.waiting_battles(db)
 
 
+@router.get("/history")
+async def battle_history(
+    limit: int = Query(default=10, ge=1, le=50),
+    offset: int = Query(default=0, ge=0),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from app.models.battle import BattleRoom, BattleParticipant, BattleResult
+    stmt = (
+        select(BattleRoom, BattleParticipant, BattleResult)
+        .join(BattleParticipant, BattleParticipant.battle_id == BattleRoom.id)
+        .outerjoin(BattleResult, BattleResult.battle_id == BattleRoom.id)
+        .where(BattleParticipant.user_id == current_user.id)
+        .order_by(BattleRoom.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    rows = (await db.execute(stmt)).all()
+    history = []
+    for room, part, res in rows:
+        history.append({
+            "battle_id": room.id,
+            "title": room.title,
+            "battle_type": room.battle_type,
+            "difficulty": room.difficulty,
+            "status": room.status,
+            "score": part.score,
+            "rank": part.rank,
+            "is_winner": bool(res and res.winner_id == current_user.id and not res.is_draw),
+            "xp_earned": res.xp_earned if res else 0,
+            "accuracy": float(res.accuracy_percentage if res else 0.0),
+            "created_at": room.created_at.isoformat() if room.created_at else None,
+        })
+    return {"history": history, "total": len(history)}
+
+
+
 # ==========================================================
 # Battle Details (Sanitized for client)
 # ==========================================================
@@ -413,6 +450,7 @@ async def solo_finish(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    correct_count = 0
     for res in request.mcq_results or []:
         from app.models.user_skill_stat import UserSkillStat
         stmt = select(UserSkillStat).where(
@@ -431,12 +469,17 @@ async def solo_finish(
         stat.total_attempts += 1
         if res.correct:
             stat.correct_attempts += 1
+            correct_count += 1
+
+    mcq_xp = correct_count * 15
+    if mcq_xp > 0:
+        await xp_service.add_xp(db, current_user, mcq_xp, commit=False)
 
     await db.commit()
     progression = await xp_service.get_user_xp(db, current_user)
     return {
         "status": "success",
-        "xp_added": 0,
+        "xp_added": mcq_xp,
         "total_xp": progression.total_xp,
         "level": progression.level,
     }

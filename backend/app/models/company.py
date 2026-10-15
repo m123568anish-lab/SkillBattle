@@ -11,11 +11,15 @@ Company / Recruiter Platform Models
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
+
+if TYPE_CHECKING:
+    from app.models.skill_intelligence import CompanySkillRequirement
 
 
 class Company(Base):
@@ -36,6 +40,7 @@ class Company(Base):
 
     members: Mapped[list["CompanyMember"]] = relationship(back_populates="company", cascade="all, delete-orphan")
     jobs: Mapped[list["JobPosting"]] = relationship(back_populates="company", cascade="all, delete-orphan")
+    skill_requirements: Mapped[list["CompanySkillRequirement"]] = relationship(back_populates="company", cascade="all, delete-orphan")
 
 
 class CompanyMember(Base):

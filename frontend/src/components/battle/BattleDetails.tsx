@@ -127,7 +127,7 @@ export default function BattleDetails({ battleId }: BattleDetailsProps) {
           <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-6">
             <h3 className="text-xl font-semibold">Battle feed</h3>
             <p className="mt-2 text-slate-400">Interact with the lobby, send actions, or submit code to the backend while you compete.</p>
-            <BattleDetailClient id={battleId} />
+            <BattleDetailClient id={battleId} problemId={battle.problem_id} />
           </div>
 
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6">

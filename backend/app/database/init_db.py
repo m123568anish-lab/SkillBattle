@@ -302,103 +302,149 @@ def _repair_dashboard_tables() -> None:
 
 
 def _seed_initial_problems() -> None:
-    """Seed initial coding practice problems if the problems table is empty."""
+    """Seed initial coding practice problems and baseline test cases if empty."""
     inspector = inspect(engine)
     if "problems" not in inspector.get_table_names():
         return
 
     with engine.begin() as connection:
         count = connection.execute(text("SELECT COUNT(*) FROM problems")).scalar()
-        if count and count > 0:
-            return
-
-        logger.info("Seeding initial practice problems into database...")
-        seed_data = [
-            (
-                "Two Sum",
-                "two-sum",
-                "Easy",
-                "Arrays",
-                "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
-                "Line 1: Space-separated integers (nums)\nLine 2: Single integer (target)",
-                "Space-separated pair of indices",
-                "2 <= nums.length <= 10^4",
-                "Use a hash map to store complements for O(N) lookup.",
-                100,
-            ),
-            (
-                "Reverse String",
-                "reverse-string",
-                "Easy",
-                "Strings",
-                "Write a function that reverses a string. The input string is given as an array of characters.",
-                "Single line string",
-                "Reversed string",
-                "1 <= s.length <= 10^5",
-                "Use two pointers (left and right) swapping elements inward.",
-                80,
-            ),
-            (
-                "Valid Parentheses",
-                "valid-parentheses",
-                "Easy",
-                "Stack",
-                "Given a string s containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.",
-                "Single line containing brackets",
-                "True if valid, False otherwise",
-                "1 <= s.length <= 10^4",
-                "Use a stack to push open brackets and match on closing brackets.",
-                120,
-            ),
-            (
-                "Binary Search",
-                "binary-search",
-                "Medium",
-                "Search",
-                "Given an array of integers nums which is sorted in ascending order, and an integer target, write a function to search target in nums.",
-                "Line 1: Sorted integers\nLine 2: Target integer",
-                "Index of target if found, else -1",
-                "1 <= nums.length <= 10^4",
-                "Maintain low and high pointers, halve the search space at mid.",
-                200,
-            ),
-            (
-                "Maximum Subarray",
-                "maximum-subarray",
-                "Hard",
-                "Dynamic Programming",
-                "Given an integer array nums, find the subarray with the largest sum, and return its sum.",
-                "Space-separated integers",
-                "Single integer (maximum sum)",
-                "1 <= nums.length <= 10^5",
-                "Kadane's Algorithm: current_sum = max(num, current_sum + num).",
-                300,
-            ),
-        ]
-
-        for title, slug, diff, cat, desc, inp, out, const, exp, xp in seed_data:
-            connection.execute(
-                text(
-                    """
-                    INSERT INTO problems (title, slug, difficulty, category, description, input_format, output_format, constraints, explanation, xp_reward, time_limit, memory_limit, is_active, created_at, updated_at)
-                    VALUES (:title, :slug, :diff, :cat, :desc, :inp, :out, :const, :exp, :xp, 2, 256, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                    ON CONFLICT DO NOTHING
-                    """
+        if not count or count == 0:
+            logger.info("Seeding initial practice problems into database...")
+            seed_data = [
+                (
+                    "Two Sum",
+                    "two-sum",
+                    "Easy",
+                    "Arrays",
+                    "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
+                    "Line 1: Space-separated integers (nums)\nLine 2: Single integer (target)",
+                    "Space-separated pair of indices",
+                    "2 <= nums.length <= 10^4",
+                    "Use a hash map to store complements for O(N) lookup.",
+                    100,
                 ),
-                {
-                    "title": title,
-                    "slug": slug,
-                    "diff": diff,
-                    "cat": cat,
-                    "desc": desc,
-                    "inp": inp,
-                    "out": out,
-                    "const": const,
-                    "exp": exp,
-                    "xp": xp,
-                },
-            )
-        logger.info("Successfully seeded 5 initial practice problems.")
+                (
+                    "Reverse String",
+                    "reverse-string",
+                    "Easy",
+                    "Strings",
+                    "Write a function that reverses a string. The input string is given as an array of characters.",
+                    "Single line string",
+                    "Reversed string",
+                    "1 <= s.length <= 10^5",
+                    "Use two pointers (left and right) swapping elements inward.",
+                    80,
+                ),
+                (
+                    "Valid Parentheses",
+                    "valid-parentheses",
+                    "Easy",
+                    "Stack",
+                    "Given a string s containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.",
+                    "Single line containing brackets",
+                    "True if valid, False otherwise",
+                    "1 <= s.length <= 10^4",
+                    "Use a stack to push open brackets and match on closing brackets.",
+                    120,
+                ),
+                (
+                    "Binary Search",
+                    "binary-search",
+                    "Medium",
+                    "Search",
+                    "Given an array of integers nums which is sorted in ascending order, and an integer target, write a function to search target in nums.",
+                    "Line 1: Sorted integers\nLine 2: Target integer",
+                    "Index of target if found, else -1",
+                    "1 <= nums.length <= 10^4",
+                    "Maintain low and high pointers, halve the search space at mid.",
+                    200,
+                ),
+                (
+                    "Maximum Subarray",
+                    "maximum-subarray",
+                    "Hard",
+                    "Dynamic Programming",
+                    "Given an integer array nums, find the subarray with the largest sum, and return its sum.",
+                    "Space-separated integers",
+                    "Single integer (maximum sum)",
+                    "1 <= nums.length <= 10^5",
+                    "Kadane's Algorithm: current_sum = max(num, current_sum + num).",
+                    300,
+                ),
+            ]
+
+            for title, slug, diff, cat, desc, inp, out, const, exp, xp in seed_data:
+                connection.execute(
+                    text(
+                        """
+                        INSERT INTO problems (title, slug, difficulty, category, description, input_format, output_format, constraints, explanation, xp_reward, time_limit, memory_limit, is_active, created_at, updated_at)
+                        VALUES (:title, :slug, :diff, :cat, :desc, :inp, :out, :const, :exp, :xp, 2, 256, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        ON CONFLICT DO NOTHING
+                        """
+                    ),
+                    {
+                        "title": title,
+                        "slug": slug,
+                        "diff": diff,
+                        "cat": cat,
+                        "desc": desc,
+                        "inp": inp,
+                        "out": out,
+                        "const": const,
+                        "exp": exp,
+                        "xp": xp,
+                    },
+                )
+            logger.info("Successfully seeded 5 initial practice problems.")
+
+        # Ensure baseline test cases exist in problem_test_cases
+        if "problem_test_cases" in inspector.get_table_names():
+            tc_count = connection.execute(text("SELECT COUNT(*) FROM problem_test_cases")).scalar()
+            if not tc_count or tc_count == 0:
+                logger.info("Seeding baseline problem test cases...")
+                problems_map = {}
+                rows = connection.execute(text("SELECT id, slug FROM problems")).fetchall()
+                for pid, slug in rows:
+                    problems_map[slug] = pid
+
+                baseline_cases = [
+                    # Two Sum
+                    ("two-sum", "2 7 11 15\n9", "0 1", False, "Standard sample case"),
+                    ("two-sum", "3 2 4\n6", "1 2", True, "Hidden case 1"),
+                    ("two-sum", "3 3\n6", "0 1", True, "Hidden case 2"),
+                    # Reverse String
+                    ("reverse-string", "hello", "olleh", False, "Standard sample"),
+                    ("reverse-string", "SkillBattle", "elttaBllikS", True, "Hidden case 1"),
+                    ("reverse-string", "racecar", "racecar", True, "Hidden palindrome"),
+                    # Valid Parentheses
+                    ("valid-parentheses", "()", "True", False, "Simple valid"),
+                    ("valid-parentheses", "()[]{}", "True", True, "Multiple brackets"),
+                    ("valid-parentheses", "(]", "False", True, "Mismatched closing"),
+                    ("valid-parentheses", "{[]}", "True", True, "Nested valid"),
+                    # Binary Search
+                    ("binary-search", "-1 0 3 5 9 12\n9", "4", False, "Standard match"),
+                    ("binary-search", "-1 0 3 5 9 12\n2", "-1", True, "Target absent"),
+                    ("binary-search", "5\n5", "0", True, "Single element match"),
+                    # Maximum Subarray
+                    ("maximum-subarray", "-2 1 -3 4 -1 2 1 -5 4", "6", False, "Standard Kadane test"),
+                    ("maximum-subarray", "1", "1", True, "Single element"),
+                    ("maximum-subarray", "5 4 -1 7 8", "23", True, "Positive array"),
+                ]
+
+                for slug, inp, out, is_hidden, exp in baseline_cases:
+                    pid = problems_map.get(slug)
+                    if pid:
+                        connection.execute(
+                            text(
+                                """
+                                INSERT INTO problem_test_cases (problem_id, input_data, expected_output, is_hidden, explanation)
+                                VALUES (:pid, :inp, :out, :is_hidden, :exp)
+                                """
+                            ),
+                            {"pid": pid, "inp": inp, "out": out, "is_hidden": is_hidden, "exp": exp},
+                        )
+                logger.info("Successfully seeded baseline problem test cases.")
 
 
 def _repair_college_tables() -> None:

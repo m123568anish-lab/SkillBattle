@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
 from app.models.question import SafeJSON
+
+if TYPE_CHECKING:
+    from app.models.company import Company
 
 
 class SkillEvidence(Base):
@@ -50,9 +54,11 @@ class CompanySkillRequirement(Base):
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    company_id: Mapped[str] = mapped_column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), index=True, nullable=False)
+    company_id: Mapped[int] = mapped_column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), index=True, nullable=False)
     skill_id: Mapped[str] = mapped_column(String(120), index=True, nullable=False)
     importance: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
     minimum_mastery: Mapped[str] = mapped_column(String(30), default="LEARNING", nullable=False)
     recommended_mastery: Mapped[str] = mapped_column(String(30), default="COMPETENT", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+    company: Mapped["Company"] = relationship(back_populates="skill_requirements")

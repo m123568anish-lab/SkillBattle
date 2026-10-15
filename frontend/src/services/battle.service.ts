@@ -97,7 +97,27 @@ class BattleService {
     const response = await api.post(API_ENDPOINTS.BATTLE.LEAVE, { battle_id: battleId });
     return response.data;
   }
+
+  async getHistory(limit = 10, offset = 0) {
+    const response = await api.get<{ history: BattleHistoryItem[]; total: number }>(`/battle/history?limit=${limit}&offset=${offset}`);
+    return response.data;
+  }
+}
+
+export interface BattleHistoryItem {
+  battle_id: string;
+  title: string;
+  battle_type: string;
+  difficulty: string;
+  status: string;
+  score: number;
+  rank: number;
+  is_winner: boolean;
+  xp_earned: number;
+  accuracy: number;
+  created_at: string | null;
 }
 
 export const battleService = new BattleService();
 export default battleService;
+

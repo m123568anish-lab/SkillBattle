@@ -109,3 +109,20 @@ class CompanyAssessmentCreate(BaseModel):
     allowed_languages: list[str] = Field(default_factory=lambda: ["python", "javascript", "cpp", "java"])
     scoring_rules: dict = Field(default_factory=dict)
     negative_marking: bool = False
+
+
+class CompanySkillRequirementCreate(BaseModel):
+    skill_id: str = Field(..., max_length=120)
+    importance: int = Field(default=3, ge=1, le=5)
+    minimum_mastery: str = Field(default="LEARNING", max_length=30)
+    recommended_mastery: str = Field(default="COMPETENT", max_length=30)
+
+
+class CompanySkillRequirementResponse(BaseModel):
+    id: str
+    company_id: int
+    skill_id: str
+    importance: int
+    minimum_mastery: str
+    recommended_mastery: str
+    created_at: datetime

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import BattleArenaCommandCenter from "@/components/battle/BattleArenaCommandCenter";
-import { battleService } from "@/services/battle.service";
+import { battleService, type BattleHistoryItem } from "@/services/battle.service";
 import { dashboardService } from "@/services/dashboard.service";
 
 export default function BattlePage() {
@@ -13,6 +13,13 @@ export default function BattlePage() {
   const [skillList, setSkillList] = useState<Array<{ skill: string; score: number; attempts: number; verified: boolean; sources: string[] }>>([]);
   const [weakSkills, setWeakSkills] = useState<Array<{ skill: string; score: number; attempts: number; verified: boolean; sources: string[] }>>([]);
   const [averageSkill, setAverageSkill] = useState(0);
+  const [history, setHistory] = useState<BattleHistoryItem[]>([]);
+  const [userStats, setUserStats] = useState({
+    rating: 1000,
+    total_xp: 0,
+    level: 1,
+    battles_count: 0,
+  });
   const [recommendedBattle, setRecommendedBattle] = useState<{
     id: string;
     title?: string;
@@ -28,12 +35,30 @@ export default function BattlePage() {
 
     const loadBattleData = async () => {
       try {
-        const [dashboardResponse, waitingBattles] = await Promise.all([
+        const [dashboardResponse, waitingBattles, historyResponse] = await Promise.all([
           dashboardService.getDashboard(),
           battleService.getWaitingBattles().catch(() => []),
+          battleService.getHistory(5, 0).catch(() => ({ history: [], total: 0 })),
         ]);
 
         if (!active) return;
+
+        // User stats
+        const extractedRating = Number(dashboardResponse?.stats?.rating ?? 1000);
+        const extractedXp = Number(dashboardResponse?.stats?.xp ?? 0);
+        const extractedLevel = Number(dashboardResponse?.stats?.level ?? 1);
+        const extractedBattles = Number(
+          dashboardResponse?.stats?.battles_played ?? historyResponse?.total ?? 0
+        );
+
+        setUserStats({
+          rating: extractedRating,
+          total_xp: extractedXp,
+          level: extractedLevel,
+          battles_count: Math.max(extractedBattles, (historyResponse?.history || []).length),
+        });
+
+        setHistory(historyResponse?.history || []);
 
         const readinessMatrix = dashboardResponse?.command_center?.placement_readiness?.matrix ?? {};
         const derivedSkills = Object.entries(readinessMatrix).map(([skill, value]) => ({
@@ -46,7 +71,7 @@ export default function BattlePage() {
 
         const normalizedSkills = derivedSkills.length > 0
           ? derivedSkills
-          : [{ skill: "Career readiness", score: 72, attempts: 1, verified: true, sources: ["profile"] }];
+          : [{ skill: "CS Fundamentals", score: 75, attempts: 1, verified: true, sources: ["profile"] }];
 
         const nextWeakSkills = [...normalizedSkills].sort((a, b) => a.score - b.score).slice(0, 3);
         const scoreAvg = Math.round(
@@ -84,27 +109,6 @@ export default function BattlePage() {
     };
   }, []);
 
-  const arenaModes = [
-    {
-      title: "Solo Battle",
-      description: "Practice with adaptive, placement-grade challenges and instant feedback.",
-      accent: "from-cyan-500/15 via-sky-500/10 to-violet-500/15",
-      href: "/battle/solo",
-    },
-    {
-      title: "Multiplayer Queue",
-      description: "Match into a live ranked duel and push your rating under pressure.",
-      accent: "from-violet-500/15 via-indigo-500/10 to-cyan-500/15",
-      href: "/battle/queue",
-    },
-    {
-      title: "Quest Map",
-      description: "Progress through the training loop: learn, battle, review, improve, and prove.",
-      accent: "from-emerald-500/15 via-cyan-500/10 to-sky-500/15",
-      href: "#quest-map",
-    },
-  ];
-
   return (
     <DashboardLayout>
       <BattleArenaCommandCenter
@@ -116,7 +120,8 @@ export default function BattlePage() {
         waitingLoadFailed={waitingLoadFailed}
         recommendedBattle={recommendedBattle}
         recommendedBattleTitle={recommendedBattleTitle}
-        arenaModes={arenaModes}
+        userStats={userStats}
+        history={history}
       />
     </DashboardLayout>
   );

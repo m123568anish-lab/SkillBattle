@@ -39,7 +39,7 @@ class RunCodeResponse(BaseModel):
 
 class SubmitCodeRequest(BaseModel):
 
-    problem_id: int
+    problem_id: int = 1
 
     language: str
 
@@ -156,17 +156,17 @@ class JudgeResult(BaseModel):
 
     total_tests: int
 
-    execution_time: int
+    execution_time: int = 0
 
-    memory_used: int
+    memory_used: int = 0
 
     failed_test_index: int | None = None
 
-    runtime_ms: float
+    runtime_ms: float = 0.0
 
-    memory_mb: float
+    memory_mb: float = 0.0
 
-    score: int
+    score: int = 0
 
 
 # ==========================================================

@@ -159,6 +159,10 @@ class JudgeEngine:
 
             total_tests=len(testcases),
 
+            execution_time=int(runtime),
+
+            memory_used=int(memory),
+
             runtime_ms=runtime,
 
             memory_mb=memory,

@@ -14,7 +14,7 @@ function buildWsUrl(id: string) {
 // Whether we already showed the WS error toast for this session
 let wsErrorShown = false;
 
-export default function BattleDetailClient({ id }: { id: string }) {
+export default function BattleDetailClient({ id, problemId }: { id: string; problemId?: number }) {
   const [messages, setMessages] = useState<any[]>([]);
   const [players, setPlayers] = useState<number>(0);
   const wsRef = useRef<WebSocket | null>(null);
@@ -86,20 +86,21 @@ export default function BattleDetailClient({ id }: { id: string }) {
     try {
       const resp = await api.post("/compiler/submit", {
         battle_id: id,
+        problem_id: problemId || 1,
         language: editorLang,
         source_code: source,
       });
       setLastResult(resp.data);
       const xpEarned = Number(resp.data?.xp_earned || 0);
-      if (xpEarned > 0) {
-        toast.success(`Solution accepted! +${xpEarned} XP`);
+      if (resp.data?.verdict === "Accepted") {
+        toast.success(`Solution accepted! +${xpEarned} verified XP`);
         await useDashboardStore.getState().refresh();
       } else {
-        toast.success("Submission recorded.");
+        toast.error(`Verdict: ${resp.data?.verdict || "Wrong Answer"}`);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error("Submission failed");
+      toast.error(err?.response?.data?.detail || "Submission failed");
     }
   }
 
