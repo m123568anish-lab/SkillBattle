@@ -260,43 +260,46 @@ export default function Home() {
 
           <div className="relative">
             <div className="absolute -inset-5 rounded-[2rem] bg-gradient-to-br from-cyan-500/15 via-violet-500/20 to-fuchsia-500/15 blur-3xl" />
-            <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-[0_40px_120px_rgba(15,23,42,0.9)] backdrop-blur-xl sm:p-6">
-              <div className="rounded-[1.5rem] border border-white/10 bg-[#0a1225]/90 p-5 sm:p-6">
-                <div className="mb-5 flex items-center justify-between border-b border-white/10 pb-4">
+            <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0a0f1d] p-5 shadow-[0_40px_120px_rgba(15,23,42,0.65)] sm:p-7">
+              <div className="absolute right-0 top-0 h-48 w-48 rounded-full bg-cyan-400/10 blur-3xl" />
+              <div className="relative">
+                <div className="mb-7 flex items-center justify-between border-b border-white/10 pb-5">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-violet-600">
-                      <Zap className="h-5 w-5 text-white" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-400/10">
+                      <Code2 className="h-5 w-5 text-cyan-300" />
                     </div>
                     <div>
-                      <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">Platform flow</p>
-                      <h2 className="text-lg font-bold text-white">SkillBattle ecosystem</h2>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300">Your skill journey</p>
+                      <h2 className="text-lg font-bold text-white">Learn by doing</h2>
                     </div>
                   </div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-300">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                    Live
+                  <div className="hidden rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-slate-400 sm:block">
+                    Practice · feedback · progress
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  {ecosystemFlow.map((item, index) => (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    { icon: Code2, title: "Practice", label: "Build fluency", tone: "text-cyan-300" },
+                    { icon: Swords, title: "Compete", label: "Test your skills", tone: "text-violet-300" },
+                    { icon: BrainCircuit, title: "Improve", label: "See what to learn", tone: "text-fuchsia-300" },
+                  ].map(({ icon: Icon, title, label, tone }, index) => (
                     <div
-                      key={item}
-                      className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/80 px-3 py-3"
+                      key={title}
+                      className={`rounded-2xl border p-4 ${index === 1 ? "border-cyan-300/25 bg-cyan-400/[0.07] sm:-translate-y-2" : "border-white/[0.08] bg-white/[0.025]"}`}
                     >
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-violet-600 text-xs font-black text-white">
-                        {index + 1}
+                      <div className={`mb-7 flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.05] ${tone}`}>
+                        <Icon className="h-4 w-4" />
                       </div>
-                      <span className="text-sm font-medium text-slate-200">{item}</span>
+                      <p className="text-sm font-bold text-white">{title}</p>
+                      <p className="mt-1 text-xs text-slate-400">{label}</p>
                     </div>
                   ))}
                 </div>
 
-                <div className="mt-5 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-200">Built for</p>
-                  <p className="mt-2 text-sm leading-7 text-slate-200">
-                    Students preparing for real opportunities, colleges improving placement readiness, and companies identifying stronger candidate pipelines.
-                  </p>
+                <div className="mt-5 flex items-center justify-between gap-4 rounded-xl border border-white/[0.07] bg-black/20 px-4 py-3">
+                  <p className="text-xs leading-5 text-slate-400">One profile connects learning progress with assessment and hiring workflows.</p>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-cyan-300" />
                 </div>
               </div>
             </div>

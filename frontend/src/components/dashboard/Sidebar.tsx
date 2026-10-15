@@ -34,7 +34,7 @@ export default function Sidebar() {
       initial={false}
       animate={{ width: isCollapsed ? 88 : 280 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="hidden lg:flex flex-col my-6 ml-6 rounded-3xl border border-white/[0.08] bg-[#0a0f1d] shadow-2xl shadow-black/60 relative overflow-hidden"
+      className="hidden lg:flex flex-col my-4 ml-4 rounded-[1.5rem] border border-white/[0.07] bg-[#090e19] shadow-xl shadow-black/30 relative overflow-hidden"
     >
       {/* Restrained Ambient Light */}
       <div className="pointer-events-none absolute -top-24 -left-24 h-48 w-48 rounded-full bg-cyan-500/5 blur-3xl" />
@@ -44,14 +44,15 @@ export default function Sidebar() {
       <button
         suppressHydrationWarning
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute right-3 top-6 z-20 rounded-lg border border-white/10 bg-white/5 p-1.5 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/30 transition duration-200"
+        aria-label={isCollapsed ? "Expand navigation" : "Collapse navigation"}
+        className="absolute right-3 top-5 z-20 rounded-lg border border-white/[0.08] bg-white/[0.03] p-1.5 text-slate-400 transition hover:border-cyan-500/30 hover:text-cyan-300"
       >
         {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
       </button>
 
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-white/5 p-6 relative z-10">
-        <div className="rounded-2xl bg-gradient-to-br from-cyan-500/20 to-violet-500/20 p-3 border border-cyan-500/30 shadow-lg shadow-cyan-500/5 flex-shrink-0">
+      <div className={`relative z-10 flex items-center gap-3 border-b border-white/[0.06] px-5 py-5 ${isCollapsed ? "justify-center" : "pr-12"}`}>
+          <div className="flex-shrink-0 rounded-xl border border-cyan-500/20 bg-cyan-500/10 p-2.5">
           <BrandIcon className="text-cyan-400" size={24} />
         </div>
 
@@ -81,13 +82,12 @@ export default function Sidebar() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.3 }}
-                  className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2"
-                >
-                  <div className="h-0.5 flex-1 bg-gradient-to-r from-slate-600 to-transparent" />
+                className="px-3 pb-2 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600"
+              >
                   {category.label}
                 </motion.h3>
               )}
-              <div className="space-y-1.5 mt-2">
+              <div className="mt-1 space-y-1">
                 {category.items.map((item) => {
                   const Icon = item.icon;
                   const active = isActive(item.href);
@@ -119,8 +119,8 @@ export default function Sidebar() {
                         whileHover={{ x: 4 }}
                         className={`flex items-center gap-3 rounded-xl px-4 py-2.5 transition-all duration-200 relative overflow-hidden group ${
                           active
-                            ? "bg-gradient-to-r from-cyan-500/20 to-violet-500/20 text-cyan-300 border border-cyan-500/30 shadow-lg shadow-cyan-500/10"
-                            : "text-slate-400 border border-transparent hover:text-slate-200 hover:bg-white/5 hover:border-white/10"
+                            ? "bg-cyan-400/[0.09] text-cyan-200 border border-cyan-300/15"
+                            : "text-slate-400 border border-transparent hover:text-slate-100 hover:bg-white/[0.04]"
                         }`}
                       >
                         {/* Animated Background */}
@@ -173,7 +173,7 @@ export default function Sidebar() {
         <div className="border-t border-white/5 p-4 relative z-10">
           <Link
             href={portal === "college" ? "/college/dashboard?view=students" : portal === "company" ? "/company/dashboard?view=jobs&action=create" : "/battle"}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500/80 to-violet-500/80 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-cyan-500/20 transition duration-200 hover:shadow-cyan-500/40"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/15 bg-cyan-300 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-cyan-200"
           >
             <Zap size={16} />
             {portal === "college" ? "Manage Students" : portal === "company" ? "Create Job" : "Start Battle"}

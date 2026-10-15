@@ -15,7 +15,7 @@ from app.models.problem import Problem
 from app.models.problem_testcase import ProblemTestCase
 from app.models.user import User
 from app.models.user_stats import UserStats
-from app.models.xp import XP
+from app.models.xp import XP, XPLedger
 from app.modules.auth.schemas.requests import RegisterRequest
 from app.modules.auth.services.auth_service import auth_service
 from app.modules.battle.service import battle_service
@@ -224,6 +224,17 @@ async def test_accepted_compiler_submission_awards_once_and_empty_tests_do_not_r
 
     monkeypatch.setattr("app.modules.compiler.service.judge_engine.judge", accepted_judgement)
     monkeypatch.setattr(compiler_service, "notify_battle", no_battle_notification)
+    original_add_xp = xp_service.add_xp
+    fail_first_reward = True
+
+    async def fail_once_then_award(*args, **kwargs):
+        nonlocal fail_first_reward
+        if fail_first_reward:
+            fail_first_reward = False
+            raise RuntimeError("temporary ledger outage")
+        return await original_add_xp(*args, **kwargs)
+
+    monkeypatch.setattr(xp_service, "add_xp", fail_once_then_award)
 
     async with session_factory() as session:
         user = User(
@@ -264,6 +275,8 @@ async def test_accepted_compiler_submission_awards_once_and_empty_tests_do_not_r
             source_code="print(1)",
         )
         first = await compiler_service.submit_solution(session, user, request)
+        finalized = await compiler_service.finalize_submission_xp(session, user, first.submission_id)
+        duplicate_finalize = await compiler_service.finalize_submission_xp(session, user, first.submission_id)
         repeated = await compiler_service.submit_solution(session, user, request)
         xp = await xp_repository.get_by_user(session, user.id)
         submissions = (await session.execute(
@@ -274,11 +287,23 @@ async def test_accepted_compiler_submission_awards_once_and_empty_tests_do_not_r
         )).scalar_one()
 
         assert first.verdict == "Accepted"
-        assert first.xp_earned == 150
+        assert first.xp_earned == 0
+        assert first.xp_status == "pending"
+        assert finalized["xp_status"] == "granted"
+        assert finalized["xp_earned"] == 150
+        assert duplicate_finalize["xp_earned"] == 150
         assert repeated.verdict == "Accepted"
         assert repeated.xp_earned == 0
         assert xp is not None and xp.total_xp == 150
         assert submissions == 2
+        ledger_count = (await session.execute(
+            select(func.count()).select_from(XPLedger).where(
+                XPLedger.user_id == user.id,
+                XPLedger.source == "problem_submission",
+                XPLedger.reference_id == str(first.submission_id),
+            )
+        )).scalar_one()
+        assert ledger_count == 1
 
         empty_problem = Problem(
             title="No test cases configured",

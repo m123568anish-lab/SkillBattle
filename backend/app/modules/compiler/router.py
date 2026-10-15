@@ -159,6 +159,17 @@ async def submit_solution(
 # My Submissions
 # ==========================================================
 
+@router.post("/submissions/{submission_id}/finalize-xp")
+async def finalize_submission_xp(
+    submission_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        return await compiler_service.finalize_submission_xp(db, current_user, submission_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
 @router.get(
     "/submissions/me",
 )

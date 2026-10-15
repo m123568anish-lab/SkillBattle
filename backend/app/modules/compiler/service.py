@@ -22,6 +22,7 @@ from app.models.compiler import (
     CodeSubmission,
 )
 from app.models.user import User
+from app.models.xp import XPLedger
 from app.modules.battle.websocket import battle_ws
 
 from app.modules.battle.events import BattleEvent
@@ -351,6 +352,8 @@ class CompilerService:
                 # The evaluated submission remains committed and can be
                 # finalized/retried by a future reward worker.
                 logger.exception("XP finalization failed for submission=%s", submission.id)
+                await db.rollback()
+                await db.refresh(submission)
                 xp_earned = 0
                 xp_status = "pending"
 
@@ -391,6 +394,60 @@ class CompilerService:
 
         )
     
+    async def finalize_submission_xp(
+        self,
+        db: AsyncSession,
+        current_user: User,
+        submission_id: int,
+    ) -> dict:
+        """Retry XP finalization for an already-evaluated owned submission."""
+        submission = await compiler_repository.get_submission(db, submission_id)
+        if submission is None or str(submission.user_id) != str(current_user.id):
+            raise ValueError("Submission not found.")
+        if submission.verdict != "Accepted":
+            return {"submission_id": submission.id, "xp_earned": 0, "xp_status": "not_eligible"}
+
+        ledger_stmt = select(XPLedger).where(
+            XPLedger.user_id == str(current_user.id),
+            XPLedger.source == "problem_submission",
+            XPLedger.reference_id == str(submission.id),
+        )
+        ledger_entry = (await db.execute(ledger_stmt)).scalar_one_or_none()
+        if ledger_entry is not None:
+            return {"submission_id": submission.id, "xp_earned": ledger_entry.amount, "xp_status": "granted"}
+
+        earlier_accepted_stmt = select(CodeSubmission.id).where(
+            CodeSubmission.user_id == current_user.id,
+            CodeSubmission.problem_id == submission.problem_id,
+            CodeSubmission.verdict == "Accepted",
+            CodeSubmission.id < submission.id,
+        ).limit(1)
+        earlier_accepted = (await db.execute(earlier_accepted_stmt)).scalar_one_or_none()
+        if earlier_accepted is not None:
+            return {"submission_id": submission.id, "xp_earned": 0, "xp_status": "not_eligible"}
+
+        problem = await self._get_problem(db, submission.problem_id)
+        difficulty_xp = {"easy": 100, "medium": 250, "hard": 500}
+        amount = difficulty_xp.get(str(problem.difficulty).lower(), problem.xp_reward or 100)
+        if submission.execution_time <= 200:
+            amount += 50
+
+        try:
+            await xp_service.add_xp(
+                db,
+                current_user,
+                amount,
+                source="problem_submission",
+                reference_id=str(submission.id),
+                description=f"Problem {problem.id} submission {submission.id}",
+            )
+        except Exception:
+            await db.rollback()
+            logger.exception("XP retry failed for submission=%s", submission.id)
+            return {"submission_id": submission.id, "xp_earned": 0, "xp_status": "pending"}
+
+        return {"submission_id": submission.id, "xp_earned": amount, "xp_status": "granted"}
+
         # ==========================================================
     # User Submission History
     # ==========================================================

@@ -7,10 +7,10 @@ export default function SettingsRoutePage() {
     return (
         <DashboardLayout>
             <section className="space-y-6">
-                <div className="rounded-3xl border border-white/[0.08] bg-[#0a0f1d] p-6 sm:p-8 text-white shadow-2xl shadow-black/50">
-                    <p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan-400">Platform Settings</p>
-                    <h1 className="mt-2 text-3xl sm:text-4xl font-black tracking-tight">Account & Experience Controls</h1>
-                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">Manage security credentials, two-factor authentication, appearance themes, notifications, and candidate sharing controls.</p>
+                <div className="rounded-3xl border border-white/[0.08] bg-gradient-to-br from-[#101a2c] to-[#0a0f1d] p-5 sm:p-7 text-white">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300">Preferences</p>
+                    <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">Account and experience</h1>
+                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">Review the account, notification, privacy, and session controls available for your profile.</p>
                 </div>
 
                 <SettingsPage />

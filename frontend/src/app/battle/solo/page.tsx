@@ -144,6 +144,48 @@ function pickRandom<T>(arr: T[], n: number): T[] {
   return copy.slice(0, n);
 }
 
+type CanonicalProblem = {
+  id: number;
+  title: string;
+  difficulty: string;
+  description: string;
+  constraints: string;
+  sample_input: string;
+  sample_output: string;
+  xp_reward: number;
+  is_active?: boolean;
+};
+
+function toCodingProblem(problem: CanonicalProblem): CodingProblem {
+  const template = CODING_PROBLEMS.find(
+    (candidate) => candidate.title.trim().toLowerCase() === problem.title.trim().toLowerCase(),
+  );
+  const constraints = problem.constraints
+    .split(/\r?\n/)
+    .map((constraint) => constraint.trim())
+    .filter(Boolean);
+
+  return {
+    ...(template ?? {
+      examples: [],
+      starterCode: { python: "", javascript: "", cpp: "", java: "" },
+      testInput: problem.sample_input || "",
+    }),
+    id: problem.id,
+    title: problem.title,
+    difficulty: (problem.difficulty.toLowerCase() === "easy"
+      ? "Easy"
+      : problem.difficulty.toLowerCase() === "hard" ? "Hard" : "Medium"),
+    description: problem.description,
+    constraints,
+    xpReward: problem.xp_reward,
+    testInput: problem.sample_input || template?.testInput || "",
+    examples: problem.sample_input || problem.sample_output
+      ? [{ input: problem.sample_input, output: problem.sample_output }]
+      : template?.examples ?? [],
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // DATABASE CODING PROBLEMS (Aligned with database IDs 1 to 5)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -518,6 +560,18 @@ public class Main {
   },
 ];
 
+const UNAVAILABLE_CODING_PROBLEM: CodingProblem = {
+  id: 0,
+  title: "Coding problem unavailable",
+  difficulty: "Easy",
+  xpReward: 0,
+  description: "A canonical problem could not be loaded. Refresh or try again later.",
+  examples: [],
+  constraints: [],
+  starterCode: { python: "", javascript: "", cpp: "", java: "" },
+  testInput: "",
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // TIMERS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -545,6 +599,10 @@ function SoloBattleContent() {
   const [activeMode, setActiveMode] = useState<"mcq" | "coding">(initialMode);
   const [sessionQuestions, setSessionQuestions] = useState<MCQQuestion[]>([]);
   const [sessionProblem, setSessionProblem] = useState<CodingProblem>(CODING_PROBLEMS[0]);
+  const [canonicalProblems, setCanonicalProblems] = useState<CanonicalProblem[]>([]);
+  const [problemCatalogLoading, setProblemCatalogLoading] = useState(true);
+  const [problemCatalogError, setProblemCatalogError] = useState<string | null>(null);
+  const problemCatalogRequested = useRef(false);
   const [sessionStarted, setSessionStarted] = useState(false);
   const [sessionComplete, setSessionComplete] = useState(false);
 
@@ -578,9 +636,14 @@ function SoloBattleContent() {
   const { elapsed, fmt } = useTimer(sessionStarted && !sessionComplete);
 
   // ── Session initialization ─────────────────────────────────────────────────
-  const startSession = useCallback(() => {
+  const startSession = useCallback((availableProblems: CanonicalProblem[] = canonicalProblems) => {
     const qs = pickRandom(ALL_MCQ_QUESTIONS, 10);
-    const prob = CODING_PROBLEMS[Math.floor(Math.random() * CODING_PROBLEMS.length)];
+    const canonicalProblem = availableProblems.length
+      ? availableProblems[Math.floor(Math.random() * availableProblems.length)]
+      : null;
+    const prob = canonicalProblem
+      ? toCodingProblem(canonicalProblem)
+      : UNAVAILABLE_CODING_PROBLEM;
 
     setSessionQuestions(qs);
     setSessionProblem(prob);
@@ -605,10 +668,32 @@ function SoloBattleContent() {
     setActiveConsoleTab("testcase");
     setMobileCodingTab("problem");
     setPersistedProgress(null);
-  }, []);
+  }, [canonicalProblems]);
 
   useEffect(() => {
-    startSession();
+    if (problemCatalogRequested.current) return;
+    problemCatalogRequested.current = true;
+    let active = true;
+    api.get<CanonicalProblem[]>('/problems?limit=100')
+      .then(({ data }) => {
+        if (!active) return;
+        const activeProblems = Array.isArray(data) ? data.filter((problem) => problem.is_active !== false) : [];
+        setCanonicalProblems(activeProblems);
+        setProblemCatalogError(null);
+        startSession(activeProblems);
+      })
+      .catch((error: any) => {
+        if (!active) return;
+        setCanonicalProblems([]);
+        setProblemCatalogError(error?.response?.data?.detail || 'The coding problem bank is temporarily unavailable.');
+        startSession([]);
+      })
+      .finally(() => {
+        if (active) {
+          setProblemCatalogLoading(false);
+        }
+      });
+    return () => { active = false; };
   }, [startSession]);
 
   // Update starter code when language changes
@@ -673,6 +758,14 @@ function SoloBattleContent() {
 
   const handleSubmitCode = async () => {
     if (codingSolved) return;
+    if (canonicalProblems.length === 0) {
+      const message = problemCatalogLoading
+        ? "The coding problem bank is still loading. Please retry in a moment."
+        : problemCatalogError || "No active coding problems are currently available.";
+      setOutput(message);
+      toast.error(message);
+      return;
+    }
     setSubmitting(true);
     setActiveConsoleTab("result");
     setMobileCodingTab("results");
@@ -688,6 +781,7 @@ function SoloBattleContent() {
       const verdict = res.data.verdict;
       const passed = verdict === "Accepted";
       const earned = Number(res.data.xp_earned || 0);
+      const xpStatus = String(res.data.xp_status || (earned > 0 ? "granted" : "not_eligible"));
 
       setSubmissionVerdict(verdict);
       setPassedTests(res.data.passed_tests ?? 0);
@@ -695,7 +789,32 @@ function SoloBattleContent() {
 
       if (passed) {
         setCodingSolved(true);
-        setCodingXp(earned);
+        const verifiedXp = xpStatus === "granted" ? earned : 0;
+        setCodingXp(verifiedXp);
+        if (xpStatus === "pending" && res.data.submission_id) {
+          try {
+            const retry = await api.post(`/compiler/submissions/${res.data.submission_id}/finalize-xp`);
+            const retryStatus = String(retry.data?.xp_status || "pending");
+            const retryXp = Number(retry.data?.xp_earned || 0);
+            if (retryStatus === "granted") {
+              setCodingXp(retryXp);
+              setOutput(`Accepted by the evaluator. +${retryXp} verified XP was recorded in your ledger.`);
+              toast.success(`Solution accepted! +${retryXp} verified XP`);
+              void useDashboardStore.getState().refresh();
+              return;
+            }
+          } catch {
+            // Preserve the verified evaluation and explicitly show that XP is still pending.
+          }
+        }
+        if (xpStatus !== "granted") {
+          setOutput(xpStatus === "pending"
+            ? `Accepted by the evaluator, but XP finalization is pending. No XP was recorded as awarded.`
+            : `Accepted by the evaluator. This submission was not eligible for an XP award.`);
+          if (xpStatus === "pending") toast.error("Accepted, but XP finalization is pending.");
+          else toast.success("Solution accepted.");
+          return;
+        }
         setOutput(
           `✅ ACCEPTED — All ${res.data.passed_tests}/${res.data.total_tests} test cases passed!\n` +
           `Execution Time: ${res.data.execution_time}ms | Memory: ${res.data.memory_used}MB\n` +
@@ -723,6 +842,13 @@ function SoloBattleContent() {
 
   // ── Session Finish Handler ─────────────────────────────────────────────────
   const handleFinishSession = async () => {
+    if (activeMode === "coding") {
+      void useDashboardStore.getState().refresh();
+      setPersistedProgress(null);
+      setSessionComplete(true);
+      return;
+    }
+
     try {
       const response = await api.post("/battle/solo/finish", {
         mcq_results: sessionQuestions.map((q) => ({
@@ -762,7 +888,9 @@ function SoloBattleContent() {
           <div className="text-6xl animate-bounce">🏆</div>
           <h1 className="text-3xl font-black text-white md:text-5xl">Battle Session Complete!</h1>
           <p className="max-w-md text-slate-300 text-sm md:text-base leading-relaxed">
-            Your results have been verified by the server and permanently recorded to your skill progression ledger.
+            {activeMode === "coding"
+              ? "Your code was evaluated by the server. Any eligible XP is recorded in your account ledger."
+              : "Your session summary is ready. MCQ correctness is evaluated in this session."}
           </p>
 
           <div className="grid w-full max-w-lg gap-4 grid-cols-3">
@@ -790,7 +918,7 @@ function SoloBattleContent() {
 
           <div className="flex flex-wrap gap-3 mt-2">
             <button
-              onClick={startSession}
+              onClick={() => startSession()}
               className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-6 py-3 font-bold text-white shadow-lg shadow-cyan-500/25 hover:brightness-110 transition"
             >
               <RotateCcw className="h-4 w-4" /> Start New Duel
@@ -834,6 +962,13 @@ function SoloBattleContent() {
                 <h1 className="text-xl md:text-2xl font-black text-white">
                   {activeMode === "mcq" ? "Computer Science Fundamentals" : sessionProblem.title}
                 </h1>
+                {activeMode === "coding" && (problemCatalogLoading || canonicalProblems.length === 0) && (
+                  <p role="status" className="mt-1 max-w-lg text-xs text-amber-200">
+                    {problemCatalogLoading
+                      ? "Loading the verified problem bank…"
+                      : problemCatalogError || "No active coding problems are available. Submissions are disabled."}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -848,7 +983,7 @@ function SoloBattleContent() {
               </div>
 
               <button
-                onClick={startSession}
+                onClick={() => startSession()}
                 title="Load fresh question set"
                 className="rounded-xl border border-white/10 bg-slate-800/80 p-2 text-slate-300 hover:text-white transition"
               >
@@ -1239,7 +1374,7 @@ function SoloBattleContent() {
 
                       <button
                         onClick={handleSubmitCode}
-                        disabled={running || submitting || codingSolved}
+                        disabled={running || submitting || codingSolved || problemCatalogLoading || canonicalProblems.length === 0}
                         className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-1.5 text-xs font-bold text-slate-950 hover:brightness-110 disabled:opacity-50 transition shadow-md shadow-emerald-500/20"
                       >
                         <CheckCircle2 size={13} />
@@ -1366,14 +1501,14 @@ function SoloBattleContent() {
                 {/* Session Finish Button in Coding Mode */}
                 <div className="flex items-center justify-between gap-3 pt-2">
                   <span className="text-xs text-slate-400">
-                    {codingSolved ? "Challenge solved! Submit session to record your XP." : "Solve problem to earn verified XP."}
+                    {codingSolved ? "Evaluation and any eligible XP are already recorded." : "Solve the problem to receive a verified evaluation."}
                   </span>
                   <button
                     onClick={handleFinishSession}
                     className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-600 px-5 py-2.5 text-xs font-bold text-slate-950 shadow-md shadow-yellow-500/20 hover:brightness-110 transition"
                   >
                     <Award size={14} />
-                    Finish Session & Save Results
+                    End Coding Session
                   </button>
                 </div>
               </div>
