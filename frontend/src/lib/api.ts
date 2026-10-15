@@ -55,7 +55,10 @@ api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
 
         if (clerkTokenGetter) {
             try {
-                clerkToken = await clerkTokenGetter();
+                clerkToken = await Promise.race([
+                    clerkTokenGetter(),
+                    new Promise<null>((resolve) => setTimeout(() => resolve(null), 3500)),
+                ]);
             } catch {
                 // Let the request fail normally. Do not fall back to a legacy
                 // token while a Clerk session is active.

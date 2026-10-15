@@ -53,7 +53,9 @@ export function AuthProvider({
 
     useEffect(() => {
             if (!clerkLoaded) {
-                useAuthStore.setState({ loading: true });
+                if (!useAuthStore.getState().user) {
+                    useAuthStore.setState({ loading: true });
+                }
                 return;
             }
 

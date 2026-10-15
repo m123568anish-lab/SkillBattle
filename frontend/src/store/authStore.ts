@@ -34,17 +34,31 @@ interface AuthState {
     updateUserPartial(fields: Partial<User>): void;
 }
 
+function getInitialUser(): User | null {
+    if (typeof window === "undefined") return null;
+    try {
+        const stored = localStorage.getItem("skillbattle_user_cache");
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch {
+        // Ignore JSON parse errors in localStorage
+    }
+    return null;
+}
+
+const initialCachedUser = getInitialUser();
+
 let activeLoadUserPromise: Promise<void> | null = null;
 
 export const useAuthStore = create<AuthState>(
-
 (set)=>({
 
-    user:null,
+    user: initialCachedUser,
 
-    loading:true,
+    loading: !initialCachedUser,
 
-    isAuthenticated:false,
+    isAuthenticated: Boolean(initialCachedUser),
 
     async login(data){
 
@@ -63,6 +77,12 @@ export const useAuthStore = create<AuthState>(
                     data,
 
                 );
+
+            if (typeof window !== "undefined") {
+                try {
+                    localStorage.setItem("skillbattle_user_cache", JSON.stringify(user));
+                } catch {}
+            }
 
             set({
 
@@ -95,11 +115,19 @@ export const useAuthStore = create<AuthState>(
 
         await authService.logout();
 
+        if (typeof window !== "undefined") {
+            try {
+                localStorage.removeItem("skillbattle_user_cache");
+            } catch {}
+        }
+
         set({
 
             user:null,
 
             isAuthenticated:false,
+
+            loading:false,
 
         });
 
@@ -110,16 +138,27 @@ export const useAuthStore = create<AuthState>(
             return activeLoadUserPromise;
         }
 
-        set({ loading: true });
+        // If we don't have a cached user, show loading. If we do, validate in background.
+        set((state) => ({ loading: !state.user }));
 
         activeLoadUserPromise = (async () => {
             try {
                 const user = await authService.getCurrentUser();
+                if (typeof window !== "undefined") {
+                    try {
+                        localStorage.setItem("skillbattle_user_cache", JSON.stringify(user));
+                    } catch {}
+                }
                 set({
                     user,
                     isAuthenticated: true,
                 });
             } catch {
+                if (typeof window !== "undefined") {
+                    try {
+                        localStorage.removeItem("skillbattle_user_cache");
+                    } catch {}
+                }
                 set({
                     user: null,
                     isAuthenticated: false,
@@ -133,8 +172,19 @@ export const useAuthStore = create<AuthState>(
         return activeLoadUserPromise;
     },
     updateUserPartial(fields) {
-        set((state) => ({
-            user: state.user ? { ...state.user, ...fields, avatar_url: fields.avatar_url ?? fields.avatar ?? state.user.avatar_url ?? state.user.avatar ?? null } : null
-        }));
+        set((state) => {
+            if (!state.user) return { user: null };
+            const updated = {
+                ...state.user,
+                ...fields,
+                avatar_url: fields.avatar_url ?? fields.avatar ?? state.user.avatar_url ?? state.user.avatar ?? null,
+            };
+            if (typeof window !== "undefined") {
+                try {
+                    localStorage.setItem("skillbattle_user_cache", JSON.stringify(updated));
+                } catch {}
+            }
+            return { user: updated };
+        });
     }
 }));

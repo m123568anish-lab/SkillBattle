@@ -81,88 +81,89 @@ export default function DashboardPage() {
     if (destination !== "/dashboard") router.replace(destination);
   }, [authLoading, router, user]);
 
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="space-y-6 animate-pulse" aria-label="Loading dashboard...">
-          {/* Hero Skeleton */}
-          <div className="h-44 rounded-3xl bg-[#0a0f1d] border border-white/[0.06]" />
-          {/* Stats Grid Skeleton (6 cards) */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="h-28 rounded-2xl bg-[#0a0f1d] border border-white/[0.06]" />
-            <div className="h-28 rounded-2xl bg-[#0a0f1d] border border-white/[0.06]" />
-            <div className="h-28 rounded-2xl bg-[#0a0f1d] border border-white/[0.06]" />
-            <div className="h-28 rounded-2xl bg-[#0a0f1d] border border-white/[0.06]" />
-            <div className="h-28 rounded-2xl bg-[#0a0f1d] border border-white/[0.06]" />
-            <div className="h-28 rounded-2xl bg-[#0a0f1d] border border-white/[0.06]" />
-          </div>
-          {/* Command Center Skeleton */}
-          <div className="h-64 rounded-3xl bg-[#0a0f1d] border border-white/[0.06]" />
-          {/* AI Coach + Server Status Row Skeleton */}
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div className="h-48 rounded-2xl bg-[#0a0f1d] border border-white/[0.06]" />
-            <div className="h-48 rounded-2xl bg-[#0a0f1d] border border-white/[0.06]" />
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
+  const defaultStats = {
+    xp: 0,
+    level: user?.level ?? 1,
+    streak: 0,
+    rating: 1000,
+    battles_played: 0,
+    battles_won: 0,
+  };
 
-  if (error) {
-    return (
-      <DashboardLayout>
-        <motion.div
-          className="flex h-[70vh] flex-col items-center justify-center gap-5"
-          initial={false}
-          animate={{ opacity: 1, scale: 1 }}
-        >
-          <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-8 text-center">
-            <h2 className="text-2xl font-bold text-rose-400 mb-2">
-              Unable to load dashboard
-            </h2>
-            <p className="text-slate-400 mb-6">
-              {error}
-            </p>
-            <GradientButton onClick={refresh}>Retry</GradientButton>
-          </div>
-        </motion.div>
-      </DashboardLayout>
-    );
-  }
-
-  if (!dashboard) {
-    return null;
-  }
+  const activeStats = dashboard?.stats ?? defaultStats;
+  const activeUser = dashboard?.user ?? {
+    id: user?.id ?? "",
+    username: user?.username ?? "player",
+    full_name: user?.full_name ?? user?.username ?? "SkillBattle Player",
+    email: user?.email ?? "",
+    avatar_url: user?.avatar_url ?? null,
+    role: user?.role ?? "user",
+    is_superuser: Boolean(user?.is_superuser),
+  };
 
   return (
     <DashboardLayout>
       <div className="space-y-8">
+        {error && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 px-6 text-sm">
+            <div className="text-rose-300">
+              <span className="font-semibold">Note:</span> Live dashboard data could not be refreshed ({error}). Showing cached metrics.
+            </div>
+            <button
+              onClick={refresh}
+              className="rounded-lg bg-rose-500/20 px-3 py-1.5 text-xs font-medium text-rose-200 transition-colors hover:bg-rose-500/30"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         {/* Hero Section */}
         <div>
           <DashboardHero
-            user={dashboard.user}
-            stats={dashboard.stats}
-            achievements={dashboard.achievements}
+            user={activeUser}
+            stats={activeStats}
+            achievements={dashboard?.achievements ?? []}
           />
         </div>
 
         {/* Stats Grid */}
         <div className="mt-8">
           <StatsGrid
-            stats={dashboard.stats}
+            stats={activeStats}
           />
         </div>
 
         <div className="mt-8">
-          <CommandCenterCard commandCenter={dashboard.command_center} />
+          {dashboard?.command_center ? (
+            <CommandCenterCard commandCenter={dashboard.command_center} />
+          ) : (
+            <div className="h-64 rounded-3xl bg-[#0a0f1d] border border-white/[0.06] animate-pulse p-6">
+              <div className="h-6 w-48 rounded bg-white/[0.05] mb-4" />
+              <div className="h-4 w-72 rounded bg-white/[0.03] mb-8" />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="h-28 rounded-2xl bg-white/[0.02]" />
+                <div className="h-28 rounded-2xl bg-white/[0.02]" />
+                <div className="h-28 rounded-2xl bg-white/[0.02]" />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* AI Coach + Server Status Row */}
         <div className="mt-8">
           <div className="grid gap-6 lg:grid-cols-2">
-            <AICoachCard
-              recommendation={dashboard.ai_recommendation}
-            />
+            {dashboard?.ai_recommendation ? (
+              <AICoachCard
+                recommendation={dashboard.ai_recommendation}
+              />
+            ) : (
+              <div className="h-48 rounded-2xl bg-[#0a0f1d] border border-white/[0.06] animate-pulse p-6">
+                <div className="h-6 w-40 rounded bg-white/[0.05] mb-3" />
+                <div className="h-4 w-full rounded bg-white/[0.03] mb-2" />
+                <div className="h-4 w-3/4 rounded bg-white/[0.03]" />
+              </div>
+            )}
             <DeferredSection minHeight="18rem">
               <ServerStatus />
             </DeferredSection>
@@ -170,11 +171,13 @@ export default function DashboardPage() {
         </div>
 
         {/* Daily Challenge */}
-        <div className="mt-8">
-          <DeferredSection minHeight="42rem">
-          <DailyChallenge challenge={dashboard.daily_challenge} />
-          </DeferredSection>
-        </div>
+        {dashboard?.daily_challenge && (
+          <div className="mt-8">
+            <DeferredSection minHeight="42rem">
+              <DailyChallenge challenge={dashboard.daily_challenge} />
+            </DeferredSection>
+          </div>
+        )}
 
         {/* Quick OA Placement Speedrun */}
         <div className="mt-8">

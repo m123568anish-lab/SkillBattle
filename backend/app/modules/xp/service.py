@@ -42,6 +42,12 @@ class XPService:
         commit: bool = True,
     ) -> XP:
         user_id = str(current_user.id)
+        # Fast read path: retrieve existing XP record without acquiring row locks
+        xp = await xp_repository.get_by_user(db, user_id)
+        if xp is not None:
+            return xp
+
+        # Initialization path: acquire row lock only when creating missing XP record
         await db.execute(select(User.id).where(User.id == user_id).with_for_update())
         xp = await xp_repository.get_by_user(db, user_id)
         if xp is not None:

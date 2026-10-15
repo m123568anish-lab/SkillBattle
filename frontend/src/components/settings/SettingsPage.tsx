@@ -156,8 +156,9 @@ export default function SettingsPage() {
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
 
-  // 1. Load preferences (theme + notifications)
+  // 1. Load preferences (theme + notifications) only when needed
   useEffect(() => {
+    if (activeTab !== "appearance" && activeTab !== "notifications") return;
     let active = true;
     async function loadPreferences() {
       try {
@@ -186,10 +187,11 @@ export default function SettingsPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [activeTab]);
 
-  // 2. Load privacy sharing settings & 2FA status
+  // 2. Load privacy sharing settings & 2FA status only when needed
   useEffect(() => {
+    if (activeTab !== "privacy" && activeTab !== "security") return;
     let active = true;
     async function loadPrivacyAnd2FA() {
       const [privacyResult, userResult] = await Promise.allSettled([
@@ -209,10 +211,11 @@ export default function SettingsPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [activeTab]);
 
-  // 3. Load active sessions
+  // 3. Load active sessions only when sessions tab is selected
   useEffect(() => {
+    if (activeTab !== "sessions") return;
     let active = true;
     async function loadSessions() {
       try {
@@ -228,7 +231,7 @@ export default function SettingsPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [activeTab]);
 
   // Theme change handler
   async function handleThemeChange(newTheme: "dark" | "light" | "system") {
