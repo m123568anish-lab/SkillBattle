@@ -70,6 +70,14 @@ export function AuthGuard({ children }: AuthGuardProps) {
     }
   }, [loading, isAuthenticated, pathname, router, user]);
 
+  const isProtected = isProtectedRoute(pathname);
+
+  // Public routes (landing page, login, register, docs, etc.) must render immediately
+  // without blocking the user on background authentication checks or cold starts.
+  if (!isProtected) {
+    return <>{children}</>;
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#070B14]">
@@ -83,9 +91,10 @@ export function AuthGuard({ children }: AuthGuardProps) {
     );
   }
 
-  const isProtected = isProtectedRoute(pathname);
   const organizationSetupRequired = Boolean(user && getPostLoginPath(user) === "/organization-setup");
-  if (isProtected && (!isAuthenticated || !user || user.is_verified === false || (organizationSetupRequired && pathname !== "/organization-setup"))) return null;
+  if (!isAuthenticated || !user || user.is_verified === false || (organizationSetupRequired && pathname !== "/organization-setup")) {
+    return null;
+  }
 
   return <>{children}</>;
 }

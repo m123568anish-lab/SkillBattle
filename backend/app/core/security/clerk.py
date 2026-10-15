@@ -17,6 +17,14 @@ class ClerkAuthenticationError(ValueError):
 
 
 _jwks_cache: dict[str, Any] = {"expires_at": 0.0, "keys": []}
+_shared_client: httpx.AsyncClient | None = None
+
+
+def _get_http_client() -> httpx.AsyncClient:
+    global _shared_client
+    if _shared_client is None or _shared_client.is_closed:
+        _shared_client = httpx.AsyncClient(timeout=5.0, limits=httpx.Limits(max_keepalive_connections=10, max_connections=20))
+    return _shared_client
 
 
 def _configured_issuer() -> str:
@@ -42,10 +50,10 @@ async def _get_jwks() -> list[dict[str, Any]]:
         raise ClerkAuthenticationError("Clerk issuer or JWKS URL is not configured.")
 
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(jwks_url)
-            response.raise_for_status()
-            keys = response.json().get("keys", [])
+        client = _get_http_client()
+        response = await client.get(jwks_url)
+        response.raise_for_status()
+        keys = response.json().get("keys", [])
     except (httpx.HTTPError, ValueError) as exc:
         raise ClerkAuthenticationError("Unable to retrieve Clerk signing keys.") from exc
 
@@ -115,13 +123,13 @@ async def get_clerk_user_profile(user_id: str) -> dict[str, Any] | None:
         return None
 
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(
-                f"https://api.clerk.com/v1/users/{user_id}",
-                headers={"Authorization": f"Bearer {settings.CLERK_SECRET_KEY}"},
-            )
-            response.raise_for_status()
-            payload = response.json()
+        client = _get_http_client()
+        response = await client.get(
+            f"https://api.clerk.com/v1/users/{user_id}",
+            headers={"Authorization": f"Bearer {settings.CLERK_SECRET_KEY}"},
+        )
+        response.raise_for_status()
+        payload = response.json()
     except (httpx.HTTPError, ValueError) as exc:
         raise ClerkAuthenticationError("Unable to retrieve the Clerk user profile.") from exc
 

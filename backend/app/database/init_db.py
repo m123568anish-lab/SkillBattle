@@ -147,17 +147,25 @@ def init_db() -> None:
             pass
 
         try:
-            Base.metadata.create_all(bind=engine)
-            _repair_users_table()
-            _repair_achievements_table()
-            _repair_profile_preferences()
-            _repair_dashboard_tables()
-            _repair_college_tables()
-            _repair_company_tables()
-            _repair_battle_tables()
-            _seed_initial_problems()
-            _seed_initial_questions()
-            logger.info(f"✅ Tables created: {list(Base.metadata.tables.keys())}")
+            inspector = inspect(engine)
+            existing_tables = set(inspector.get_table_names())
+            schema_initialized = "users" in existing_tables and "questions" in existing_tables
+
+            if not schema_initialized:
+                logger.info("Initializing new database schema...")
+                Base.metadata.create_all(bind=engine)
+                _repair_users_table()
+                _repair_achievements_table()
+                _repair_profile_preferences()
+                _repair_dashboard_tables()
+                _repair_college_tables()
+                _repair_company_tables()
+                _repair_battle_tables()
+                _seed_initial_problems()
+                _seed_initial_questions()
+                logger.info(f"✅ Tables created: {list(Base.metadata.tables.keys())}")
+            else:
+                logger.info("⚡ Database schema already initialized (%d tables found); skipping redundant DDL repairs for rapid boot.", len(existing_tables))
         except Exception as e:
             # Some DB backends may raise an OperationalError on concurrent create_all
             # (e.g., multiple reload processes trying to create the same table).

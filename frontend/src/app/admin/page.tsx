@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import DailyChallengeForm from "@/components/admin/DailyChallengeForm";
 import UserManagement from "@/components/admin/UserManagement";
@@ -9,7 +10,7 @@ import AdminOverview from "@/components/admin/AdminOverview";
 import SystemHealthPanel from "@/components/admin/SystemHealthPanel";
 import AdminVerificationPanel from "@/components/admin/AdminVerificationPanel";
 
-export default function AdminPage() {
+function AdminPageContent() {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "overview";
 
@@ -56,5 +57,13 @@ export default function AdminPage() {
         {activeTab === "verification" && <AdminVerificationPanel />}
       </div>
     </div>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl bg-white/[0.03]" />}>
+      <AdminPageContent />
+    </Suspense>
   );
 }

@@ -38,16 +38,16 @@ if database_url.startswith("sqlite"):
 else:
     # PostgreSQL configuration
     engine_kwargs.update({
-        "pool_size": 10,
-        "max_overflow": 20,
-        "pool_timeout": 10,
+        "pool_size": 5,
+        "max_overflow": 5,
+        "pool_timeout": 15,
         "pool_recycle": 300,
         "pool_pre_ping": True,
         "connect_args": {
             "connect_timeout": 10,
         }
     })
-    logger.info("🐘 Enterprise Sync engine configured for PostgreSQL (pool_size=10, timeout=10s)")
+    logger.info("🐘 Enterprise Sync engine configured for PostgreSQL (pool_size=5, max_overflow=5)")
 
 # Create engine
 engine = create_engine(database_url, **engine_kwargs)
@@ -64,4 +64,4 @@ def get_db():
     try:
         yield db
     finally:
-        db.close()
+        db.close()

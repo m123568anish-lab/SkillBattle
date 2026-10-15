@@ -38,7 +38,13 @@ from app.modules.dashboard.schemas import (
 
 class DashboardService:
 
-    async def get_command_center(self, db: AsyncSession, current_user: User) -> dict:
+    async def get_command_center(
+        self,
+        db: AsyncSession,
+        current_user: User,
+        total_xp: int | None = None,
+        current_streak: int | None = None,
+    ) -> dict:
         user_id = str(current_user.id)
         profile = await profile_service.get_profile(db, current_user)
         study_hours_value = None
@@ -51,9 +57,11 @@ class DashboardService:
         except (TypeError, ValueError):
             study_hours = None
 
-        user_xp = await xp_service.get_user_xp(db, current_user)
-        total_xp = int(getattr(user_xp, "total_xp", 0) or 0)
-        current_streak = await dashboard_repository.get_current_streak(db, user_id)
+        if total_xp is None:
+            user_xp = await xp_service.get_user_xp(db, current_user)
+            total_xp = int(getattr(user_xp, "total_xp", 0) or 0)
+        if current_streak is None:
+            current_streak = await dashboard_repository.get_current_streak(db, user_id)
         roadmap = await roadmap_service.get_roadmap(db, current_user)
         roadmap_summary = None
         if roadmap is not None:
@@ -63,14 +71,20 @@ class DashboardService:
                 "milestone": (roadmap.weeks[0].title if roadmap.weeks else "Roadmap active"),
             }
 
-        # Collect real evidence from the canonical skill intelligence system.
+        # Collect recent evidence from the canonical skill intelligence system (bounded to recent 30 items for speed).
         evidence = []
         from sqlalchemy import select
         from app.models.question import Question, UserSubmission
         from app.models.assessment_engine import AssessmentQuestionSubmission
         from app.models.battle.battle_submission import BattleSubmission
 
-        practice_stmt = select(UserSubmission, Question).join(Question, Question.id == UserSubmission.question_id).where(UserSubmission.user_id == user_id)
+        practice_stmt = (
+            select(UserSubmission, Question)
+            .join(Question, Question.id == UserSubmission.question_id)
+            .where(UserSubmission.user_id == user_id)
+            .order_by(UserSubmission.created_at.desc())
+            .limit(30)
+        )
         for submission, question in (await db.execute(practice_stmt)).all():
             evidence.append({
                 "user_id": user_id,
@@ -88,7 +102,13 @@ class DashboardService:
                 "timestamp": submission.created_at.isoformat(),
             })
 
-        battle_stmt = select(BattleSubmission, Question).outerjoin(Question, Question.id == BattleSubmission.question_id).where(BattleSubmission.user_id == user_id)
+        battle_stmt = (
+            select(BattleSubmission, Question)
+            .outerjoin(Question, Question.id == BattleSubmission.question_id)
+            .where(BattleSubmission.user_id == user_id)
+            .order_by(BattleSubmission.submitted_at.desc())
+            .limit(30)
+        )
         for submission, question in (await db.execute(battle_stmt)).all():
             total_tests = submission.total_tests or 1
             score_ratio = round((submission.passed_tests / total_tests) if total_tests else 1.0, 4)
@@ -108,7 +128,13 @@ class DashboardService:
                 "timestamp": submission.submitted_at.isoformat(),
             })
 
-        assessment_stmt = select(AssessmentQuestionSubmission, Question).join(Question, Question.id == AssessmentQuestionSubmission.question_id).where(AssessmentQuestionSubmission.user_id == user_id)
+        assessment_stmt = (
+            select(AssessmentQuestionSubmission, Question)
+            .join(Question, Question.id == AssessmentQuestionSubmission.question_id)
+            .where(AssessmentQuestionSubmission.user_id == user_id)
+            .order_by(AssessmentQuestionSubmission.created_at.desc())
+            .limit(30)
+        )
         for submission, question in (await db.execute(assessment_stmt)).all():
             evidence.append({
                 "user_id": user_id,
@@ -243,7 +269,12 @@ class DashboardService:
                 xp_reward=int(getattr(challenge, "xp_reward", 100) or 100),
             )
 
-        command_center = await self.get_command_center(db, current_user)
+        command_center = await self.get_command_center(
+            db,
+            current_user,
+            total_xp=total_xp,
+            current_streak=current_streak,
+        )
 
         return DashboardResponse(
             user=UserSummary(

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { isAxiosError } from "axios";
 import { ArrowRight, BriefcaseBusiness, Users, ClipboardCheck, Trophy, SearchCheck } from "lucide-react";
@@ -44,7 +44,7 @@ function EmptyState({ children }: { children: React.ReactNode }) {
   return <p className="rounded-xl border border-dashed border-white/10 px-4 py-6 text-sm text-slate-400">{children}</p>;
 }
 
-export default function CompanyDashboardPage() {
+function CompanyDashboardPageContent() {
   const searchParams = useSearchParams();
   const view = searchParams.get("view") || "overview";
   const filterStatus = searchParams.get("status");
@@ -326,5 +326,13 @@ export default function CompanyDashboardPage() {
         )}
       </main>
     </DashboardLayout>
+  );
+}
+
+export default function CompanyDashboardPage() {
+  return (
+    <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl bg-white/[0.03]" />}>
+      <CompanyDashboardPageContent />
+    </Suspense>
   );
 }

@@ -46,16 +46,17 @@ class DashboardRepository:
         today = date.today()
         day_seed = today.toordinal()  # unique int per day
 
-        # Fetch all challenges
-        result = await db.execute(select(Challenge))
-        challenges = result.scalars().all()
+        # Fetch challenge count efficiently without loading entire table into memory
+        count_res = await db.execute(select(func.count(Challenge.id)))
+        total_challenges = count_res.scalar_one_or_none() or 0
 
-        if not challenges:
+        if total_challenges == 0:
             return None
 
         # Pick deterministically based on today's date (cycles through all challenges)
-        idx = day_seed % len(challenges)
-        return challenges[idx]
+        idx = day_seed % total_challenges
+        result = await db.execute(select(Challenge).offset(idx).limit(1))
+        return result.scalar_one_or_none()
 
 
     async def get_achievements(

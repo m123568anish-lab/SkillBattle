@@ -34,6 +34,8 @@ interface AuthState {
     updateUserPartial(fields: Partial<User>): void;
 }
 
+let activeLoadUserPromise: Promise<void> | null = null;
+
 export const useAuthStore = create<AuthState>(
 
 (set)=>({
@@ -104,40 +106,31 @@ export const useAuthStore = create<AuthState>(
     },
 
     async loadUser(){
+        if (activeLoadUserPromise) {
+            return activeLoadUserPromise;
+        }
 
         set({ loading: true });
 
-        try{
+        activeLoadUserPromise = (async () => {
+            try {
+                const user = await authService.getCurrentUser();
+                set({
+                    user,
+                    isAuthenticated: true,
+                });
+            } catch {
+                set({
+                    user: null,
+                    isAuthenticated: false,
+                });
+            } finally {
+                set({ loading: false });
+                activeLoadUserPromise = null;
+            }
+        })();
 
-            const user=
-
-                await authService.getCurrentUser();
-
-            set({
-
-                user,
-
-                isAuthenticated:true,
-
-            });
-
-        }
-
-        catch{
-
-            set({
-
-                user:null,
-
-                isAuthenticated:false,
-
-            });
-
-        }
-
-        finally{
-            set({ loading: false });
-        }
+        return activeLoadUserPromise;
     },
     updateUserPartial(fields) {
         set((state) => ({

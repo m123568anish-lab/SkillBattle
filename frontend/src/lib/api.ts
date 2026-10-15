@@ -16,7 +16,7 @@ const API_BASE_URL = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_URL);
 
 const api = axios.create({
     baseURL: `${API_BASE_URL}/api/v1`,
-    timeout: 60_000,                  // 60 s — allow Render cold-starts ample time to spin up
+    timeout: 15_000,                  // 15 s — responsive timeout preventing hung requests
     headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -78,15 +78,15 @@ api.interceptors.response.use(
     async (error: AxiosError & { config?: InternalAxiosRequestConfig }) => {
         const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean; _fallbackRetry?: boolean; _timeoutRetry?: boolean }) | undefined;
         const url = originalRequest?.url ?? "";
-        const isAuthRequest = /\/auth\/(login|register|refresh)/i.test(url);
+        const isAuthRequest = /\/auth\/(login|register|refresh|me|logout|account)/i.test(url);
 
-        // Automatic retry for timeout / cold-start errors. We intentionally avoid
-        // retrying auth calls because a browser-side 2s retry loop causes the fake
-        // "2000ms exceeded" login problem and masks the real backend response.
+        // Bounded retry for transient timeout errors on safe, idempotent GET requests only.
+        // Never retry mutations (POST/PUT/DELETE) or auth checks on timeout to avoid multi-minute freezes.
         const isTimeout = error.code === "ECONNABORTED" || error.message?.toLowerCase().includes("timeout");
-        if (originalRequest && isTimeout && !originalRequest._timeoutRetry && !isAuthRequest) {
+        const isGetRequest = (originalRequest?.method || "get").toLowerCase() === "get";
+        if (originalRequest && isTimeout && !originalRequest._timeoutRetry && !isAuthRequest && isGetRequest) {
             originalRequest._timeoutRetry = true;
-            originalRequest.timeout = 60_000;
+            originalRequest.timeout = 10_000;
             try {
                 return await axios(originalRequest);
             } catch (retryError) {
@@ -103,7 +103,7 @@ api.interceptors.response.use(
         ) {
             originalRequest._fallbackRetry = true;
             originalRequest.baseURL = "https://skillbattle-api-2026.onrender.com/api/v1";
-            originalRequest.timeout = 60_000; // Allow 60s for Render cold start
+            originalRequest.timeout = 15_000;
             try {
                 return await axios(originalRequest);
             } catch (fallbackErr) {

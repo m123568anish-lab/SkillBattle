@@ -84,23 +84,24 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <motion.div
-          className="flex h-[70vh] items-center justify-center"
-          initial={false}
-          animate={{ opacity: 1 }}
-        >
-          <div className="text-center">
-            <div className="mx-auto h-16 w-16 mb-6">
-              <div className="relative h-full w-full">
-                <div className="absolute inset-0 rounded-full border-4 border-cyan-500/20" />
-                <div className="absolute inset-0 rounded-full border-4 border-t-cyan-500 border-r-violet-500 border-b-transparent border-l-transparent animate-spin" />
-              </div>
-            </div>
-            <p className="text-slate-400 font-semibold">
-              Loading your dashboard...
-            </p>
+        <div className="space-y-8 animate-pulse" aria-label="Loading dashboard...">
+          {/* Hero Skeleton */}
+          <div className="h-44 rounded-3xl bg-white/[0.03] border border-white/5" />
+          {/* Stats Grid Skeleton */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="h-28 rounded-2xl bg-white/[0.03] border border-white/5" />
+            <div className="h-28 rounded-2xl bg-white/[0.03] border border-white/5" />
+            <div className="h-28 rounded-2xl bg-white/[0.03] border border-white/5" />
+            <div className="h-28 rounded-2xl bg-white/[0.03] border border-white/5" />
           </div>
-        </motion.div>
+          {/* Command Center Skeleton */}
+          <div className="h-56 rounded-3xl bg-white/[0.03] border border-white/5" />
+          {/* AI Coach + Server Status Row Skeleton */}
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="h-48 rounded-2xl bg-white/[0.03] border border-white/5" />
+            <div className="h-48 rounded-2xl bg-white/[0.03] border border-white/5" />
+          </div>
+        </div>
       </DashboardLayout>
     );
   }

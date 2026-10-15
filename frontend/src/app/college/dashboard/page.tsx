@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { isAxiosError } from "axios";
 import { ArrowRight, ClipboardCheck, Users, Building2, Layers3, AlertTriangle, CalendarClock, BarChart3 } from "lucide-react";
@@ -56,7 +56,7 @@ function EmptyState({ children }: { children: React.ReactNode }) {
   return <p className="rounded-xl border border-dashed border-white/10 px-4 py-6 text-sm text-slate-400">{children}</p>;
 }
 
-export default function CollegeDashboardPage() {
+function CollegeDashboardPageContent() {
   const searchParams = useSearchParams();
   const view = searchParams.get("view") || "overview";
   const [dashboard, setDashboard] = useState<CollegeDashboardData | null>(null);
@@ -359,5 +359,13 @@ export default function CollegeDashboardPage() {
         )}
       </main>
     </DashboardLayout>
+  );
+}
+
+export default function CollegeDashboardPage() {
+  return (
+    <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl bg-white/[0.03]" />}>
+      <CollegeDashboardPageContent />
+    </Suspense>
   );
 }

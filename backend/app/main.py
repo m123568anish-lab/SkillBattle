@@ -215,8 +215,9 @@ def readiness():
             inspector = __import__("sqlalchemy").inspect(engine)
             tables = inspector.get_table_names()
             
-            required_tables = ["user", "profile", "challenge"]
-            missing_tables = [t for t in required_tables if t not in tables]
+            required_tables = ["users", "profiles", "questions"]
+            table_set = set(tables)
+            missing_tables = [t for t in required_tables if t not in table_set]
             
             if missing_tables:
                 logger.warning(f"⚠️  Missing tables: {missing_tables}")
