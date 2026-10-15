@@ -29,7 +29,7 @@ from .matchmaking import MatchmakingMatch, PlacementPrepSession
 from .user_skill_stat import UserSkillStat
 from .skill_intelligence import SkillEvidence, CompanySkillRequirement
 from .quest_map import QuestMapLevel, QuestProgress
-from .xp import XP
+from .xp import XP, XPLedger
 from .college import (
     College,
     Department,
@@ -83,6 +83,7 @@ __all__ = [
     "QuestMapLevel",
     "QuestProgress",
     "XP",
+    "XPLedger",
     "College",
     "Department",
     "Batch",

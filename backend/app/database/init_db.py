@@ -68,7 +68,7 @@ from app.models.battle import (
 )
 from app.models.user_skill_stat import UserSkillStat
 from app.models.skill_intelligence import SkillEvidence, CompanySkillRequirement
-from app.models.xp import XP
+from app.models.xp import XP, XPLedger
 
 
 # Silence unused import warnings
@@ -97,6 +97,7 @@ __all__ = [
     "SkillEvidence",
     "CompanySkillRequirement",
     "XP",
+    "XPLedger",
     "Question",
     "UserSubmission",
     "UserStats",
