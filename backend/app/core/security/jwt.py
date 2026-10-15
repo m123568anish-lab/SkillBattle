@@ -68,11 +68,15 @@ class JWTManager:
         user_id: str,
     ) -> str:
 
+        import secrets
+
         payload = {
 
             "sub": user_id,
 
             "type": "refresh",
+
+            "jti": secrets.token_hex(16),
 
             "exp": datetime.now(
 

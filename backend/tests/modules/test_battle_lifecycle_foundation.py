@@ -1,9 +1,10 @@
+import uuid
 import pytest
 
 
 @pytest.mark.asyncio
 async def test_battle_creation_sets_mode_and_server_authoritative_defaults(client):
-    unique = "btlifecycle1"
+    unique = f"btlc1_{uuid.uuid4().hex[:8]}"
     email = f"{unique}@example.com"
     register = await client.post(
         "/auth/register",
@@ -47,7 +48,7 @@ async def test_battle_creation_sets_mode_and_server_authoritative_defaults(clien
 
 @pytest.mark.asyncio
 async def test_server_start_and_round_transition_protects_invalid_state(client):
-    unique = "btlifecycle2"
+    unique = f"btlc2_{uuid.uuid4().hex[:8]}"
     email = f"{unique}@example.com"
     register = await client.post(
         "/auth/register",

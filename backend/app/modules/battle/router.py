@@ -7,7 +7,7 @@ import json
 from app.database.session import get_db
 from app.models.user import User
 from app.core.dependencies import get_current_user
-from app.models.battle import BattleResult
+from app.models.battle import BattleParticipant, BattleResult, BattleRoom, BattleSubmission
 
 from app.modules.battle.schemas import (
     CreateBattleRequest,
@@ -40,6 +40,31 @@ router = APIRouter(
     prefix="/battle",
     tags=["Battle"],
 )
+
+
+def battle_to_response(battle, *, submitted_question_ids: list[int] | None = None) -> BattleResponse:
+    return BattleResponse(
+        id=battle.id,
+        title=battle.title,
+        mode=getattr(battle, "mode", getattr(battle, "battle_mode", "solo")) or "solo",
+        type=getattr(battle, "type", getattr(battle, "battle_type", "general")) or "general",
+        difficulty=battle.difficulty,
+        problem_id=battle.problem_id,
+        status=battle.status,
+        current_round=getattr(battle, "current_round", 1) or 1,
+        round_state=getattr(battle, "round_state", getattr(battle, "round_status", "created")) or "created",
+        max_players=battle.max_players,
+        config_id=battle.config_id,
+        battle_type=battle.battle_type,
+        current_section_index=battle.current_section_index,
+        sections_config=battle.sections_config or [],
+        questions_data=battle.questions_data or [],
+        started_at=battle.started_at,
+        expires_at=getattr(battle, "expires_at", None),
+        ended_at=battle.ended_at,
+        created_at=battle.created_at,
+        submitted_question_ids=submitted_question_ids or [],
+    )
 
 @router.get("/health")
 async def health():
@@ -158,7 +183,7 @@ async def create_battle(
                 current_section_index=battle.current_section_index,
                 is_completed=False,
             )
-        return battle
+        return battle_to_response(battle)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -251,7 +276,43 @@ async def battle_details(
             is_completed=is_completed,
         )
 
-    return battle
+    submissions_result = await db.execute(
+        select(BattleSubmission.question_id).where(
+            BattleSubmission.battle_id == battle.id,
+            BattleSubmission.question_id.is_not(None),
+        )
+    )
+    return battle_to_response(battle, submitted_question_ids=list(submissions_result.scalars().all()))
+
+
+@router.post("/{battle_id}/start", response_model=BattleResponse)
+async def start_battle(
+    battle_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        battle = await battle_service.start_battle(db, battle_id, current_user)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return battle_to_response(battle)
+
+
+@router.post("/{battle_id}/advance-round", response_model=BattleResponse)
+async def advance_round(
+    battle_id: str,
+    request: dict | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    target_round = None
+    if request:
+        target_round = request.get("target_round")
+    try:
+        battle = await battle_service.advance_battle_round(db, battle_id, current_user, target_round)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return battle_to_response(battle)
 
 
 @router.get("/{battle_id}/participants", response_model=list[BattleParticipantResponse])
@@ -450,6 +511,12 @@ async def solo_finish(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if request.xp_earned > 0 or request.coding_solved:
+        raise HTTPException(
+            status_code=410,
+            detail="Client-reported battle results are no longer accepted. Submit answers through a server-created battle.",
+        )
+
     correct_count = 0
     for res in request.mcq_results or []:
         from app.models.user_skill_stat import UserSkillStat

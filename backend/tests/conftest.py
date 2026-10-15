@@ -13,6 +13,12 @@ from httpx import AsyncClient, ASGITransport
 from app.main import app
 from app.database.init_db import init_db
 
+@pytest_asyncio.fixture(autouse=True)
+def clean_dependency_overrides():
+    app.dependency_overrides.clear()
+    yield
+    app.dependency_overrides.clear()
+
 @pytest_asyncio.fixture
 async def client():
     init_db()

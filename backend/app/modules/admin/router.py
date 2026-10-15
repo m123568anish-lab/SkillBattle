@@ -141,12 +141,14 @@ async def get_system_health(
     try:
         await db.execute(text("SELECT 1"))
         try:
-            migration_version = await db.scalar(text("SELECT version_num FROM alembic_version LIMIT 1"))
+            migration_version = (await db.scalar(text("SELECT version_num FROM alembic_version LIMIT 1"))) or "baseline"
         except SQLAlchemyError:
             migration_version = "baseline"
     except SQLAlchemyError:
         database_status = "unhealthy"
         await db.rollback()
+        migration_version = "baseline"
+    if not migration_version:
         migration_version = "baseline"
 
     total_users = await db.scalar(select(func.count()).select_from(User))

@@ -37,6 +37,12 @@ class BattleStateEnum(str, Enum):
     FINALIZED = "finalized"
 
 
+class BattleModeEnum(str, Enum):
+    SOLO = "solo"
+    DUO = "duo"
+    SQUAD = "squad"
+
+
 # Legacy compatibility enum
 class BattleType(str, Enum):
     SOLO = "solo"
@@ -107,6 +113,7 @@ class CreateBattleRequest(BaseModel):
     problem_id: int = Field(default=1)
     config_id: Optional[str] = None
     battle_type: BattleTypeEnum = Field(default=BattleTypeEnum.GENERAL)
+    battle_mode: BattleModeEnum = Field(default=BattleModeEnum.SOLO)
     max_players: int = Field(default=2, ge=1, le=16)
 
 
@@ -125,9 +132,13 @@ class LeaveBattleRequest(BaseModel):
 class BattleResponse(BaseModel):
     id: str
     title: str
+    mode: str = "solo"
+    type: str = "general"
     difficulty: str
     problem_id: int
     status: str
+    current_round: int = 1
+    round_state: str = "created"
     max_players: int
     config_id: Optional[str] = None
     battle_type: str = "general"
@@ -135,8 +146,10 @@ class BattleResponse(BaseModel):
     sections_config: List[Dict[str, Any]] = Field(default_factory=list)
     questions_data: List[Dict[str, Any]] = Field(default_factory=list)
     started_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
     ended_at: Optional[datetime] = None
     created_at: datetime
+    submitted_question_ids: List[int] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
