@@ -24,15 +24,15 @@ router = APIRouter(prefix="/interview", tags=["Career AI Mock Interview"])
 # --- Schemas ---
 
 class StartInterviewRequest(BaseModel):
-    company: str = Field(default="Google", example="Google")
-    role: str = Field(default="Software Engineer", example="Backend Engineer")
-    interview_type: str = Field(default="Technical", example="Technical")
-    difficulty: str = Field(default="Medium", example="Medium")
+    company: str = Field(default="Google", min_length=1, max_length=100, example="Google")
+    role: str = Field(default="Software Engineer", min_length=1, max_length=100, example="Backend Engineer")
+    interview_type: str = Field(default="Technical", min_length=1, max_length=50, example="Technical")
+    difficulty: str = Field(default="Medium", min_length=1, max_length=30, example="Medium")
 
 
 class SubmitAnswerRequest(BaseModel):
     question_id: int
-    answer: str
+    answer: str = Field(min_length=1, max_length=20_000)
 
 
 class AnswerSchema(BaseModel):
@@ -51,7 +51,6 @@ class QuestionSchema(BaseModel):
     id: int
     sequence: int
     question: str
-    expected_topics: str
     difficulty: str
     answers: List[AnswerSchema] = []
 
@@ -271,11 +270,31 @@ async def submit_answer(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    stmt = select(InterviewQuestion).where(InterviewQuestion.id == req.question_id)
+    # The question and its answer rubric are private evaluation data. Scope the
+    # lookup to the authenticated user's session before reading either of them.
+    # Locking the question row also serializes concurrent submissions so an XP
+    # reward cannot be claimed twice by racing requests.
+    stmt = (
+        select(InterviewQuestion)
+        .join(InterviewSession, InterviewQuestion.session_id == InterviewSession.id)
+        .where(
+            InterviewQuestion.id == req.question_id,
+            InterviewSession.user_id == current_user.id,
+        )
+        .options(
+            selectinload(InterviewQuestion.answers),
+            selectinload(InterviewQuestion.session),
+        )
+        .with_for_update()
+    )
     res = await db.execute(stmt)
     q_obj = res.scalar_one_or_none()
     if not q_obj:
         raise HTTPException(status_code=404, detail="Question not found")
+    if q_obj.session.status != "IN_PROGRESS":
+        raise HTTPException(status_code=409, detail="This interview session is no longer accepting answers")
+    if q_obj.answers:
+        raise HTTPException(status_code=409, detail="An answer has already been submitted for this question")
 
     # Evaluate answer score & feedback using evaluation engine
     score, feedback = evaluate_answer_accurately(q_obj.question, q_obj.expected_topics, req.answer)
@@ -287,7 +306,7 @@ async def submit_answer(
         score=score,
     )
     db.add(ans_obj)
-    await db.commit()
+    await db.flush()
 
     # Calculate overall session score and status update
     stmt_sess = (
@@ -317,20 +336,18 @@ async def submit_answer(
             session_obj.finished_at = datetime.utcnow()
             session_completed = True
 
-        await db.commit()
-
-    # Grant XP for answering
-    try:
-        await xp_service.add_xp(
-            db,
-            current_user,
-            50,
-            source="interview_question",
-            reference_id=f"{session_id}:{req.question_id}",
-            description=f"Interview {session_id} question {req.question_id}",
-        )
-    except Exception:
-        pass
+    # Award verified XP in the same transaction as the persisted response.
+    # The ledger reference is scoped to this server-owned session/question pair.
+    await xp_service.add_xp(
+        db,
+        current_user,
+        50,
+        commit=False,
+        source="interview_question",
+        reference_id=f"{q_obj.session_id}:{q_obj.id}",
+        description=f"Interview {q_obj.session_id} question {q_obj.id}",
+    )
+    await db.commit()
 
     return {
         "status": "success",
@@ -397,4 +414,3 @@ async def get_user_interviews(
     )
     res = await db.execute(stmt)
     return res.scalars().all()
-

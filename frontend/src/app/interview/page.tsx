@@ -13,6 +13,7 @@ export default function AIMockInterviewPage() {
   const [feedback, setFeedback] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
   const [company, setCompany] = useState("Google");
   const [role, setRole] = useState("Software Engineer");
   const [difficulty, setDifficulty] = useState("Medium");
@@ -40,6 +41,7 @@ export default function AIMockInterviewPage() {
   const handleStartInterview = async () => {
     try {
       setLoading(true);
+      setError("");
       const newSession = await careerService.startInterview(company, role, difficulty, interviewType);
       setSessions((previous) => [newSession, ...previous]);
       setActiveSession(newSession);
@@ -48,22 +50,28 @@ export default function AIMockInterviewPage() {
       setUserAnswer("");
     } catch (error) {
       console.error("Error starting interview:", error);
+      setError("Unable to start an interview right now. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleSubmitAnswer = async () => {
-    if (!activeSession || !userAnswer.trim()) return;
-
+    if (!activeSession) return;
     const currentQ = activeSession.questions?.[currentQIndex];
-    if (!currentQ) return;
+    if (!currentQ || !userAnswer.trim() || currentQ.answers?.length || activeSession.status !== "IN_PROGRESS") return;
 
     try {
       setSubmitting(true);
+      setError("");
       const result = await careerService.submitInterviewAnswer(currentQ.id, userAnswer);
       setFeedback(result);
-      setUserAnswer("");
+      const questions = [...activeSession.questions];
+      questions[currentQIndex] = {
+        ...currentQ,
+        answers: [{ answer: userAnswer, feedback: result.feedback, score: result.score }],
+      };
+      setActiveSession({ ...activeSession, questions });
 
       if (result?.session_completed) {
         const refreshed = await careerService.getUserInterviews();
@@ -74,6 +82,8 @@ export default function AIMockInterviewPage() {
       }
     } catch (error) {
       console.error("Error submitting answer:", error);
+      const message = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setError(message || "Your answer could not be saved. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -82,12 +92,11 @@ export default function AIMockInterviewPage() {
   const handleFinishSession = async () => {
     if (!activeSession) return;
     try {
+      setError("");
       const result = await careerService.completeInterview(activeSession.id);
       const refreshed = await careerService.getUserInterviews();
       setSessions(refreshed ?? []);
-      if (refreshed?.length) {
-        setActiveSession(refreshed[0]);
-      }
+      setActiveSession(refreshed?.find((session) => session.id === activeSession.id) ?? null);
       setFeedback({
         score: result.overall_score ?? 0,
         feedback: `Session completed. Performance rating: ${result.performance_rating ?? "Needs Improvement"}`,
@@ -95,6 +104,7 @@ export default function AIMockInterviewPage() {
       });
     } catch (error) {
       console.error("Error completing interview:", error);
+      setError("Unable to finish this interview right now. Your saved answers are still available.");
     }
   };
 
@@ -121,6 +131,12 @@ export default function AIMockInterviewPage() {
           <Play className="h-4 w-4" /> Start New Session
         </button>
       </div>
+
+      {error && (
+        <div role="alert" className="mb-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+          {error}
+        </div>
+      )}
 
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="space-y-6">
@@ -235,8 +251,8 @@ export default function AIMockInterviewPage() {
               {currentQ && (
                 <div className="space-y-6">
                   <div className="rounded-2xl border border-violet-500/30 bg-violet-500/10 p-6">
-                    <span className="rounded-lg bg-violet-500/20 px-2.5 py-1 text-xs font-bold text-violet-300">
-                      Expected Topics: {currentQ.expected_topics}
+                    <span className="rounded-lg bg-violet-500/20 px-2.5 py-1 text-xs font-bold text-violet-200">
+                      Evaluation looks for clear reasoning, trade-offs, complexity, and edge cases.
                     </span>
                     <h4 className="mt-3 text-xl font-bold text-white leading-relaxed">{currentQ.question}</h4>
                   </div>
@@ -247,6 +263,7 @@ export default function AIMockInterviewPage() {
                       rows={6}
                       value={userAnswer}
                       onChange={(e) => setUserAnswer(e.target.value)}
+                      readOnly={Boolean(currentQ.answers?.length) || activeSession.status !== "IN_PROGRESS"}
                       placeholder="Explain the trade-offs, algorithm, complexity, and edge cases..."
                       className="w-full rounded-2xl border border-white/10 bg-slate-950 p-4 text-sm text-white focus:border-violet-500 focus:outline-none font-mono"
                     />
@@ -262,10 +279,10 @@ export default function AIMockInterviewPage() {
                     </button>
                     <button
                       onClick={handleSubmitAnswer}
-                      disabled={submitting || !userAnswer.trim()}
+                      disabled={submitting || !userAnswer.trim() || Boolean(currentQ.answers?.length) || activeSession.status !== "IN_PROGRESS"}
                       className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-6 py-3 font-bold text-white shadow-lg shadow-cyan-500/20 hover:opacity-90 transition disabled:opacity-50"
                     >
-                      <Send className="h-4 w-4" /> {submitting ? "Evaluating..." : "Submit Answer"}
+                      <Send className="h-4 w-4" /> {submitting ? "Evaluating..." : currentQ.answers?.length ? "Answer Recorded" : "Submit Answer"}
                     </button>
                     <button
                       onClick={handleFinishSession}
