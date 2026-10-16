@@ -22,6 +22,11 @@ import {
   UserPlus,
   Users,
   Zap,
+  Gamepad2,
+  Flame,
+  Code2,
+  HelpCircle,
+  Activity,
   LucideIcon,
 } from "lucide-react";
 
@@ -29,7 +34,9 @@ export interface SidebarItem {
   title: string;
   href: string;
   icon: LucideIcon;
-  category: "main" | "compete" | "learn" | "track" | "account";
+  category: "home" | "compete" | "learn" | "career" | "community" | "account" | "main" | "track" | string;
+  badge?: string;
+  description?: string;
 }
 
 export interface SidebarCategory {
@@ -46,6 +53,7 @@ export interface PortalNavItem {
   icon: LucideIcon;
   category: string;
   available: boolean;
+  badge?: string;
 }
 
 export function getPortalKind(pathname: string): PortalKind {
@@ -60,19 +68,11 @@ const collegeItems: PortalNavItem[] = [
   { title: "Students", href: "/college/dashboard?view=students", icon: Users, category: "Organization", available: true },
   { title: "Departments", href: "/college/dashboard?view=departments", icon: Building2, category: "Organization", available: true },
   { title: "Batches", href: "/college/dashboard?view=batches", icon: Layers3, category: "Organization", available: true },
-  { title: "Import Students", icon: UserPlus, category: "Organization", available: false },
+  { title: "College Profile", href: "/organization-setup", icon: Building2, category: "Organization", available: true },
   { title: "Assessments", href: "/college/dashboard?view=assessments", icon: ClipboardCheck, category: "Assessment", available: true },
   { title: "Results", href: "/college/dashboard?view=results", icon: FileBarChart, category: "Assessment", available: true },
-  { title: "Question Bank", icon: ListChecks, category: "Assessment", available: false },
-  { title: "Training Programs", icon: Zap, category: "Development", available: false },
-  { title: "Challenges", icon: Sword, category: "Development", available: false },
-  { title: "Placement Drives", icon: BriefcaseBusiness, category: "Placement", available: false },
-  { title: "Eligible Students", icon: SearchCheck, category: "Placement", available: false },
-  { title: "Shortlisted Students", icon: Trophy, category: "Placement", available: false },
-  { title: "Placement Analytics", icon: BarChart3, category: "Insights", available: false },
+  { title: "Placement Scorecard", href: "/placement/scorecard", icon: BriefcaseBusiness, category: "Placement", available: true },
   { title: "Skill Analytics", href: "/college/dashboard?view=analytics", icon: BarChart3, category: "Insights", available: true },
-  { title: "College Profile", href: "/organization-setup", icon: Building2, category: "Organization", available: true },
-  { title: "Staff", icon: Users, category: "Organization", available: false },
   { title: "Settings", href: "/settings", icon: Settings, category: "Account", available: true },
 ];
 
@@ -82,26 +82,33 @@ const companyItems: PortalNavItem[] = [
   { title: "Create Job", href: "/company/dashboard?view=jobs&action=create", icon: UserPlus, category: "Hiring", available: true },
   { title: "Candidates", href: "/company/dashboard?view=candidates", icon: Users, category: "Hiring", available: true },
   { title: "Shortlisted", href: "/company/dashboard?view=candidates&status=shortlisted", icon: ListChecks, category: "Hiring", available: true },
-  { title: "Interviews", icon: ClipboardCheck, category: "Hiring", available: false },
-  { title: "Assessments", href: "/company/dashboard?view=assessments", icon: ClipboardCheck, category: "Assessment", available: true },
-  { title: "Question Bank", icon: ListChecks, category: "Assessment", available: false },
-  { title: "Results", href: "/company/dashboard?view=candidates", icon: FileBarChart, category: "Assessment", available: true },
+  { title: "Interviews", href: "/company/dashboard?view=interviews", icon: ClipboardCheck, category: "Hiring", available: true },
   { title: "Discover Candidates", href: "/company/dashboard?view=discover", icon: SearchCheck, category: "Talent", available: true },
-  { title: "Skill Profiles", href: "/company/dashboard?view=discover", icon: FileBarChart, category: "Talent", available: true },
+  { title: "Assessments", href: "/company/dashboard?view=assessments", icon: ClipboardCheck, category: "Talent", available: true },
   { title: "Hiring Analytics", href: "/company/dashboard?view=analytics", icon: BarChart3, category: "Insights", available: true },
-  { title: "Assessment Analytics", href: "/company/dashboard?view=analytics", icon: BarChart3, category: "Insights", available: true },
   { title: "Company Profile", href: "/organization-setup", icon: Building2, category: "Organization", available: true },
-  { title: "Team", icon: Users, category: "Organization", available: false },
   { title: "Settings", href: "/settings", icon: Settings, category: "Account", available: true },
 ];
 
-export function getPortalCategories(portal: PortalKind): Array<{ id: string; label: string; items: PortalNavItem[] }> {
-  if (portal === "student") return sidebarCategories.map((category) => ({
-    ...category,
-    items: category.items.map((item) => ({ ...item, available: true })),
-  }));
+const adminItems: PortalNavItem[] = [
+  { title: "Overview", href: "/admin", icon: Home, category: "Overview", available: true },
+  { title: "Daily Challenge", href: "/admin?tab=challenge", icon: Flame, category: "Platform Controls", available: true },
+  { title: "User Management", href: "/admin?tab=users", icon: Users, category: "Platform Controls", available: true },
+  { title: "System Logs", href: "/admin?tab=logs", icon: FileBarChart, category: "Platform Controls", available: true },
+  { title: "Server Health", href: "/admin?tab=server", icon: BarChart3, category: "Platform Controls", available: true },
+  { title: "Verification", href: "/admin?tab=verification", icon: ShieldCheck, category: "Platform Controls", available: true },
+  { title: "Settings", href: "/admin?tab=settings", icon: Settings, category: "System", available: true },
+];
 
-  const items = portal === "college" ? collegeItems : companyItems;
+export function getPortalCategories(portal: PortalKind): Array<{ id: string; label: string; items: PortalNavItem[] }> {
+  if (portal === "student") {
+    return sidebarCategories.map((category) => ({
+      ...category,
+      items: category.items.map((item) => ({ ...item, available: true })),
+    }));
+  }
+
+  const items = portal === "college" ? collegeItems : portal === "company" ? companyItems : adminItems;
   const categoryNames = [...new Set(items.map((item) => item.category))];
   return categoryNames.map((label) => ({
     id: label.toLowerCase().replace(/\s+/g, "-"),
@@ -151,38 +158,46 @@ export function getMobileNavigation(portal: PortalKind): PortalNavItem[] {
 }
 
 export const sidebarItems: SidebarItem[] = [
-  // Main
-  { title: "Dashboard", href: "/dashboard", icon: Home, category: "main" },
-  { title: "Battle Arena", href: "/battle", icon: Sword, category: "main" },
+  // Home
+  { title: "Dashboard", href: "/dashboard", icon: Home, category: "home" },
 
   // Compete
+  { title: "Battle Arena", href: "/battle", icon: Sword, category: "compete", badge: "Live" },
   { title: "Tournaments", href: "/tournament", icon: Trophy, category: "compete" },
-  { title: "Leaderboard", href: "/leaderboard", icon: Trophy, category: "compete" },
+  { title: "Leaderboard", href: "/leaderboard", icon: BarChart3, category: "compete" },
 
-  // Learn & Grow
-  { title: "Career Roadmap", href: "/career/roadmap", icon: Map, category: "learn" },
-  { title: "College Assessments", href: "/assessments", icon: ClipboardCheck, category: "learn" },
-  { title: "Company Opportunities", href: "/opportunities", icon: BriefcaseBusiness, category: "learn" },
-  { title: "Resume Screening", href: "/career/resume", icon: FileText, category: "learn" },
-  { title: "Career Mentor", href: "/career/mentor", icon: Bot, category: "learn" },
-  { title: "AI Mock Interview", href: "/interview", icon: Mic, category: "learn" },
+  // Learn
+  { title: "Skill Quest", href: "/campaign", icon: Gamepad2, category: "learn", badge: "Quest" },
+  { title: "Daily Challenge", href: "/challenge", icon: Flame, category: "learn" },
+  { title: "Practice Tasks", href: "/tasks", icon: Code2, category: "learn" },
   { title: "AI Coach", href: "/coach", icon: Bot, category: "learn" },
+  { title: "Assessments", href: "/assessments", icon: ClipboardCheck, category: "learn" },
 
-  // Track Progress
-  { title: "Achievements", href: "/achievements", icon: Medal, category: "track" },
-  { title: "Analytics", href: "/analytics", icon: BarChart3, category: "track" },
+  // Career
+  { title: "Career Roadmap", href: "/career/roadmap", icon: Map, category: "career" },
+  { title: "Mock Interview", href: "/interview", icon: Mic, category: "career" },
+  { title: "Resume Screener", href: "/career/resume", icon: FileText, category: "career" },
+  { title: "Career Mentor", href: "/career/mentor", icon: Bot, category: "career" },
+  { title: "Opportunities", href: "/opportunities", icon: BriefcaseBusiness, category: "career" },
+
+  // Community
+  { title: "Friends", href: "/friends", icon: Users, category: "community" },
+  { title: "Live Activity", href: "/activity", icon: Activity, category: "community" },
 
   // Account
-  { title: "Calendar", href: "/calendar", icon: Calendar, category: "account" },
   { title: "Profile", href: "/profile", icon: User, category: "account" },
+  { title: "Achievements", href: "/achievements", icon: Medal, category: "account" },
+  { title: "Analytics", href: "/analytics", icon: BarChart3, category: "account" },
+  { title: "Calendar", href: "/calendar", icon: Calendar, category: "account" },
   { title: "Settings", href: "/settings", icon: Settings, category: "account" },
+  { title: "Help & FAQ", href: "/faq", icon: HelpCircle, category: "account" },
 ];
 
 export const sidebarCategories: SidebarCategory[] = [
   {
-    id: "main",
-    label: "Main",
-    items: sidebarItems.filter(i => i.category === "main"),
+    id: "home",
+    label: "Home",
+    items: sidebarItems.filter(i => i.category === "home"),
   },
   {
     id: "compete",
@@ -191,13 +206,18 @@ export const sidebarCategories: SidebarCategory[] = [
   },
   {
     id: "learn",
-    label: "Learn & Grow",
+    label: "Learn",
     items: sidebarItems.filter(i => i.category === "learn"),
   },
   {
-    id: "track",
-    label: "Track Progress",
-    items: sidebarItems.filter(i => i.category === "track"),
+    id: "career",
+    label: "Career",
+    items: sidebarItems.filter(i => i.category === "career"),
+  },
+  {
+    id: "community",
+    label: "Community",
+    items: sidebarItems.filter(i => i.category === "community"),
   },
   {
     id: "account",

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, ArrowUpRight } from "lucide-react";
+import { Search, ArrowUpRight, Menu } from "lucide-react";
 import api from "@/services/api";
 import NotificationMenu from "./NotificationMenu";
 import ActivityMenu from "./ActivityMenu";
@@ -18,7 +18,7 @@ type SearchResult = {
   href: string;
 };
 
-export default function TopNavbar() {
+export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () => void } = {}) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const [searchQuery, setSearchQuery] = useState("");
@@ -77,6 +77,16 @@ export default function TopNavbar() {
       "
     >
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+        {onOpenMobileNav && (
+          <button
+            type="button"
+            onClick={onOpenMobileNav}
+            aria-label="Open navigation menu"
+            className="flex items-center justify-center rounded-xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:border-cyan-400/40 hover:bg-cyan-400/10 hover:text-cyan-300 lg:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+          >
+            <Menu size={18} />
+          </button>
+        )}
         <Link
           href={logoHref}
           aria-label="Go to your SkillBattle dashboard"
