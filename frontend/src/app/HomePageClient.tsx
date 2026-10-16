@@ -208,45 +208,46 @@ export default function Home() {
       <section id="home" className="relative mx-auto max-w-7xl px-4 pb-16 pt-16 sm:px-6 lg:px-8 lg:pb-20 lg:pt-20">
         <div className="grid items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.12)]">
-              <Sparkles className="h-3.5 w-3.5" />
-              Students • Colleges • Companies
+            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.15)]">
+              <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
+              SkillBattle AI 3.0 • Competitive Learning Platform
             </div>
 
             <h1 className="mt-8 max-w-xl text-4xl font-black leading-[0.96] tracking-[-0.05em] text-white sm:text-5xl lg:text-7xl">
-              Learn.
-              <span className="mt-2 block bg-gradient-to-r from-cyan-400 via-violet-400 to-fuchsia-500 bg-clip-text text-transparent">
-                Practice.
+              Master Code.
+              <span className="mt-2 block bg-gradient-to-r from-cyan-400 via-teal-300 to-violet-400 bg-clip-text text-transparent">
+                Win Battles.
               </span>
-              <span className="mt-2 block text-slate-100">Compete. Get placement ready.</span>
+              <span className="mt-2 block text-slate-100">Get Placed.</span>
             </h1>
 
             <p className="mt-6 max-w-xl text-base leading-8 text-slate-300 sm:text-lg">
-              SkillBattle connects students, colleges, and companies through coding practice, assessments, AI guidance, and competitive learning designed for real-world placement preparation.
+              The AI-powered competitive platform where students solve real DSA problems, battle peers in live coding duels, prepare with real-time AI interviewers, and build verified skill profiles for top hiring companies.
             </p>
 
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-cyan-500 to-violet-600 px-6 py-3.5 text-base font-bold text-white shadow-[0_18px_40px_rgba(59,130,246,0.35)] transition hover:translate-y-[-1px]"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-cyan-500 to-violet-600 px-7 py-3.5 text-base font-bold text-white shadow-[0_18px_40px_rgba(6,182,212,0.35)] transition hover:scale-[1.02] hover:shadow-[0_20px_45px_rgba(6,182,212,0.5)]"
               >
-                Start your journey
+                Start Free Journey
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/battle"
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3.5 text-base font-semibold text-slate-100 transition hover:border-cyan-400/50 hover:bg-white/10"
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-7 py-3.5 text-base font-semibold text-slate-100 transition hover:border-cyan-400/50 hover:bg-white/10"
               >
-                Explore SkillBattle
+                Live Battle Arena
                 <ChevronRight className="h-4 w-4" />
               </Link>
             </div>
 
             <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-white/10 pt-8">
               {[
-                "AI-guided learning",
-                "Career-focused practice",
-                "Placement-ready assessments",
+                "⚡ Live 1v1 Battles",
+                "🤖 AI Career Coach",
+                "🎯 Placement Assessments",
+                "🗺️ Skill Quest Roadmap",
               ].map((tag) => (
                 <span
                   key={tag}

@@ -11,6 +11,7 @@ import StatsGrid from "@/components/dashboard/StatsGrid";
 
 import AICoachCard from "@/components/dashboard/AICoachCard";
 import CommandCenterCard from "@/components/dashboard/CommandCenterCard";
+import { Swords, Code2, Bot, Trophy, ArrowRight, Sparkles } from "lucide-react";
 
 function DashboardPlaceholder({ minHeight }: { minHeight: string }) {
   return <div aria-hidden="true" className="animate-pulse rounded-2xl bg-white/[0.02]" style={{ minHeight }} />;
@@ -155,6 +156,85 @@ export default function DashboardPage() {
           <StatsGrid
             stats={activeStats}
           />
+        </div>
+
+        {/* Quick Action Arena Launchpad */}
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <button
+            onClick={() => router.push("/battle")}
+            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-[#0a0f1d] to-[#050816] p-5 text-left transition hover:border-cyan-400/50 hover:shadow-lg hover:shadow-cyan-500/10"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-300 ring-1 ring-cyan-400/20">
+                <Swords className="h-5 w-5" />
+              </div>
+              <span className="rounded-full bg-cyan-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cyan-300">Live</span>
+            </div>
+            <div className="mt-4">
+              <h3 className="font-bold text-white text-base group-hover:text-cyan-300 transition-colors">Battle Arena</h3>
+              <p className="mt-1 text-xs text-slate-400 leading-relaxed">Enter real-time 1v1 coding duels to climb the rank ladder.</p>
+            </div>
+            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-cyan-400">
+              Find Match <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+            </div>
+          </button>
+
+          <button
+            onClick={() => router.push("/campaign")}
+            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-[#0a0f1d] to-[#050816] p-5 text-left transition hover:border-amber-400/50 hover:shadow-lg hover:shadow-amber-500/10"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-400/10 text-amber-300 ring-1 ring-amber-400/20">
+                <Trophy className="h-5 w-5" />
+              </div>
+              <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">Quest</span>
+            </div>
+            <div className="mt-4">
+              <h3 className="font-bold text-white text-base group-hover:text-amber-300 transition-colors">Skill Quest Map</h3>
+              <p className="mt-1 text-xs text-slate-400 leading-relaxed">Progress through DSA, OS, and DBMS stage challenges.</p>
+            </div>
+            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-amber-400">
+              Continue Quest <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+            </div>
+          </button>
+
+          <button
+            onClick={() => router.push("/tasks")}
+            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 via-[#0a0f1d] to-[#050816] p-5 text-left transition hover:border-violet-400/50 hover:shadow-lg hover:shadow-violet-500/10"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-400/10 text-violet-300 ring-1 ring-violet-400/20">
+                <Code2 className="h-5 w-5" />
+              </div>
+              <span className="rounded-full bg-violet-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-violet-300">500+</span>
+            </div>
+            <div className="mt-4">
+              <h3 className="font-bold text-white text-base group-hover:text-violet-300 transition-colors">Practice Tasks</h3>
+              <p className="mt-1 text-xs text-slate-400 leading-relaxed">Solve catalog problems across all topics with instant verdict.</p>
+            </div>
+            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-violet-400">
+              Solve Code <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+            </div>
+          </button>
+
+          <button
+            onClick={() => router.push("/interview")}
+            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-[#0a0f1d] to-[#050816] p-5 text-left transition hover:border-emerald-400/50 hover:shadow-lg hover:shadow-emerald-500/10"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-400/20">
+                <Bot className="h-5 w-5" />
+              </div>
+              <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300">AI Room</span>
+            </div>
+            <div className="mt-4">
+              <h3 className="font-bold text-white text-base group-hover:text-emerald-300 transition-colors">Mock Interview</h3>
+              <p className="mt-1 text-xs text-slate-400 leading-relaxed">Practice technical & behavioral rounds with AI evaluation.</p>
+            </div>
+            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
+              Start Session <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+            </div>
+          </button>
         </div>
 
         <div className="mt-8">

@@ -443,7 +443,7 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
           </div>
 
           {/* Contextual Quick Action Panel (Expanded mode only) */}
-          {!effectiveCollapsed && !dismissQuickAction && (
+          {portal !== "student" && !effectiveCollapsed && !dismissQuickAction && (
             <div className="mt-5 rounded-2xl border border-cyan-500/20 bg-gradient-to-b from-cyan-500/10 to-violet-500/5 p-3.5 relative">
               <button
                 type="button"

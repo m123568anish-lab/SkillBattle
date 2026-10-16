@@ -36,6 +36,7 @@ export default function DashboardLayout({ children }: Props) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const authLoading = useAuthStore((s) => s.loading);
+  const logout = useAuthStore((s) => s.logout);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -67,6 +68,14 @@ export default function DashboardLayout({ children }: Props) {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mobileMenuOpen]);
+
+  // A drawer is modal navigation on small screens: keep the page behind it still.
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previousOverflow; };
   }, [mobileMenuOpen]);
 
   const navigationCategories = useMemo(() => {
@@ -108,6 +117,12 @@ export default function DashboardLayout({ children }: Props) {
     },
     [pathname]
   );
+
+  const handleMobileLogout = useCallback(async () => {
+    setMobileMenuOpen(false);
+    await logout();
+    router.replace("/login");
+  }, [logout, router]);
 
   return (
     <div
@@ -274,30 +289,22 @@ export default function DashboardLayout({ children }: Props) {
                         const Icon = item.icon;
                         const active = isItemActive(item.href);
 
-                        return (
+                        const linkClass = `flex items-center justify-between rounded-xl px-3.5 py-2.5 transition text-xs font-semibold ${
+                          active
+                            ? "border border-cyan-500/30 bg-cyan-500/15 text-cyan-300 shadow-md shadow-cyan-500/10"
+                            : "border border-transparent text-slate-300 hover:bg-white/5 hover:text-white"
+                        }`;
+                        const content = <><div className="flex items-center gap-3"><Icon size={17} className={active ? "text-cyan-400" : "text-slate-400"} /><span>{item.title}</span></div><ChevronRight size={14} className={`opacity-40 transition ${active ? "opacity-100 text-cyan-400" : ""}`} /></>;
+                        return item.action === "logout" ? (
+                          <button key={item.href} type="button" onClick={() => void handleMobileLogout()} className={`${linkClass} w-full`}>{content}</button>
+                        ) : (
                           <Link
                             key={item.href}
                             href={item.href}
                             onClick={() => setMobileMenuOpen(false)}
-                            className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 transition text-xs font-semibold ${
-                              active
-                                ? "border border-cyan-500/30 bg-cyan-500/15 text-cyan-300 shadow-md shadow-cyan-500/10"
-                                : "border border-transparent text-slate-300 hover:bg-white/5 hover:text-white"
-                            }`}
+                            className={linkClass}
                           >
-                            <div className="flex items-center gap-3">
-                              <Icon
-                                size={17}
-                                className={active ? "text-cyan-400" : "text-slate-400"}
-                              />
-                              <span>{item.title}</span>
-                            </div>
-                            <ChevronRight
-                              size={14}
-                              className={`opacity-40 transition ${
-                                active ? "opacity-100 text-cyan-400" : ""
-                              }`}
-                            />
+                            {content}
                           </Link>
                         );
                       })}

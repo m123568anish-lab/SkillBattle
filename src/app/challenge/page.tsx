@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { problemService, Problem, Submission, SubmitCodeResponse } from "@/services/problem.service";
 import {
@@ -28,6 +29,7 @@ const STARTER_CODE: Record<string, string> = {
 };
 
 export default function PracticePage() {
+  const searchParams = useSearchParams();
   const [problems, setProblems] = useState<Problem[]>([]);
   const [selectedProblem, setSelectedProblem] = useState<Problem | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -53,10 +55,15 @@ export default function PracticePage() {
   const loadInitialData = async () => {
     try {
       setLoading(true);
-      const [probData, subData] = await Promise.all([
-        problemService.getProblems().catch(() => []),
+      const [catalogue, subData] = await Promise.all([
+        problemService.getPracticeCatalogue({
+          q: searchParams.get("q") || undefined,
+          category: searchParams.get("category") || undefined,
+          page_size: 50,
+        }).catch(() => ({ items: [], total: 0, page: 1, page_size: 50, categories: [] })),
         problemService.getMySubmissions().catch(() => []),
       ]);
+      const probData = catalogue.items;
 
       setProblems(probData);
       setSubmissions(subData);

@@ -10,11 +10,14 @@ import {
 } from "@/data/dashboard";
 import { useAuthStore } from "@/store/authStore";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuthStore();
+  const logout = useAuthStore((state) => state.logout);
+  const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const role = (user?.role || "user").toLowerCase();
@@ -52,6 +55,12 @@ export default function Sidebar() {
   };
 
   const QuickActionIcon = quickActionIcon;
+  const visibleCategories = useMemo(() => categories.filter((category) => category.items.length > 0), [categories]);
+
+  async function handleLogout() {
+    await logout();
+    router.replace("/login");
+  }
 
   return (
     <motion.aside
@@ -59,7 +68,7 @@ export default function Sidebar() {
       initial={false}
       animate={{ width: isCollapsed ? 88 : 280 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="hidden md:flex flex-col flex-shrink-0 my-6 ml-6 h-[calc(100vh-3rem)] h-[calc(100dvh-3rem)] rounded-3xl border border-white/10 bg-gradient-to-b from-[#0F172A] via-[#070B14] to-[#050816] backdrop-blur-2xl shadow-2xl shadow-black/50 relative overflow-hidden z-30"
+      className="hidden md:flex flex-col flex-shrink-0 m-4 mr-0 h-[calc(100vh-2rem)] h-[calc(100dvh-2rem)] rounded-2xl border border-white/10 bg-[#091120]/95 backdrop-blur-2xl shadow-2xl shadow-black/50 relative overflow-hidden z-30"
     >
       {/* Aurora Ambient Light */}
       <div className="pointer-events-none absolute -top-24 -left-24 h-48 w-48 rounded-full bg-cyan-500/10 blur-3xl" />
@@ -70,7 +79,7 @@ export default function Sidebar() {
         suppressHydrationWarning
         onClick={() => setIsCollapsed(!isCollapsed)}
         aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className="absolute right-3 top-6 z-20 rounded-lg border border-white/10 bg-white/5 p-1.5 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/30 transition duration-200"
+        className="absolute right-3 top-5 z-20 rounded-lg border border-white/10 bg-[#101b31] p-1.5 text-slate-400 hover:text-cyan-300 hover:border-cyan-400/40 transition"
       >
         {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
       </button>
@@ -78,11 +87,11 @@ export default function Sidebar() {
       {/* Header with Logo */}
       <Link
         href="/"
-        className="flex items-center gap-3 border-b border-white/5 p-6 relative z-10 flex-shrink-0 group cursor-pointer transition hover:opacity-90"
+        className="flex items-center gap-3 border-b border-white/10 p-5 relative z-10 flex-shrink-0 group cursor-pointer transition hover:opacity-90"
         title="Go to Home"
       >
         <div className="rounded-2xl bg-gradient-to-br from-cyan-500/20 to-violet-500/20 p-3 border border-cyan-500/30 shadow-lg shadow-cyan-500/5 flex-shrink-0 group-hover:border-cyan-400/50 transition">
-          <Trophy className="text-cyan-400 animate-pulse" size={24} />
+          <Trophy className="text-cyan-300" size={22} />
         </div>
 
         {!isCollapsed && (
@@ -103,17 +112,16 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav aria-label="Main Navigation" className="flex-1 min-h-0 overflow-y-auto relative z-10 scrollbar-hide">
-        <div className="p-4 space-y-5">
-          {categories.map((category) => (
+        <div className="p-3 space-y-4">
+          {visibleCategories.map((category) => (
             <div key={category.id}>
               {!isCollapsed && category.items.length > 0 && (
                 <motion.h3
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.3 }}
-                  className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2"
+                  className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500"
                 >
-                  <div className="h-0.5 flex-1 bg-gradient-to-r from-slate-600 to-transparent" />
                   {category.label}
                 </motion.h3>
               )}
@@ -122,58 +130,32 @@ export default function Sidebar() {
                   const Icon = item.icon;
                   const active = isItemActive(item.href);
 
-                  return (
+                  const content = (
+                    <motion.div
+                      suppressHydrationWarning
+                      whileHover={{ x: isCollapsed ? 0 : 3 }}
+                      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 relative overflow-hidden group ${
+                        active
+                          ? "bg-cyan-400/12 text-cyan-200 border border-cyan-400/25 shadow-lg shadow-cyan-500/5"
+                          : "text-slate-400 border border-transparent hover:text-slate-100 hover:bg-white/5"
+                      }`}
+                    >
+                      {active && <span className="absolute left-0 h-5 w-0.5 rounded-r bg-cyan-300" />}
+                      <Icon size={18} className={`flex-shrink-0 ${active ? "text-cyan-300" : "group-hover:text-slate-200"}`} />
+                      {!isCollapsed && <span className="font-semibold text-sm whitespace-nowrap flex-1">{item.title}</span>}
+                      {active && !isCollapsed && <span className="h-1.5 w-1.5 rounded-full bg-cyan-300" />}
+                    </motion.div>
+                  );
+                  return item.action === "logout" ? (
+                    <button key={item.href} onClick={handleLogout} title={isCollapsed ? item.title : undefined} className="block w-full text-left">{content}</button>
+                  ) : (
                     <Link
                       key={item.href}
                       href={item.href}
                       className="block relative group"
                       title={isCollapsed ? item.title : undefined}
                     >
-                      <motion.div
-                        suppressHydrationWarning
-                        whileHover={{ x: 4 }}
-                        className={`flex items-center gap-3 rounded-xl px-4 py-2.5 transition-all duration-200 relative overflow-hidden group ${
-                          active
-                            ? "bg-gradient-to-r from-cyan-500/20 to-violet-500/20 text-cyan-300 border border-cyan-500/30 shadow-lg shadow-cyan-500/10"
-                            : "text-slate-400 border border-transparent hover:text-slate-200 hover:bg-white/5 hover:border-white/10"
-                        }`}
-                      >
-                        {/* Animated Background */}
-                        {active && (
-                          <motion.div
-                            initial={false}
-                            layoutId="activeNav"
-                            className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-violet-500/10 -z-10"
-                          />
-                        )}
-
-                        <Icon
-                          size={18}
-                          className={`flex-shrink-0 ${
-                            active ? "text-cyan-400" : "group-hover:text-slate-300"
-                          }`}
-                        />
-
-                        {!isCollapsed && (
-                          <motion.span
-                            initial={false}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.2 }}
-                            className="font-semibold text-sm whitespace-nowrap flex-1"
-                          >
-                            {item.title}
-                          </motion.span>
-                        )}
-
-                        {/* Active Indicator */}
-                        {active && (
-                          <motion.div
-                            initial={false}
-                            layoutId="activeDot"
-                            className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-lg shadow-cyan-400/50"
-                          />
-                        )}
-                      </motion.div>
+                      {content}
                     </Link>
                   );
                 })}

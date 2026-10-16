@@ -158,60 +158,43 @@ export function getMobileNavigation(portal: PortalKind): PortalNavItem[] {
 }
 
 export const sidebarItems: SidebarItem[] = [
-  // Home
-  { title: "Dashboard", href: "/dashboard", icon: Home, category: "home" },
+  { title: "Dashboard", href: "/dashboard", icon: Home, category: "space" },
 
-  // Compete
-  { title: "Battle Arena", href: "/battle", icon: Sword, category: "compete", badge: "Live" },
-  { title: "Tournaments", href: "/tournament", icon: Trophy, category: "compete" },
-  { title: "Leaderboard", href: "/leaderboard", icon: BarChart3, category: "compete" },
+  { title: "Battle Arena", href: "/battle", icon: Sword, category: "train" },
+  { title: "Daily Challenges", href: "/challenge", icon: Flame, category: "train" },
+  { title: "Practice Tasks", href: "/tasks", icon: Code2, category: "train" },
+  { title: "Skill Quest", href: "/campaign", icon: Gamepad2, category: "train" },
+  { title: "Tournaments", href: "/tournament", icon: Trophy, category: "train" },
+  { title: "Leaderboard", href: "/leaderboard", icon: BarChart3, category: "train" },
 
-  // Learn
-  { title: "Skill Quest", href: "/campaign", icon: Gamepad2, category: "learn", badge: "Quest" },
-  { title: "Daily Challenge", href: "/challenge", icon: Flame, category: "learn" },
-  { title: "Practice Tasks", href: "/tasks", icon: Code2, category: "learn" },
-  { title: "AI Coach", href: "/coach", icon: Bot, category: "learn" },
-  { title: "Assessments", href: "/assessments", icon: ClipboardCheck, category: "learn" },
-
-  // Career
+  { title: "AI Coach", href: "/coach", icon: Bot, category: "career" },
+  { title: "Assessments", href: "/assessments", icon: ClipboardCheck, category: "career" },
   { title: "Career Roadmap", href: "/career/roadmap", icon: Map, category: "career" },
-  { title: "Mock Interview", href: "/interview", icon: Mic, category: "career" },
-  { title: "Resume Screener", href: "/career/resume", icon: FileText, category: "career" },
+  { title: "AI Mock Interview", href: "/interview", icon: Mic, category: "career" },
+  { title: "Resume Tools", href: "/career/resume", icon: FileText, category: "career" },
   { title: "Career Mentor", href: "/career/mentor", icon: Bot, category: "career" },
-  { title: "Opportunities", href: "/opportunities", icon: BriefcaseBusiness, category: "career" },
 
-  // Community
   { title: "Friends", href: "/friends", icon: Users, category: "community" },
-  { title: "Live Activity", href: "/activity", icon: Activity, category: "community" },
 
-  // Account
   { title: "Profile", href: "/profile", icon: User, category: "account" },
-  { title: "Achievements", href: "/achievements", icon: Medal, category: "account" },
-  { title: "Analytics", href: "/analytics", icon: BarChart3, category: "account" },
-  { title: "Calendar", href: "/calendar", icon: Calendar, category: "account" },
   { title: "Settings", href: "/settings", icon: Settings, category: "account" },
   { title: "Help & FAQ", href: "/faq", icon: HelpCircle, category: "account" },
 ];
 
 export const sidebarCategories: SidebarCategory[] = [
   {
-    id: "home",
-    label: "Overview",
-    items: sidebarItems.filter(i => i.category === "home"),
+    id: "space",
+    label: "Your Space",
+    items: sidebarItems.filter(i => i.category === "space"),
   },
   {
-    id: "compete",
-    label: "Compete",
-    items: sidebarItems.filter(i => i.category === "compete"),
-  },
-  {
-    id: "learn",
-    label: "Learn",
-    items: sidebarItems.filter(i => i.category === "learn"),
+    id: "train",
+    label: "Train & Compete",
+    items: sidebarItems.filter(i => i.category === "train"),
   },
   {
     id: "career",
-    label: "Career",
+    label: "Grow Your Career",
     items: sidebarItems.filter(i => i.category === "career"),
   },
   {

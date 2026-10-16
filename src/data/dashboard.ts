@@ -25,6 +25,9 @@ import {
   Layers,
   Sparkles,
   Search,
+  ClipboardCheck,
+  CircleHelp,
+  LogOut,
 } from "lucide-react";
 
 export interface SidebarItem {
@@ -32,6 +35,7 @@ export interface SidebarItem {
   href: string;
   icon: LucideIcon;
   category?: string;
+  action?: "logout";
 }
 
 export interface SidebarCategory {
@@ -45,40 +49,41 @@ export interface SidebarCategory {
 // ==========================================
 export const studentSidebarCategories: SidebarCategory[] = [
   {
-    id: "main",
-    label: "Main",
+    id: "space",
+    label: "Your Space",
     items: [
       { title: "Dashboard", href: "/dashboard", icon: Home },
-      { title: "Practice", href: "/practice", icon: Sparkles },
-      { title: "Battle Arena", href: "/battle", icon: Sword },
     ],
   },
   {
-    id: "compete",
-    label: "Compete",
+    id: "train",
+    label: "Train & Compete",
     items: [
+      { title: "Battle Arena", href: "/battle", icon: Sword },
+      { title: "Daily Challenges", href: "/daily-challenges", icon: Calendar },
+      { title: "Practice Tasks", href: "/practice", icon: Sparkles },
+      { title: "Skill Quest", href: "/campaign", icon: Map },
       { title: "Tournaments", href: "/tournament", icon: Trophy },
       { title: "Leaderboard", href: "/leaderboard", icon: Medal },
-      { title: "Social & Friends", href: "/social", icon: Users },
     ],
   },
   {
-    id: "learn",
-    label: "Learn & Grow",
+    id: "career",
+    label: "Grow Your Career",
     items: [
-      { title: "Career Roadmap", href: "/career/roadmap", icon: Map },
-      { title: "Jobs", href: "/jobs", icon: Briefcase },
-      { title: "AI Mock Interview", href: "/interview", icon: Mic },
       { title: "AI Coach", href: "/coach", icon: Bot },
+      { title: "Assessments", href: "/analytics", icon: ClipboardCheck },
+      { title: "Career Roadmap", href: "/career/roadmap", icon: Map },
+      { title: "AI Mock Interview", href: "/interview", icon: Mic },
+      { title: "Resume Tools", href: "/career/resume", icon: FileText },
+      { title: "Career Mentor", href: "/career/mentor", icon: Briefcase },
     ],
   },
   {
-    id: "progress",
-    label: "Progress",
+    id: "community",
+    label: "Community",
     items: [
-      { title: "Achievements", href: "/achievements", icon: Medal },
-      { title: "Analytics", href: "/analytics", icon: BarChart3 },
-      { title: "Verified Skill Profile", href: "/skill-profile", icon: GraduationCap },
+      { title: "Friends", href: "/friends", icon: Users },
     ],
   },
   {
@@ -88,6 +93,8 @@ export const studentSidebarCategories: SidebarCategory[] = [
       { title: "Calendar", href: "/calendar", icon: Calendar },
       { title: "Profile", href: "/profile", icon: User },
       { title: "Settings", href: "/settings", icon: Settings },
+      { title: "Help & Support", href: "/ai-coach", icon: CircleHelp },
+      { title: "Logout", href: "/login", icon: LogOut, action: "logout" },
     ],
   },
 ];

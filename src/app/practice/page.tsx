@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation";
+import ChallengeWorkspace from "../challenge/page";
 
-export default function PracticeRedirectPage() {
-  redirect("/challenge");
-}
+export default ChallengeWorkspace;
