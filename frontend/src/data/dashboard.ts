@@ -27,6 +27,7 @@ import {
   Code2,
   HelpCircle,
   Activity,
+  Target,
   LucideIcon,
 } from "lucide-react";
 
@@ -173,6 +174,7 @@ export const sidebarItems: SidebarItem[] = [
   { title: "AI Mock Interview", href: "/interview", icon: Mic, category: "career" },
   { title: "Resume Tools", href: "/career/resume", icon: FileText, category: "career" },
   { title: "Career Mentor", href: "/career/mentor", icon: Bot, category: "career" },
+  { title: "Placement Prep", href: "/placement", icon: Target, category: "career" },
 
   { title: "Friends", href: "/friends", icon: Users, category: "community" },
 

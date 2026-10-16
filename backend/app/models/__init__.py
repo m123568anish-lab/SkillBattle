@@ -27,6 +27,7 @@ from .question import Question, UserSubmission
 from .question_exposure import QuestionExposure
 from .user_stats import UserSettings, UserStats
 from .matchmaking import MatchmakingMatch, PlacementPrepSession
+from .placement_catalog import PlacementCompany, PlacementTrack, PlacementTrackRound
 from .user_skill_stat import UserSkillStat
 from .skill_intelligence import SkillEvidence, CompanySkillRequirement
 from .quest_map import QuestMapLevel, QuestProgress
@@ -79,6 +80,7 @@ __all__ = [
     "UserSettings",
     "MatchmakingMatch",
     "PlacementPrepSession",
+    "PlacementCompany", "PlacementTrack", "PlacementTrackRound",
     "UserSkillStat",
     "SkillEvidence",
     "CompanySkillRequirement",
