@@ -2,7 +2,7 @@ from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import selectinload
 
 from app.models.roadmap import (
     Roadmap,
@@ -36,11 +36,11 @@ class RoadmapRepository:
     ) -> Optional[Roadmap]:
         result = await db.execute(
             select(Roadmap)
-            .options(joinedload(Roadmap.weeks).joinedload(RoadmapWeek.tasks))
+            .options(selectinload(Roadmap.weeks).selectinload(RoadmapWeek.tasks))
             .where(Roadmap.user_id == user_id, Roadmap.status == "ACTIVE")
             .limit(1)
         )
-        return result.scalar_one_or_none()
+        return result.scalars().first()
 
     async def delete_user_roadmaps(
         self,

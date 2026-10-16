@@ -71,7 +71,7 @@ class DashboardService:
                 "milestone": (roadmap.weeks[0].title if roadmap.weeks else "Roadmap active"),
             }
 
-        # Collect recent evidence from the canonical skill intelligence system (bounded to recent 30 items for speed).
+        # Collect recent evidence from the canonical skill intelligence system using projected lightweight columns.
         evidence = []
         from sqlalchemy import select
         from app.models.question import Question, UserSubmission
@@ -79,77 +79,107 @@ class DashboardService:
         from app.models.battle.battle_submission import BattleSubmission
 
         practice_stmt = (
-            select(UserSubmission, Question)
+            select(
+                UserSubmission.id,
+                UserSubmission.question_id,
+                UserSubmission.solved,
+                UserSubmission.execution_time_ms,
+                UserSubmission.created_at,
+                Question.skill_category,
+                Question.difficulty,
+            )
             .join(Question, Question.id == UserSubmission.question_id)
             .where(UserSubmission.user_id == user_id)
             .order_by(UserSubmission.created_at.desc())
             .limit(30)
         )
-        for submission, question in (await db.execute(practice_stmt)).all():
+        for (sub_id, q_id, solved, exec_time, created_at, skill_category, difficulty) in (await db.execute(practice_stmt)).all():
             evidence.append({
                 "user_id": user_id,
-                "skill_id": question.skill_category if question else "Problem Solving",
+                "skill_id": skill_category or "Problem Solving",
                 "source_type": "PRACTICE",
-                "source_id": f"practice:{submission.id}",
-                "submission_id": str(submission.id),
-                "question_id": str(submission.question_id),
-                "difficulty": (question.difficulty if question else "medium").lower(),
-                "correct": bool(submission.solved),
-                "score": 1.0 if submission.solved else 0.0,
+                "source_id": f"practice:{sub_id}",
+                "submission_id": str(sub_id),
+                "question_id": str(q_id),
+                "difficulty": (difficulty or "medium").lower(),
+                "correct": bool(solved),
+                "score": 1.0 if solved else 0.0,
                 "max_score": 1.0,
-                "response_time_ms": submission.execution_time_ms,
+                "response_time_ms": exec_time or 0,
                 "attempt_number": 1,
-                "timestamp": submission.created_at.isoformat(),
+                "timestamp": created_at.isoformat() if created_at else "",
             })
 
         battle_stmt = (
-            select(BattleSubmission, Question)
+            select(
+                BattleSubmission.id,
+                BattleSubmission.question_id,
+                BattleSubmission.passed_tests,
+                BattleSubmission.total_tests,
+                BattleSubmission.verdict,
+                BattleSubmission.time_taken_seconds,
+                BattleSubmission.submitted_at,
+                BattleSubmission.question_type,
+                Question.skill_category,
+            )
             .outerjoin(Question, Question.id == BattleSubmission.question_id)
             .where(BattleSubmission.user_id == user_id)
             .order_by(BattleSubmission.submitted_at.desc())
             .limit(30)
         )
-        for submission, question in (await db.execute(battle_stmt)).all():
-            total_tests = submission.total_tests or 1
-            score_ratio = round((submission.passed_tests / total_tests) if total_tests else 1.0, 4)
+        for (sub_id, q_id, passed_tests, total_tests, verdict, time_taken, submitted_at, q_type, skill_category) in (await db.execute(battle_stmt)).all():
+            total_t = total_tests or 1
+            score_ratio = round(((passed_tests or 0) / total_t) if total_t else 1.0, 4)
+            accepted = verdict in ("Accepted", "Correct")
             evidence.append({
                 "user_id": user_id,
-                "skill_id": question.skill_category if question else str(submission.question_type or "Problem Solving"),
+                "skill_id": skill_category if skill_category else str(q_type or "Problem Solving"),
                 "source_type": "BATTLE",
-                "source_id": f"battle:{submission.id}",
-                "submission_id": str(submission.id),
-                "question_id": str(submission.question_id or submission.id),
+                "source_id": f"battle:{sub_id}",
+                "submission_id": str(sub_id),
+                "question_id": str(q_id or sub_id),
                 "difficulty": "medium",
-                "correct": bool(submission.accepted or score_ratio >= 0.5),
+                "correct": bool(accepted or score_ratio >= 0.5),
                 "score": score_ratio,
                 "max_score": 1.0,
-                "response_time_ms": int((submission.time_taken_seconds or 0) * 1000),
+                "response_time_ms": int((time_taken or 0) * 1000),
                 "attempt_number": 1,
-                "timestamp": submission.submitted_at.isoformat(),
+                "timestamp": submitted_at.isoformat() if submitted_at else "",
             })
 
         assessment_stmt = (
-            select(AssessmentQuestionSubmission, Question)
+            select(
+                AssessmentQuestionSubmission.id,
+                AssessmentQuestionSubmission.attempt_id,
+                AssessmentQuestionSubmission.question_id,
+                AssessmentQuestionSubmission.score_awarded,
+                AssessmentQuestionSubmission.max_score,
+                AssessmentQuestionSubmission.execution_time_ms,
+                AssessmentQuestionSubmission.created_at,
+                Question.skill_category,
+                Question.difficulty,
+            )
             .join(Question, Question.id == AssessmentQuestionSubmission.question_id)
             .where(AssessmentQuestionSubmission.user_id == user_id)
             .order_by(AssessmentQuestionSubmission.created_at.desc())
             .limit(30)
         )
-        for submission, question in (await db.execute(assessment_stmt)).all():
+        for (sub_id, attempt_id, q_id, score_awarded, max_score, exec_time, created_at, skill_category, difficulty) in (await db.execute(assessment_stmt)).all():
+            m_score = max_score or 1.0
             evidence.append({
                 "user_id": user_id,
-                "skill_id": question.skill_category if question else "Problem Solving",
+                "skill_id": skill_category or "Problem Solving",
                 "source_type": "ASSESSMENT",
-                "source_id": f"assessment:{submission.attempt_id}",
-                "submission_id": str(submission.id),
-                "question_id": str(submission.question_id),
-                "difficulty": (question.difficulty if question else "medium").lower(),
-                "correct": submission.score_awarded >= (submission.max_score * 0.5),
-                "score": submission.score_awarded / submission.max_score if submission.max_score else 1.0,
+                "source_id": f"assessment:{attempt_id}",
+                "submission_id": str(sub_id),
+                "question_id": str(q_id),
+                "difficulty": (difficulty or "medium").lower(),
+                "correct": (score_awarded or 0.0) >= (m_score * 0.5),
+                "score": ((score_awarded or 0.0) / m_score) if m_score else 1.0,
                 "max_score": 1.0,
-                "response_time_ms": submission.execution_time_ms,
+                "response_time_ms": exec_time or 0,
                 "attempt_number": 1,
-                "timestamp": submission.created_at.isoformat(),
+                "timestamp": created_at.isoformat() if created_at else "",
             })
 
         skill_profile = skill_intelligence_service.build_profile(evidence)
@@ -168,9 +198,7 @@ class DashboardService:
         current_user: User,
     ) -> DashboardResponse:
         user_id = str(current_user.id)
-        user = await dashboard_repository.get_user(db, user_id)
-        if user is None:
-            user = current_user
+        user = current_user
 
         challenge = await dashboard_repository.get_daily_challenge(db)
         achievements = await dashboard_repository.get_achievements(db, user_id)
@@ -181,13 +209,13 @@ class DashboardService:
         total_xp = int(user_xp.total_xp or 0)
         user_level = int(user_xp.level or 1)
         rating = 1000
-        user_stats = (
+        stats_rating = (
             await db.execute(
-                select(UserStats).where(UserStats.user_id == user_id)
+                select(UserStats.rating).where(UserStats.user_id == user_id)
             )
         ).scalar_one_or_none()
-        if user_stats:
-            rating = getattr(user_stats, "rating", 1000) or 1000
+        if stats_rating is not None:
+            rating = stats_rating or 1000
 
         stats = DashboardStats(
             xp=total_xp,
@@ -211,28 +239,32 @@ class DashboardService:
         ]
 
         skill_result = await db.execute(
-            select(UserSkillStat).where(
+            select(
+                UserSkillStat.subject,
+                UserSkillStat.correct_attempts,
+                UserSkillStat.total_attempts,
+            ).where(
                 UserSkillStat.user_id == user_id,
                 UserSkillStat.total_attempts > 0,
             )
         )
-        skill_evidence = list(skill_result.scalars().all())
+        skill_evidence = list(skill_result.all())
         weakest_skill = min(
             skill_evidence,
-            key=lambda skill: skill.correct_attempts / skill.total_attempts,
+            key=lambda row: row[1] / row[2],
             default=None,
         )
         if weakest_skill:
-            accuracy = round(weakest_skill.correct_attempts / weakest_skill.total_attempts * 100)
+            accuracy = round(weakest_skill[1] / weakest_skill[2] * 100)
             recommendation = AIRecommendation(
-                title=f"Practice {weakest_skill.subject}",
+                title=f"Practice {weakest_skill[0]}",
                 message=(
                     f"Your recorded accuracy is {accuracy}% "
-                    f"({weakest_skill.correct_attempts} of {weakest_skill.total_attempts} attempts). "
+                    f"({weakest_skill[1]} of {weakest_skill[2]} attempts). "
                     "Focused practice in this area is your clearest next step."
                 ),
                 progress=accuracy,
-                action=f"Practice {weakest_skill.subject}",
+                action=f"Practice {weakest_skill[0]}",
             )
         elif stats.battles_played == 0:
             recommendation = AIRecommendation(

@@ -118,6 +118,7 @@ export const useAuthStore = create<AuthState>(
         if (typeof window !== "undefined") {
             try {
                 localStorage.removeItem("skillbattle_user_cache");
+                localStorage.removeItem("skillbattle_dashboard_cache");
             } catch {}
         }
 

@@ -22,6 +22,10 @@ from app.models.streak import Streak
 
 class DashboardRepository:
 
+    def __init__(self):
+        self._cached_day: int | None = None
+        self._cached_challenge: Challenge | None = None
+
     async def get_user(
         self,
         db: AsyncSession,
@@ -41,22 +45,24 @@ class DashboardRepository:
     ) -> Challenge | None:
         from datetime import date
 
-        # Use today's day-of-year as a deterministic seed to pick the challenge
-        # This makes the challenge rotate daily like LeetCode
         today = date.today()
-        day_seed = today.toordinal()  # unique int per day
+        day_seed = today.toordinal()
 
-        # Fetch challenge count efficiently without loading entire table into memory
+        if self._cached_day == day_seed and self._cached_challenge is not None:
+            return self._cached_challenge
+
         count_res = await db.execute(select(func.count(Challenge.id)))
         total_challenges = count_res.scalar_one_or_none() or 0
 
         if total_challenges == 0:
             return None
 
-        # Pick deterministically based on today's date (cycles through all challenges)
         idx = day_seed % total_challenges
         result = await db.execute(select(Challenge).offset(idx).limit(1))
-        return result.scalar_one_or_none()
+        challenge = result.scalar_one_or_none()
+        self._cached_day = day_seed
+        self._cached_challenge = challenge
+        return challenge
 
 
     async def get_achievements(

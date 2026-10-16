@@ -302,6 +302,16 @@ def _repair_dashboard_tables() -> None:
                     )
                     logger.info("Added missing %s.%s column", table, name)
 
+        # Performance indexes for fast dashboard evidence and roadmap lookups
+        if "user_submissions" in tables:
+            connection.execute(text('CREATE INDEX IF NOT EXISTS "ix_user_submissions_user_created" ON "user_submissions" ("user_id", "created_at")'))
+        if "battle_submissions" in tables:
+            connection.execute(text('CREATE INDEX IF NOT EXISTS "ix_battle_submissions_user_submitted" ON "battle_submissions" ("user_id", "submitted_at")'))
+        if "assessment_question_submissions" in tables:
+            connection.execute(text('CREATE INDEX IF NOT EXISTS "ix_assessment_q_sub_user_created" ON "assessment_question_submissions" ("user_id", "created_at")'))
+        if "roadmaps" in tables:
+            connection.execute(text('CREATE INDEX IF NOT EXISTS "ix_roadmaps_user_status" ON "roadmaps" ("user_id", "status")'))
+
 
 def _seed_initial_problems() -> None:
     """Seed initial coding practice problems and baseline test cases if empty."""

@@ -68,12 +68,20 @@ export default function DashboardPage() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const authLoading = useAuthStore((state) => state.loading);
+  const [mounted, setMounted] = useState(false);
   const {
     dashboard,
     loading,
+    isRefreshing,
+    isFromCache,
+    lastRefreshedAt,
     error,
     refresh,
   } = useDashboard();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -101,20 +109,35 @@ export default function DashboardPage() {
     is_superuser: Boolean(user?.is_superuser),
   };
 
+  const formattedCacheTime = mounted && lastRefreshedAt
+    ? ` from ${new Date(lastRefreshedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+    : "";
+
   return (
     <DashboardLayout>
       <div className="space-y-8">
         {error && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 px-6 text-sm">
             <div className="text-rose-300">
-              <span className="font-semibold">Note:</span> Live dashboard data could not be refreshed ({error}). Showing cached metrics.
+              <span className="font-semibold">{dashboard ? "Notice:" : "Error:"}</span>{" "}
+              {dashboard
+                ? `Live dashboard data could not be refreshed (${error}). Showing cached metrics${formattedCacheTime}.`
+                : `Live dashboard data could not be loaded (${error}).`}
             </div>
             <button
               onClick={refresh}
-              className="rounded-lg bg-rose-500/20 px-3 py-1.5 text-xs font-medium text-rose-200 transition-colors hover:bg-rose-500/30"
+              disabled={isRefreshing}
+              className="rounded-lg bg-rose-500/20 px-3 py-1.5 text-xs font-medium text-rose-200 transition-colors hover:bg-rose-500/30 disabled:opacity-50"
             >
-              Retry
+              {isRefreshing ? "Refreshing..." : "Retry"}
             </button>
+          </div>
+        )}
+
+        {!error && isRefreshing && dashboard && (
+          <div className="flex items-center gap-2 text-xs text-slate-400 px-1">
+            <span className="inline-block h-2 w-2 animate-ping rounded-full bg-cyan-400" />
+            <span>Updating live dashboard metrics...</span>
           </div>
         )}
 

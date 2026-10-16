@@ -16,7 +16,7 @@ const API_BASE_URL = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_URL);
 
 const api = axios.create({
     baseURL: `${API_BASE_URL}/api/v1`,
-    timeout: 15_000,                  // 15 s — responsive timeout preventing hung requests
+    timeout: 20_000,                  // 20 s — responsive timeout allowing backend/cold-start response
     headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -89,9 +89,12 @@ api.interceptors.response.use(
         const isGetRequest = (originalRequest?.method || "get").toLowerCase() === "get";
         if (originalRequest && isTimeout && !originalRequest._timeoutRetry && !isAuthRequest && isGetRequest) {
             originalRequest._timeoutRetry = true;
-            originalRequest.timeout = 10_000;
+            originalRequest.timeout = 20_000;
+            if (!originalRequest.baseURL) {
+                originalRequest.baseURL = api.defaults.baseURL;
+            }
             try {
-                return await axios(originalRequest);
+                return await api(originalRequest);
             } catch (retryError) {
                 return Promise.reject(retryError);
             }
@@ -106,9 +109,9 @@ api.interceptors.response.use(
         ) {
             originalRequest._fallbackRetry = true;
             originalRequest.baseURL = "https://skillbattle-api-2026.onrender.com/api/v1";
-            originalRequest.timeout = 15_000;
+            originalRequest.timeout = 20_000;
             try {
-                return await axios(originalRequest);
+                return await api(originalRequest);
             } catch (fallbackErr) {
                 return Promise.reject(fallbackErr);
             }
