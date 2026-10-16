@@ -196,7 +196,7 @@ export const sidebarItems: SidebarItem[] = [
 export const sidebarCategories: SidebarCategory[] = [
   {
     id: "home",
-    label: "Home",
+    label: "Overview",
     items: sidebarItems.filter(i => i.category === "home"),
   },
   {

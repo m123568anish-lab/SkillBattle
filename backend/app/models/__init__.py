@@ -6,6 +6,7 @@ from .campaign import UserCampaignProgress
 from .campaign_attempt import CampaignAttempt
 from .compiler import CodeSubmission
 from .challenge import Challenge
+from .daily_practice import DailyPracticeSession
 from .conversation import Conversation
 from .developer_api_key import DeveloperApiKey
 from .developer_api_usage import DeveloperApiUsage
@@ -49,6 +50,7 @@ __all__ = [
     "Base",
     "Achievement",
     "Challenge",
+    "DailyPracticeSession",
     "CodeSubmission",
     "Conversation",
     "InterviewAnswer",

@@ -357,6 +357,16 @@ class CompilerService:
                 xp_earned = 0
                 xp_status = "pending"
 
+        if judge_result.verdict == "Accepted":
+            # Daily completion is a session state, not a second reward path.
+            try:
+                from app.modules.practice.service import mark_daily_complete
+                await mark_daily_complete(db, current_user.id, problem.id, submission.id)
+            except Exception:
+                # A completed judgement must remain successful if optional
+                # daily-session tracking is temporarily unavailable.
+                logger.exception("Daily practice completion update failed for submission=%s", submission.id)
+
         try:
             await self.notify_battle(
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import {
@@ -140,26 +140,26 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
     return normalizedPath === targetPath || normalizedPath.startsWith(`${targetPath}/`);
   };
 
-  const BrandIcon = useMemo(() => {
+  const BrandIcon = (() => {
     if (portal === "admin") return Shield;
     if (portal === "college") return Building2;
     if (portal === "company") return BriefcaseBusiness;
     return Trophy;
-  }, [portal]);
+  })();
 
-  const portalLabel = useMemo(() => {
+  const portalLabel = (() => {
     if (portal === "admin") return "Admin Suite";
     if (portal === "college") return "College Portal";
     if (portal === "company") return "Hiring Suite";
     return "Arena";
-  }, [portal]);
+  })();
 
-  const portalBadge = useMemo(() => {
+  const portalBadge = (() => {
     if (portal === "admin") return "SYSTEM";
     if (portal === "college") return "CAMPUS";
     if (portal === "company") return "ENTERPRISE";
     return "STUDENT";
-  }, [portal]);
+  })();
 
   // Handle Logout safely
   const handleLogout = async () => {
@@ -189,7 +189,7 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
         : "Student";
 
   // Contextual Quick Action data
-  const quickAction = useMemo(() => {
+  const quickAction = (() => {
     if (portal === "student") {
       return {
         icon: Flame,
@@ -224,7 +224,7 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
       cta: "Server Health",
       href: "/admin?tab=server",
     };
-  }, [portal]);
+  })();
 
   const effectiveCollapsed = isMobile ? false : isCollapsed;
 

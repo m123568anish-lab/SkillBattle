@@ -1,79 +1,19 @@
 "use client";
-
-import React, { useEffect, useState } from "react";
-
+import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import api from "@/lib/api";
+import { practiceService, type PracticeProblem, type PracticeProblemDetail } from "@/services/practice.service";
+import { CheckCircle2, Code2, Play, Search, Send } from "lucide-react";
+const Monaco = dynamic(() => import("@monaco-editor/react"), { ssr: false }); const languages = ["python", "javascript", "cpp", "java"];
 export default function TasksPage() {
-  const [tasks, setTasks] = useState<string[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem("__tasks") || "[]");
-    } catch {
-      return [];
-    }
-  });
-
-  const [value, setValue] = useState("");
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("__tasks", JSON.stringify(tasks));
-    } catch {}
-  }, [tasks]);
-
-  function addTask() {
-    const v = value.trim();
-    if (!v) return;
-    setTasks((s) => [v, ...s]);
-    setValue("");
-  }
-
-  function removeTask(idx: number) {
-    setTasks((s) => s.filter((_, i) => i !== idx));
-  }
-
-  return (
-    <main className="min-h-screen p-8">
-      <div className="mx-auto max-w-2xl">
-        <h1 className="mb-4 text-2xl font-semibold">Any Task</h1>
-
-        <div className="mb-4 flex gap-2">
-          <input
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && addTask()}
-            placeholder="Describe a task..."
-            className="flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
-          />
-
-          <button
-            onClick={addTask}
-            className="rounded-lg bg-cyan-500 px-4 py-3 font-medium text-black"
-          >
-            Add
-          </button>
-        </div>
-
-        <ul className="space-y-2">
-          {tasks.length === 0 && (
-            <li className="text-sm text-slate-400">No tasks yet</li>
-          )}
-
-          {tasks.map((t, i) => (
-            <li
-              key={i}
-              className="flex items-center justify-between rounded-md border border-white/6 bg-white/3 px-4 py-3"
-            >
-              <span>{t}</span>
-
-              <button
-                onClick={() => removeTask(i)}
-                className="ml-4 rounded bg-red-600 px-3 py-1 text-sm"
-              >
-                Delete
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </main>
-  );
+ const params=useSearchParams(), router=useRouter(), requested=Number(params.get("problem")); const [items,setItems]=useState<PracticeProblem[]>([]),[categories,setCategories]=useState<string[]>([]),[selected,setSelected]=useState<PracticeProblemDetail|null>(null),[query,setQuery]=useState(""),[difficulty,setDifficulty]=useState(""),[category,setCategory]=useState(""),[status,setStatus]=useState("all"),[summary,setSummary]=useState<{solved:number;attempted:number;accuracy:number|null}|null>(null),[code,setCode]=useState(""),[language,setLanguage]=useState("python"),[input,setInput]=useState(""),[output,setOutput]=useState(""),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
+ const load=async()=>{try{const [catalog,stats]=await Promise.all([practiceService.list({q:query||undefined,difficulty:difficulty||undefined,category:category||undefined,status}),practiceService.summary()]);setItems(catalog.items);setCategories(catalog.categories);setSummary(stats)}catch{setMessage("Practice data could not be loaded.")}};
+ useEffect(()=>{const timer=window.setTimeout(()=>void load(),220);return()=>window.clearTimeout(timer)},[query,difficulty,category,status]);
+ const open=async(id:number)=>{try{const detail=await practiceService.get(id);const first=Object.keys(detail.starter_codes)[0]||"python";setSelected(detail);setLanguage(first);setCode(detail.starter_codes[first]||"");setOutput("");router.replace(`/tasks${params.get("daily")==="1"?"?daily=1&":"?"}problem=${id}`)}catch{setMessage("That problem is unavailable.")}};
+ useEffect(()=>{if(requested&&!selected)void open(requested)},[requested]); const changeLanguage=(next:string)=>{setLanguage(next);setCode(selected?.starter_codes[next]||"")};
+ const run=async()=>{if(!selected)return;setBusy(true);try{const r=await api.post("/compiler/run",{language,source_code:code,stdin:input,custom_input:true});setOutput(r.data.stderr||r.data.stdout||r.data.status)}catch{setOutput("Run failed. Check your code and try again.")}finally{setBusy(false)}};
+ const submit=async()=>{if(!selected)return;setBusy(true);try{const r=(await api.post("/compiler/submit",{problem_id:selected.id,language,source_code:code})).data;setOutput(`${r.verdict} — ${r.passed_tests}/${r.total_tests} tests\nRuntime: ${r.execution_time} ms\nXP awarded: ${r.xp_earned}`);if(r.verdict==="Accepted"){setMessage("Accepted. Completion and reward were recorded.");await load()}}catch(e:any){setOutput(e?.response?.data?.detail||"Submission could not be evaluated.")}finally{setBusy(false)}};
+ return <DashboardLayout><main className="min-h-screen p-4 sm:p-7"><div className="mx-auto max-w-7xl space-y-5"><header className="flex flex-wrap justify-between gap-3"><div><p className="text-sm font-bold uppercase tracking-widest text-cyan-300">Practice tasks</p><h1 className="text-3xl font-black text-white">Build skill through real problems.</h1></div><div className="text-sm text-slate-300">Solved {summary?.solved??"—"} · Accuracy {summary?.accuracy==null?"—":`${summary.accuracy}%`}</div></header><div className="grid gap-5 lg:grid-cols-[320px_1fr]"><aside className="space-y-3 rounded-2xl border border-white/10 bg-slate-900/70 p-4"><div className="relative"><Search size={16} className="absolute left-3 top-3 text-slate-500"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search problems" className="w-full rounded-xl bg-slate-950 py-2.5 pl-9 text-sm text-white outline-none"/></div><div className="grid grid-cols-2 gap-2"><select value={difficulty} onChange={e=>setDifficulty(e.target.value)} className="rounded-lg bg-slate-950 p-2 text-sm text-slate-300"><option value="">All levels</option><option>Easy</option><option>Medium</option><option>Hard</option></select><select value={category} onChange={e=>setCategory(e.target.value)} className="rounded-lg bg-slate-950 p-2 text-sm text-slate-300"><option value="">All topics</option>{categories.map(x=><option key={x}>{x}</option>)}</select></div><select value={status} onChange={e=>setStatus(e.target.value)} className="w-full rounded-lg bg-slate-950 p-2 text-sm text-slate-300"><option value="all">All progress</option><option value="unsolved">Unsolved</option><option value="attempted">Attempted</option><option value="solved">Solved</option></select><div className="max-h-[60vh] space-y-2 overflow-auto">{items.map(item=><button key={item.id} onClick={()=>void open(item.id)} className={`w-full rounded-xl border p-3 text-left ${selected?.id===item.id?"border-cyan-400 bg-cyan-400/10":"border-white/10 bg-slate-950"}`}><div className="flex justify-between"><strong className="text-sm text-white">{item.title}</strong><CheckCircle2 size={16} className={item.status==="solved"?"text-emerald-300":item.status==="attempted"?"text-amber-300":"text-slate-600"}/></div><p className="mt-1 text-xs text-slate-400">{item.category} · {item.difficulty} · {item.xp_reward} XP</p></button>)}{!items.length&&<p className="text-sm text-slate-400">No matching problems.</p>}</div></aside><section className="rounded-2xl border border-white/10 bg-slate-900/70">{selected?<div className="grid min-h-[680px] lg:grid-cols-2"><article className="max-h-[680px] overflow-auto border-b border-white/10 p-5 lg:border-b-0 lg:border-r"><p className="text-xs font-bold uppercase text-cyan-300">{selected.category} · {selected.difficulty}</p><h2 className="text-2xl font-bold text-white">{selected.title}</h2><p className="mt-5 whitespace-pre-wrap text-sm leading-6 text-slate-300">{selected.description}</p><h3 className="mt-5 font-bold text-white">Input format</h3><p className="whitespace-pre-wrap text-sm text-slate-400">{selected.input_format}</p><h3 className="mt-5 font-bold text-white">Constraints</h3><p className="whitespace-pre-wrap text-sm text-slate-400">{selected.constraints}</p><h3 className="mt-5 font-bold text-white">Examples</h3>{selected.samples.map((s,i)=><pre key={i} className="mt-2 overflow-auto rounded-lg bg-slate-950 p-3 text-xs text-slate-300">Input:\n{s.input}\n\nOutput:\n{s.output}{s.explanation?`\n\n${s.explanation}`:""}</pre>)}</article><article className="flex flex-col p-4"><select value={language} onChange={e=>changeLanguage(e.target.value)} className="mb-3 w-fit rounded-lg bg-slate-950 px-3 py-2 text-sm text-cyan-300">{languages.map(x=><option key={x}>{x}</option>)}</select><div className="min-h-[320px] flex-1 overflow-hidden rounded-lg"><Monaco height="100%" language={language==="cpp"?"cpp":language} theme="vs-dark" value={code} onChange={x=>setCode(x||"")} options={{minimap:{enabled:false}}}/></div><textarea value={input} onChange={e=>setInput(e.target.value)} placeholder="Custom input for Run" className="mt-3 min-h-20 rounded-lg bg-slate-950 p-3 font-mono text-xs text-white"/><pre className="mt-3 min-h-20 whitespace-pre-wrap rounded-lg bg-slate-950 p-3 text-xs text-slate-300">{output||"Run code or submit to see results."}</pre><div className="mt-3 flex justify-end gap-2"><button onClick={()=>void run()} disabled={busy} className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-4 py-2 text-sm text-white"><Play size={15}/>Run</button><button onClick={()=>void submit()} disabled={busy} className="inline-flex items-center gap-2 rounded-lg bg-cyan-400 px-4 py-2 text-sm font-bold text-slate-950"><Send size={15}/>Submit</button></div></article></div>:<div className="flex min-h-[500px] flex-col items-center justify-center"><Code2 className="text-cyan-300" size={42}/><h2 className="mt-4 text-xl font-bold text-white">Choose a practice problem</h2><p className="text-sm text-slate-400">Progress is sourced from your submission history.</p></div>}</section></div>{message&&<p className="rounded-lg bg-cyan-400/10 p-3 text-sm text-cyan-100">{message}</p>}</div></main></DashboardLayout>;
 }
