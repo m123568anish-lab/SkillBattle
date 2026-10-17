@@ -29,6 +29,7 @@ async def test_dashboard_endpoint_success_and_latency(client):
     data = resp.json()
     assert "user" in data
     assert "stats" in data
+    assert isinstance(data["weekly_activity"], list)
     assert "command_center" in data
     print(f"\n[BENCHMARK] /dashboard response time: {elapsed*1000:.2f}ms")
 
@@ -89,4 +90,3 @@ async def test_dashboard_with_active_roadmap(client):
     data = resp.json()
     assert data["command_center"]["roadmap"]["title"] == "Fullstack Mastery"
     print(f"\n[BENCHMARK] /dashboard with roadmap: {elapsed*1000:.2f}ms")
-

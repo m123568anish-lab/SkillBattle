@@ -231,7 +231,7 @@ export default function DashboardPage() {
         {/* Daily Challenge */}
         {dashboard?.daily_challenge && (
           <div className="mt-8">
-            <DailyChallenge challenge={dashboard.daily_challenge} />
+              <DailyChallenge challenge={dashboard.daily_challenge} activity={dashboard.weekly_activity} />
           </div>
         )}
 

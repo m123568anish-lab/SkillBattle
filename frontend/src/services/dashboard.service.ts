@@ -65,7 +65,7 @@ export interface DashboardResponse {
 
     achievements: any[];
 
-    weekly_activity?: any[];
+    weekly_activity: Array<{ day: string; xp: number }>;
 
     ai_recommendation: any;
 

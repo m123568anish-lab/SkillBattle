@@ -8,6 +8,8 @@ Dashboard Service
 =========================================================
 """
 
+from datetime import datetime, timedelta
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
@@ -20,6 +22,7 @@ from app.modules.skill_intelligence.service import skill_intelligence_service
 from app.modules.profile.service import profile_service
 from app.modules.roadmap.service import roadmap_service
 from app.modules.xp.service import xp_service
+from app.models.xp import XPLedger
 
 from app.modules.dashboard.repository import (
     dashboard_repository,
@@ -226,7 +229,20 @@ class DashboardService:
             battles_won=battles_won,
         )
 
-        weekly: list[WeeklyActivity] = []
+        activity_result = await db.execute(
+            select(XPLedger.created_at, XPLedger.amount)
+            .where(
+                XPLedger.user_id == user_id,
+                XPLedger.created_at >= datetime.utcnow() - timedelta(days=84),
+            )
+            .order_by(XPLedger.created_at.asc())
+        )
+        activity_by_day: dict[str, int] = {}
+        for created_at, amount in activity_result.all():
+            if created_at:
+                day = created_at.date().isoformat()
+                activity_by_day[day] = activity_by_day.get(day, 0) + int(amount or 0)
+        weekly = [WeeklyActivity(day=day, xp=xp) for day, xp in sorted(activity_by_day.items())]
 
         achievement_list = [
             Achievement(

@@ -23,6 +23,11 @@ export interface Achievement {
   description: string;
   icon: string;
 }
+
+export interface WeeklyActivity {
+  day: string;
+  xp: number;
+}
 export interface AIRecommendation {
   title: string;
   message: string;
@@ -41,6 +46,7 @@ export interface DailyChallenge {
 export interface DashboardResponse {
   user: UserSummary;
   stats: DashboardStats;
+  weekly_activity: WeeklyActivity[];
   achievements: Achievement[];
   ai_recommendation: AIRecommendation;
   daily_challenge: DailyChallenge;

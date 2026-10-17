@@ -5,11 +5,23 @@ import { motion } from "framer-motion";
 const weeks = 12;
 const days = 7;
 
-function randomLevel() {
-  return Math.floor(Math.random() * 5);
+function getDays(activity: Array<{ day: string; xp: number }>) {
+  const values = new Map(activity.map((item) => [item.day, item.xp]));
+  const end = new Date();
+  end.setHours(0, 0, 0, 0);
+  const start = new Date(end);
+  start.setDate(start.getDate() - (weeks * days - 1));
+  return Array.from({ length: weeks * days }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    const key = date.toISOString().slice(0, 10);
+    return { key, xp: values.get(key) ?? 0 };
+  });
 }
 
-export default function CalendarHeatmap() {
+export default function CalendarHeatmap({ activity = [] }: { activity?: Array<{ day: string; xp: number }> }) {
+  const calendarDays = getDays(activity);
+  const hasActivity = activity.some((item) => item.xp > 0);
   return (
     <motion.div
       whileHover={{ y: -4 }}
@@ -41,8 +53,8 @@ export default function CalendarHeatmap() {
             >
 
               {Array.from({ length: days }).map((__, day) => {
-
-                const level = randomLevel();
+                const activityDay = calendarDays[week * days + day];
+                const level = activityDay.xp <= 0 ? 0 : activityDay.xp < 25 ? 1 : activityDay.xp < 75 ? 2 : activityDay.xp < 150 ? 3 : 4;
 
                 const colors = [
                   "bg-white/10",
@@ -55,6 +67,7 @@ export default function CalendarHeatmap() {
                 return (
                   <motion.div
                     key={day}
+                    title={`${activityDay.key}: ${activityDay.xp} XP`}
                     whileHover={{
                       scale: 1.4,
                     }}
@@ -76,6 +89,8 @@ export default function CalendarHeatmap() {
         </div>
 
       </div>
+
+      {!hasActivity && <p className="mt-5 text-sm text-slate-400">No verified XP activity recorded yet.</p>}
 
       <div className="mt-8 flex items-center gap-4 text-sm text-slate-400">
 

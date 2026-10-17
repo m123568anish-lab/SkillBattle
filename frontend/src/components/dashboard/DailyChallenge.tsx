@@ -12,9 +12,10 @@ import type { DailyChallenge as DailyChallengeType } from "@/types/dashboard";
 
 interface DailyChallengeProps {
   challenge: DailyChallengeType;
+  activity?: Array<{ day: string; xp: number }>;
 }
 
-export default function DailyChallenge({ challenge }: DailyChallengeProps) {
+export default function DailyChallenge({ challenge, activity = [] }: DailyChallengeProps) {
   const router = useRouter();
 
   const handleStartChallenge = () => {
@@ -101,7 +102,7 @@ export default function DailyChallenge({ challenge }: DailyChallengeProps) {
 
       {/* Calendar + Achievements Grid */}
       <div className="mt-8 grid gap-8 xl:grid-cols-2 relative z-10">
-        <CalendarHeatmap />
+        <CalendarHeatmap activity={activity} />
         <AchievementWidget />
       </div>
     </motion.div>
