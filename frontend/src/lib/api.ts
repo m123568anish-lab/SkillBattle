@@ -161,23 +161,11 @@ api.interceptors.response.use(
 
                 throw new Error("refresh token response missing access token");
             } catch (e) {
-                if (typeof window !== "undefined") {
+                const refreshStatus = axios.isAxiosError(e) ? e.response?.status : undefined;
+                if (typeof window !== "undefined" && (refreshStatus === 401 || refreshStatus === 403)) {
                     localStorage.removeItem("access_token");
                     localStorage.removeItem("refresh_token");
-                    const PUBLIC_ROUTES = [
-                        "/",
-                        "/login",
-                        "/register",
-                        "/forgot-password",
-                        "/verify-email",
-                        "/reset-password",
-                    ];
-
-                    const pathname = window.location.pathname || "/";
-
-                    if (!PUBLIC_ROUTES.includes(pathname)) {
-                        window.location.assign("/login");
-                    }
+                    window.dispatchEvent(new Event("skillbattle:session-invalid"));
                 }
                 return Promise.reject(e);
             } finally {

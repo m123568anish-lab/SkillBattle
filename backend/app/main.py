@@ -173,19 +173,6 @@ def root():
     }
 
 
-@app.get("/health")
-def health():
-    """
-    Liveness probe - is the app running?
-    """
-    return {
-        "success": True,
-        "status": "healthy",
-        "service": "SkillBattle API",
-        "version": "2.0.0",
-    }
-
-
 @app.get("/healthz")
 def healthz():
     """

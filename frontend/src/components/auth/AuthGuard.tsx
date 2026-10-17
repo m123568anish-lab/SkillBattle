@@ -40,9 +40,12 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const loading = useAuthStore((s) => s.loading);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
+  const status = useAuthStore((s) => s.status);
+  const authError = useAuthStore((s) => s.authError);
+  const loadUser = useAuthStore((s) => s.loadUser);
 
   useEffect(() => {
-    if (loading) return; // wait until auth resolved
+    if (loading || status === "unavailable" || status === "forbidden") return;
 
     if (!isAuthenticated && isProtectedRoute(pathname)) {
       router.replace("/login");
@@ -73,7 +76,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
       if (user) router.replace(getPostLoginPath(user));
       return;
     }
-  }, [loading, isAuthenticated, pathname, router, user]);
+  }, [loading, status, isAuthenticated, pathname, router, user]);
 
   const isProtected = isProtectedRoute(pathname);
 
@@ -94,6 +97,21 @@ export function AuthGuard({ children }: AuthGuardProps) {
         </div>
       </div>
     );
+  }
+
+  if (status === "unavailable") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#070B14] text-center text-slate-300">
+        <div className="space-y-4">
+          <p>{authError ?? "Authentication service is temporarily unavailable."}</p>
+          <button type="button" onClick={() => void loadUser()} className="rounded-xl bg-cyan-500 px-4 py-2 font-semibold text-slate-950">Try again</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "forbidden") {
+    return <div className="flex min-h-screen items-center justify-center bg-[#070B14] text-slate-300">Your account is not permitted to access SkillBattle.</div>;
   }
 
   const organizationSetupRequired = Boolean(user && getPostLoginPath(user) === "/organization-setup");

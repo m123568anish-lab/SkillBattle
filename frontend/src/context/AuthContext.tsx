@@ -53,9 +53,7 @@ export function AuthProvider({
 
     useEffect(() => {
             if (!clerkLoaded) {
-                if (!useAuthStore.getState().user) {
-                    useAuthStore.setState({ loading: true });
-                }
+                useAuthStore.setState({ loading: true, status: "loading" });
                 return;
             }
 
@@ -68,9 +66,23 @@ export function AuthProvider({
                     user: null,
                     isAuthenticated: false,
                     loading: false,
+                    status: "unauthenticated",
+                    authError: null,
                 });
             }
         }, [clerkLoaded, isSignedIn, loadUser]);
+
+    useEffect(() => {
+        const invalidate = () => useAuthStore.setState({
+            user: null,
+            isAuthenticated: false,
+            loading: false,
+            status: "unauthenticated",
+            authError: "Your session has expired. Please sign in again.",
+        });
+        window.addEventListener("skillbattle:session-invalid", invalidate);
+        return () => window.removeEventListener("skillbattle:session-invalid", invalidate);
+    }, []);
 
     return (
 

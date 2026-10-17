@@ -32,7 +32,6 @@ const ServerStatus = dynamic(() => import("@/components/dashboard/ServerStatus")
 
 import { useDashboard } from "@/hooks/use-dashboard";
 import { useAuthStore } from "@/store/authStore";
-import { getPostLoginPath } from "@/lib/auth-routing";
 
 function DeferredSection({ children, minHeight }: { children: ReactNode; minHeight: string }) {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -68,7 +67,6 @@ function DeferredSection({ children, minHeight }: { children: ReactNode; minHeig
 export default function DashboardPage() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const authLoading = useAuthStore((state) => state.loading);
   const [mounted, setMounted] = useState(false);
   const {
     dashboard,
@@ -83,12 +81,6 @@ export default function DashboardPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  useEffect(() => {
-    if (authLoading || !user) return;
-    const destination = getPostLoginPath(user);
-    if (destination !== "/dashboard") router.replace(destination);
-  }, [authLoading, router, user]);
 
   const defaultStats = {
     xp: 0,
