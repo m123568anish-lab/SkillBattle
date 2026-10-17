@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Search, ArrowUpRight, Menu } from "lucide-react";
 import api from "@/services/api";
@@ -20,12 +21,34 @@ type SearchResult = {
 
 export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () => void } = {}) {
   const router = useRouter();
+  const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+
+  const pageLabel = pathname
+    .split("/")
+    .filter(Boolean)
+    .slice(-1)[0]
+    ?.replace(/[-_]/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase()) || "Dashboard";
+
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, []);
 
   useEffect(() => {
     const query = searchQuery.trim();
@@ -41,7 +64,10 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
           signal: controller.signal,
         });
         if (active) {
-          setSearchResults(response.data.results);
+          const uniqueResults = response.data.results.filter((result, index, results) => (
+            results.findIndex((candidate) => `${candidate.type}:${candidate.href}:${candidate.title}` === `${result.type}:${result.href}:${result.title}`) === index
+          ));
+          setSearchResults(uniqueResults);
           setSearchError(false);
         }
       } catch {
@@ -98,10 +124,11 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
           </span>
         </Link>
 
-        <div className="relative hidden w-full max-w-xs lg:block">
-          <div className="flex w-full flex-1 items-center gap-3 rounded-xl border border-white/10 bg-[#0F172A] px-4 py-2.5 transition focus-within:border-cyan-400">
+        <div className="relative min-w-0 flex-1 lg:max-w-md">
+          <div className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-[#0F172A]/90 px-3 py-2 transition focus-within:border-cyan-400/70 focus-within:ring-1 focus-within:ring-cyan-400/30 sm:gap-3 sm:px-4 sm:py-2.5">
             <Search size={18} className="shrink-0 text-slate-400" />
             <input
+              ref={searchInputRef}
               value={searchQuery}
               onChange={(event) => {
                 const value = event.target.value;
@@ -109,13 +136,22 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
                 setSearchResults([]);
                 setSearchError(false);
                 setSearching(value.trim().length >= 2);
+                setHighlightedIndex(0);
                 setSearchOpen(true);
               }}
               onFocus={() => setSearchOpen(true)}
               onKeyDown={(event) => {
                 if (event.key === "Escape") setSearchOpen(false);
-                if (event.key === "Enter" && searchResults[0]) {
-                  router.push(searchResults[0].href);
+                if (event.key === "ArrowDown" && searchResults.length) {
+                  event.preventDefault();
+                  setHighlightedIndex((index) => (index + 1) % searchResults.length);
+                }
+                if (event.key === "ArrowUp" && searchResults.length) {
+                  event.preventDefault();
+                  setHighlightedIndex((index) => (index - 1 + searchResults.length) % searchResults.length);
+                }
+                if (event.key === "Enter" && searchResults[highlightedIndex]) {
+                  router.push(searchResults[highlightedIndex].href);
                   setSearchOpen(false);
                 }
               }}
@@ -124,9 +160,12 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
               aria-autocomplete="list"
               aria-expanded={searchOpen}
               aria-controls="global-search-results"
-              placeholder="Search platform..."
+              aria-activedescendant={searchResults.length ? `global-search-result-${highlightedIndex}` : undefined}
+              aria-keyshortcuts="Control+K Meta+K"
+              placeholder={`Search ${pageLabel.toLowerCase()}...`}
               className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
             />
+            <kbd className="hidden shrink-0 rounded border border-white/10 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 sm:inline">⌘K</kbd>
           </div>
           {searchOpen && searchQuery.trim().length >= 2 && (
             <>
@@ -152,14 +191,16 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
                   searchResults.map((result, index) => (
                     <button
                       key={`${result.type}-${result.href}-${index}`}
+                      id={`global-search-result-${index}`}
                       type="button"
                       role="option"
-                      aria-selected={false}
+                      aria-selected={highlightedIndex === index}
+                      onMouseEnter={() => setHighlightedIndex(index)}
                       onClick={() => {
                         router.push(result.href);
                         setSearchOpen(false);
                       }}
-                      className="flex w-full items-center gap-3 border-b border-white/5 px-4 py-3 text-left last:border-0 hover:bg-white/5"
+                      className={`flex w-full items-center gap-3 border-b border-white/5 px-4 py-3 text-left last:border-0 hover:bg-white/5 ${highlightedIndex === index ? "bg-cyan-400/10" : ""}`}
                     >
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium text-white">{result.title}</span>
@@ -176,6 +217,12 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
             </>
           )}
         </div>
+      </div>
+
+      <div className="absolute left-3 top-full hidden items-center gap-1.5 pt-1 text-[10px] text-slate-500 md:flex lg:left-[calc(theme(spacing.4)+10rem)]">
+        <span className="text-slate-600">Workspace</span>
+        <span aria-hidden="true">/</span>
+        <span className="font-medium text-slate-400">{pageLabel}</span>
       </div>
 
       <div className="flex items-center justify-end gap-3 sm:gap-4">

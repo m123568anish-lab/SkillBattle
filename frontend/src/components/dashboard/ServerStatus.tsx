@@ -165,7 +165,7 @@ export default function ServerStatus() {
         <div className="rounded-2xl bg-white/5 border border-white/5 p-3 text-center">
           <Activity className="h-3.5 w-3.5 text-violet-400 mx-auto mb-1" />
           <p className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-cyan-300">
-            {uptime ? `${uptime}%` : isOnline ? "~99%" : "0%"}
+            {uptime ? `${uptime}%` : "—"}
           </p>
           <p className="text-[10px] uppercase tracking-widest text-slate-500 mt-0.5">Uptime</p>
         </div>

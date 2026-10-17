@@ -21,11 +21,10 @@ function getCachedDashboard(): DashboardCachePayload | null {
         if (!stored) return null;
         const parsed = JSON.parse(stored) as DashboardCachePayload;
         const userStored = localStorage.getItem("skillbattle_user_cache");
-        if (userStored) {
-            const parsedUser = JSON.parse(userStored);
-            if (parsedUser?.id && parsed?.userId && parsedUser.id !== parsed.userId) {
-                return null;
-            }
+        if (!userStored) return null;
+        const parsedUser = JSON.parse(userStored);
+        if (!parsedUser?.id || !parsed?.userId || parsedUser.id !== parsed.userId) {
+            return null;
         }
         if (parsed?.data?.user?.id && parsed?.timestamp) {
             return parsed;
@@ -52,34 +51,56 @@ function saveDashboardToCache(data: DashboardResponse) {
 
 interface DashboardState {
     dashboard: DashboardResponse | null;
+    userId: string | null;
     loading: boolean;
     isRefreshing: boolean;
     isFromCache: boolean;
     lastRefreshedAt: string | null;
     error: string | null;
-    loadDashboard: () => Promise<void>;
+    loadDashboard: (userId?: string) => Promise<void>;
     refresh: () => Promise<void>;
 }
 
 const initialCache = getCachedDashboard();
 
 let activeDashboardPromise: Promise<void> | null = null;
+let activeDashboardUserId: string | null = null;
+let dashboardRequestVersion = 0;
 
 export const useDashboardStore = create<DashboardState>((set, get) => ({
     dashboard: initialCache ? initialCache.data : null,
+    userId: initialCache?.userId ?? null,
     loading: !initialCache,
     isRefreshing: false,
     isFromCache: Boolean(initialCache),
     lastRefreshedAt: initialCache ? initialCache.timestamp : null,
     error: null,
 
-    async loadDashboard() {
-        if (activeDashboardPromise) {
+    async loadDashboard(requestedUserId) {
+        const userId = requestedUserId ?? get().userId;
+        if (!userId) return;
+
+        if (activeDashboardPromise && activeDashboardUserId === userId) {
             return activeDashboardPromise;
+        }
+
+        if (get().userId !== userId) {
+            dashboardRequestVersion += 1;
+            set({
+                dashboard: null,
+                userId,
+                loading: true,
+                isRefreshing: false,
+                isFromCache: false,
+                lastRefreshedAt: null,
+                error: null,
+            });
         }
 
         const currentDashboard = get().dashboard;
         const hadDashboard = Boolean(currentDashboard);
+        const requestVersion = ++dashboardRequestVersion;
+        activeDashboardUserId = userId;
 
         set({
             loading: !hadDashboard,
@@ -90,10 +111,12 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         activeDashboardPromise = (async () => {
             try {
                 const data = await dashboardService.getDashboard();
+                if (requestVersion !== dashboardRequestVersion || data.user.id !== userId) return;
                 saveDashboardToCache(data);
 
                 set({
                     dashboard: data,
+                    userId,
                     loading: false,
                     isRefreshing: false,
                     isFromCache: false,
@@ -101,6 +124,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
                     error: null,
                 });
             } catch (err: unknown) {
+                if (requestVersion !== dashboardRequestVersion) return;
                 const responseData = isAxiosError(err) ? err.response?.data : null;
                 const serverMessage = responseData?.detail ?? responseData?.message;
                 const message = typeof serverMessage === "string"
@@ -117,7 +141,10 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
                     isFromCache: Boolean(state.dashboard),
                 }));
             } finally {
-                activeDashboardPromise = null;
+                if (activeDashboardUserId === userId) {
+                    activeDashboardPromise = null;
+                    activeDashboardUserId = null;
+                }
             }
         })();
 

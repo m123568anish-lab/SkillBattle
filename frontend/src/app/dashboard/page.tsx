@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
@@ -32,37 +32,6 @@ const ServerStatus = dynamic(() => import("@/components/dashboard/ServerStatus")
 
 import { useDashboard } from "@/hooks/use-dashboard";
 import { useAuthStore } from "@/store/authStore";
-
-function DeferredSection({ children, minHeight }: { children: ReactNode; minHeight: string }) {
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const [shouldRender, setShouldRender] = useState(false);
-
-  useEffect(() => {
-    const section = sectionRef.current;
-    if (!section) return;
-
-    if (!("IntersectionObserver" in window)) {
-      setShouldRender(true);
-      return;
-    }
-
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setShouldRender(true);
-        observer.disconnect();
-      }
-    }, { rootMargin: "600px 0px" });
-
-    observer.observe(section);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div ref={sectionRef} style={{ minHeight }}>
-      {shouldRender ? children : <DashboardPlaceholder minHeight={minHeight} />}
-    </div>
-  );
-}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -230,64 +199,71 @@ export default function DashboardPage() {
         </div>
 
         <div className="mt-8">
-          {dashboard?.command_center ? (
+          {loading && !dashboard ? (
+            <DashboardPlaceholder minHeight="16rem" />
+          ) : error && !dashboard ? (
+            <DashboardSectionError title="Command Center unavailable" onRetry={refresh} />
+          ) : dashboard?.command_center ? (
             <CommandCenterCard commandCenter={dashboard.command_center} />
           ) : (
-            <div className="h-64 rounded-3xl bg-[#0a0f1d] border border-white/[0.06] animate-pulse p-6">
-              <div className="h-6 w-48 rounded bg-white/[0.05] mb-4" />
-              <div className="h-4 w-72 rounded bg-white/[0.03] mb-8" />
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="h-28 rounded-2xl bg-white/[0.02]" />
-                <div className="h-28 rounded-2xl bg-white/[0.02]" />
-                <div className="h-28 rounded-2xl bg-white/[0.02]" />
-              </div>
-            </div>
+            <DashboardSectionEmpty title="Command Center is ready for more activity" detail="Complete a practice, assessment, or battle to generate personalized guidance." />
           )}
         </div>
 
         {/* AI Coach + Server Status Row */}
         <div className="mt-8">
           <div className="grid gap-6 lg:grid-cols-2">
-            {dashboard?.ai_recommendation ? (
+            {loading && !dashboard ? (
+              <DashboardPlaceholder minHeight="12rem" />
+            ) : error && !dashboard ? (
+              <DashboardSectionError title="Coach recommendation unavailable" onRetry={refresh} />
+            ) : dashboard?.ai_recommendation ? (
               <AICoachCard
                 recommendation={dashboard.ai_recommendation}
               />
             ) : (
-              <div className="h-48 rounded-2xl bg-[#0a0f1d] border border-white/[0.06] animate-pulse p-6">
-                <div className="h-6 w-40 rounded bg-white/[0.05] mb-3" />
-                <div className="h-4 w-full rounded bg-white/[0.03] mb-2" />
-                <div className="h-4 w-3/4 rounded bg-white/[0.03]" />
-              </div>
+              <DashboardSectionEmpty title="Your coach will learn from your activity" detail="There is not enough evidence for a personalized recommendation yet." />
             )}
-            <DeferredSection minHeight="18rem">
-              <ServerStatus />
-            </DeferredSection>
+            <ServerStatus />
           </div>
         </div>
 
         {/* Daily Challenge */}
         {dashboard?.daily_challenge && (
           <div className="mt-8">
-            <DeferredSection minHeight="42rem">
-              <DailyChallenge challenge={dashboard.daily_challenge} />
-            </DeferredSection>
+            <DailyChallenge challenge={dashboard.daily_challenge} />
           </div>
         )}
 
         {/* Quick OA Placement Speedrun */}
         <div className="mt-8">
-          <DeferredSection minHeight="10rem">
-            <QuickSpeedrunWidget />
-          </DeferredSection>
+          <QuickSpeedrunWidget />
         </div>
 
         {/* Battle Dock */}
         <div className="mt-8">
-          <DeferredSection minHeight="36rem">
-            <BattleDock />
-          </DeferredSection>
+          <BattleDock />
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+function DashboardSectionEmpty({ title, detail }: { title: string; detail: string }) {
+  return (
+    <section className="flex min-h-48 flex-col justify-center rounded-3xl border border-white/[0.08] bg-[#0a0f1d] p-6">
+      <h2 className="text-lg font-bold text-white">{title}</h2>
+      <p className="mt-2 max-w-xl text-sm text-slate-400">{detail}</p>
+    </section>
+  );
+}
+
+function DashboardSectionError({ title, onRetry }: { title: string; onRetry: () => void }) {
+  return (
+    <section role="alert" className="flex min-h-48 flex-col justify-center rounded-3xl border border-rose-400/20 bg-rose-500/[0.06] p-6">
+      <h2 className="text-lg font-bold text-rose-200">{title}</h2>
+      <p className="mt-2 text-sm text-rose-200/70">Live data could not be loaded.</p>
+      <button type="button" onClick={() => void onRetry()} className="mt-4 w-fit rounded-lg border border-rose-300/30 px-3 py-2 text-xs font-semibold text-rose-100 hover:bg-rose-400/10">Retry</button>
+    </section>
   );
 }
