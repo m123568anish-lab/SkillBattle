@@ -1,10 +1,23 @@
 import pytest
+import sys
 from uuid import uuid4
 from sqlalchemy import select
 
+from app.modules.auth.services import auth_service as auth_service_module
 from app.database.session import AsyncSessionLocal
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
+
+
+def test_login_environment_check_reads_pytest_current_test(monkeypatch):
+    """The login test-mode check must evaluate its environment variable safely."""
+    original_modules = sys.modules
+    monkeypatch.setattr(auth_service_module.sys, "modules", {})
+    monkeypatch.setenv("PYTEST_CURRENT_TEST", "auth login regression")
+    try:
+        assert auth_service_module._is_test_environment() is True
+    finally:
+        monkeypatch.setattr(auth_service_module.sys, "modules", original_modules)
 
 
 @pytest.mark.asyncio

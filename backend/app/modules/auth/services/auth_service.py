@@ -16,8 +16,10 @@ import base64
 import hashlib
 import hmac
 import logging
+import os
 import secrets
 import struct
+import sys
 import time
 import uuid
 from collections import defaultdict, deque
@@ -61,6 +63,11 @@ logger = logging.getLogger(__name__)
 _LOGIN_FAILURES: dict[str, deque[datetime]] = defaultdict(deque)
 _LOGIN_FAILURE_WINDOW = timedelta(minutes=15)
 _LOGIN_MAX_FAILURES = 5
+
+
+def _is_test_environment() -> bool:
+    """Disable external rate-limit calls only for the test process."""
+    return "pytest" in sys.modules or bool(os.getenv("PYTEST_CURRENT_TEST"))
 
 
 def _normalize_login_key(value: str | None) -> str:
@@ -195,8 +202,7 @@ class AuthService:
 
     ) -> dict:
 
-        import sys
-        if not ("pytest" in sys.modules or os.getenv("PYTEST_CURRENT_TEST")):
+        if not _is_test_environment():
             ip_key = _normalize_login_key(ip_address)
             email_key = _normalize_login_key(request.email)
             if not await rate_limiter.allow(f"auth-login-ip:{ip_key}", 30, 900):
