@@ -168,7 +168,7 @@ async def test_company_registration_and_job_workflow(client: AsyncClient):
     assert openings_resp.status_code == 200, openings_resp.text
     assert any(
         opening["job_id"] == job_resp.json()["id"] and opening["assessment_available"]
-        for opening in openings_resp.json()
+        for opening in openings_resp.json()["items"]
     )
 
     jobs_resp = await client.get("/company/jobs", headers=headers)

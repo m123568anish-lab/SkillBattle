@@ -167,6 +167,7 @@ def init_db() -> None:
                 logger.info(f"✅ Tables created: {list(Base.metadata.tables.keys())}")
             else:
                 Base.metadata.create_all(bind=engine)
+                _repair_company_tables()
                 logger.info("⚡ Database schema already initialized (%d tables found); verified all registered model tables exist.", len(existing_tables))
         except Exception as e:
             # Some DB backends may raise an OperationalError on concurrent create_all
@@ -483,20 +484,38 @@ def _repair_college_tables() -> None:
 def _repair_company_tables() -> None:
     """Add company recruitment fields to existing installations."""
     inspector = inspect(engine)
-    if "candidate_applications" not in inspector.get_table_names():
-        return
-
-    existing = {column["name"] for column in inspector.get_columns("candidate_applications")}
-    additions = {
-        "assessment_battle_id": "VARCHAR(36)",
-        "assessment_status": "VARCHAR(30) NOT NULL DEFAULT 'not_started'",
-        "assessment_score": "FLOAT",
-    }
     with engine.begin() as connection:
-        for name, definition in additions.items():
-            if name not in existing:
-                connection.execute(text(f'ALTER TABLE "candidate_applications" ADD COLUMN "{name}" {definition}'))
-                logger.info("Added missing candidate_applications.%s column", name)
+        tables = set(inspector.get_table_names())
+        if "job_postings" in tables:
+            existing = {column["name"] for column in inspector.get_columns("job_postings")}
+            additions = {
+                "category": "VARCHAR(100) NOT NULL DEFAULT 'general'",
+                "work_mode": "VARCHAR(20) NOT NULL DEFAULT 'on_site'",
+                "eligibility": "TEXT NOT NULL DEFAULT ''",
+                "application_url": "VARCHAR(500) NOT NULL DEFAULT ''",
+                "source_url": "VARCHAR(500) NOT NULL DEFAULT ''",
+                "source_label": "VARCHAR(120) NOT NULL DEFAULT 'Company'",
+                "verification_status": "VARCHAR(30) NOT NULL DEFAULT 'verified'",
+                "opens_at": "DATETIME",
+                "deadline_at": "DATETIME",
+            }
+            for name, definition in additions.items():
+                if name not in existing:
+                    connection.execute(text(f'ALTER TABLE "job_postings" ADD COLUMN "{name}" {definition}'))
+                    logger.info("Added missing job_postings.%s column", name)
+        if "candidate_applications" in tables:
+            existing = {column["name"] for column in inspector.get_columns("candidate_applications")}
+            additions = {
+                "assessment_battle_id": "VARCHAR(36)",
+                "assessment_status": "VARCHAR(30) NOT NULL DEFAULT 'not_started'",
+                "assessment_score": "FLOAT",
+                "application_method": "VARCHAR(30) NOT NULL DEFAULT 'internal'",
+                "externally_confirmed_at": "DATETIME",
+            }
+            for name, definition in additions.items():
+                if name not in existing:
+                    connection.execute(text(f'ALTER TABLE "candidate_applications" ADD COLUMN "{name}" {definition}'))
+                    logger.info("Added missing candidate_applications.%s column", name)
 
 
 def _repair_battle_tables() -> None:
@@ -782,4 +801,3 @@ def _seed_initial_questions() -> None:
                 },
             )
         logger.info("Seeded initial MCQ, Debugging, and Technical questions.")
-
