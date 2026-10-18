@@ -152,8 +152,8 @@ export function getMobileNavigation(portal: PortalKind): PortalNavItem[] {
   return [
     { title: "Home", href: "/dashboard", icon: Home, category: "mobile", available: true },
     { title: "Battle", href: "/battle", icon: Sword, category: "mobile", available: true },
-    { title: "Leaderboard", href: "/leaderboard", icon: Trophy, category: "mobile", available: true },
-    { title: "Friends", href: "/friends", icon: Users, category: "mobile", available: true },
+    { title: "Practice", href: "/tasks", icon: Code2, category: "mobile", available: true },
+    { title: "Jobs", href: "/opportunities", icon: BriefcaseBusiness, category: "mobile", available: true },
     { title: "More", icon: Layers3, category: "mobile", available: true },
   ];
 }
@@ -175,6 +175,7 @@ export const sidebarItems: SidebarItem[] = [
   { title: "Resume Tools", href: "/career/resume", icon: FileText, category: "career" },
   { title: "Career Mentor", href: "/career/mentor", icon: Bot, category: "career" },
   { title: "Placement Prep", href: "/placement", icon: Target, category: "career" },
+  { title: "Opportunities", href: "/opportunities", icon: BriefcaseBusiness, category: "career" },
 
   { title: "Friends", href: "/friends", icon: Users, category: "community" },
 

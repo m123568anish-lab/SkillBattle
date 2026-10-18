@@ -13,7 +13,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -81,6 +81,15 @@ class JobPosting(Base):
     description: Mapped[str] = mapped_column(Text, default="")
     required_skills: Mapped[str] = mapped_column(Text, default="")
     compensation: Mapped[str] = mapped_column(String(120), default="")
+    category: Mapped[str] = mapped_column(String(100), default="general")
+    work_mode: Mapped[str] = mapped_column(String(20), default="on_site")
+    eligibility: Mapped[str] = mapped_column(Text, default="")
+    application_url: Mapped[str] = mapped_column(String(500), default="")
+    source_url: Mapped[str] = mapped_column(String(500), default="")
+    source_label: Mapped[str] = mapped_column(String(120), default="Company")
+    verification_status: Mapped[str] = mapped_column(String(30), default="verified")
+    opens_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    deadline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String(30), default="draft")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -95,6 +104,8 @@ class CandidateApplication(Base):
     job_id: Mapped[int] = mapped_column(ForeignKey("job_postings.id", ondelete="CASCADE"), nullable=False, index=True)
     candidate_user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     source: Mapped[str] = mapped_column(String(50), default="platform")
+    application_method: Mapped[str] = mapped_column(String(30), default="internal", nullable=False)
+    externally_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="applied")
     score: Mapped[int] = mapped_column(Integer, default=0)
     consent_to_recruiters: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -102,6 +113,26 @@ class CandidateApplication(Base):
     assessment_status: Mapped[str] = mapped_column(String(30), default="not_started", nullable=False)
     assessment_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("job_id", "candidate_user_id", name="uq_candidate_application_job_user"),)
+
+
+class SavedOpportunity(Base):
+    __tablename__ = "saved_opportunities"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    job_id: Mapped[int] = mapped_column(ForeignKey("job_postings.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    __table_args__ = (UniqueConstraint("job_id", "user_id", name="uq_saved_opportunity_job_user"),)
+
+
+class ApplicationStatusHistory(Base):
+    __tablename__ = "application_status_history"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    application_id: Mapped[int] = mapped_column(ForeignKey("candidate_applications.id", ondelete="CASCADE"), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(50), nullable=False)
+    changed_by_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
 
 
 class CompanyInterview(Base):

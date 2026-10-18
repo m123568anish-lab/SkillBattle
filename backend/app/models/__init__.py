@@ -41,7 +41,7 @@ from .college import (
     CollegeAssessmentQuestion,
     CollegeAssessmentSubmission,
 )
-from .company import Company, CompanyMember, CandidateApplication, CandidatePrivacySettings, CompanyInterview, JobPosting
+from .company import ApplicationStatusHistory, Company, CompanyMember, CandidateApplication, CandidatePrivacySettings, CompanyInterview, JobPosting, SavedOpportunity
 from .battle import BattleConfig, BattleRoom, BattleParticipant, BattleSubmission, BattleResult
 from .assessment_engine import UnifiedAssessment, AssessmentAttempt, AssessmentQuestionSubmission, StudentSkillProfile
 from .notification import Notification
@@ -100,6 +100,8 @@ __all__ = [
     "CandidatePrivacySettings",
     "JobPosting",
     "CandidateApplication",
+    "SavedOpportunity",
+    "ApplicationStatusHistory",
     "CompanyInterview",
     "Notification",
     "AuditLog",

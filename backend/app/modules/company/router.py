@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,7 +11,7 @@ from app.database.session import get_db
 from app.models.company import JobPosting
 from app.models.user import User
 from app.models.battle.battle_config import BattleConfig
-from app.modules.company.schemas import CandidateApplicationConsentRequest, CandidateApplicationRequest, CandidateApplicationStatusRequest, CompanyAssessmentCreate, CompanyDashboardResponse, CompanyRegisterRequest, CompanyStatusRequest, CompanySummary, InterviewScheduleRequest, JobPostingRequest, JobPostingResponse
+from app.modules.company.schemas import CandidateApplicationConsentRequest, CandidateApplicationRequest, CandidateApplicationStatusRequest, CompanyAssessmentCreate, CompanyDashboardResponse, CompanyRegisterRequest, CompanyStatusRequest, CompanySummary, ExternalApplicationRequest, InterviewScheduleRequest, JobPostingRequest, JobPostingResponse
 from app.modules.battle.schemas import BattleConfigResponse, BattleResponse, CreateBattleRequest
 from app.modules.battle.service import battle_service
 from app.modules.company.service import company_service
@@ -147,8 +147,34 @@ async def create_job_assessment(
 
 
 @router.get("/openings")
-async def list_openings(db: AsyncSession = Depends(get_db)):
-    return await company_service.list_openings(db)
+async def list_openings(
+    q: str = "", category: str | None = None, work_mode: str | None = None,
+    employment_type: str | None = None, page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+):
+    return await company_service.list_openings(db, q=q, category=category, work_mode=work_mode, employment_type=employment_type, page=page, page_size=page_size)
+
+
+@router.get("/openings/{job_id}")
+async def get_opening(job_id: int, db: AsyncSession = Depends(get_db)):
+    return await company_service.get_opening(db, job_id)
+
+
+@router.get("/saved-opportunities")
+async def list_saved_opportunities(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return await company_service.list_saved_opportunities(db, current_user)
+
+
+@router.put("/openings/{job_id}/save")
+async def save_opportunity(job_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    saved = await company_service.save_opportunity(db, current_user, job_id)
+    return {"job_id": saved.job_id, "saved": True}
+
+
+@router.delete("/openings/{job_id}/save")
+async def unsave_opportunity(job_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    await company_service.unsave_opportunity(db, current_user, job_id)
+    return {"job_id": job_id, "saved": False}
 
 
 @router.get("/my-applications")
@@ -275,6 +301,14 @@ async def submit_application(
 ):
     application = await company_service.submit_application(db, current_user, payload.model_dump())
     return {"status": "applied", "application_id": application.id, "job_id": application.job_id}
+
+
+@router.post("/applications/external")
+async def confirm_external_application(payload: ExternalApplicationRequest, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if not payload.confirm_applied:
+        raise HTTPException(status_code=422, detail="Confirmation is required to record an external application.")
+    application = await company_service.confirm_external_application(db, current_user, payload.job_id)
+    return {"status": "self_reported_external", "application_id": application.id, "job_id": application.job_id}
 
 
 @router.get("/candidates")

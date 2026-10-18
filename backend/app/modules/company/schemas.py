@@ -25,11 +25,24 @@ class JobPostingRequest(BaseModel):
     required_skills: str = Field(default="")
     compensation: str = Field(default="")
     status: str = Field(default="draft")
+    category: str = Field(default="general", max_length=100)
+    work_mode: str = Field(default="on_site", pattern="^(remote|hybrid|on_site)$")
+    eligibility: str = Field(default="")
+    application_url: str = Field(default="", max_length=500)
+    source_url: str = Field(default="", max_length=500)
+    source_label: str = Field(default="Company", max_length=120)
+    opens_at: datetime | None = None
+    deadline_at: datetime | None = None
 
 
 class CandidateApplicationRequest(BaseModel):
     job_id: int
     consent_to_recruiters: bool = False
+
+
+class ExternalApplicationRequest(BaseModel):
+    job_id: int
+    confirm_applied: bool = True
 
 
 class CompanySummary(BaseModel):

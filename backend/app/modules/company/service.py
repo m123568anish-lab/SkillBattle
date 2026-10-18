@@ -8,7 +8,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.company import CandidateApplication, CandidatePrivacySettings, Company, CompanyInterview, CompanyMember, JobPosting
+from app.models.company import ApplicationStatusHistory, CandidateApplication, CandidatePrivacySettings, Company, CompanyInterview, CompanyMember, JobPosting, SavedOpportunity
 from app.models.profile import Profile
 from app.models.skill_intelligence import SkillEvidence
 from app.models.user import User
@@ -22,6 +22,15 @@ from app.modules.skill_intelligence.service import normalize_skill_id
 
 
 class CompanyService:
+    @staticmethod
+    def _is_open(job: JobPosting) -> bool:
+        now = datetime.now(timezone.utc)
+        if job.status not in {"open", "active"} or job.verification_status != "verified":
+            return False
+        if job.opens_at and job.opens_at.replace(tzinfo=job.opens_at.tzinfo or timezone.utc) > now:
+            return False
+        return not job.deadline_at or job.deadline_at.replace(tzinfo=job.deadline_at.tzinfo or timezone.utc) >= now
+
     async def register_company(self, db: AsyncSession, user: User, payload: dict[str, Any]) -> Company:
         if not user or not getattr(user, "id", None):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required.")
@@ -86,6 +95,14 @@ class CompanyService:
             description=(payload.get("description") or "").strip(),
             required_skills=(payload.get("required_skills") or "").strip(),
             compensation=(payload.get("compensation") or "").strip(),
+            category=(payload.get("category") or "general").strip(),
+            work_mode=(payload.get("work_mode") or "on_site").strip(),
+            eligibility=(payload.get("eligibility") or "").strip(),
+            application_url=(payload.get("application_url") or "").strip(),
+            source_url=(payload.get("source_url") or "").strip(),
+            source_label=(payload.get("source_label") or "Company").strip(),
+            opens_at=payload.get("opens_at"),
+            deadline_at=payload.get("deadline_at"),
             status=(payload.get("status") or "draft").strip(),
         )
         db.add(job)
@@ -132,16 +149,29 @@ class CompanyService:
         )
         return await battle_config_service.create_config(db, config)
 
-    async def list_openings(self, db: AsyncSession) -> list[dict[str, Any]]:
+    async def list_openings(self, db: AsyncSession, *, q: str = "", category: str | None = None, work_mode: str | None = None, employment_type: str | None = None, page: int = 1, page_size: int = 20) -> dict[str, Any]:
         stmt = (
             select(JobPosting, Company, BattleConfig.id)
             .join(Company, Company.id == JobPosting.company_id)
             .outerjoin(BattleConfig, BattleConfig.job_id == JobPosting.id)
-            .where(Company.status == "verified", JobPosting.status.in_(("open", "active")))
+            .where(Company.status == "verified", JobPosting.status.in_(("open", "active")), JobPosting.verification_status == "verified")
             .order_by(JobPosting.created_at.desc())
         )
+        if q.strip():
+            from sqlalchemy import or_
+            term = f"%{q.strip()}%"
+            stmt = stmt.where(or_(Company.name.ilike(term), JobPosting.title.ilike(term), JobPosting.required_skills.ilike(term)))
+        if category:
+            stmt = stmt.where(JobPosting.category == category)
+        if work_mode:
+            stmt = stmt.where(JobPosting.work_mode == work_mode)
+        if employment_type:
+            stmt = stmt.where(JobPosting.employment_type == employment_type)
         result = await db.execute(stmt)
-        return [
+        rows = [(job, company, assessment_id) for job, company, assessment_id in result.all() if self._is_open(job)]
+        total = len(rows)
+        rows = rows[(max(page, 1) - 1) * page_size:max(page, 1) * page_size]
+        items = [
             {
                 "job_id": job.id,
                 "company_id": company.id,
@@ -152,10 +182,52 @@ class CompanyService:
                 "remote_allowed": job.remote_allowed,
                 "description": job.description,
                 "required_skills": job.required_skills,
+                "compensation": job.compensation or None,
+                "category": job.category,
+                "work_mode": job.work_mode,
+                "eligibility": job.eligibility,
+                "deadline_at": job.deadline_at.replace(tzinfo=job.deadline_at.tzinfo or timezone.utc).isoformat() if job.deadline_at else None,
+                "source_label": job.source_label,
+                "source_url": job.source_url,
+                "application_method": "external" if job.application_url else "internal",
+                "application_url": job.application_url or None,
+                "verification_status": job.verification_status,
                 "assessment_available": assessment_id is not None,
             }
-            for job, company, assessment_id in result.all()
+            for job, company, assessment_id in rows
         ]
+        return {"items": items, "page": page, "page_size": page_size, "total": total}
+
+    async def get_opening(self, db: AsyncSession, job_id: int) -> dict[str, Any]:
+        result = await db.execute(select(JobPosting, Company).join(Company).where(JobPosting.id == job_id))
+        row = result.one_or_none()
+        if not row or row[1].status != "verified" or row[0].verification_status != "verified":
+            raise HTTPException(status_code=404, detail="Opportunity not found.")
+        job, company = row
+        return {"job_id": job.id, "company_name": company.name, "title": job.title, "description": job.description, "required_skills": job.required_skills, "eligibility": job.eligibility, "location": job.location, "work_mode": job.work_mode, "employment_type": job.employment_type, "compensation": job.compensation or None, "deadline_at": job.deadline_at.replace(tzinfo=job.deadline_at.tzinfo or timezone.utc).isoformat() if job.deadline_at else None, "source_label": job.source_label, "source_url": job.source_url, "application_url": job.application_url or None, "application_method": "external" if job.application_url else "internal", "is_open": self._is_open(job)}
+
+    async def save_opportunity(self, db: AsyncSession, user: User, job_id: int) -> SavedOpportunity:
+        await self.get_opening(db, job_id)
+        existing = await db.execute(select(SavedOpportunity).where(SavedOpportunity.job_id == job_id, SavedOpportunity.user_id == user.id))
+        saved = existing.scalar_one_or_none()
+        if saved:
+            return saved
+        saved = SavedOpportunity(job_id=job_id, user_id=user.id)
+        db.add(saved)
+        await db.commit()
+        await db.refresh(saved)
+        return saved
+
+    async def unsave_opportunity(self, db: AsyncSession, user: User, job_id: int) -> None:
+        result = await db.execute(select(SavedOpportunity).where(SavedOpportunity.job_id == job_id, SavedOpportunity.user_id == user.id))
+        saved = result.scalar_one_or_none()
+        if saved:
+            await db.delete(saved)
+            await db.commit()
+
+    async def list_saved_opportunities(self, db: AsyncSession, user: User) -> list[dict[str, Any]]:
+        result = await db.execute(select(SavedOpportunity, JobPosting, Company).join(JobPosting, JobPosting.id == SavedOpportunity.job_id).join(Company, Company.id == JobPosting.company_id).where(SavedOpportunity.user_id == user.id).order_by(SavedOpportunity.created_at.desc()))
+        return [{"saved_at": saved.created_at.replace(tzinfo=timezone.utc).isoformat(), "job_id": job.id, "company_name": company.name, "title": job.title, "status": "open" if self._is_open(job) else "closed", "deadline_at": job.deadline_at.replace(tzinfo=job.deadline_at.tzinfo or timezone.utc).isoformat() if job.deadline_at else None} for saved, job, company in result.all()]
 
     async def list_user_applications(self, db: AsyncSession, user: User) -> list[dict[str, Any]]:
         stmt = (
@@ -173,7 +245,11 @@ class CompanyService:
                 "application_id": application.id,
                 "job_id": job.id,
                 "company_name": company.name,
+                "job_title": job.title,
                 "status": application.status,
+                "application_method": application.application_method,
+                "submitted_at": application.created_at.replace(tzinfo=timezone.utc).isoformat(),
+                "externally_confirmed_at": application.externally_confirmed_at.replace(tzinfo=application.externally_confirmed_at.tzinfo or timezone.utc).isoformat() if application.externally_confirmed_at else None,
                 "consent_to_recruiters": application.consent_to_recruiters,
                 "assessment_config_id": config_id,
                 "assessment_status": application.assessment_status,
@@ -238,12 +314,11 @@ class CompanyService:
         application = result.scalar_one_or_none()
         if not application:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found for this company.")
-
         transitions = {
-            "applied": {"shortlisted", "rejected"},
-            "shortlisted": {"rejected"},
+            "applied": {"shortlisted", "rejected", "withdrawn"},
+            "shortlisted": {"interview", "rejected", "withdrawn"},
             "interview": {"offer", "rejected"},
-            "offer": {"hired", "rejected"},
+            "offer": {"hired", "rejected", "withdrawn"},
             "hired": set(),
             "rejected": set(),
         }
@@ -282,6 +357,7 @@ class CompanyService:
         status_changed = application.status != new_status
         application.status = new_status
         if status_changed:
+            db.add(ApplicationStatusHistory(application_id=application.id, status=new_status, changed_by_user_id=user.id))
             audit_service.enqueue(
                 db,
                 action="candidate_application_status_updated",
@@ -925,8 +1001,10 @@ class CompanyService:
         job = result.scalar_one_or_none()
         if not job:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found.")
-        if job.status not in {"open", "active"}:
+        if not self._is_open(job):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This job is not accepting applications.")
+        if job.application_url:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This opportunity is applied to on the external website.")
         company_result = await db.execute(select(Company).where(Company.id == job.company_id))
         company = company_result.scalar_one_or_none()
         if not company or company.status != "verified":
@@ -951,6 +1029,7 @@ class CompanyService:
         )
         db.add(application)
         await db.flush()
+        db.add(ApplicationStatusHistory(application_id=application.id, status="applied", changed_by_user_id=user.id))
 
         members_result = await db.execute(
             select(CompanyMember.user_id).where(
@@ -983,6 +1062,23 @@ class CompanyService:
             metadata={"job_id": job.id},
         )
 
+        await db.commit()
+        await db.refresh(application)
+        return application
+
+    async def confirm_external_application(self, db: AsyncSession, user: User, job_id: int) -> CandidateApplication:
+        job_result = await db.execute(select(JobPosting).where(JobPosting.id == job_id))
+        job = job_result.scalar_one_or_none()
+        if not job or not self._is_open(job) or not job.application_url:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This external opportunity is not available for tracking.")
+        existing = await db.execute(select(CandidateApplication).where(CandidateApplication.job_id == job_id, CandidateApplication.candidate_user_id == user.id))
+        application = existing.scalar_one_or_none()
+        if application:
+            return application
+        application = CandidateApplication(job_id=job_id, candidate_user_id=user.id, source="external_self_reported", application_method="external_self_reported", status="applied", externally_confirmed_at=datetime.now(timezone.utc))
+        db.add(application)
+        await db.flush()
+        db.add(ApplicationStatusHistory(application_id=application.id, status="applied", changed_by_user_id=user.id))
         await db.commit()
         await db.refresh(application)
         return application

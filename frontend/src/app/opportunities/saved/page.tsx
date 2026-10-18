@@ -1,0 +1,7 @@
+"use client";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { opportunityService } from "@/services/placement.service";
+type Saved = { job_id: number; company_name: string; title: string; status: string; deadline_at: string | null };
+export default function SavedOpportunitiesPage() { const [items, setItems] = useState<Saved[]>([]); const [error, setError] = useState(""); useEffect(() => { void opportunityService.saved().then(setItems).catch(() => setError("Saved opportunities could not be loaded.")); }, []); return <DashboardLayout><main className="mx-auto max-w-4xl space-y-5 pb-6"><header><p className="text-xs font-semibold uppercase text-cyan-300">Career opportunities</p><h1 className="mt-1 text-2xl font-bold">Saved opportunities</h1></header>{error ? <p role="alert" className="text-rose-200">{error}</p> : items.length === 0 ? <p className="rounded-xl border border-dashed border-white/15 p-6 text-slate-400">You have no saved opportunities.</p> : items.map((item) => <Link key={item.job_id} href="/opportunities" className="block rounded-xl border border-white/10 bg-[#0b1020] p-4"><p className="font-semibold text-white">{item.title}</p><p className="mt-1 text-sm text-slate-400">{item.company_name} · {item.status}{item.deadline_at ? ` · Deadline ${new Date(item.deadline_at).toLocaleDateString()}` : ""}</p></Link>)}</main></DashboardLayout>; }

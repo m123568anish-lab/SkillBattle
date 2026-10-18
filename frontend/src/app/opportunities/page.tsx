@@ -1,123 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { isAxiosError } from "axios";
-import { ArrowUpRight, BriefcaseBusiness, MapPin, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { Bookmark, ExternalLink, MapPin, Search } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import api from "@/lib/api";
+import { opportunityService, type Opportunity } from "@/services/placement.service";
 
-type CompanyOpening = {
-  job_id: number;
-  company_id: number;
-  company_name: string;
-  title: string;
-  location: string;
-  employment_type: string;
-  remote_allowed: boolean;
-  description: string;
-  required_skills: string;
-  assessment_available: boolean;
-};
-
-type StudentApplication = {
-  application_id: number;
-  job_id: number;
-  company_name: string;
-  job_title: string;
-  status: string;
-  consent_to_recruiters: boolean;
-  assessment_config_id: string | null;
-  assessment_status: string;
-};
-
-function errorMessage(error: unknown): string {
-  if (isAxiosError(error) && typeof error.response?.data?.detail === "string") return error.response.data.detail;
-  return error instanceof Error ? error.message : "Opportunities could not be loaded.";
-}
+const categories = ["AI/ML and Data Science", "Web and Software Development", "Cloud, DevOps and Cybersecurity", "Data Analytics and SQL", "Business, Design and Product", "General Internships and Graduate Placements"];
 
 export default function OpportunitiesPage() {
-  const [openings, setOpenings] = useState<CompanyOpening[]>([]);
-  const [applications, setApplications] = useState<StudentApplication[]>([]);
-  const [consentByJob, setConsentByJob] = useState<Record<number, boolean>>({});
-  const [loading, setLoading] = useState(true);
-  const [submittingJobId, setSubmittingJobId] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [refreshVersion, setRefreshVersion] = useState(0);
-
-  useEffect(() => {
-    let active = true;
-    void Promise.all([
-      api.get<CompanyOpening[]>("/company/openings"),
-      api.get<StudentApplication[]>("/company/my-applications"),
-    ]).then(([openingResponse, applicationResponse]) => {
-      if (!active) return;
-      setOpenings(openingResponse.data);
-      setApplications(applicationResponse.data);
-    }).catch((loadError: unknown) => {
-      if (active) setError(errorMessage(loadError));
-    }).finally(() => {
-      if (active) setLoading(false);
-    });
-    return () => { active = false; };
-  }, [refreshVersion]);
-
-  async function apply(jobId: number) {
-    setSubmittingJobId(jobId);
-    setError(null);
-    setNotice(null);
-    try {
-      await api.post("/company/applications", {
-        job_id: jobId,
-        consent_to_recruiters: consentByJob[jobId] ?? false,
-      });
-      setNotice("Application submitted. Candidate details remain governed by your privacy settings and this consent choice.");
-      setRefreshVersion((version) => version + 1);
-    } catch (applyError) {
-      setError(errorMessage(applyError));
-    } finally {
-      setSubmittingJobId(null);
-    }
-  }
-
-  const appliedJobIds = new Set(applications.map((application) => application.job_id));
-
-  return (
-    <DashboardLayout>
-      <main className="mx-auto max-w-6xl space-y-6 pb-8">
-        <header className="border-b border-white/10 pb-5">
-          <p className="text-xs font-semibold uppercase text-cyan-300">Career opportunities</p>
-          <h1 className="mt-2 text-2xl font-semibold text-white sm:text-3xl">Company openings</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Open roles from verified companies. Apply with control over recruiter-sharing consent.</p>
-        </header>
-        {error && <div role="alert" className="rounded-xl border border-rose-400/20 bg-rose-400/5 px-4 py-3 text-sm text-rose-200">{error}</div>}
-        {notice && <div role="status" className="rounded-xl border border-emerald-400/20 bg-emerald-400/5 px-4 py-3 text-sm text-emerald-200">{notice}</div>}
-
-        <section className="rounded-2xl border border-white/10 bg-[#0b1020] p-5 sm:p-6">
-          <div className="mb-5 flex items-center gap-2"><BriefcaseBusiness size={18} className="text-cyan-300" /><h2 className="font-semibold text-white">Open roles · {openings.length}</h2></div>
-          {loading ? <p className="text-sm text-slate-400">Loading verified openings…</p>
-            : openings.length === 0 ? <p className="rounded-xl border border-dashed border-white/10 px-4 py-6 text-sm text-slate-400">There are no open roles from verified companies right now.</p>
-              : <div className="grid gap-4 xl:grid-cols-2">{openings.map((job) => {
-                const applied = appliedJobIds.has(job.job_id);
-                return (
-                  <article key={job.job_id} className="flex min-w-0 flex-col rounded-xl border border-white/10 bg-white/[0.02] p-4 sm:p-5">
-                    <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="text-lg font-semibold text-white">{job.title}</h3><p className="mt-1 text-sm text-slate-300">{job.company_name}</p></div><span className="shrink-0 rounded-full border border-cyan-400/15 bg-cyan-400/5 px-2.5 py-1 text-[10px] capitalize text-cyan-100">{job.employment_type.replaceAll("_", " ")}</span></div>
-                    <p className="mt-3 flex items-center gap-1.5 text-xs text-slate-400"><MapPin size={13} />{job.location || (job.remote_allowed ? "Remote" : "Location not specified")}{job.remote_allowed ? " · Remote allowed" : ""}</p>
-                    <p className="mt-4 line-clamp-4 text-sm leading-6 text-slate-400">{job.description || "No role description provided."}</p>
-                    <p className="mt-4 text-xs text-cyan-100">Required skills: {job.required_skills || "Not specified"}</p>
-                    {job.assessment_available && <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-200"><ShieldCheck size={13} />Company assessment available after application</p>}
-                    {!applied && <label className="mt-5 flex items-start gap-2.5 rounded-lg border border-white/5 bg-white/[0.02] p-3 text-xs leading-5 text-slate-400"><input type="checkbox" checked={consentByJob[job.job_id] ?? false} onChange={(event) => setConsentByJob((current) => ({ ...current, [job.job_id]: event.target.checked }))} className="mt-1 accent-cyan-400" /><span>I consent to recruiter review for this application. Contact and skill details are shared only when enabled in my privacy settings.</span></label>}
-                    <div className="mt-auto flex items-center justify-between gap-3 pt-5"><span className="text-xs text-slate-500">{applied ? `Application: ${applications.find((item) => item.job_id === job.job_id)?.status || "submitted"}` : "Application status is stored in your account."}</span>{applied ? <span className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-semibold text-emerald-200">Applied</span> : <button type="button" className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={submittingJobId === job.job_id} onClick={() => void apply(job.job_id)}>{submittingJobId === job.job_id ? "Applying…" : "Apply"}<ArrowUpRight size={14} /></button>}</div>
-                  </article>
-                );
-              })}</div>}
-        </section>
-
-        <section className="rounded-2xl border border-white/10 bg-[#0b1020] p-5 sm:p-6">
-          <h2 className="mb-4 font-semibold text-white">My applications</h2>
-          {loading ? <p className="text-sm text-slate-400">Loading applications…</p> : applications.length === 0 ? <p className="text-sm text-slate-400">You have not applied to any openings yet.</p> : <div className="divide-y divide-white/5">{applications.map((application) => <div key={application.application_id} className="flex flex-wrap items-center justify-between gap-3 py-3"><div><p className="text-sm font-medium text-white">{application.job_title}</p><p className="mt-1 text-xs text-slate-400">{application.company_name}</p></div><div className="text-right"><p className="text-xs capitalize text-slate-300">{application.status.replaceAll("_", " ")}</p><p className="mt-1 text-[10px] text-slate-500">Assessment: {application.assessment_status.replaceAll("_", " ")}</p></div></div>)}</div>}
-        </section>
-      </main>
-    </DashboardLayout>
-  );
+  const [items, setItems] = useState<Opportunity[]>([]); const [q, setQ] = useState(""); const [category, setCategory] = useState(""); const [workMode, setWorkMode] = useState(""); const [page, setPage] = useState(1); const [total, setTotal] = useState(0); const [loading, setLoading] = useState(true); const [error, setError] = useState(""); const [notice, setNotice] = useState(""); const [busy, setBusy] = useState<number | null>(null);
+  const load = async () => { setLoading(true); setError(""); try { const result = await opportunityService.list({ q, category: category || undefined, work_mode: workMode || undefined, page }); setItems(result.items); setTotal(result.total); } catch { setError("Verified opportunities could not be loaded. Please retry."); } finally { setLoading(false); } };
+  useEffect(() => { void load(); }, [page, category, workMode]);
+  const submitSearch = (e: React.FormEvent) => { e.preventDefault(); setPage(1); void load(); };
+  async function save(jobId: number) { setBusy(jobId); try { await opportunityService.save(jobId); setNotice("Opportunity saved to your account."); } catch { setError("Could not save this opportunity."); } finally { setBusy(null); } }
+  async function apply(job: Opportunity) { setBusy(job.job_id); try { if (job.application_method === "external" && job.application_url) { window.open(job.application_url, "_blank", "noopener,noreferrer"); await opportunityService.confirmExternal(job.job_id); setNotice("Opened the external application. It is self-reported, not employer-confirmed."); } else { await opportunityService.apply(job.job_id); setNotice("Application submitted and saved to My Applications."); } } catch { setError("This application could not be completed. The opportunity may have closed."); } finally { setBusy(null); } }
+  return <DashboardLayout><main className="mx-auto max-w-6xl space-y-5 pb-6"><header><p className="text-xs font-semibold uppercase tracking-wider text-cyan-300">Career opportunities</p><div className="mt-1 flex flex-wrap items-end justify-between gap-3"><div><h1 className="text-2xl font-bold text-white sm:text-3xl">Internships & placements</h1><p className="mt-1 text-sm text-slate-400">Verified company listings and attributed external openings.</p></div><div className="flex gap-2"><Link href="/opportunities/saved" className="rounded-xl border border-white/10 px-3 py-2 text-sm text-slate-200">Saved</Link><Link href="/opportunities/applications" className="rounded-xl border border-white/10 px-3 py-2 text-sm text-slate-200">My applications</Link></div></div></header>
+  <form onSubmit={submitSearch} className="rounded-2xl border border-white/10 bg-[#0b1020] p-3 sm:p-4"><div className="flex flex-col gap-2 sm:flex-row"><label className="flex min-h-11 flex-1 items-center gap-2 rounded-xl bg-white/5 px-3"><Search size={17} className="text-cyan-300"/><input aria-label="Search opportunities" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Company, role, or skill" className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500"/></label><select aria-label="Work mode" value={workMode} onChange={(e) => { setWorkMode(e.target.value); setPage(1); }} className="min-h-11 rounded-xl border border-white/10 bg-[#10172a] px-3 text-sm text-slate-200"><option value="">All work modes</option><option value="remote">Remote</option><option value="hybrid">Hybrid</option><option value="on_site">On-site</option></select><button className="min-h-11 rounded-xl bg-cyan-400 px-4 text-sm font-bold text-slate-950">Search</button></div><div className="mt-3 flex gap-2 overflow-x-auto pb-1">{categories.map((item) => <button key={item} type="button" onClick={() => { setCategory(category === item ? "" : item); setPage(1); }} className={`shrink-0 rounded-full px-3 py-2 text-xs ${category === item ? "bg-cyan-400 text-slate-950" : "border border-white/10 text-slate-300"}`}>{item}</button>)}</div></form>
+  {error && <div role="alert" className="rounded-xl border border-rose-400/30 bg-rose-500/10 p-3 text-sm text-rose-100">{error} <button onClick={() => void load()} className="underline">Retry</button></div>}{notice && <div role="status" className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-3 text-sm text-emerald-100">{notice}</div>}
+  <section className="space-y-3">{loading ? <p className="p-6 text-sm text-slate-400">Loading verified opportunities…</p> : items.length === 0 ? <div className="rounded-2xl border border-dashed border-white/15 p-8 text-center text-sm text-slate-400">No matching verified opportunities are currently available. Try changing the filters.</div> : items.map((job) => <article key={job.job_id} className="rounded-2xl border border-white/10 bg-[#0b1020] p-4 sm:p-5"><div className="flex flex-col justify-between gap-4 sm:flex-row"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-bold text-white">{job.title}</h2><span className="rounded-full bg-emerald-400/10 px-2 py-1 text-[10px] font-bold uppercase text-emerald-200">Verified</span></div><p className="mt-1 text-sm text-slate-300">{job.company_name} · {job.employment_type.replaceAll("_", " ")}</p><p className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400"><MapPin size={14}/>{job.location || "Location not specified"} · {job.work_mode.replace("_", " ")}{job.deadline_at ? ` · Deadline ${new Date(job.deadline_at).toLocaleDateString()}` : ""}</p><p className="mt-3 text-sm text-slate-400">{job.required_skills || "Skills not specified"}</p>{job.eligibility && <p className="mt-2 text-xs text-slate-500">Eligibility: {job.eligibility}</p>}<p className="mt-2 text-xs text-slate-500">Source: {job.source_label}</p></div><div className="flex shrink-0 items-end gap-2"><button aria-label="Save opportunity" disabled={busy === job.job_id} onClick={() => void save(job.job_id)} className="inline-flex min-h-11 items-center rounded-xl border border-white/10 px-3 text-slate-200"><Bookmark size={16}/></button><button disabled={busy === job.job_id} onClick={() => void apply(job)} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-4 text-sm font-bold text-white">{busy === job.job_id ? "Working…" : job.application_method === "external" ? "Apply externally" : "Apply now"}{job.application_method === "external" && <ExternalLink size={15}/>}</button></div></div></article>)}</section>
+  {total > 20 && <div className="flex justify-between"><button disabled={page === 1} onClick={() => setPage(page - 1)} className="rounded-lg border border-white/10 px-3 py-2 text-sm disabled:opacity-40">Previous</button><span className="text-sm text-slate-400">{total} verified roles</span><button disabled={page * 20 >= total} onClick={() => setPage(page + 1)} className="rounded-lg border border-white/10 px-3 py-2 text-sm disabled:opacity-40">Next</button></div>}
+  </main></DashboardLayout>;
 }
