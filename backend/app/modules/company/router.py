@@ -11,10 +11,11 @@ from app.database.session import get_db
 from app.models.company import JobPosting
 from app.models.user import User
 from app.models.battle.battle_config import BattleConfig
-from app.modules.company.schemas import CandidateApplicationConsentRequest, CandidateApplicationRequest, CandidateApplicationStatusRequest, CompanyAssessmentCreate, CompanyDashboardResponse, CompanyRegisterRequest, CompanyStatusRequest, CompanySummary, ExternalApplicationRequest, InterviewScheduleRequest, JobPostingRequest, JobPostingResponse
+from app.modules.company.schemas import CandidateApplicationConsentRequest, CandidateApplicationRequest, CandidateApplicationStatusRequest, CompanyAssessmentCreate, CompanyDashboardResponse, CompanyRegisterRequest, CompanyStatusRequest, CompanySummary, ExternalApplicationRequest, ExternalOpportunitySummaryRequest, InterviewScheduleRequest, JobPostingRequest, JobPostingResponse
 from app.modules.battle.schemas import BattleConfigResponse, BattleResponse, CreateBattleRequest
 from app.modules.battle.service import battle_service
 from app.modules.company.service import company_service
+from app.modules.company.external_opportunities import external_opportunity_service
 
 router = APIRouter(prefix="/company", tags=["Company Platform"])
 
@@ -158,6 +159,24 @@ async def list_openings(
 @router.get("/openings/{job_id}")
 async def get_opening(job_id: int, db: AsyncSession = Depends(get_db)):
     return await company_service.get_opening(db, job_id)
+
+
+@router.get("/external-opportunities")
+async def search_external_opportunities(
+    q: str = Query(..., min_length=2, max_length=120),
+    opening_type: str = Query("all", pattern="^(all|internship|entry_level|graduate_program)$"),
+    location: str | None = Query(None, max_length=100),
+    current_user: User = Depends(get_current_user),
+):
+    return await external_opportunity_service.search(q, opening_type, location)
+
+
+@router.post("/external-opportunities/summary")
+async def summarize_external_opportunity(
+    payload: ExternalOpportunitySummaryRequest,
+    current_user: User = Depends(get_current_user),
+):
+    return {"summary": await external_opportunity_service.summarize(payload)}
 
 
 @router.get("/saved-opportunities")

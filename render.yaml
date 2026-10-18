@@ -35,6 +35,20 @@ services:
         sync: false
       - key: DATABASE_URL
         sync: false
+      - key: JSEARCH_API_KEY
+        sync: false
+      - key: JSEARCH_COUNTRIES
+        value: us,in,gb,ca,au,de
+      - key: AI_PROVIDER
+        value: ollama
+      - key: OLLAMA_URL
+        sync: false
+      - key: OLLAMA_MODEL
+        value: llama3.1:8b
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
       - key: PLATFORM_ADMIN_EMAIL
         sync: false
       - key: PLATFORM_ADMIN_PASSWORD

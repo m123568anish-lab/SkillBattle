@@ -15,7 +15,7 @@ import os
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
@@ -140,6 +140,8 @@ class Settings(BaseSettings):
     # AI Providers
     # --------------------------------------------------
 
+    AI_PROVIDER: str = "ollama"
+
     OLLAMA_URL: str = "http://localhost:11434"
 
     OLLAMA_MODEL: str = "llama3.1:8b"
@@ -147,10 +149,30 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
 
     OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o-mini"
 
     ANTHROPIC_API_KEY: str = ""
 
     DEEPSEEK_API_KEY: str = ""
+
+    # --------------------------------------------------
+    # External opportunity search
+    # --------------------------------------------------
+
+    JSEARCH_API_KEY: str = ""
+    JSEARCH_COUNTRIES: str = "us,in,gb,ca,au,de"
+
+    @field_validator("JSEARCH_COUNTRIES")
+    @classmethod
+    def validate_jsearch_countries(cls, value: str) -> str:
+        countries = [country.strip().lower() for country in value.split(",") if country.strip()]
+        if not 1 <= len(countries) <= 8 or any(
+            len(country) != 2 or not country.isalpha() for country in countries
+        ):
+            raise ValueError("JSEARCH_COUNTRIES must contain between 1 and 8 two-letter country codes.")
+        if len(set(countries)) != len(countries):
+            raise ValueError("JSEARCH_COUNTRIES cannot contain duplicate country codes.")
+        return ",".join(countries)
 
     # --------------------------------------------------
     # Production Integrations (Email, Cloud, OAuth, Monitoring)

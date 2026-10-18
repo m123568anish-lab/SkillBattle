@@ -57,6 +57,12 @@ copy .env.example .env
 
 Set `SECRET_KEY` and any other required values before running the application.
 
+### Live internships and placement listings
+
+The opportunities page can search JSearch across the country codes configured in the backend. Set `JSEARCH_API_KEY` on the backend (RapidAPI) and configure `JSEARCH_COUNTRIES` as a comma-separated list of up to eight ISO 3166-1 alpha-2 country codes. Search results are attributed to JSearch and link to the original listing/application page; they are not verified by SkillBattle, and externally submitted applications are not tracked in My Applications.
+
+AI summaries use the configured backend AI provider. For OpenAI, set `AI_PROVIDER=openai` and configure `OPENAI_API_KEY` (optionally `OPENAI_MODEL`). For local Ollama, use `AI_PROVIDER=ollama` with a reachable `OLLAMA_URL` and installed `OLLAMA_MODEL`. AI summaries are optional and do not replace the source listing.
+
 ## Docker Compose
 
 ### Development

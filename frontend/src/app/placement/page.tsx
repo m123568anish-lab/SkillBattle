@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, BriefcaseBusiness, Code2 } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import ExternalJobBoards from "@/components/opportunities/ExternalJobBoards";
+import ExternalOpportunitySearch from "@/components/opportunities/ExternalOpportunitySearch";
 
 export default function PlacementPage() {
   return (
@@ -13,12 +13,12 @@ export default function PlacementPage() {
           <p className="text-xs font-bold uppercase tracking-[.2em] text-cyan-300">Internships & placements</p>
           <h1 className="mt-3 text-2xl font-black text-white sm:text-3xl">Find current opportunities</h1>
           <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300">
-            Search current openings on external job boards or browse employer-posted opportunities on SkillBattle.
+            Search live external internships and placements or browse employer-posted opportunities on SkillBattle.
             External listings stay on their original websites and are not represented as SkillBattle-verified.
           </p>
         </header>
 
-        <ExternalJobBoards />
+        <ExternalOpportunitySearch />
 
         <section className="grid gap-3 sm:grid-cols-2">
           <Link

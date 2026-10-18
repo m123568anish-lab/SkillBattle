@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, BriefcaseBusiness } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import ExternalJobBoards from "@/components/opportunities/ExternalJobBoards";
+import ExternalOpportunitySearch from "@/components/opportunities/ExternalOpportunitySearch";
 
 export default function CompanySpeedrunPage() {
   return (
@@ -23,7 +23,7 @@ export default function CompanySpeedrunPage() {
             </Link>
           </div>
         </section>
-        <ExternalJobBoards />
+        <ExternalOpportunitySearch />
       </main>
     </DashboardLayout>
   );

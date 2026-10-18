@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.modules.battle.schemas import BattleSectionConfig
 
@@ -43,6 +43,26 @@ class CandidateApplicationRequest(BaseModel):
 class ExternalApplicationRequest(BaseModel):
     job_id: int
     confirm_applied: bool = True
+
+
+class ExternalOpportunitySummaryRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=300)
+    employer_name: str = Field(default="Employer not specified", max_length=300)
+    location: str = Field(default="Location not specified", max_length=300)
+    employment_type: str = Field(default="Not specified", max_length=100)
+    description: str = Field(..., min_length=1, max_length=12000)
+    listing_url: str = Field(..., max_length=2000)
+    highlights: list[str] = Field(default_factory=list, max_length=15)
+
+    @field_validator("listing_url")
+    @classmethod
+    def require_http_listing_url(cls, value: str) -> str:
+        from urllib.parse import urlsplit
+
+        parsed = urlsplit(value)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError("listing_url must be an HTTP or HTTPS URL.")
+        return value
 
 
 class CompanySummary(BaseModel):

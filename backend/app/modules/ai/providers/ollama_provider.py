@@ -12,24 +12,16 @@ from __future__ import annotations
 
 import httpx
 
+from app.core.config import settings
+
 from .base import AIProvider
 
 
 class OllamaProvider(AIProvider):
 
-    def __init__(
-
-        self,
-
-        model: str = "llama3",
-
-        host: str = "http://localhost:11434",
-
-    ):
-
-        self.model = model
-
-        self.host = host
+    def __init__(self, model: str | None = None, host: str | None = None):
+        self.model = model or settings.OLLAMA_MODEL
+        self.host = (host or settings.OLLAMA_URL).rstrip("/")
 
     async def generate(
 
