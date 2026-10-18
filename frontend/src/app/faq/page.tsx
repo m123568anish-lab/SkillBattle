@@ -31,7 +31,7 @@ export default function FAQPage() {
         <div className="mt-10 divide-y divide-white/10 border-y border-white/10">
           {topics.map(([question, answer]) => <details key={question} className="group py-1"><summary className="cursor-pointer list-none py-5 text-lg font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"><span className="flex items-center justify-between gap-3">{question}<span aria-hidden="true" className="text-cyan-300 transition group-open:rotate-45">+</span></span></summary><p className="pb-5 leading-7 text-slate-300">{answer}</p></details>)}
         </div>
-        <p className="mt-8 text-sm text-slate-400">Need help with your account? Email <a className="text-cyan-300 underline" href="mailto:support@skillbattle.app">support@skillbattle.app</a>.</p>
+        <p className="mt-8 text-sm text-slate-400">Need help with your account? <Link className="text-cyan-300 underline" href="/support">Open the support center</Link>.</p>
         <nav className="mt-5 flex gap-5 text-sm"><Link href="/privacy" className="text-cyan-300 underline">Privacy</Link><Link href="/terms" className="text-cyan-300 underline">Terms</Link></nav>
       </div>
       <Footer />
