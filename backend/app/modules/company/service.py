@@ -21,6 +21,9 @@ from app.modules.audit.service import audit_service
 from app.modules.skill_intelligence.service import normalize_skill_id
 
 
+LEGACY_DEMO_COMPANY_SLUG = "skillbattle-demo"
+
+
 class CompanyService:
     @staticmethod
     def _is_open(job: JobPosting) -> bool:
@@ -154,7 +157,12 @@ class CompanyService:
             select(JobPosting, Company, BattleConfig.id)
             .join(Company, Company.id == JobPosting.company_id)
             .outerjoin(BattleConfig, BattleConfig.job_id == JobPosting.id)
-            .where(Company.status == "verified", JobPosting.status.in_(("open", "active")), JobPosting.verification_status == "verified")
+            .where(
+                Company.status == "verified",
+                Company.slug != LEGACY_DEMO_COMPANY_SLUG,
+                JobPosting.status.in_(("open", "active")),
+                JobPosting.verification_status == "verified",
+            )
             .order_by(JobPosting.created_at.desc())
         )
         if q.strip():
@@ -201,7 +209,12 @@ class CompanyService:
     async def get_opening(self, db: AsyncSession, job_id: int) -> dict[str, Any]:
         result = await db.execute(select(JobPosting, Company).join(Company).where(JobPosting.id == job_id))
         row = result.one_or_none()
-        if not row or row[1].status != "verified" or row[0].verification_status != "verified":
+        if (
+            not row
+            or row[1].status != "verified"
+            or row[1].slug == LEGACY_DEMO_COMPANY_SLUG
+            or row[0].verification_status != "verified"
+        ):
             raise HTTPException(status_code=404, detail="Opportunity not found.")
         job, company = row
         return {"job_id": job.id, "company_name": company.name, "title": job.title, "description": job.description, "required_skills": job.required_skills, "eligibility": job.eligibility, "location": job.location, "work_mode": job.work_mode, "employment_type": job.employment_type, "compensation": job.compensation or None, "deadline_at": job.deadline_at.replace(tzinfo=job.deadline_at.tzinfo or timezone.utc).isoformat() if job.deadline_at else None, "source_label": job.source_label, "source_url": job.source_url, "application_url": job.application_url or None, "application_method": "external" if job.application_url else "internal", "is_open": self._is_open(job)}
@@ -226,7 +239,7 @@ class CompanyService:
             await db.commit()
 
     async def list_saved_opportunities(self, db: AsyncSession, user: User) -> list[dict[str, Any]]:
-        result = await db.execute(select(SavedOpportunity, JobPosting, Company).join(JobPosting, JobPosting.id == SavedOpportunity.job_id).join(Company, Company.id == JobPosting.company_id).where(SavedOpportunity.user_id == user.id).order_by(SavedOpportunity.created_at.desc()))
+        result = await db.execute(select(SavedOpportunity, JobPosting, Company).join(JobPosting, JobPosting.id == SavedOpportunity.job_id).join(Company, Company.id == JobPosting.company_id).where(SavedOpportunity.user_id == user.id, Company.slug != LEGACY_DEMO_COMPANY_SLUG).order_by(SavedOpportunity.created_at.desc()))
         return [{"saved_at": saved.created_at.replace(tzinfo=timezone.utc).isoformat(), "job_id": job.id, "company_name": company.name, "title": job.title, "status": "open" if self._is_open(job) else "closed", "deadline_at": job.deadline_at.replace(tzinfo=job.deadline_at.tzinfo or timezone.utc).isoformat() if job.deadline_at else None} for saved, job, company in result.all()]
 
     async def list_user_applications(self, db: AsyncSession, user: User) -> list[dict[str, Any]]:
@@ -236,7 +249,10 @@ class CompanyService:
             .join(Company, Company.id == JobPosting.company_id)
             .outerjoin(BattleConfig, BattleConfig.job_id == JobPosting.id)
             .outerjoin(CompanyInterview, CompanyInterview.application_id == CandidateApplication.id)
-            .where(CandidateApplication.candidate_user_id == user.id)
+            .where(
+                CandidateApplication.candidate_user_id == user.id,
+                Company.slug != LEGACY_DEMO_COMPANY_SLUG,
+            )
             .order_by(CandidateApplication.created_at.desc())
         )
         result = await db.execute(stmt)

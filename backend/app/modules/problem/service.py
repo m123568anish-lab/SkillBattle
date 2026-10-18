@@ -90,6 +90,7 @@ class ProblemService:
         problem = await problem_repository.get_problem(
             db,
             problem_id,
+            include_inactive=True,
         )
 
         if problem is None:
@@ -130,6 +131,7 @@ class ProblemService:
         problem = await problem_repository.get_problem(
             db,
             problem_id,
+            include_inactive=True,
         )
 
         if problem is None:

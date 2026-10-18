@@ -171,7 +171,7 @@ class CareerAI:
 
         # Placeholder implementation: return a descriptive message so callers
         # receive deterministic output when OpenAI is not configured.
-        return f"[openai-placeholder] {prompt}"
+        raise NotImplementedError("The OpenAI career AI integration is not implemented.")
 
     # --------------------------------------------------
 
@@ -185,7 +185,7 @@ class CareerAI:
 
     ) -> str:
 
-        return f"[gemini-placeholder] {prompt}"
+        raise NotImplementedError("The Gemini career AI integration is not implemented.")
 
     # --------------------------------------------------
 
@@ -199,7 +199,7 @@ class CareerAI:
 
     ) -> str:
 
-        return f"[claude-placeholder] {prompt}"
+        raise NotImplementedError("The Claude career AI integration is not implemented.")
 
 
 career_ai = CareerAI()

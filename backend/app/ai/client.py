@@ -1,4 +1,4 @@
-from typing import Optional
+from app.modules.ai.provider import ai_provider
 
 
 class AIClient:
@@ -8,15 +8,12 @@ class AIClient:
         system_prompt: str,
         user_prompt: str,
     ) -> str:
-        """
-        Placeholder implementation.
-        Replace with OpenAI/Ollama/Gemini later.
-        """
-        # Minimal safe implementation: return a simple combined echo response.
-        # This keeps features working without a configured provider.
-        system = system_prompt or ""
-        user = user_prompt or ""
-        return f"[ai-client-placeholder] system: {system} | user: {user}"
+        prompt = "\n\n".join(
+            part for part in (system_prompt.strip(), user_prompt.strip()) if part
+        )
+        if not prompt:
+            raise ValueError("An AI prompt is required.")
+        return await ai_provider.generate(prompt)
 
 
 ai_client = AIClient()

@@ -19,7 +19,4 @@ class GeminiProvider(AIProvider):
         self,
         prompt: str,
     ) -> str:
-        # Minimal placeholder implementation — return informative message.
-        if not prompt:
-            return ""
-        return f"[gemini-placeholder] {prompt}"
+        raise NotImplementedError("The Gemini provider integration is not implemented.")

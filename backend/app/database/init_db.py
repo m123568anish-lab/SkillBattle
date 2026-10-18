@@ -17,7 +17,7 @@ definitions are registered.
 import logging
 import os
 
-from sqlalchemy import inspect, text
+from sqlalchemy import bindparam, inspect, text
 
 from app.database.base import Base
 from app.database.database import engine
@@ -162,13 +162,13 @@ def init_db() -> None:
                 _repair_college_tables()
                 _repair_company_tables()
                 _repair_battle_tables()
-                _seed_initial_problems()
-                _seed_initial_questions()
                 logger.info(f"✅ Tables created: {list(Base.metadata.tables.keys())}")
             else:
                 Base.metadata.create_all(bind=engine)
                 _repair_company_tables()
                 logger.info("⚡ Database schema already initialized (%d tables found); verified all registered model tables exist.", len(existing_tables))
+
+            _deactivate_legacy_sample_content()
         except Exception as e:
             # Some DB backends may raise an OperationalError on concurrent create_all
             # (e.g., multiple reload processes trying to create the same table).
@@ -183,6 +183,47 @@ def init_db() -> None:
     except Exception as e:
         logger.error(f"❌ Failed to create tables: {e}", exc_info=True)
         raise
+
+
+def _deactivate_legacy_sample_content() -> None:
+    """Hide only the exact records inserted by the removed built-in sample seeders."""
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+    legacy_problem_slugs = (
+        "two-sum",
+        "reverse-string",
+        "valid-parentheses",
+        "binary-search",
+        "maximum-subarray",
+    )
+    legacy_question_slugs = (
+        "time-complexity-quicksort-worst-case",
+        "acid-properties-dbms",
+        "access-array-element",
+        "sum-two-integers",
+        "fix-off-by-one-loop-bug",
+        "explain-rest-vs-graphql",
+    )
+
+    with engine.begin() as connection:
+        if "problems" in tables and "is_active" in {
+            column["name"] for column in inspector.get_columns("problems")
+        }:
+            connection.execute(
+                text("UPDATE problems SET is_active = FALSE WHERE slug IN :slugs").bindparams(
+                    bindparam("slugs", expanding=True)
+                ),
+                {"slugs": legacy_problem_slugs},
+            )
+        if "questions" in tables and "is_active" in {
+            column["name"] for column in inspector.get_columns("questions")
+        }:
+            connection.execute(
+                text("UPDATE questions SET is_active = FALSE WHERE slug IN :slugs").bindparams(
+                    bindparam("slugs", expanding=True)
+                ),
+                {"slugs": legacy_question_slugs},
+            )
 
 
 def _repair_users_table() -> None:
@@ -312,152 +353,6 @@ def _repair_dashboard_tables() -> None:
             connection.execute(text('CREATE INDEX IF NOT EXISTS "ix_assessment_q_sub_user_created" ON "assessment_question_submissions" ("user_id", "created_at")'))
         if "roadmaps" in tables:
             connection.execute(text('CREATE INDEX IF NOT EXISTS "ix_roadmaps_user_status" ON "roadmaps" ("user_id", "status")'))
-
-
-def _seed_initial_problems() -> None:
-    """Seed initial coding practice problems and baseline test cases if empty."""
-    inspector = inspect(engine)
-    if "problems" not in inspector.get_table_names():
-        return
-
-    with engine.begin() as connection:
-        count = connection.execute(text("SELECT COUNT(*) FROM problems")).scalar()
-        if not count or count == 0:
-            logger.info("Seeding initial practice problems into database...")
-            seed_data = [
-                (
-                    "Two Sum",
-                    "two-sum",
-                    "Easy",
-                    "Arrays",
-                    "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
-                    "Line 1: Space-separated integers (nums)\nLine 2: Single integer (target)",
-                    "Space-separated pair of indices",
-                    "2 <= nums.length <= 10^4",
-                    "Use a hash map to store complements for O(N) lookup.",
-                    100,
-                ),
-                (
-                    "Reverse String",
-                    "reverse-string",
-                    "Easy",
-                    "Strings",
-                    "Write a function that reverses a string. The input string is given as an array of characters.",
-                    "Single line string",
-                    "Reversed string",
-                    "1 <= s.length <= 10^5",
-                    "Use two pointers (left and right) swapping elements inward.",
-                    80,
-                ),
-                (
-                    "Valid Parentheses",
-                    "valid-parentheses",
-                    "Easy",
-                    "Stack",
-                    "Given a string s containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.",
-                    "Single line containing brackets",
-                    "True if valid, False otherwise",
-                    "1 <= s.length <= 10^4",
-                    "Use a stack to push open brackets and match on closing brackets.",
-                    120,
-                ),
-                (
-                    "Binary Search",
-                    "binary-search",
-                    "Medium",
-                    "Search",
-                    "Given an array of integers nums which is sorted in ascending order, and an integer target, write a function to search target in nums.",
-                    "Line 1: Sorted integers\nLine 2: Target integer",
-                    "Index of target if found, else -1",
-                    "1 <= nums.length <= 10^4",
-                    "Maintain low and high pointers, halve the search space at mid.",
-                    200,
-                ),
-                (
-                    "Maximum Subarray",
-                    "maximum-subarray",
-                    "Hard",
-                    "Dynamic Programming",
-                    "Given an integer array nums, find the subarray with the largest sum, and return its sum.",
-                    "Space-separated integers",
-                    "Single integer (maximum sum)",
-                    "1 <= nums.length <= 10^5",
-                    "Kadane's Algorithm: current_sum = max(num, current_sum + num).",
-                    300,
-                ),
-            ]
-
-            for title, slug, diff, cat, desc, inp, out, const, exp, xp in seed_data:
-                connection.execute(
-                    text(
-                        """
-                        INSERT INTO problems (title, slug, difficulty, category, description, input_format, output_format, constraints, explanation, xp_reward, time_limit, memory_limit, is_active, created_at, updated_at)
-                        VALUES (:title, :slug, :diff, :cat, :desc, :inp, :out, :const, :exp, :xp, 2, 256, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                        ON CONFLICT DO NOTHING
-                        """
-                    ),
-                    {
-                        "title": title,
-                        "slug": slug,
-                        "diff": diff,
-                        "cat": cat,
-                        "desc": desc,
-                        "inp": inp,
-                        "out": out,
-                        "const": const,
-                        "exp": exp,
-                        "xp": xp,
-                    },
-                )
-            logger.info("Successfully seeded 5 initial practice problems.")
-
-        # Ensure baseline test cases exist in problem_test_cases
-        if "problem_test_cases" in inspector.get_table_names():
-            tc_count = connection.execute(text("SELECT COUNT(*) FROM problem_test_cases")).scalar()
-            if not tc_count or tc_count == 0:
-                logger.info("Seeding baseline problem test cases...")
-                problems_map = {}
-                rows = connection.execute(text("SELECT id, slug FROM problems")).fetchall()
-                for pid, slug in rows:
-                    problems_map[slug] = pid
-
-                baseline_cases = [
-                    # Two Sum
-                    ("two-sum", "2 7 11 15\n9", "0 1", False, "Standard sample case"),
-                    ("two-sum", "3 2 4\n6", "1 2", True, "Hidden case 1"),
-                    ("two-sum", "3 3\n6", "0 1", True, "Hidden case 2"),
-                    # Reverse String
-                    ("reverse-string", "hello", "olleh", False, "Standard sample"),
-                    ("reverse-string", "SkillBattle", "elttaBllikS", True, "Hidden case 1"),
-                    ("reverse-string", "racecar", "racecar", True, "Hidden palindrome"),
-                    # Valid Parentheses
-                    ("valid-parentheses", "()", "True", False, "Simple valid"),
-                    ("valid-parentheses", "()[]{}", "True", True, "Multiple brackets"),
-                    ("valid-parentheses", "(]", "False", True, "Mismatched closing"),
-                    ("valid-parentheses", "{[]}", "True", True, "Nested valid"),
-                    # Binary Search
-                    ("binary-search", "-1 0 3 5 9 12\n9", "4", False, "Standard match"),
-                    ("binary-search", "-1 0 3 5 9 12\n2", "-1", True, "Target absent"),
-                    ("binary-search", "5\n5", "0", True, "Single element match"),
-                    # Maximum Subarray
-                    ("maximum-subarray", "-2 1 -3 4 -1 2 1 -5 4", "6", False, "Standard Kadane test"),
-                    ("maximum-subarray", "1", "1", True, "Single element"),
-                    ("maximum-subarray", "5 4 -1 7 8", "23", True, "Positive array"),
-                ]
-
-                for slug, inp, out, is_hidden, exp in baseline_cases:
-                    pid = problems_map.get(slug)
-                    if pid:
-                        connection.execute(
-                            text(
-                                """
-                                INSERT INTO problem_test_cases (problem_id, input_data, expected_output, is_hidden, explanation)
-                                VALUES (:pid, :inp, :out, :is_hidden, :exp)
-                                """
-                            ),
-                            {"pid": pid, "inp": inp, "out": out, "is_hidden": is_hidden, "exp": exp},
-                        )
-                logger.info("Successfully seeded baseline problem test cases.")
 
 
 def _repair_college_tables() -> None:
@@ -633,171 +528,3 @@ def _repair_battle_tables() -> None:
             if "job_id" not in existing:
                 connection.execute(text('ALTER TABLE "battle_configs" ADD COLUMN "job_id" INTEGER'))
                 logger.info("Added missing battle_configs.job_id column")
-
-
-def _seed_initial_questions() -> None:
-    """Seed initial MCQ, Debugging, Coding, and Technical questions if questions table is empty."""
-    inspector = inspect(engine)
-    if "questions" not in inspector.get_table_names():
-        return
-
-    with engine.begin() as connection:
-        logger.info("Seeding initial MCQ, Debugging, and Technical questions...")
-        import json
-
-        sample_qs = [
-            # MCQs
-            {
-                "title": "Time Complexity of QuickSort Worst Case",
-                "slug": "time-complexity-quicksort-worst-case",
-                "description": "What is the worst-case time complexity of the standard QuickSort algorithm?",
-                "difficulty": "Easy",
-                "question_type": "mcq",
-                "options": [
-                    {"key": "A", "text": "O(N log N)"},
-                    {"key": "B", "text": "O(N^2)"},
-                    {"key": "C", "text": "O(N)"},
-                    {"key": "D", "text": "O(log N)"}
-                ],
-                "correct_option": "B",
-                "explanation": "QuickSort worst-case happens when the pivot chosen is consistently the smallest or largest element, resulting in O(N^2) time.",
-                "topic_tags": ["DSA", "Algorithms"],
-                "skill_category": "DSA",
-            },
-            {
-                "title": "ACID Properties in DBMS",
-                "slug": "acid-properties-dbms",
-                "description": "Which letter in ACID stands for ensuring that a transaction once committed is permanently saved?",
-                "difficulty": "Easy",
-                "question_type": "mcq",
-                "options": [
-                    {"key": "A", "text": "Atomicity"},
-                    {"key": "B", "text": "Consistency"},
-                    {"key": "C", "text": "Isolation"},
-                    {"key": "D", "text": "Durability"}
-                ],
-                "correct_option": "D",
-                "explanation": "Durability guarantees that once a transaction has been committed, it will remain committed even in the event of a system failure.",
-                "topic_tags": ["DBMS", "SQL"],
-                "skill_category": "DBMS",
-            },
-            {
-                "title": "Access Array Element",
-                "slug": "access-array-element",
-                "description": "Which operation retrieves the element at index 2 from an array named values?",
-                "difficulty": "Easy",
-                "question_type": "mcq",
-                "options": [
-                    {"key": "A", "text": "values[1]"},
-                    {"key": "B", "text": "values[2]"},
-                    {"key": "C", "text": "values(2)"},
-                    {"key": "D", "text": "values{2}"},
-                ],
-                "correct_option": "B",
-                "explanation": "Array indexing uses square brackets and the requested index directly.",
-                "topic_tags": ["Arrays", "Data Structures"],
-                "skill_category": "Data Structures",
-            },
-            # Coding
-            {
-                "title": "Sum Two Integers",
-                "slug": "sum-two-integers",
-                "description": "Read two integers from standard input and print their sum.",
-                "difficulty": "Easy",
-                "question_type": "coding",
-                "explanation": "Parse both integers and print their sum.",
-                "constraints": "The input contains exactly two integers.",
-                "examples": [
-                    {"input": "3 5\n", "output": "8\n"},
-                ],
-                "hidden_test_cases": [
-                    {"input": "3 5\n", "output": "8\n"},
-                    {"input": "-7 2\n", "output": "-5\n"},
-                    {"input": "1000000000 2000000000\n", "output": "3000000000\n"},
-                ],
-                "topic_tags": ["Algorithms", "Input/Output"],
-                "skill_category": "Algorithms",
-            },
-            # Debugging
-            {
-                "title": "Fix Off-By-One Loop Bug",
-                "slug": "fix-off-by-one-loop-bug",
-                "description": "The function below is supposed to calculate the sum of elements from 1 to N, but it raises an IndexOutOfRange or wrong answer. Fix the bug.",
-                "difficulty": "Medium",
-                "question_type": "debugging",
-                "buggy_code": "def sum_to_n(n):\n    total = 0\n    for i in range(1, n): # Bug here\n        total += i\n    return total",
-                "fixed_code_reference": "def sum_to_n(n):\n    total = 0\n    for i in range(1, n + 1):\n        total += i\n    return total",
-                "explanation": "range(1, n) excludes n. It should be range(1, n + 1).",
-                "topic_tags": ["Debugging", "Python"],
-                "skill_category": "Debugging",
-            },
-            # Technical Question
-            {
-                "title": "Explain REST vs GraphQL",
-                "slug": "explain-rest-vs-graphql",
-                "description": "Explain the architectural differences between RESTful APIs and GraphQL APIs. When would you prefer GraphQL over REST?",
-                "difficulty": "Medium",
-                "question_type": "technical",
-                "rubric": {"key_concepts": ["Over-fetching", "Under-fetching", "Single Endpoint", "HTTP Methods", "Schema/Queries"]},
-                "explanation": "GraphQL uses a single endpoint and allows clients to request exact fields, preventing over-fetching. REST uses multiple URIs and standard HTTP verbs.",
-                "topic_tags": ["Web Architecture", "System Design"],
-                "skill_category": "System Design",
-            },
-        ]
-
-        for q in sample_qs:
-            for optional_field in (
-                "options",
-                "correct_option",
-                "buggy_code",
-                "fixed_code_reference",
-                "rubric",
-                "constraints",
-                "examples",
-                "hidden_test_cases",
-                "company_tags",
-                "estimated_time_minutes",
-            ):
-                q.setdefault(
-                    optional_field,
-                    [] if optional_field in {"examples", "hidden_test_cases", "company_tags", "options"} else ({} if optional_field == "rubric" else (5 if optional_field == "estimated_time_minutes" else "")),
-                )
-
-            connection.execute(
-                text(
-                    """
-                    INSERT INTO questions (
-                        title, slug, description, difficulty, question_type, options, correct_option,
-                        buggy_code, fixed_code_reference, rubric, explanation, constraints, examples,
-                        hidden_test_cases, company_tags, topic_tags, skill_category, estimated_time_minutes,
-                        is_active, is_ai_generated, is_validated, created_at
-                    ) VALUES (
-                        :title, :slug, :description, :difficulty, :question_type, :options, :correct_option,
-                        :buggy_code, :fixed_code_reference, :rubric, :explanation, :constraints, :examples,
-                        :hidden_test_cases, :company_tags, :topic_tags, :skill_category, :estimated_time_minutes,
-                        TRUE, FALSE, TRUE, CURRENT_TIMESTAMP
-                    ) ON CONFLICT DO NOTHING
-                    """
-                ),
-                {
-                    "title": q["title"],
-                    "slug": q["slug"],
-                    "description": q["description"],
-                    "difficulty": q["difficulty"],
-                    "question_type": q["question_type"],
-                    "options": json.dumps(q["options"]),
-                    "correct_option": q["correct_option"],
-                    "buggy_code": q["buggy_code"],
-                    "fixed_code_reference": q["fixed_code_reference"],
-                    "rubric": json.dumps(q["rubric"]),
-                    "explanation": q["explanation"],
-                    "constraints": q["constraints"],
-                    "examples": json.dumps(q["examples"]),
-                    "hidden_test_cases": json.dumps(q["hidden_test_cases"]),
-                    "company_tags": json.dumps(q["company_tags"]),
-                    "topic_tags": json.dumps(q["topic_tags"]),
-                    "skill_category": q["skill_category"],
-                    "estimated_time_minutes": q["estimated_time_minutes"],
-                },
-            )
-        logger.info("Seeded initial MCQ, Debugging, and Technical questions.")

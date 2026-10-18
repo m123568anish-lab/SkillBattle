@@ -84,3 +84,25 @@ async def test_opportunity_ownership_and_expiration_are_enforced(client: AsyncCl
     assert (await client.post("/company/applications", headers=one_headers, json={"job_id": job_id})).status_code == 409
     assert (await client.get("/company/saved-opportunities")).status_code in {401, 403}
     assert (await client.put(f"/company/openings/{job_id}/save", headers=two_headers)).status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_legacy_demo_company_openings_are_hidden_without_deleting_records(client: AsyncClient, monkeypatch):
+    _, job_id = await verified_company_and_job(client, title="Demo Software Engineer")
+    legacy_slug = f"legacy-demo-company-test-{uuid4().hex[:8]}"
+    async with AsyncSessionLocal() as db:
+        job = await db.get(JobPosting, job_id)
+        company = await db.get(Company, job.company_id)
+        company.slug = legacy_slug
+        await db.commit()
+
+    from app.modules.company import service as company_service_module
+
+    monkeypatch.setattr(company_service_module, "LEGACY_DEMO_COMPANY_SLUG", legacy_slug)
+    listing = await client.get("/company/openings")
+    assert listing.status_code == 200
+    assert job_id not in {item["job_id"] for item in listing.json()["items"]}
+    assert (await client.get(f"/company/openings/{job_id}")).status_code == 404
+
+    async with AsyncSessionLocal() as db:
+        assert await db.get(JobPosting, job_id) is not None

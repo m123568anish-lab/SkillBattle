@@ -24,7 +24,7 @@ router = APIRouter(prefix="/interview", tags=["Career AI Mock Interview"])
 # --- Schemas ---
 
 class StartInterviewRequest(BaseModel):
-    company: str = Field(default="Google", min_length=1, max_length=100, example="Google")
+    company: str = Field(default="General", min_length=1, max_length=100, example="General")
     role: str = Field(default="Software Engineer", min_length=1, max_length=100, example="Backend Engineer")
     interview_type: str = Field(default="Technical", min_length=1, max_length=50, example="Technical")
     difficulty: str = Field(default="Medium", min_length=1, max_length=30, example="Medium")
@@ -78,69 +78,6 @@ class InterviewSessionSchema(BaseModel):
 
 # --- Placement Questions Bank Generator ---
 
-COMPANY_QUESTION_BANKS = {
-    "google": [
-        {
-            "sequence": 1,
-            "question": "How would you design a distributed global rate limiter for Google Search APIs handling 100k+ QPS?",
-            "expected_topics": "Token Bucket, Redis, Distributed Locking, Concurrency, Latency",
-            "difficulty": "Hard"
-        },
-        {
-            "sequence": 2,
-            "question": "Explain how you would find the median of two sorted arrays of sizes M and N in O(log(min(M,N))) time.",
-            "expected_topics": "Binary Search, Array Partitioning, Divide & Conquer",
-            "difficulty": "Hard"
-        },
-        {
-            "sequence": 3,
-            "question": "What happens under the hood when a user types google.com in the browser? Detail DNS, TCP, SSL/TLS, and HTTP/3.",
-            "expected_topics": "DNS resolution, TCP 3-way Handshake, TLS Handshake, HTTP/3, CDN",
-            "difficulty": "Medium"
-        }
-    ],
-    "amazon": [
-        {
-            "sequence": 1,
-            "question": "Design an Amazon Flash Sale System handling high concurrency, inventory decrement, and preventing double booking.",
-            "expected_topics": "Pessimistic vs Optimistic Locking, Redis Distributed Lock, Message Queue (Kafka), Database Sharding",
-            "difficulty": "Hard"
-        },
-        {
-            "sequence": 2,
-            "question": "Implement an LRU Cache with O(1) get and put time complexities.",
-            "expected_topics": "Doubly Linked List, Hash Map, O(1) Operations, Memory Management",
-            "difficulty": "Medium"
-        },
-        {
-            "sequence": 3,
-            "question": "Describe an Amazon Leadership Principle (Customer Obsession or Ownership) where you resolved a technical dispute.",
-            "expected_topics": "STAR Method, Technical Ownership, Data-driven Decisions, Team Alignment",
-            "difficulty": "Medium"
-        }
-    ],
-    "meta": [
-        {
-            "sequence": 1,
-            "question": "How would you design the Instagram Newsfeed algorithm for 1 Billion daily active users?",
-            "expected_topics": "Fan-out on write vs read, Feed Generation, Caching, Ranking Service, Graph DB",
-            "difficulty": "Hard"
-        },
-        {
-            "sequence": 2,
-            "question": "Given a directed graph, write an algorithm to detect if there is a cycle and print the topological order.",
-            "expected_topics": "Kahn's Algorithm, In-Degree Array, BFS/DFS, Cycle Detection",
-            "difficulty": "Medium"
-        },
-        {
-            "sequence": 3,
-            "question": "Explain the difference between SQL indexing (B-Trees) and LSM-Trees used in storage engines.",
-            "expected_topics": "B+ Trees, LSM Trees, Write Amplification, SSTables, WAL",
-            "difficulty": "Hard"
-        }
-    ]
-}
-
 DEFAULT_QUESTIONS = [
     {
         "sequence": 1,
@@ -164,9 +101,8 @@ DEFAULT_QUESTIONS = [
 
 
 def generate_interview_questions(company: str, role: str, difficulty: str) -> list[dict]:
-    key = company.lower()
-    if key in COMPANY_QUESTION_BANKS:
-        return COMPANY_QUESTION_BANKS[key]
+    # The available question set is general practice content, not an employer's
+    # official or verified interview question bank.
     return DEFAULT_QUESTIONS
 
 

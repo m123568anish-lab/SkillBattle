@@ -82,29 +82,21 @@ class ProblemRepository:
         self,
         db: AsyncSession,
         problem_id: int,
+        include_inactive: bool = False,
     ) -> Problem | None:
 
-        result = await db.execute(
-
+        stmt = (
             select(Problem)
-
             .options(
-
                 selectinload(Problem.test_cases),
-
                 selectinload(Problem.starter_codes),
-
                 selectinload(Problem.tags),
-
             )
-
-            .where(
-
-                Problem.id == problem_id
-
-            )
-
+            .where(Problem.id == problem_id)
         )
+        if not include_inactive:
+            stmt = stmt.where(Problem.is_active.is_(True))
+        result = await db.execute(stmt)
 
         return result.scalar_one_or_none()
 
@@ -123,9 +115,8 @@ class ProblemRepository:
             select(Problem)
 
             .where(
-
-                Problem.slug == slug
-
+                Problem.slug == slug,
+                Problem.is_active.is_(True),
             )
 
         )
@@ -146,6 +137,8 @@ class ProblemRepository:
         result = await db.execute(
 
             select(Problem)
+
+            .where(Problem.is_active.is_(True))
 
             .offset(skip)
 
@@ -185,7 +178,8 @@ class ProblemRepository:
 
                     f"%{keyword}%"
 
-                )
+                ),
+                Problem.is_active.is_(True),
 
             )
 
@@ -213,8 +207,8 @@ class ProblemRepository:
 
             .where(
 
-                Problem.difficulty == difficulty
-
+                Problem.difficulty == difficulty,
+                Problem.is_active.is_(True),
             )
 
         )
@@ -241,8 +235,8 @@ class ProblemRepository:
 
             .where(
 
-                Problem.category == category
-
+                Problem.category == category,
+                Problem.is_active.is_(True),
             )
 
         )

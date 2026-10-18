@@ -76,12 +76,11 @@ export default function CompanyStep({
         }}
         className="text-4xl font-black text-white"
       >
-        Dream Companies
+        Company Preferences
       </motion.h1>
 
       <p className="mt-3 text-slate-400">
-        Select the companies you want
-        to prepare for.
+        Select organizations you are interested in. These are preference suggestions, not partner listings or current openings.
       </p>
 
       {/* Search */}
@@ -141,10 +140,10 @@ export default function CompanyStep({
 
       </div>
 
-      {/* Featured */}
+      {/* Suggestions */}
 
       <h2 className="mt-10 mb-5 text-xl font-bold text-white">
-        ⭐ Featured Companies
+        Company suggestions
       </h2>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -169,10 +168,10 @@ export default function CompanyStep({
 
       </div>
 
-      {/* Others */}
+      {/* More suggestions */}
 
       <h2 className="mt-10 mb-5 text-xl font-bold text-white">
-        All Companies
+        More suggestions
       </h2>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

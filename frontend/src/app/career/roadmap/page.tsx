@@ -10,8 +10,8 @@ export default function CareerRoadmapPage() {
   const [selectedRoadmap, setSelectedRoadmap] = useState<Roadmap | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [targetCompany, setTargetCompany] = useState("Google");
-  const [title, setTitle] = useState("FAANG Algorithmic Mastery");
+  const [targetCompany, setTargetCompany] = useState("");
+  const [title, setTitle] = useState("Career Preparation Roadmap");
   const [durationWeeks, setDurationWeeks] = useState(4);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -73,7 +73,7 @@ export default function CareerRoadmapPage() {
             🗺️ Career Preparation Roadmap
           </h1>
           <p className="mt-1 text-sm text-slate-400">
-            Structured week-by-week algorithmic learning paths tailored for dream tech companies.
+            Build and track a preparation roadmap for your own career goals.
           </p>
         </div>
 
@@ -95,7 +95,7 @@ export default function CareerRoadmapPage() {
           <Target className="mx-auto h-16 w-16 text-cyan-400 mb-4" />
           <h2 className="text-2xl font-bold text-white">No Career Roadmaps Active</h2>
           <p className="mt-2 text-slate-400 max-w-md mx-auto">
-            Build your custom preparation schedule targetting companies like Google, Meta, Amazon, or Microsoft.
+            Create a preparation schedule for your goals. Company-specific hiring processes are not represented here.
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
@@ -246,18 +246,13 @@ export default function CareerRoadmapPage() {
 
               <div>
                 <label className="block text-xs font-bold text-slate-300 uppercase mb-2">Target Company</label>
-                <select
+                <input
+                  type="text"
                   value={targetCompany}
                   onChange={(e) => setTargetCompany(e.target.value)}
+                  placeholder="Optional — enter a company you are targeting"
                   className="w-full rounded-xl border border-white/10 bg-slate-800 px-4 py-3 text-sm text-white focus:border-violet-500 focus:outline-none"
-                >
-                  <option value="Google">Google</option>
-                  <option value="Meta">Meta</option>
-                  <option value="Amazon">Amazon</option>
-                  <option value="Microsoft">Microsoft</option>
-                  <option value="Apple">Apple</option>
-                  <option value="Netflix">Netflix</option>
-                </select>
+                />
               </div>
 
               <div>

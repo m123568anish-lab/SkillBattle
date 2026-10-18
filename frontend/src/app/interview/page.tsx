@@ -14,7 +14,7 @@ export default function AIMockInterviewPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [company, setCompany] = useState("Google");
+  const [company, setCompany] = useState("General");
   const [role, setRole] = useState("Software Engineer");
   const [difficulty, setDifficulty] = useState("Medium");
   const [interviewType, setInterviewType] = useState("Technical");
@@ -116,10 +116,10 @@ export default function AIMockInterviewPage() {
       <div className="mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-violet-500 tracking-tight">
-            🎙️ AI Mock Interview Room
+            🎙️ Mock Interview Practice
           </h1>
           <p className="mt-1 text-sm text-slate-400">
-            Simulate realistic technical and system design rounds with instant AI feedback and placement-level scoring.
+            Practice with general interview questions and a transparent, rubric-based response score. These questions are not employer-provided or official hiring assessments.
           </p>
         </div>
 
@@ -146,13 +146,14 @@ export default function AIMockInterviewPage() {
             </h3>
 
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Company Target</label>
-              <select value={company} onChange={(e) => setCompany(e.target.value)} className="w-full rounded-xl border border-white/10 bg-slate-800 px-4 py-2.5 text-sm text-white focus:border-violet-500 focus:outline-none">
-                <option value="Google">Google</option>
-                <option value="Meta">Meta</option>
-                <option value="Amazon">Amazon</option>
-                <option value="Microsoft">Microsoft</option>
-              </select>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Target employer (optional)</label>
+              <input
+                type="text"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-slate-800 px-4 py-2.5 text-sm text-white focus:border-violet-500 focus:outline-none"
+              />
+              <p className="mt-1 text-xs text-slate-500">This labels your session only; questions are general practice content.</p>
             </div>
 
             <div>
@@ -221,7 +222,7 @@ export default function AIMockInterviewPage() {
           {!activeSession ? (
             <div className="rounded-3xl border border-white/10 bg-slate-900/40 p-12 text-center backdrop-blur-xl">
               <Bot className="mx-auto h-16 w-16 text-violet-400 mb-4 animate-bounce" />
-              <h2 className="text-2xl font-bold text-white">AI Interview Room Idle</h2>
+              <h2 className="text-2xl font-bold text-white">Interview Practice Room Ready</h2>
               <p className="mt-2 text-slate-400 max-w-md mx-auto">
                 Configure your target role and launch a realistic mock interview session.
               </p>
@@ -234,7 +235,7 @@ export default function AIMockInterviewPage() {
                     <Bot className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-white text-lg">{activeSession.company} AI Interviewer</h3>
+                    <h3 className="font-bold text-white text-lg">{activeSession.company} Practice Session</h3>
                     <p className="text-xs text-slate-400">{activeSession.role} • Question {Math.min(currentQIndex + 1, activeSession.questions.length || 1)} of {activeSession.questions.length || 0}</p>
                   </div>
                 </div>

@@ -72,7 +72,6 @@ const collegeItems: PortalNavItem[] = [
   { title: "College Profile", href: "/organization-setup", icon: Building2, category: "Organization", available: true },
   { title: "Assessments", href: "/college/dashboard?view=assessments", icon: ClipboardCheck, category: "Assessment", available: true },
   { title: "Results", href: "/college/dashboard?view=results", icon: FileBarChart, category: "Assessment", available: true },
-  { title: "Placement Scorecard", href: "/placement/scorecard", icon: BriefcaseBusiness, category: "Placement", available: true },
   { title: "Skill Analytics", href: "/college/dashboard?view=analytics", icon: BarChart3, category: "Insights", available: true },
   { title: "Settings", href: "/settings", icon: Settings, category: "Account", available: true },
 ];
@@ -124,7 +123,7 @@ export function getMobileNavigation(portal: PortalKind): PortalNavItem[] {
       { title: "Home", href: "/college/dashboard", icon: Home, category: "mobile", available: true },
       { title: "Students", href: "/college/dashboard?view=students", icon: Users, category: "mobile", available: true },
       { title: "Assessments", href: "/college/dashboard?view=assessments", icon: ClipboardCheck, category: "mobile", available: true },
-      { title: "Placement", href: "/placement/scorecard", icon: BriefcaseBusiness, category: "mobile", available: true },
+      { title: "Placement", href: "/placement", icon: BriefcaseBusiness, category: "mobile", available: true },
       { title: "More", icon: Layers3, category: "mobile", available: true },
     ];
   }

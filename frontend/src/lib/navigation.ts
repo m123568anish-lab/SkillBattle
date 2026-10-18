@@ -8,12 +8,8 @@ export const navigation = [
     href: "/battle",
   },
   {
-    name: "Company Speedrun",
-    href: "/battle/company-speedrun",
-  },
-  {
-    name: "Placement Scorecard",
-    href: "/placement/scorecard",
+    name: "Internships & placements",
+    href: "/placement",
   },
   {
     name: "Career",

@@ -222,7 +222,7 @@ export default function Home() {
             </h1>
 
             <p className="mt-6 max-w-xl text-base leading-8 text-slate-300 sm:text-lg">
-              The AI-powered competitive platform where students solve real DSA problems, battle peers in live coding duels, prepare with real-time AI interviewers, and build verified skill profiles for top hiring companies.
+              A competitive learning platform where students practice coding, join live battles, work through interview questions, and track their progress.
             </p>
 
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">

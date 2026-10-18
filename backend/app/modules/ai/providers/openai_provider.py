@@ -19,7 +19,4 @@ class OpenAIProvider(AIProvider):
         self,
         prompt: str,
     ) -> str:
-        # Minimal placeholder implementation — return informative message.
-        if not prompt:
-            return ""
-        return f"[openai-placeholder] {prompt}"
+        raise NotImplementedError("The OpenAI provider integration is not implemented.")

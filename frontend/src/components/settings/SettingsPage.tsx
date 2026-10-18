@@ -663,7 +663,7 @@ export default function SettingsPage() {
                         {
                           key: "allow_recruiter_search" as const,
                           title: "Allow Recruiter Discovery",
-                          desc: "Let partner tech companies discover your profile when searching for specific skill tags.",
+                          desc: "Allow companies using SkillBattle's candidate search to find your profile by relevant skill tags.",
                         },
                       ].map((item) => (
                         <label

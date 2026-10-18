@@ -412,25 +412,6 @@ export default function ProfileForm() {
             <>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Target Company Tier</label>
-                  <select
-                    onChange={(e) => {
-                      const tier = e.target.value;
-                      if (tier === "tier1") setProfile({ ...profile, target_company: "Google" });
-                      else if (tier === "tier2") setProfile({ ...profile, target_company: "Razorpay" });
-                      else if (tier === "tier3") setProfile({ ...profile, target_company: "TCS" });
-                      else setProfile({ ...profile, target_company: "" });
-                    }}
-                    className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-sm text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 outline-none transition"
-                  >
-                    <option value="">Select Tier...</option>
-                    <option value="tier1">Tier 1 - FAANG & Premium</option>
-                    <option value="tier2">Tier 2 - Startups & Unicorns</option>
-                    <option value="tier3">Tier 3 - Service Providers</option>
-                  </select>
-                </div>
-
-                <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Target Company</label>
                   <input
                     type="text"

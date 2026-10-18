@@ -4,7 +4,7 @@ SkillBattle - Placement-Focused AI Coach Chat Router
 =========================================================
 """
 import logging
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -38,12 +38,12 @@ async def get_student_context(db: AsyncSession, user: User) -> dict:
     profile = res_prof.scalar_one_or_none()
 
     pref = profile.onboarding_preferences if profile and profile.onboarding_preferences else {}
-    target_role = pref.get("target_role") or (profile.bio if profile and profile.bio else "Software Engineer")
-    target_company = profile.target_company if (profile and profile.target_company) else (pref.get("dream_companies", ["Top Tech Company"])[0] if pref.get("dream_companies") else "Google")
-    dream_companies = pref.get("dream_companies") or ([profile.target_company] if profile and profile.target_company else ["Google", "Amazon", "Meta"])
-    pref_langs = pref.get("preferred_languages") or ["Python", "C++", "Java"]
-    learning_goals = pref.get("learning_goals") or ["Placement Prep", "Data Structures & Algorithms"]
-    college = profile.college if profile and profile.college else "Engineering Institute"
+    target_role = pref.get("target_role") or ""
+    target_company = profile.target_company if profile and profile.target_company else ""
+    dream_companies = pref.get("dream_companies") or ([target_company] if target_company else [])
+    pref_langs = pref.get("preferred_languages") or []
+    learning_goals = pref.get("learning_goals") or []
+    college = profile.college if profile and profile.college else ""
 
     # Active Roadmap
     stmt_road = (
@@ -55,7 +55,7 @@ async def get_student_context(db: AsyncSession, user: User) -> dict:
     roadmaps = res_road.scalars().all()
     active_roadmap = roadmaps[0] if roadmaps else None
 
-    roadmap_title = active_roadmap.title if active_roadmap else "DSA & System Design Mastery"
+    roadmap_title = active_roadmap.title if active_roadmap else ""
     roadmap_progress = active_roadmap.progress if active_roadmap else 0
     
     current_tasks = []
@@ -84,17 +84,12 @@ async def get_student_context(db: AsyncSession, user: User) -> dict:
             else:
                 strong_topics.append(f"{s.subject} ({acc:.0f}% accuracy)")
     
-    if not weak_topics:
-        weak_topics = ["Dynamic Programming", "Graph Algorithms", "System Design"]
-    if not strong_topics:
-        strong_topics = ["Arrays & Strings", "Binary Search"]
-
     # Interview Sessions
     stmt_int = select(InterviewSession).where(InterviewSession.user_id == user.id)
     res_int = await db.execute(stmt_int)
     interviews = res_int.scalars().all()
     interview_count = len(interviews)
-    avg_interview_score = round(sum(i.overall_score for i in interviews) / interview_count, 1) if interview_count > 0 else 0.0
+    avg_interview_score = round(sum(i.overall_score for i in interviews) / interview_count, 1) if interview_count else None
 
     return {
         "name": user.full_name or user.username,
@@ -117,99 +112,6 @@ async def get_student_context(db: AsyncSession, user: User) -> dict:
     }
 
 
-def generate_context_aware_fallback(message: str, ctx: dict) -> str:
-    """
-    Intelligent rule-based fallback response engine grounded in exact student metrics.
-    """
-    m = message.lower().strip()
-    name = ctx["name"]
-    role = ctx["target_role"]
-    company = ctx["target_company"]
-    progress = ctx["roadmap_progress"]
-    weak_str = ", ".join(ctx["weak_topics"])
-    strong_str = ", ".join(ctx["strong_topics"])
-    langs_str = ", ".join(ctx["preferred_languages"])
-    tasks_str = "\n".join([f"• {t}" for t in ctx["current_tasks"]]) if ctx["current_tasks"] else "• Practice Dynamic Programming (0/1 Knapsack)\n• Implement Graphs (BFS/DFS)\n• Review SQL Window Functions"
-
-    if "study today" in m or "what should i study" in m or "today" in m:
-        return (
-            f"### 📅 Today's Personal Study Plan for {name}\n\n"
-            f"Target Role: **{role}** | Target Company: **{company}**\n\n"
-            f"Based on your active roadmap (**{ctx['roadmap_title']}** - **{progress}% complete**), here are your top priorities for today:\n\n"
-            f"#### 🎯 Active Roadmap Tasks\n{tasks_str}\n\n"
-            f"#### ⚠️ Focus Weak Areas\n"
-            f"Your current lower-accuracy topics: **{weak_str}**. We recommend allocating 45 minutes to solve 2 practice problems on these topics.\n\n"
-            f"💡 *Tip:* Write clean code in **{langs_str}** and analyze Time/Space complexity before submitting!"
-        )
-
-    if "weak" in m or "why am i weak" in m or "improve" in m:
-        return (
-            f"### 🔍 Weak Topic Analysis for {name}\n\n"
-            f"According to your SkillBattle analytics, your weak areas are: **{weak_str}**.\n\n"
-            f"#### 💡 Why students struggle with these topics:\n"
-            f"1. **State Definition in DP:** Difficulty identifying subproblems and transition formulas `dp[i][j]`.\n"
-            f"2. **Graph Traversal Edge Cases:** Forgetting cycle detection (in-degree array in Kahn's algo or visited sets).\n"
-            f"3. **Complexity Trade-offs:** Overusing memory instead of in-place algorithms.\n\n"
-            f"#### 🚀 Recommended Action Plan:\n"
-            f"• Complete 3 Easy-Medium problems on **{ctx['weak_topics'][0]}**.\n"
-            f"• Take an **AI Mock Interview** tailored to **{company}** to practice explaining your logic out loud.\n"
-            f"• Review past submissions and check optimal $O(N)$ solutions."
-        )
-
-    if "practice next" in m or "what next" in m or "next step" in m:
-        return (
-            f"### 🚀 Next Practice Recommendations for {name}\n\n"
-            f"To maximize your readiness for **{company} ({role})**:\n\n"
-            f"1. **Top Priority Topic:** Focus on **{ctx['weak_topics'][0]}**.\n"
-            f"2. **Daily Drill:** Solve 2 Medium problems using **{langs_str}**.\n"
-            f"3. **Mock Interview:** Conduct a 30-minute AI Technical Interview round to test speed and accuracy under pressure.\n"
-            f"4. **Roadmap Milestone:** Progress your roadmap **{ctx['roadmap_title']}** beyond current **{progress}%**."
-        )
-
-    if "progress" in m or "how am i progressing" in m or "stats" in m:
-        return (
-            f"### 📊 Student Progress Report: {name}\n\n"
-            f"• **Current Level:** Level {ctx['level']} ({ctx['xp']} XP)\n"
-            f"• **Target Role & Company:** {role} @ {company}\n"
-            f"• **Roadmap Completion:** {progress}% ({ctx['roadmap_title']})\n"
-            f"• **AI Mock Interviews Completed:** {ctx['interview_count']} session(s) (Avg Score: {ctx['avg_interview_score']}/100)\n"
-            f"• **Strong Topics:** {strong_str}\n"
-            f"• **Areas Needing Practice:** {weak_str}\n\n"
-            f"🔥 *Keep up your daily streak to climb the SkillBattle Leaderboard!*"
-        )
-
-    if "prepare me for" in m or "target company" in m or company.lower() in m:
-        return (
-            f"### 🎯 Tailored Preparation Strategy for {company}\n\n"
-            f"Candidate: **{name}** | Role: **{role}**\n\n"
-            f"#### 🏢 {company} Technical Interview Structure:\n"
-            f"1. **Online Assessment (OA):** 2 Data Structure & Algorithm questions (90 mins). Focus: Monotonic Stack, Sliding Window, DP.\n"
-            f"2. **Technical Round 1 & 2:** Live coding + Data Structure optimization in **{langs_str}**.\n"
-            f"3. **System Design / Architecture:** Distributed caching, rate limiters, DB indexing, and microservices.\n"
-            f"4. **Behavioral Round:** Leadership principles and STAR method storytelling.\n\n"
-            f"#### 📌 Your Immediate Focus:\n"
-            f"• Strengthen weak areas: **{weak_str}**.\n"
-            f"• Run an **AI Mock Interview** configured for **{company}** in the Interview Room."
-        )
-
-    # General structured context-aware breakdown
-    return (
-        f"### 🤖 SkillBattle AI Coach Response for {name}\n\n"
-        f"Here is your personalized guidance for: **\"{message}\"**\n\n"
-        f"#### 1. Context & Profile Alignment\n"
-        f"• **Target Role:** {role} @ **{company}**\n"
-        f"• **Current Progress:** Level {ctx['level']} | Roadmap: {progress}%\n"
-        f"• **Preferred Stack:** {langs_str}\n\n"
-        f"#### 2. Technical Recommendation\n"
-        f"To solve query concepts effectively, always structure your approach into:\n"
-        f"1. **Brute Force & Constraints:** Check constraints ($N \\le 10^5$ requires $O(N)$ or $O(N \\log N)$).\n"
-        f"2. **Optimal Data Structures:** Select appropriate structures (HashMap $O(1)$, Heap $O(\\log N)$, Graph BFS/DFS).\n"
-        f"3. **Complexity & Edge Cases:** Explicitly state Time & Space complexity.\n\n"
-        f"#### 3. Recommended Next Step\n"
-        f"Work on **{ctx['weak_topics'][0]}** or ask me: *\"What should I study today?\"* or *\"Prepare me for {company}\"*!"
-    )
-
-
 @router.post("/chat")
 async def chat(
     req: ChatRequest,
@@ -224,16 +126,18 @@ You are SkillBattle's AI Placement Coach. You provide concise, actionable, highl
 
 Student Context:
 - Name: {ctx['name']}
-- Target Role: {ctx['target_role']}
-- Target Company: {ctx['target_company']}
+- Target Role: {ctx['target_role'] or 'Not specified'}
+- Target Company: {ctx['target_company'] or 'Not specified'}
 - Dream Companies: {ctx['dream_companies']}
 - Preferred Languages: {ctx['preferred_languages']}
 - XP: {ctx['xp']} (Level {ctx['level']})
-- Active Roadmap: {ctx['roadmap_title']} ({ctx['roadmap_progress']}% complete)
+- Active Roadmap: {ctx['roadmap_title'] or 'None'} ({ctx['roadmap_progress']}% complete)
 - Current Pending Tasks: {ctx['current_tasks']}
 - Weak Areas: {ctx['weak_topics']}
 - Strong Areas: {ctx['strong_topics']}
-- Mock Interviews Completed: {ctx['interview_count']} (Average Score: {ctx['avg_interview_score']}/100)
+- Mock Interviews Completed: {ctx['interview_count']} (Average Score: {ctx['avg_interview_score'] if ctx['avg_interview_score'] is not None else 'No interviews recorded'})
+
+Only treat listed profile and activity values as known. Do not invent missing student details, skill metrics, or employer hiring processes.
 
 Student Question:
 "{req.message}"
@@ -246,8 +150,11 @@ Respond using Markdown with bullet points, code snippets where helpful, and dire
         if not reply or len(reply.strip()) < 10:
             raise ValueError("Empty or invalid AI provider response")
     except Exception as err:
-        logger.warning(f"AI Provider unavailable ({err}). Using context-aware fallback engine.")
-        reply = generate_context_aware_fallback(req.message, ctx)
+        logger.exception("AI Coach provider is unavailable")
+        raise HTTPException(
+            status_code=503,
+            detail="AI Coach is currently unavailable because no working AI provider responded.",
+        ) from err
 
     return {
         "reply": reply,
@@ -259,4 +166,3 @@ Respond using Markdown with bullet points, code snippets where helpful, and dire
             "weak_topics": ctx["weak_topics"],
         }
     }
-

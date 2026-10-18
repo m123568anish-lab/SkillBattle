@@ -47,24 +47,18 @@ export default function CoachPage() {
 
     try {
       const res = await api.post("/coach/chat", { message: text });
-      const reply = res.data?.reply || res.data?.message || "I understand. Let me help you with that concept!";
+      const reply = res.data?.reply || res.data?.message;
+      if (typeof reply !== "string" || !reply.trim()) {
+        throw new Error("The AI Coach returned an empty response.");
+      }
       setMessages((prev) => [...prev, { role: "coach", content: reply }]);
-    } catch {
-      // Provide a helpful fallback response
-      const fallback = generateFallback(text);
-      setMessages((prev) => [...prev, { role: "coach", content: fallback }]);
+    } catch (error: any) {
+      const detail = error?.response?.data?.detail;
+      const unavailable = typeof detail === "string" ? detail : "AI Coach is unavailable right now. Please try again later.";
+      setMessages((prev) => [...prev, { role: "coach", content: unavailable }]);
     } finally {
       setLoading(false);
     }
-  };
-
-  const generateFallback = (query: string): string => {
-    const q = query.toLowerCase();
-    if (q.includes("dp") || q.includes("dynamic")) return "**Dynamic Programming** breaks complex problems into overlapping subproblems. Key patterns: Fibonacci (memoization), Knapsack (tabulation), LCS (2D DP), Matrix Chain (interval DP). Always define: state, transition, and base case.";
-    if (q.includes("graph") || q.includes("tree")) return "**Graph Traversal**: Use BFS for shortest path in unweighted graphs (queue-based), DFS for connected components, cycle detection (stack/recursion). For trees: preorder (root → left → right), inorder (sorted BST output), postorder (delete/height).";
-    if (q.includes("big o") || q.includes("complexity")) return "**Big O** measures how runtime/space grows with input size. O(1) < O(log n) < O(n) < O(n log n) < O(n²) < O(2^n). Tips: nested loops = O(n²), halving = O(log n), divide & conquer = O(n log n).";
-    if (q.includes("sql")) return "**Advanced SQL**: Window functions (`ROW_NUMBER()`, `RANK()`, `LAG()`) run without collapsing rows. CTEs (`WITH cte AS (...)`) improve readability. Indexing: create indexes on WHERE/JOIN columns. EXPLAIN ANALYZE shows query plan.";
-    return `Great question! To tackle **"${query}"** effectively: 1) Break it into smaller pieces, 2) Identify the data structure that fits, 3) Think about edge cases, 4) Analyze time/space complexity. Would you like a deeper dive on any specific aspect?`;
   };
 
   return (
@@ -124,9 +118,7 @@ export default function CoachPage() {
               </div>
               <div>
                 <p className="font-bold text-white text-sm">BattleAI Coach</p>
-                <p className="text-xs text-emerald-400 flex items-center gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" /> Online
-                </p>
+                <p className="text-xs text-slate-500">AI responses require a configured provider</p>
               </div>
             </div>
             <button
