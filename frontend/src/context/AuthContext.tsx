@@ -32,6 +32,7 @@ export function AuthProvider({
         isLoaded: clerkLoaded,
         isSignedIn,
         getToken,
+        userId,
     } = useClerkAuth();
 
     const {
@@ -60,26 +61,14 @@ export function AuthProvider({
             const token = localStorage.getItem("access_token");
 
             if (isSignedIn || token) {
-                void loadUser();
+                void loadUser(isSignedIn ? `clerk:${userId ?? "active"}` : "legacy");
             } else {
-                useAuthStore.setState({
-                    user: null,
-                    isAuthenticated: false,
-                    loading: false,
-                    status: "unauthenticated",
-                    authError: null,
-                });
+                useAuthStore.getState().clearSession();
             }
-        }, [clerkLoaded, isSignedIn, loadUser]);
+        }, [clerkLoaded, isSignedIn, userId, loadUser]);
 
     useEffect(() => {
-        const invalidate = () => useAuthStore.setState({
-            user: null,
-            isAuthenticated: false,
-            loading: false,
-            status: "unauthenticated",
-            authError: "Your session has expired. Please sign in again.",
-        });
+        const invalidate = () => useAuthStore.getState().clearSession("Your session has expired. Please sign in again.");
         window.addEventListener("skillbattle:session-invalid", invalidate);
         return () => window.removeEventListener("skillbattle:session-invalid", invalidate);
     }, []);

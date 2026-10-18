@@ -13,7 +13,8 @@ interface AuthState {
     authError: string | null;
     login(data: LoginRequest): Promise<User>;
     logout(): Promise<void>;
-    loadUser(): Promise<void>;
+    loadUser(sessionKey?: string): Promise<void>;
+    clearSession(message?: string): void;
     updateUserPartial(fields: Partial<User>): void;
 }
 
@@ -26,7 +27,8 @@ function getInitialUser(): User | null {
 }
 
 const initialCachedUser = getInitialUser();
-let activeLoadUserPromise: Promise<void> | null = null;
+let activeLoadUser: { sessionKey: string; promise: Promise<void> } | null = null;
+let activeAuthSessionKey: string | null = null;
 let authRequestGeneration = 0;
 
 function classify(error: unknown): AuthStatus {
@@ -61,6 +63,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     async login(data) {
         authRequestGeneration += 1;
+        activeAuthSessionKey = "legacy";
+        activeLoadUser = null;
         set({ loading: true, status: "loading", authError: null });
         try {
             const user = await authService.login(data);
@@ -75,17 +79,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     async logout() {
         authRequestGeneration += 1;
+        activeAuthSessionKey = null;
+        activeLoadUser = null;
         await authService.logout();
         cacheUser(null);
         if (typeof window !== "undefined") localStorage.removeItem("skillbattle_dashboard_cache");
         set({ user: null, loading: false, isAuthenticated: false, status: "unauthenticated", authError: null });
     },
 
-    async loadUser() {
-        if (activeLoadUserPromise) return activeLoadUserPromise;
+    async loadUser(sessionKey) {
+        const requestedSessionKey = sessionKey ?? activeAuthSessionKey ?? "legacy";
+        if (activeLoadUser?.sessionKey === requestedSessionKey) return activeLoadUser.promise;
+
+        if (activeAuthSessionKey && activeAuthSessionKey !== requestedSessionKey) {
+            authRequestGeneration += 1;
+            activeLoadUser = null;
+            cacheUser(null);
+            if (typeof window !== "undefined") localStorage.removeItem("skillbattle_dashboard_cache");
+            set({
+                user: null,
+                isAuthenticated: false,
+                loading: true,
+                status: "loading",
+                authError: null,
+            });
+        }
+        activeAuthSessionKey = requestedSessionKey;
         const requestGeneration = authRequestGeneration;
         set({ loading: true, status: "loading", authError: null });
-        activeLoadUserPromise = (async () => {
+        const loadRequest = { sessionKey: requestedSessionKey, promise: Promise.resolve() };
+        const promise = (async () => {
             try {
                 const user = await authService.getCurrentUser();
                 if (requestGeneration !== authRequestGeneration) return;
@@ -102,10 +125,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     set({ loading: false, isAuthenticated: Boolean(get().user), status, authError: errorMessage(error) });
                 }
             } finally {
-                activeLoadUserPromise = null;
+                if (activeLoadUser === loadRequest) activeLoadUser = null;
             }
         })();
-        return activeLoadUserPromise;
+        loadRequest.promise = promise;
+        activeLoadUser = loadRequest;
+        return promise;
+    },
+
+    clearSession(message) {
+        authRequestGeneration += 1;
+        activeAuthSessionKey = null;
+        activeLoadUser = null;
+        cacheUser(null);
+        if (typeof window !== "undefined") localStorage.removeItem("skillbattle_dashboard_cache");
+        set({
+            user: null,
+            loading: false,
+            isAuthenticated: false,
+            status: "unauthenticated",
+            authError: message ?? null,
+        });
     },
 
     updateUserPartial(fields) {

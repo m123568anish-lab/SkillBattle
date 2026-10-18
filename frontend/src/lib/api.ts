@@ -16,7 +16,7 @@ const API_BASE_URL = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_URL);
 
 const api = axios.create({
     baseURL: `${API_BASE_URL}/api/v1`,
-    timeout: 20_000,                  // 20 s — responsive timeout allowing backend/cold-start response
+    timeout: 20_000,
     headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -27,6 +27,7 @@ type ClerkTokenGetter = () => Promise<string | null>;
 
 let clerkTokenGetter: ClerkTokenGetter | null = null;
 let clerkSessionActive = false;
+let clerkTokenPromise: Promise<string | null> | null = null;
 
 /**
  * Clerk owns the browser session, while legacy users may still have the
@@ -39,36 +40,67 @@ export function configureClerkTokenProvider(
 ) {
     clerkTokenGetter = getToken;
     clerkSessionActive = active;
+    clerkTokenPromise = null;
 }
 
-let isRefreshing = false;
-let pendingRequests: Array<(token: string) => void> = [];
+let refreshPromise: Promise<string> | null = null;
+const SAFE_RETRY_METHODS = new Set(["get", "head", "options"]);
 
-const processQueue = (token: string | null) => {
-    pendingRequests.forEach((cb) => cb(token || ""));
-    pendingRequests = [];
-};
+function getClerkToken(): Promise<string | null> {
+    if (clerkTokenPromise) return clerkTokenPromise;
+    const getter = clerkTokenGetter;
+    if (!getter) return Promise.resolve(null);
+
+    clerkTokenPromise = (async () => {
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        try {
+            return await Promise.race([
+                Promise.resolve().then(getter),
+                new Promise<null>((_, reject) => {
+                    timeoutId = setTimeout(() => reject(new Error("Timed out while resolving the Clerk session.")), 3500);
+                }),
+            ]);
+        } finally {
+            if (timeoutId) clearTimeout(timeoutId);
+            clerkTokenPromise = null;
+        }
+    })();
+    return clerkTokenPromise;
+}
+
+async function refreshLegacyAccessToken(): Promise<string> {
+    const refreshToken = typeof window !== "undefined" ? localStorage.getItem("refresh_token") : null;
+    if (!refreshToken) throw new Error("No refresh token is available.");
+
+    const response = await api.post("/auth/refresh", { refresh_token: refreshToken });
+    const token = response.data?.access_token;
+    if (typeof token !== "string" || !token) {
+        throw new Error("The refresh response did not include an access token.");
+    }
+    localStorage.setItem("access_token", token);
+    return token;
+}
+
+function getLegacyRefreshPromise(): Promise<string> {
+    if (refreshPromise) return refreshPromise;
+    const promise = refreshLegacyAccessToken();
+    refreshPromise = promise;
+    void promise.finally(() => {
+        if (refreshPromise === promise) refreshPromise = null;
+    }).catch(() => undefined);
+    return promise;
+}
 
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
     if (typeof window !== "undefined") {
-        let clerkToken: string | null = null;
+        const clerkToken = await getClerkToken();
+        const token = clerkSessionActive
+            ? clerkToken
+            : clerkToken || localStorage.getItem("access_token");
 
-        if (clerkTokenGetter) {
-            try {
-                clerkToken = await Promise.race([
-                    clerkTokenGetter(),
-                    new Promise<null>((resolve) => setTimeout(() => resolve(null), 3500)),
-                ]);
-            } catch {
-                // Let the request fail normally. Do not fall back to a legacy
-                // token while a Clerk session is active.
-            }
+        if (clerkSessionActive && !token) {
+            throw new Error("The active Clerk session did not provide an access token.");
         }
-
-        const token = clerkToken || (
-            clerkSessionActive ? null : localStorage.getItem("access_token")
-        );
-
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -79,43 +111,10 @@ api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
 api.interceptors.response.use(
     (response) => response,
     async (error: AxiosError & { config?: InternalAxiosRequestConfig }) => {
-        const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean; _fallbackRetry?: boolean; _timeoutRetry?: boolean }) | undefined;
+        const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
         const url = originalRequest?.url ?? "";
         const isAuthRequest = /\/auth\/(login|register|refresh|me|logout|account)/i.test(url);
-
-        // Bounded retry for transient timeout errors on safe, idempotent GET requests only.
-        // Never retry mutations (POST/PUT/DELETE) or auth checks on timeout to avoid multi-minute freezes.
-        const isTimeout = error.code === "ECONNABORTED" || error.message?.toLowerCase().includes("timeout");
-        const isGetRequest = (originalRequest?.method || "get").toLowerCase() === "get";
-        if (originalRequest && isTimeout && !originalRequest._timeoutRetry && !isAuthRequest && isGetRequest) {
-            originalRequest._timeoutRetry = true;
-            originalRequest.timeout = 20_000;
-            if (!originalRequest.baseURL) {
-                originalRequest.baseURL = api.defaults.baseURL;
-            }
-            try {
-                return await api(originalRequest);
-            } catch (retryError) {
-                return Promise.reject(retryError);
-            }
-        }
-
-        // Fallback retry for network errors / connection refused when target is localhost
-        if (
-            originalRequest &&
-            !error.response &&
-            !originalRequest._fallbackRetry &&
-            (api.defaults.baseURL?.includes("localhost") || originalRequest.baseURL?.includes("localhost") || originalRequest.url?.includes("localhost"))
-        ) {
-            originalRequest._fallbackRetry = true;
-            originalRequest.baseURL = "https://skillbattle-api-2026.onrender.com/api/v1";
-            originalRequest.timeout = 20_000;
-            try {
-                return await api(originalRequest);
-            } catch (fallbackErr) {
-                return Promise.reject(fallbackErr);
-            }
-        }
+        const method = (originalRequest?.method || "get").toLowerCase();
 
         if (
             originalRequest &&
@@ -124,42 +123,17 @@ api.interceptors.response.use(
             !clerkSessionActive &&
             !url.includes("/auth/login") &&
             !url.includes("/auth/register") &&
-            !url.includes("/auth/refresh")
+            !url.includes("/auth/refresh") &&
+            SAFE_RETRY_METHODS.has(method)
         ) {
             originalRequest._retry = true;
 
-            if (isRefreshing) {
-                return new Promise((resolve) => {
-                    pendingRequests.push((token: string) => {
-                        if (originalRequest.headers) {
-                            originalRequest.headers.Authorization = `Bearer ${token}`;
-                        }
-                        resolve(api(originalRequest));
-                    });
-                });
-            }
-
-            isRefreshing = true;
-
             try {
-                const refreshToken = typeof window !== "undefined" ? localStorage.getItem("refresh_token") : null;
-                if (!refreshToken) {
-                    throw new Error("no refresh token");
+                const token = await getLegacyRefreshPromise();
+                if (originalRequest.headers) {
+                    originalRequest.headers.Authorization = `Bearer ${token}`;
                 }
-
-                const resp = await api.post("/auth/refresh", { refresh_token: refreshToken });
-                const token = resp.data?.access_token;
-
-                if (token) {
-                    localStorage.setItem("access_token", token);
-                    processQueue(token);
-                    if (originalRequest.headers) {
-                        originalRequest.headers.Authorization = `Bearer ${token}`;
-                    }
-                    return api(originalRequest);
-                }
-
-                throw new Error("refresh token response missing access token");
+                return await api(originalRequest);
             } catch (e) {
                 const refreshStatus = axios.isAxiosError(e) ? e.response?.status : undefined;
                 if (typeof window !== "undefined" && (refreshStatus === 401 || refreshStatus === 403)) {
@@ -168,9 +142,19 @@ api.interceptors.response.use(
                     window.dispatchEvent(new Event("skillbattle:session-invalid"));
                 }
                 return Promise.reject(e);
-            } finally {
-                isRefreshing = false;
             }
+        }
+
+        if (
+            originalRequest &&
+            !originalRequest._retry &&
+            !isAuthRequest &&
+            SAFE_RETRY_METHODS.has(method) &&
+            [502, 503, 504].includes(error.response?.status ?? 0)
+        ) {
+            originalRequest._retry = true;
+            await new Promise((resolve) => setTimeout(resolve, 250));
+            return api(originalRequest);
         }
 
         return Promise.reject(error);

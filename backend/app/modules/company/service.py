@@ -5,8 +5,9 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import load_only
 
 from app.models.company import ApplicationStatusHistory, CandidateApplication, CandidatePrivacySettings, Company, CompanyInterview, CompanyMember, JobPosting, SavedOpportunity
 from app.models.profile import Profile
@@ -153,32 +154,75 @@ class CompanyService:
         return await battle_config_service.create_config(db, config)
 
     async def list_openings(self, db: AsyncSession, *, q: str = "", category: str | None = None, work_mode: str | None = None, employment_type: str | None = None, page: int = 1, page_size: int = 20) -> dict[str, Any]:
-        stmt = (
-            select(JobPosting, Company, BattleConfig.id)
-            .join(Company, Company.id == JobPosting.company_id)
-            .outerjoin(BattleConfig, BattleConfig.job_id == JobPosting.id)
-            .where(
-                Company.status == "verified",
-                Company.slug != LEGACY_DEMO_COMPANY_SLUG,
-                JobPosting.status.in_(("open", "active")),
-                JobPosting.verification_status == "verified",
-            )
-            .order_by(JobPosting.created_at.desc())
-        )
+        now = datetime.now(timezone.utc)
+        conditions = [
+            Company.status == "verified",
+            Company.slug != LEGACY_DEMO_COMPANY_SLUG,
+            JobPosting.status.in_(("open", "active")),
+            JobPosting.verification_status == "verified",
+            or_(JobPosting.opens_at.is_(None), JobPosting.opens_at <= now),
+            or_(JobPosting.deadline_at.is_(None), JobPosting.deadline_at >= now),
+        ]
         if q.strip():
-            from sqlalchemy import or_
             term = f"%{q.strip()}%"
-            stmt = stmt.where(or_(Company.name.ilike(term), JobPosting.title.ilike(term), JobPosting.required_skills.ilike(term)))
+            conditions.append(
+                or_(
+                    Company.name.ilike(term),
+                    JobPosting.title.ilike(term),
+                    JobPosting.required_skills.ilike(term),
+                )
+            )
         if category:
-            stmt = stmt.where(JobPosting.category == category)
+            conditions.append(JobPosting.category == category)
         if work_mode:
-            stmt = stmt.where(JobPosting.work_mode == work_mode)
+            conditions.append(JobPosting.work_mode == work_mode)
         if employment_type:
-            stmt = stmt.where(JobPosting.employment_type == employment_type)
+            conditions.append(JobPosting.employment_type == employment_type)
+
+        count_result = await db.execute(
+            select(func.count(JobPosting.id))
+            .join(Company, Company.id == JobPosting.company_id)
+            .where(*conditions)
+        )
+        total = count_result.scalar_one()
+        assessment_id = (
+            select(BattleConfig.id)
+            .where(BattleConfig.job_id == JobPosting.id)
+            .limit(1)
+            .scalar_subquery()
+        )
+        stmt = (
+            select(JobPosting, Company, assessment_id)
+            .join(Company, Company.id == JobPosting.company_id)
+            .options(
+                load_only(
+                    JobPosting.id,
+                    JobPosting.company_id,
+                    JobPosting.title,
+                    JobPosting.location,
+                    JobPosting.employment_type,
+                    JobPosting.remote_allowed,
+                    JobPosting.required_skills,
+                    JobPosting.compensation,
+                    JobPosting.category,
+                    JobPosting.work_mode,
+                    JobPosting.eligibility,
+                    JobPosting.deadline_at,
+                    JobPosting.source_label,
+                    JobPosting.source_url,
+                    JobPosting.application_url,
+                    JobPosting.verification_status,
+                    JobPosting.created_at,
+                ),
+                load_only(Company.id, Company.name),
+            )
+            .where(*conditions)
+            .order_by(JobPosting.created_at.desc(), JobPosting.id.desc())
+            .offset((max(page, 1) - 1) * page_size)
+            .limit(page_size)
+        )
         result = await db.execute(stmt)
-        rows = [(job, company, assessment_id) for job, company, assessment_id in result.all() if self._is_open(job)]
-        total = len(rows)
-        rows = rows[(max(page, 1) - 1) * page_size:max(page, 1) * page_size]
+        rows = result.all()
         items = [
             {
                 "job_id": job.id,
@@ -188,7 +232,6 @@ class CompanyService:
                 "location": job.location,
                 "employment_type": job.employment_type,
                 "remote_allowed": job.remote_allowed,
-                "description": job.description,
                 "required_skills": job.required_skills,
                 "compensation": job.compensation or None,
                 "category": job.category,

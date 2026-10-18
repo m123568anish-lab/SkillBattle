@@ -39,17 +39,38 @@ async def verified_company_and_job(client: AsyncClient, **job_data) -> tuple[dic
 
 @pytest.mark.asyncio
 async def test_opportunity_filters_pagination_and_lifecycle(client: AsyncClient):
-    _, active_id = await verified_company_and_job(client, title="Python Analyst")
-    _, expired_id = await verified_company_and_job(client, title="Expired Analyst", deadline_at=(datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat())
-    listing = await client.get("/company/openings", params={"q": "Python", "category": "Data Analytics and SQL", "work_mode": "hybrid", "page": 1, "page_size": 1})
+    unique_query = f"query-{uuid4().hex}"
+    _, active_id = await verified_company_and_job(client, title=f"Python Analyst {unique_query}", description="Detailed description " * 400)
+    _, expired_id = await verified_company_and_job(client, title=f"Expired Analyst {unique_query}", deadline_at=(datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat())
+    _, future_id = await verified_company_and_job(client, title=f"Future Analyst {unique_query}", opens_at=(datetime.now(timezone.utc) + timedelta(days=1)).isoformat())
+    listing = await client.get("/company/openings", params={"q": unique_query, "category": "Data Analytics and SQL", "work_mode": "hybrid", "page": 1, "page_size": 1})
     assert listing.status_code == 200, listing.text
     body = listing.json()
     assert body["page"] == 1 and body["page_size"] == 1
     assert [item["job_id"] for item in body["items"]] == [active_id]
+    assert body["total"] == 1
+    assert "description" not in body["items"][0]
     assert expired_id not in [item["job_id"] for item in body["items"]]
+    assert future_id not in [item["job_id"] for item in body["items"]]
+    empty_page = await client.get(
+        "/company/openings",
+        params={
+            "q": unique_query,
+            "category": "Data Analytics and SQL",
+            "work_mode": "hybrid",
+            "page": 2,
+            "page_size": 1,
+        },
+    )
+    assert empty_page.status_code == 200
+    assert empty_page.json()["items"] == []
+    assert empty_page.json()["total"] == 1
     expired = await client.get(f"/company/openings/{expired_id}")
     assert expired.status_code == 200
     assert expired.json()["is_open"] is False
+    detail = await client.get(f"/company/openings/{active_id}")
+    assert detail.status_code == 200
+    assert detail.json()["description"].startswith("Detailed description")
 
 
 @pytest.mark.asyncio

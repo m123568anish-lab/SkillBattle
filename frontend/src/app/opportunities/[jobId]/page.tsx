@@ -9,7 +9,7 @@ import api from "@/lib/api";
 import type { Opportunity } from "@/services/placement.service";
 import { CopyButton } from "@/components/common/CopyButton";
 
-type Details = Opportunity & { is_open: boolean };
+type Details = Opportunity & { description: string; is_open: boolean };
 
 export default function OpportunityDetailsPage() {
   const { jobId } = useParams<{ jobId: string }>();

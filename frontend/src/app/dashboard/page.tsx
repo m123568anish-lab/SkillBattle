@@ -1,16 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import GradientButton from '@/components/design/GradientButton';
 
 import DashboardHero from "@/components/dashboard/DashboardHero";
 import StatsGrid from "@/components/dashboard/StatsGrid";
 
-import AICoachCard from "@/components/dashboard/AICoachCard";
-import CommandCenterCard from "@/components/dashboard/CommandCenterCard";
 import { Swords, Code2, Bot, Trophy, ArrowRight, Sparkles } from "lucide-react";
 
 function DashboardPlaceholder({ minHeight }: { minHeight: string }) {
@@ -25,6 +21,12 @@ const BattleDock = dynamic(() => import("@/components/dashboard/BattleDock"), {
 });
 const QuickSpeedrunWidget = dynamic(() => import("@/components/dashboard/QuickSpeedrunWidget"), {
   loading: () => <DashboardPlaceholder minHeight="10rem" />,
+});
+const AICoachCard = dynamic(() => import("@/components/dashboard/AICoachCard"), {
+  loading: () => <DashboardPlaceholder minHeight="12rem" />,
+});
+const CommandCenterCard = dynamic(() => import("@/components/dashboard/CommandCenterCard"), {
+  loading: () => <DashboardPlaceholder minHeight="12rem" />,
 });
 const ServerStatus = dynamic(() => import("@/components/dashboard/ServerStatus"), {
   loading: () => <DashboardPlaceholder minHeight="18rem" />,
@@ -41,7 +43,6 @@ export default function DashboardPage() {
     dashboard,
     loading,
     isRefreshing,
-    isFromCache,
     lastRefreshedAt,
     error,
     refresh,

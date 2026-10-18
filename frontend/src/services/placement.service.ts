@@ -8,7 +8,7 @@ export const placementService = {
   track: async (id: string) => (await api.get<PlacementTrack>(`/placement/tracks/${id}`)).data,
 };
 
-export type Opportunity = { job_id: number; company_name: string; title: string; location: string; employment_type: string; work_mode: "remote" | "hybrid" | "on_site"; required_skills: string; description: string; eligibility: string; compensation: string | null; deadline_at: string | null; source_label: string; source_url: string; application_method: "internal" | "external"; application_url: string | null; verification_status: string };
+export type Opportunity = { job_id: number; company_name: string; title: string; location: string; employment_type: string; work_mode: "remote" | "hybrid" | "on_site"; required_skills: string; eligibility: string; compensation: string | null; deadline_at: string | null; source_label: string; source_url: string; application_method: "internal" | "external"; application_url: string | null; verification_status: string };
 export type OpportunityPage = { items: Opportunity[]; page: number; page_size: number; total: number };
 export type ExternalOpportunity = {
   job_id: string;
@@ -33,7 +33,10 @@ export type ExternalOpportunitySearch = {
   markets_with_errors: string[];
 };
 export const opportunityService = {
-  list: async (params: { q?: string; category?: string; work_mode?: string; employment_type?: string; page?: number }) => (await api.get<OpportunityPage>("/company/openings", { params })).data,
+  list: async (
+    params: { q?: string; category?: string; work_mode?: string; employment_type?: string; page?: number },
+    signal?: AbortSignal,
+  ) => (await api.get<OpportunityPage>("/company/openings", { params, signal })).data,
   searchExternal: async (params: { q: string; opening_type: string; location?: string }) => (await api.get<ExternalOpportunitySearch>("/company/external-opportunities", { params })).data,
   summarizeExternal: async (listing: ExternalOpportunity) => (await api.post<{ summary: string }>("/company/external-opportunities/summary", {
     title: listing.title,
