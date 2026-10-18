@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -22,16 +22,52 @@ async def list_problems(
     page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=50),
     db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user),
 ):
-    stmt = select(Problem).options(selectinload(Problem.tags)).where(Problem.is_active.is_(True))
-    if q.strip(): stmt = stmt.where(Problem.title.ilike(f"%{q.strip()}%"))
-    if difficulty: stmt = stmt.where(func.lower(Problem.difficulty) == difficulty.lower())
-    if category: stmt = stmt.where(func.lower(Problem.category) == category.lower())
-    statuses = await submission_statuses(db, current_user.id)
-    all_items = [public_problem(problem, statuses.get(problem.id, "unsolved")) for problem in (await db.execute(stmt.order_by(Problem.id.desc()))).scalars().all()]
-    if status != "all": all_items = [item for item in all_items if item["status"] == status]
+    conditions = [Problem.is_active.is_(True)]
+    if q.strip():
+        conditions.append(Problem.title.ilike(f"%{q.strip()}%"))
+    if difficulty:
+        conditions.append(func.lower(Problem.difficulty) == difficulty.lower())
+    if category:
+        conditions.append(func.lower(Problem.category) == category.lower())
+
+    user_submissions = select(CodeSubmission.id).where(
+        CodeSubmission.user_id == current_user.id,
+        CodeSubmission.problem_id == Problem.id,
+    )
+    accepted_submissions = user_submissions.where(CodeSubmission.verdict == "Accepted")
+    if status == "solved":
+        conditions.append(exists(accepted_submissions))
+    elif status == "attempted":
+        conditions.extend((exists(user_submissions), ~exists(accepted_submissions)))
+    elif status == "unsolved":
+        conditions.append(~exists(user_submissions))
+
+    total = await db.scalar(
+        select(func.count(Problem.id)).where(*conditions)
+    ) or 0
+    page_problems = list(
+        (
+            await db.execute(
+                select(Problem)
+                .options(selectinload(Problem.tags))
+                .where(*conditions)
+                .order_by(Problem.id.desc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+            )
+        ).scalars().all()
+    )
+    statuses = await submission_statuses(
+        db,
+        current_user.id,
+        [problem.id for problem in page_problems],
+    )
+    items = [
+        public_problem(problem, statuses.get(problem.id, "unsolved"))
+        for problem in page_problems
+    ]
     categories = (await db.execute(select(Problem.category).where(Problem.is_active.is_(True)).distinct().order_by(Problem.category))).scalars().all()
-    offset = (page - 1) * page_size
-    return {"items": all_items[offset:offset + page_size], "total": len(all_items), "page": page, "page_size": page_size, "categories": list(categories)}
+    return {"items": items, "total": total, "page": page, "page_size": page_size, "categories": list(categories)}
 
 
 @router.get("/problems/{problem_id}")

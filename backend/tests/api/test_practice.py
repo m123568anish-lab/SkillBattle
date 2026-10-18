@@ -4,6 +4,7 @@ import pytest
 
 from app.database.session import AsyncSessionLocal
 from app.models.challenge import Challenge
+from app.models.compiler import CodeSubmission
 from app.models.problem import Problem
 
 
@@ -75,3 +76,79 @@ async def test_inactive_problem_is_not_exposed_in_public_catalogue(client):
     async with AsyncSessionLocal() as db:
         assert await problem_repository.get_problem(db, inactive_id) is None
         assert all(problem.slug != f"inactive-generated-{key}" for problem in await problem_repository.list_problems(db))
+
+
+@pytest.mark.asyncio
+async def test_practice_catalogue_paginates_and_filters_user_progress(client):
+    headers = await _headers(client)
+    user_response = await client.get("/auth/me", headers=headers)
+    assert user_response.status_code == 200
+    user_id = user_response.json()["id"]
+    key = uuid4().hex[:8]
+    async with AsyncSessionLocal() as db:
+        problems = [
+            Problem(
+                title=f"Catalog page {key} {index:02}",
+                slug=f"catalog-page-{key}-{index:02}",
+                difficulty="Easy",
+                category="Arrays",
+                description="Return the requested value.",
+                input_format="integer",
+                output_format="integer",
+                constraints="n > 0",
+                is_active=True,
+            )
+            for index in range(23)
+        ]
+        db.add_all(problems)
+        await db.flush()
+        db.add_all([
+            CodeSubmission(
+                user_id=user_id,
+                problem_id=problems[0].id,
+                language="python",
+                source_code="print(1)",
+                verdict="Accepted",
+            ),
+            CodeSubmission(
+                user_id=user_id,
+                problem_id=problems[1].id,
+                language="python",
+                source_code="print(1)",
+                verdict="Wrong Answer",
+            ),
+        ])
+        await db.commit()
+
+    params = {"q": f"Catalog page {key}", "page_size": 10}
+    first_page = await client.get("/api/v1/practice/problems", headers=headers, params=params)
+    second_page = await client.get("/api/v1/practice/problems", headers=headers, params={**params, "page": 2})
+    final_page = await client.get("/api/v1/practice/problems", headers=headers, params={**params, "page": 3})
+
+    assert first_page.status_code == second_page.status_code == final_page.status_code == 200
+    first, second, final = first_page.json(), second_page.json(), final_page.json()
+    assert [first["total"], second["total"], final["total"]] == [23, 23, 23]
+    assert [len(first["items"]), len(second["items"]), len(final["items"])] == [10, 10, 3]
+    all_ids = [item["id"] for page in (first, second, final) for item in page["items"]]
+    assert len(all_ids) == len(set(all_ids)) == 23
+
+    solved = await client.get(
+        "/api/v1/practice/problems",
+        headers=headers,
+        params={**params, "status": "solved"},
+    )
+    attempted = await client.get(
+        "/api/v1/practice/problems",
+        headers=headers,
+        params={**params, "status": "attempted"},
+    )
+    unsolved = await client.get(
+        "/api/v1/practice/problems",
+        headers=headers,
+        params={**params, "status": "unsolved"},
+    )
+    assert solved.json()["total"] == 1
+    assert solved.json()["items"][0]["status"] == "solved"
+    assert attempted.json()["total"] == 1
+    assert attempted.json()["items"][0]["status"] == "attempted"
+    assert unsolved.json()["total"] == 21

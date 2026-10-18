@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import api from "@/lib/api";
@@ -18,7 +18,9 @@ import {
   AlertCircle,
   Clock,
   Cpu,
-  Award
+  Award,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 const Monaco = dynamic(() => import("@monaco-editor/react"), { 
@@ -45,13 +47,22 @@ export default function TasksPage() {
   const requested = Number(params.get("problem"));
 
   const [items, setItems] = useState<PracticeProblem[]>([]);
+  const [total, setTotal] = useState(0);
   const [categories, setCategories] = useState<string[]>([]);
   const [selected, setSelected] = useState<PracticeProblemDetail | null>(null);
+  const [playStarted, setPlayStarted] = useState(false);
   const [query, setQuery] = useState("");
   const [difficulty, setDifficulty] = useState("");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("all");
+  const [page, setPage] = useState(1);
+  const [catalogRevision, setCatalogRevision] = useState(0);
+  const [catalogError, setCatalogError] = useState("");
   const [summary, setSummary] = useState<{ solved: number; attempted: number; accuracy: number | null } | null>(null);
+  const workspaceRef = useRef<HTMLElement>(null);
+  const selectedProblemIdRef = useRef<number | null>(null);
+  const detailRequestIdRef = useRef(0);
+  const previousRequestedProblemIdRef = useRef<number | null>(null);
 
   const [code, setCode] = useState("");
   const [language, setLanguage] = useState("python");
@@ -73,42 +84,62 @@ export default function TasksPage() {
     xp_earned?: number;
   } | null>(null);
 
-  const load = async () => {
-    try {
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
       setLoadingList(true);
-      const [catalog, stats] = await Promise.all([
-        practiceService.list({
-          q: query || undefined,
-          difficulty: difficulty || undefined,
-          category: category || undefined,
-          status,
-        }),
-        practiceService.summary(),
-      ]);
-      setItems(catalog.items || []);
-      setCategories(catalog.categories || []);
-      setSummary(stats);
-    } catch {
-      setMessage("Practice catalogue could not be loaded. Please ensure backend is reachable.");
-    } finally {
-      setLoadingList(false);
-    }
-  };
+      setCatalogError("");
+      void practiceService.list({
+        q: query || undefined,
+        difficulty: difficulty || undefined,
+        category: category || undefined,
+        status,
+        page,
+        page_size: 20,
+      }, controller.signal).then((catalog) => {
+        setItems(catalog.items || []);
+        setTotal(catalog.total);
+        setCategories(catalog.categories || []);
+      }).catch(() => {
+        if (!controller.signal.aborted) {
+          setCatalogError("Practice catalogue could not be loaded. Please retry.");
+        }
+      }).finally(() => {
+        if (!controller.signal.aborted) setLoadingList(false);
+      });
+    }, 200);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, difficulty, category, status, page, catalogRevision]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => void load(), 200);
-    return () => window.clearTimeout(timer);
-  }, [query, difficulty, category, status]);
+    let active = true;
+    void practiceService.summary().then((stats) => {
+      if (active) setSummary(stats);
+    }).catch(() => {
+      if (active) setCatalogError("Practice progress could not be loaded. Please retry.");
+    });
+    return () => {
+      active = false;
+    };
+  }, [catalogRevision]);
 
-  const open = async (id: number) => {
+  const open = async (id: number, startPlaying = false, updateUrl = true) => {
+    const requestId = ++detailRequestIdRef.current;
     try {
       setLoadingDetail(true);
       setMessage("");
+      setPlayStarted(startPlaying);
       setSubmissionResult(null);
       setOutput("");
 
       const detail = await practiceService.get(id);
+      if (requestId !== detailRequestIdRef.current) return;
       setSelected(detail);
+      selectedProblemIdRef.current = id;
 
       // Determine initial language and code with reliable fallbacks
       const availableLangs = Object.keys(detail.starter_codes || {});
@@ -119,19 +150,37 @@ export default function TasksPage() {
       setLanguage(initialLang);
       setCode(detail.starter_codes?.[initialLang] || DEFAULT_STARTER_CODES[initialLang] || "");
 
-      router.replace(`/tasks${params.get("daily") === "1" ? "?daily=1&" : "?"}problem=${id}`);
+      if (window.matchMedia("(max-width: 1023px)").matches) {
+        window.setTimeout(() => workspaceRef.current?.scrollIntoView({
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+          block: "start",
+        }), 0);
+      }
+
+      if (updateUrl) {
+        router.push(`/tasks${params.get("daily") === "1" ? "?daily=1&" : "?"}problem=${id}`);
+      }
     } catch {
-      setMessage("Selected problem could not be loaded.");
+      if (requestId === detailRequestIdRef.current) {
+        setMessage("Selected problem could not be loaded.");
+      }
     } finally {
-      setLoadingDetail(false);
+      if (requestId === detailRequestIdRef.current) setLoadingDetail(false);
     }
   };
 
   useEffect(() => {
-    if (requested && (!selected || selected.id !== requested)) {
-      void open(requested);
+    if (requested && selectedProblemIdRef.current !== requested) {
+      void open(requested, true, false);
+    } else if (!params.get("problem") && selected && previousRequestedProblemIdRef.current !== null) {
+      detailRequestIdRef.current += 1;
+      selectedProblemIdRef.current = null;
+      setLoadingDetail(false);
+      setSelected(null);
+      setPlayStarted(false);
     }
-  }, [requested]);
+    previousRequestedProblemIdRef.current = params.get("problem") ? requested : null;
+  }, [requested, selected?.id]);
 
   const changeLanguage = (next: string) => {
     setLanguage(next);
@@ -191,7 +240,9 @@ export default function TasksPage() {
 
       if (r.verdict === "Accepted") {
         setMessage(`🎉 Accepted! +${r.xp_earned} XP awarded to your profile.`);
-        await load();
+        setSelected((current) => current ? { ...current, status: "solved" } : current);
+        setItems((current) => current.map((item) => item.id === selected.id ? { ...item, status: "solved" } : item));
+        setCatalogRevision((current) => current + 1);
       } else {
         setMessage(`Verdict: ${r.verdict}. Try again or inspect sample tests.`);
       }
@@ -226,6 +277,15 @@ export default function TasksPage() {
             </div>
           </header>
 
+          {catalogError && (
+            <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-400/30 bg-rose-500/10 p-3 text-sm text-rose-100">
+              <span>{catalogError}</span>
+              <button type="button" onClick={() => setCatalogRevision((current) => current + 1)} className="min-h-10 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400">
+                Retry
+              </button>
+            </div>
+          )}
+
           {/* Main Workspace Split */}
           <div className="grid gap-5 lg:grid-cols-[340px_1fr]">
             {/* Sidebar: Problems List & Filters */}
@@ -234,8 +294,9 @@ export default function TasksPage() {
                 <Search size={16} className="absolute left-3 top-3 text-slate-500" />
                 <input
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+                  onChange={(e) => { setQuery(e.target.value); setPage(1); }}
                   placeholder="Search problem title..."
+                  aria-label="Search practice questions"
                   className="w-full rounded-xl bg-slate-950 py-2.5 pl-9 pr-3 text-xs text-white placeholder:text-slate-500 outline-none border border-white/5 focus:border-cyan-500/30"
                 />
               </div>
@@ -243,7 +304,8 @@ export default function TasksPage() {
               <div className="grid grid-cols-2 gap-2">
                 <select
                   value={difficulty}
-                  onChange={(e) => setDifficulty(e.target.value)}
+                  onChange={(e) => { setDifficulty(e.target.value); setPage(1); }}
+                  aria-label="Filter by difficulty"
                   className="rounded-lg bg-slate-950 p-2 text-xs text-slate-300 border border-white/5 outline-none"
                 >
                   <option value="">All Levels</option>
@@ -254,7 +316,8 @@ export default function TasksPage() {
 
                 <select
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  onChange={(e) => { setCategory(e.target.value); setPage(1); }}
+                  aria-label="Filter by topic"
                   className="rounded-lg bg-slate-950 p-2 text-xs text-slate-300 border border-white/5 outline-none"
                 >
                   <option value="">All Topics</option>
@@ -266,7 +329,8 @@ export default function TasksPage() {
 
               <select
                 value={status}
-                onChange={(e) => setStatus(e.target.value)}
+                onChange={(e) => { setStatus(e.target.value); setPage(1); }}
+                aria-label="Filter by progress"
                 className="w-full rounded-lg bg-slate-950 p-2 text-xs text-slate-300 border border-white/5 outline-none"
               >
                 <option value="all">All Progress</option>
@@ -276,9 +340,15 @@ export default function TasksPage() {
               </select>
 
               {/* Problem List Items */}
-              <div className="max-h-[64vh] space-y-2 overflow-y-auto pr-1">
+              <p className="text-xs text-slate-400" aria-live="polite">
+                {loadingList ? "Loading questions…" : `${total.toLocaleString()} questions available`}
+              </p>
+
+              <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1 lg:max-h-[64vh]">
                 {loadingList ? (
                   <div className="py-12 text-center text-xs text-slate-400">Loading catalog...</div>
+                ) : catalogError ? (
+                  <div className="py-12 text-center text-xs text-slate-400">Questions could not be loaded.</div>
                 ) : items.length === 0 ? (
                   <div className="py-12 text-center text-xs text-slate-500">No matching problems found.</div>
                 ) : (
@@ -288,6 +358,7 @@ export default function TasksPage() {
                       <button
                         key={item.id}
                         onClick={() => void open(item.id)}
+                        aria-pressed={isSelected}
                         className={`w-full rounded-xl border p-3 text-left transition ${
                           isSelected
                             ? "border-cyan-400 bg-cyan-400/10 shadow-sm"
@@ -318,10 +389,34 @@ export default function TasksPage() {
                   })
                 )}
               </div>
+
+              {total > 0 && (
+                <div className="flex items-center justify-between gap-2 border-t border-white/5 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                    disabled={page === 1 || loadingList}
+                    className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-white/10 px-3 text-xs font-semibold text-slate-200 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                  >
+                    <ChevronLeft size={14} aria-hidden="true" /> Previous
+                  </button>
+                  <span className="text-center text-[11px] text-slate-400">
+                    {Math.min((page - 1) * 20 + 1, total)}–{Math.min(page * 20, total)} of {total.toLocaleString()}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPage((current) => current + 1)}
+                    disabled={page * 20 >= total || loadingList}
+                    className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-white/10 px-3 text-xs font-semibold text-slate-200 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                  >
+                    Next <ChevronRight size={14} aria-hidden="true" />
+                  </button>
+                </div>
+              )}
             </aside>
 
             {/* Problem View + Code Editor Pane */}
-            <section className="rounded-2xl border border-white/10 bg-slate-900/70 overflow-hidden backdrop-blur-md">
+            <section ref={workspaceRef} className="scroll-mt-20 rounded-2xl border border-white/10 bg-slate-900/70 overflow-hidden backdrop-blur-md">
               {loadingDetail ? (
                 <div className="flex min-h-[650px] items-center justify-center">
                   <div className="text-center space-y-3">
@@ -329,6 +424,52 @@ export default function TasksPage() {
                     <p className="text-xs text-slate-400">Loading problem details...</p>
                   </div>
                 </div>
+              ) : message && !playStarted && !selected ? (
+                <div role="alert" className="p-6 text-sm text-rose-200">{message}</div>
+              ) : selected && !playStarted ? (
+                <article className="space-y-5 p-5 sm:p-7">
+                  {message && <p role="alert" className="rounded-xl border border-rose-400/30 bg-rose-500/10 p-3 text-sm text-rose-200">{message}</p>}
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span className="rounded-md border border-cyan-400/20 bg-cyan-400/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-cyan-300">
+                      {selected.category} · {selected.difficulty}
+                    </span>
+                    <span className="flex items-center gap-1 text-xs font-bold text-amber-300">
+                      <Award size={14} aria-hidden="true" /> +{selected.xp_reward} XP
+                    </span>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-white">{selected.title}</h2>
+                    <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-slate-300">{selected.description}</p>
+                  </div>
+                  {selected.constraints && (
+                    <div className="rounded-xl border border-white/5 bg-slate-950 p-4">
+                      <h3 className="text-xs font-bold uppercase text-slate-400">Constraints</h3>
+                      <p className="mt-2 whitespace-pre-wrap text-sm text-slate-300">{selected.constraints}</p>
+                    </div>
+                  )}
+                  {selected.samples.length > 0 && (
+                    <div className="rounded-xl border border-white/5 bg-slate-950 p-4">
+                      <h3 className="text-xs font-bold uppercase text-cyan-300">Example</h3>
+                      <p className="mt-3 text-[10px] font-bold uppercase text-slate-500">Input</p>
+                      <pre className="mt-1 overflow-x-auto whitespace-pre-wrap text-xs text-cyan-200">{selected.samples[0].input}</pre>
+                      <p className="mt-3 text-[10px] font-bold uppercase text-slate-500">Expected output</p>
+                      <pre className="mt-1 overflow-x-auto whitespace-pre-wrap text-xs text-emerald-300">{selected.samples[0].output}</pre>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPlayStarted(true);
+                      window.setTimeout(() => workspaceRef.current?.scrollIntoView({
+                        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+                        block: "start",
+                      }), 0);
+                    }}
+                    className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-5 text-sm font-bold text-white shadow-lg shadow-cyan-500/10 transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:w-auto"
+                  >
+                    <Play size={16} aria-hidden="true" /> Play question
+                  </button>
+                </article>
               ) : selected ? (
                 <div className="grid min-h-[680px] lg:grid-cols-2">
                   {/* Left Column: Problem Statement & Examples */}
@@ -411,6 +552,13 @@ export default function TasksPage() {
                     <div className="mb-3 flex items-center justify-between gap-2 border-b border-white/5 pb-2">
                       <div className="flex items-center gap-2">
                         <Code2 size={16} className="text-cyan-400" />
+                        <button
+                          type="button"
+                          onClick={() => setPlayStarted(false)}
+                          className="rounded-lg border border-white/10 px-2 py-1.5 text-[11px] font-semibold text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                        >
+                          Problem
+                        </button>
                         <select
                           value={language}
                           onChange={(e) => changeLanguage(e.target.value)}

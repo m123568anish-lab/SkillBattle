@@ -22,11 +22,20 @@ def public_problem(problem: Problem, status: str = "unsolved") -> dict:
     }
 
 
-async def submission_statuses(db: AsyncSession, user_id: str) -> dict[int, str]:
-    rows = (await db.execute(
-        select(CodeSubmission.problem_id, CodeSubmission.verdict)
-        .where(CodeSubmission.user_id == user_id)
-    )).all()
+async def submission_statuses(
+    db: AsyncSession,
+    user_id: str,
+    problem_ids: list[int] | None = None,
+) -> dict[int, str]:
+    if problem_ids is not None and not problem_ids:
+        return {}
+
+    stmt = select(CodeSubmission.problem_id, CodeSubmission.verdict).where(
+        CodeSubmission.user_id == user_id
+    )
+    if problem_ids is not None:
+        stmt = stmt.where(CodeSubmission.problem_id.in_(problem_ids))
+    rows = (await db.execute(stmt)).all()
     statuses: dict[int, str] = {}
     for problem_id, verdict in rows:
         statuses[problem_id] = "solved" if verdict == "Accepted" else statuses.get(problem_id, "attempted")
