@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
-import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getMobileNavigation, getPortalKind, sidebarItems } from "@/data/dashboard";
+import { getMobileNavigation, getPortalKind } from "@/data/dashboard";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { useReducedMotion } from "framer-motion";
 
 interface Props {
   children: React.ReactNode;
@@ -15,10 +15,13 @@ interface Props {
 
 export default function DashboardLayout({ children }: Props) {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [textEntryFocused, setTextEntryFocused] = useState(false);
+  const drawerRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const portal = getPortalKind(pathname);
   const mobileNavigation = getMobileNavigation(portal);
+  const reduceMotion = useReducedMotion();
 
   // Close mobile drawer on route change
   useEffect(() => {
@@ -28,22 +31,69 @@ export default function DashboardLayout({ children }: Props) {
   // Lock body scroll when mobile drawer is open
   useEffect(() => {
     if (mobileDrawerOpen) {
+      const previousOverflow = document.body.style.overflow;
       document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
+      return () => {
+        document.body.style.overflow = previousOverflow;
+      };
     }
+  }, [mobileDrawerOpen]);
+
+  useEffect(() => {
+    if (!mobileDrawerOpen) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const drawer = drawerRef.current;
+    drawer?.querySelector<HTMLElement>("[data-drawer-close]")?.focus();
+    const getFocusableElements = () => drawer?.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileDrawerOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = getFocusableElements();
+      if (!focusable?.length) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !drawer?.contains(document.activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !drawer?.contains(document.activeElement))) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+      previousFocus?.focus();
     };
   }, [mobileDrawerOpen]);
 
-  // Handle Escape key to close mobile drawer
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMobileDrawerOpen(false);
+    const updateTextEntryFocus = () => {
+      const activeElement = document.activeElement;
+      const isEditableInput = activeElement instanceof HTMLInputElement
+        && !activeElement.readOnly
+        && !["button", "checkbox", "radio", "reset", "submit"].includes(activeElement.type);
+      setTextEntryFocused(
+        isEditableInput ||
+        (activeElement instanceof HTMLTextAreaElement && !activeElement.readOnly) ||
+        (activeElement instanceof HTMLElement && activeElement.isContentEditable)
+      );
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    const handleFocusOut = () => window.requestAnimationFrame(updateTextEntryFocus);
+    document.addEventListener("focusin", updateTextEntryFocus);
+    document.addEventListener("focusout", handleFocusOut);
+    return () => {
+      document.removeEventListener("focusin", updateTextEntryFocus);
+      document.removeEventListener("focusout", handleFocusOut);
+    };
   }, []);
 
   const isActive = (href?: string) => {
@@ -79,6 +129,13 @@ export default function DashboardLayout({ children }: Props) {
     return normalizedPath === targetPath || normalizedPath.startsWith(`${targetPath}/`);
   };
 
+  const hideDock = textEntryFocused || (portal === "student" && (
+    (pathname === "/tasks" && searchParams.has("problem")) ||
+    pathname === "/battle/solo" ||
+    pathname === "/battle/company-speedrun" ||
+    (pathname.startsWith("/battle/") && !["/battle/lobby", "/battle/new", "/battle/queue", "/battle/waiting", "/battle/create"].includes(pathname))
+  ));
+
   return (
     <main suppressHydrationWarning className="flex min-h-screen bg-[#060913] text-white lg:h-dvh lg:min-h-0 lg:overflow-hidden">
       {/* Desktop Persistent Responsive Sidebar */}
@@ -89,23 +146,29 @@ export default function DashboardLayout({ children }: Props) {
         {mobileDrawerOpen && (
           <div className="fixed inset-0 z-50 lg:hidden">
             {/* Backdrop */}
-            <motion.div
+            <motion.button
+              type="button"
+              aria-label="Close navigation menu"
+              onClick={() => setMobileDrawerOpen(false)}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => setMobileDrawerOpen(false)}
-              className="absolute inset-0 bg-black/75 backdrop-blur-sm"
-              aria-hidden="true"
+              transition={{ duration: reduceMotion ? 0 : 0.2 }}
+              className="absolute inset-0 cursor-default bg-black/75 backdrop-blur-sm"
             />
 
             {/* Drawer Panel */}
             <motion.div
+              ref={drawerRef}
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
-              transition={{ type: "spring", damping: 26, stiffness: 260 }}
-              className="relative h-full w-[82vw] max-w-xs shadow-2xl shadow-black bg-[#080d19] border-r border-white/10 flex flex-col"
+              transition={reduceMotion ? { duration: 0 } : { type: "spring", damping: 26, stiffness: 260 }}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Navigation menu"
+              tabIndex={-1}
+              className="relative z-10 h-full w-[min(86vw,22rem)] shadow-2xl shadow-black"
             >
               <Sidebar isMobile onCloseMobile={() => setMobileDrawerOpen(false)} />
             </motion.div>
@@ -114,14 +177,15 @@ export default function DashboardLayout({ children }: Props) {
       </AnimatePresence>
 
       {/* Main Content Area */}
-      <section className="min-w-0 flex-1 overflow-auto px-3 pb-24 pt-3 sm:px-6 sm:pb-8 sm:pt-5 lg:h-full lg:min-h-0 lg:px-8 lg:pt-6">
+      <section id="main-content" tabIndex={-1} className="min-w-0 flex-1 overflow-auto px-3 pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-3 outline-none sm:px-6 sm:pb-[calc(7.5rem+env(safe-area-inset-bottom))] sm:pt-5 lg:h-full lg:min-h-0 lg:px-8 lg:pb-8 lg:pt-6">
         <TopNavbar onOpenMobileNav={() => setMobileDrawerOpen(true)} />
         {children}
       </section>
 
       {/* Mobile Bottom Navigation Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/[0.08] bg-[#0a0f1d]/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.35rem)] pt-1.5 backdrop-blur-xl lg:hidden shadow-2xl shadow-black">
-        <div className="mx-auto flex h-12 max-w-xl items-center justify-around gap-1">
+      {!hideDock && (
+        <nav aria-label="Primary mobile navigation" className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 z-30 w-[calc(100%-1.5rem)] max-w-[30rem] -translate-x-1/2 rounded-[1.6rem] border border-white/[0.12] bg-[#0b0f15]/90 px-2 py-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.55)] backdrop-blur-xl lg:hidden">
+        <div className="mx-auto flex h-12 items-center justify-around gap-0.5">
           {mobileNavigation.map((tab) => {
             const active = isActive(tab.href);
             if (!tab.available || !tab.href) {
@@ -131,7 +195,7 @@ export default function DashboardLayout({ children }: Props) {
                   type="button"
                   aria-label={tab.title}
                   onClick={() => setMobileDrawerOpen(true)}
-                  className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[9px] font-semibold uppercase leading-none tracking-normal text-slate-400 hover:text-slate-200 transition"
+                  className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-0.5 py-1.5 text-[9px] font-semibold leading-none tracking-normal text-slate-400 transition hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 motion-reduce:transition-none"
                 >
                   <tab.icon size={20} />
                   <span>{tab.title}</span>
@@ -142,17 +206,19 @@ export default function DashboardLayout({ children }: Props) {
               <Link
                 key={tab.title}
                 href={tab.href}
-                className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[9px] font-semibold uppercase leading-none tracking-normal transition ${
-                  active ? "scale-105 text-cyan-400 font-bold" : "text-slate-400 hover:text-slate-200"
+                aria-current={active ? "page" : undefined}
+                className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-0.5 py-1.5 text-[9px] font-semibold leading-none tracking-normal transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 motion-reduce:transition-none ${
+                  active ? "text-cyan-300 font-bold drop-shadow-[0_0_8px_rgba(34,211,238,0.35)]" : "text-slate-400 hover:text-slate-200"
                 }`}
               >
-                <tab.icon size={20} />
+                <tab.icon size={19} strokeWidth={active ? 2.5 : 2} />
                 <span className="max-w-full truncate">{tab.title}</span>
               </Link>
             );
           })}
         </div>
-      </div>
+        </nav>
+      )}
     </main>
   );
 }

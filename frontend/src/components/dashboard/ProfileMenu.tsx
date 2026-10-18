@@ -115,7 +115,7 @@ export default function ProfileMenu() {
         aria-expanded={isMenuOpen}
         aria-haspopup="dialog"
         onClick={() => setIsMenuOpen((open) => !open)}
-        className="flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-1.5 text-left transition hover:border-cyan-500/50 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] sm:h-10 sm:gap-3 sm:rounded-xl sm:px-2.5 md:px-4"
+        className="flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-1.5 text-left transition hover:border-cyan-500/50 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 sm:h-10 sm:gap-3 sm:rounded-xl sm:px-2.5 md:px-4"
       >
         <div className="relative">
           <div className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 opacity-70 blur-sm transition duration-300" />

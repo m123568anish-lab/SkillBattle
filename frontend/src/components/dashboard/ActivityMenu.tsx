@@ -47,7 +47,7 @@ export default function ActivityMenu() {
         href="/activity"
         aria-label="Open activity page"
         title="Activity"
-        className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:border-cyan-400/60 hover:text-white md:hidden"
+        className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:border-cyan-400/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 md:hidden"
       >
         <Activity className="h-[18px] w-[18px]" />
       </Link>
@@ -57,7 +57,7 @@ export default function ActivityMenu() {
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen((previous) => !previous)}
-        className="relative hidden h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:border-cyan-400/60 hover:text-white md:inline-flex sm:h-10 sm:w-10"
+        className="relative hidden h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:border-cyan-400/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 md:inline-flex sm:h-10 sm:w-10"
       >
         <Activity className="h-[18px] w-[18px]" />
       </button>

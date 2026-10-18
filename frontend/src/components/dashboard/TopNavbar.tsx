@@ -11,8 +11,8 @@ import ActivityMenu from "./ActivityMenu";
 import ProfileMenu from "./ProfileMenu";
 import { useAuthStore } from "@/store/authStore";
 import { getDashboardPath } from "@/lib/auth-routing";
-
 import { ThemeToggle } from "@/components/common/ExperienceEnhancements";
+
 type SearchResult = {
   type: string;
   title: string;
@@ -31,6 +31,7 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const pageLabel = pathname
     .split("/")
@@ -43,8 +44,9 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
     const handleShortcut = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        searchInputRef.current?.focus();
+        setMobileSearchOpen(true);
         setSearchOpen(true);
+        window.requestAnimationFrame(() => searchInputRef.current?.focus());
       }
     };
     window.addEventListener("keydown", handleShortcut);
@@ -96,19 +98,20 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
         border
         border-white/[0.08]
         bg-[#090e19]/80
-        px-3 py-2
+        px-2.5 py-2
         backdrop-blur-xl
         shadow-sm
         shadow-black/20
         sm:mb-7 sm:gap-4 sm:px-4 sm:py-3
       "
     >
-      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+      <div className="flex min-w-0 items-center gap-1.5 sm:gap-3">
         {onOpenMobileNav && (
           <button
             type="button"
             onClick={onOpenMobileNav}
             aria-label="Open navigation menu"
+            data-mobile-menu-trigger
             className="flex items-center justify-center rounded-xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:border-cyan-400/40 hover:bg-cyan-400/10 hover:text-cyan-300 lg:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
           >
             <Menu size={18} />
@@ -125,7 +128,7 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
           </span>
         </Link>
 
-        <div className="relative min-w-0 flex-1 lg:max-w-md">
+        <div className={`relative min-w-0 flex-1 lg:max-w-md ${mobileSearchOpen ? "max-sm:absolute max-sm:left-0 max-sm:right-0 max-sm:top-[calc(100%+0.5rem)] max-sm:z-50 max-sm:rounded-xl max-sm:border max-sm:border-white/10 max-sm:bg-[#090e19] max-sm:p-2 max-sm:shadow-2xl" : "max-sm:hidden"} sm:block`}>
           <div className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-[#0F172A]/90 px-3 py-2 transition focus-within:border-cyan-400/70 focus-within:ring-1 focus-within:ring-cyan-400/30 sm:gap-3 sm:px-4 sm:py-2.5">
             <Search size={18} className="shrink-0 text-slate-400" />
             <input
@@ -142,7 +145,10 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
               }}
               onFocus={() => setSearchOpen(true)}
               onKeyDown={(event) => {
-                if (event.key === "Escape") setSearchOpen(false);
+                if (event.key === "Escape") {
+                  setSearchOpen(false);
+                  setMobileSearchOpen(false);
+                }
                 if (event.key === "ArrowDown" && searchResults.length) {
                   event.preventDefault();
                   setHighlightedIndex((index) => (index + 1) % searchResults.length);
@@ -154,6 +160,7 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
                 if (event.key === "Enter" && searchResults[highlightedIndex]) {
                   router.push(searchResults[highlightedIndex].href);
                   setSearchOpen(false);
+                  setMobileSearchOpen(false);
                 }
               }}
               aria-label="Search SkillBattle"
@@ -174,7 +181,10 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
                 type="button"
                 aria-label="Close search results"
                 className="fixed inset-0 z-30 cursor-default"
-                onClick={() => setSearchOpen(false)}
+                onClick={() => {
+                  setSearchOpen(false);
+                  setMobileSearchOpen(false);
+                }}
               />
               <div
                 id="global-search-results"
@@ -200,6 +210,7 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
                       onClick={() => {
                         router.push(result.href);
                         setSearchOpen(false);
+                        setMobileSearchOpen(false);
                       }}
                       className={`flex w-full items-center gap-3 border-b border-white/5 px-4 py-3 text-left last:border-0 hover:bg-white/5 ${highlightedIndex === index ? "bg-cyan-400/10" : ""}`}
                     >
@@ -226,8 +237,23 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
         <span className="font-medium text-slate-400">{pageLabel}</span>
       </div>
 
-      <div className="flex items-center justify-end gap-3 sm:gap-4">
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+      <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-4">
+        <button
+          type="button"
+          aria-label="Search SkillBattle"
+          aria-expanded={mobileSearchOpen}
+          onClick={() => {
+            const willOpen = !mobileSearchOpen;
+            setMobileSearchOpen(willOpen);
+            setSearchOpen(willOpen);
+            if (willOpen) window.requestAnimationFrame(() => searchInputRef.current?.focus());
+          }}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:border-cyan-400/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 sm:hidden"
+        >
+          <Search className="h-[18px] w-[18px]" />
+        </button>
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          <ThemeToggle />
           <ActivityMenu />
           <NotificationMenu />
           <ProfileMenu />
@@ -236,4 +262,3 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
     </header>
   );
 }
-          <ThemeToggle />

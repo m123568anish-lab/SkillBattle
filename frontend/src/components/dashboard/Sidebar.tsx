@@ -37,7 +37,26 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
   const logout = useAuthStore((state) => state.logout);
 
   const portal = getPortalKind(pathname);
-  const categories = getPortalCategories(portal);
+  const portalCategories = getPortalCategories(portal);
+  const categories = isMobile && portal === "student"
+    ? [
+        ...portalCategories.filter((category) => category.id !== "career"),
+        {
+          id: "career",
+          label: "Grow Your Career",
+          items: portalCategories.find((category) => category.id === "career")?.items.filter((item) => item.href !== "/opportunities") ?? [],
+        },
+        {
+          id: "opportunities",
+          label: "Opportunities",
+          items: [
+            { title: "Discover Opportunities", href: "/opportunities", icon: BriefcaseBusiness, category: "Opportunities", available: true },
+            { title: "Saved Opportunities", href: "/opportunities/saved", icon: BriefcaseBusiness, category: "Opportunities", available: true },
+            { title: "My Applications", href: "/opportunities/applications", icon: BriefcaseBusiness, category: "Opportunities", available: true },
+          ],
+        },
+      ]
+    : portalCategories;
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -237,7 +256,7 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
         transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
         className={`flex flex-col select-none relative ${
           isMobile
-            ? "h-full w-full bg-[#080d19] text-white"
+            ? "h-full w-full rounded-r-[1.5rem] border-r border-white/10 bg-[#0a0d14] text-white"
             : "hidden lg:flex my-3 ml-3 rounded-[1.75rem] border border-white/[0.08] bg-[#080d19]/95 backdrop-blur-2xl shadow-2xl shadow-black/60 overflow-hidden"
         }`}
       >
@@ -293,7 +312,8 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
               type="button"
               onClick={onCloseMobile}
               aria-label="Close navigation"
-              className="rounded-xl border border-white/10 bg-white/5 p-2 text-slate-300 hover:text-white"
+              data-drawer-close
+              className="rounded-xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
             >
               <X size={18} />
             </button>

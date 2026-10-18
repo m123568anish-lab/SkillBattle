@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
 import {
-  User,
   Palette,
   Bell,
   Shield,
@@ -15,7 +14,6 @@ import {
   Check,
   Trash2,
   LogOut,
-  ArrowRight,
   Upload,
   Sparkles,
   Key,
@@ -31,11 +29,8 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { authService } from "@/services/auth.service";
 import { toast } from "react-hot-toast";
-import Link from "next/link";
-import Image from "next/image";
 
 type SettingTab =
-  | "profile"
   | "appearance"
   | "notifications"
   | "privacy"
@@ -52,7 +47,6 @@ interface TabConfig {
 }
 
 const TABS: TabConfig[] = [
-  { id: "profile", label: "Profile", icon: User, description: "Personal details and battle avatar" },
   { id: "appearance", label: "Appearance", icon: Palette, description: "Color theme and visual system" },
   { id: "notifications", label: "Notifications", icon: Bell, description: "Match, streak, and alert preferences" },
   { id: "privacy", label: "Privacy & Access", icon: Shield, description: "Recruiter discovery & data sharing" },
@@ -111,7 +105,13 @@ const defaultNotifications: NotificationPreferences = {
 
 export default function SettingsPage() {
   const user = useAuthStore((state) => state.user);
-  const [activeTab, setActiveTab] = useState<SettingTab>("profile");
+  const [activeTab, setActiveTab] = useState<SettingTab>("appearance");
+
+  useEffect(() => {
+    const requestedTab = new URLSearchParams(window.location.search).get("tab");
+    const matchingTab = TABS.find((tab) => tab.id === requestedTab);
+    if (matchingTab) setActiveTab(matchingTab.id);
+  }, []);
 
   // Appearance Theme state
   const [theme, setTheme] = useState<"dark" | "light" | "system">("dark");
@@ -442,14 +442,6 @@ export default function SettingsPage() {
     }
   }
 
-  const displayName = user?.full_name || user?.username || "SkillBattle Player";
-  const userInitials = displayName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("") || "SB";
-
   return (
     <div className="space-y-6">
       {/* Settings Navigation Header */}
@@ -488,67 +480,7 @@ export default function SettingsPage() {
         {/* Tab Content Panel */}
         <main className="min-w-0">
           <AnimatePresence mode="wait">
-            {/* 1. Profile Tab */}
-            {activeTab === "profile" && (
-              <motion.section
-                key="profile"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.15 }}
-                className="space-y-6"
-              >
-                <div className="rounded-3xl border border-white/[0.08] bg-[#0a0f1d] p-6 sm:p-8 text-white shadow-2xl shadow-black/50 space-y-6">
-                  <div className="flex items-center justify-between border-b border-white/[0.06] pb-5">
-                    <div>
-                      <h3 className="text-xl font-bold text-white">Profile Overview</h3>
-                      <p className="text-xs text-slate-400 mt-1">Your registered battle credentials and display identity</p>
-                    </div>
-                    <Link
-                      href="/profile"
-                      className="inline-flex items-center gap-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 px-4 py-2 text-xs font-bold text-cyan-300 hover:bg-cyan-500/20 transition"
-                    >
-                      <span>Edit Full Profile</span>
-                      <ArrowRight size={13} />
-                    </Link>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row items-center gap-6">
-                    <div className="relative h-24 w-24 rounded-2xl border-2 border-white/10 bg-[#060913] overflow-hidden shadow-xl shrink-0">
-                      {user?.avatar_url || user?.avatar ? (
-                        <Image
-                          src={user.avatar_url || user.avatar || ""}
-                          alt={displayName}
-                          width={96}
-                          height={96}
-                          unoptimized
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center bg-slate-800 text-white font-black text-2xl">
-                          {userInitials}
-                        </div>
-                      )}
-                    </div>
-                    <div className="space-y-1 text-center sm:text-left min-w-0">
-                      <h4 className="text-lg font-bold text-white">{displayName}</h4>
-                      <p className="text-xs font-mono text-cyan-400">@{user?.username || "player"}</p>
-                      <p className="text-xs text-slate-400">{user?.email}</p>
-                      <div className="pt-2 flex flex-wrap gap-2 justify-center sm:justify-start">
-                        <span className="rounded-md bg-white/[0.04] border border-white/[0.08] px-2.5 py-1 text-[11px] font-semibold text-slate-300">
-                          Role: {user?.role || user?.account_type || "STUDENT"}
-                        </span>
-                        <span className="rounded-md bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-1 text-[11px] font-semibold text-cyan-300">
-                          Level {user?.level ?? 1}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.section>
-            )}
-
-            {/* 2. Appearance Tab */}
+            {/* Appearance Tab */}
             {activeTab === "appearance" && (
               <motion.section
                 key="appearance"

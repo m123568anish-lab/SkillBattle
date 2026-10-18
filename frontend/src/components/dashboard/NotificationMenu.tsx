@@ -121,7 +121,7 @@ export default function NotificationMenu() {
         aria-expanded={open}
         onClick={() => setOpen((previous) => !previous)}
         aria-haspopup="dialog"
-        className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:border-cyan-400/60 hover:text-white sm:h-10 sm:w-10"
+        className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:border-cyan-400/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 sm:h-10 sm:w-10"
       >
         <Bell className="h-[18px] w-[18px]" />
         {unreadCount > 0 && (

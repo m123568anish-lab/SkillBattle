@@ -151,10 +151,10 @@ export function getMobileNavigation(portal: PortalKind): PortalNavItem[] {
 
   return [
     { title: "Home", href: "/dashboard", icon: Home, category: "mobile", available: true },
-    { title: "Battle", href: "/battle", icon: Sword, category: "mobile", available: true },
     { title: "Practice", href: "/tasks", icon: Code2, category: "mobile", available: true },
-    { title: "Jobs", href: "/opportunities", icon: BriefcaseBusiness, category: "mobile", available: true },
-    { title: "More", icon: Layers3, category: "mobile", available: true },
+    { title: "Battles", href: "/battle", icon: Sword, category: "mobile", available: true },
+    { title: "Opportunities", href: "/opportunities", icon: BriefcaseBusiness, category: "mobile", available: true },
+    { title: "Profile", href: "/profile", icon: User, category: "mobile", available: true },
   ];
 }
 
