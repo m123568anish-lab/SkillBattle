@@ -23,13 +23,13 @@ const topics = [
 
 export default function FAQPage() {
   return (
-    <main className="min-h-screen bg-[#050816] text-white">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-[#050816] text-white">
       <div className="mx-auto max-w-4xl px-5 py-16 sm:px-8">
         <Link href="/" className="text-sm font-semibold text-cyan-300 hover:text-white">SkillBattle</Link>
         <h1 className="mt-10 text-4xl font-bold">Help and frequently asked questions</h1>
         <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">Practical answers about accounts, learning, assessments, and organization workflows.</p>
         <div className="mt-10 divide-y divide-white/10 border-y border-white/10">
-          {topics.map(([question, answer]) => <section key={question} className="py-6"><h2 className="text-lg font-semibold">{question}</h2><p className="mt-2 leading-7 text-slate-300">{answer}</p></section>)}
+          {topics.map(([question, answer]) => <details key={question} className="group py-1"><summary className="cursor-pointer list-none py-5 text-lg font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"><span className="flex items-center justify-between gap-3">{question}<span aria-hidden="true" className="text-cyan-300 transition group-open:rotate-45">+</span></span></summary><p className="pb-5 leading-7 text-slate-300">{answer}</p></details>)}
         </div>
         <p className="mt-8 text-sm text-slate-400">Need help with your account? Email <a className="text-cyan-300 underline" href="mailto:support@skillbattle.app">support@skillbattle.app</a>.</p>
         <nav className="mt-5 flex gap-5 text-sm"><Link href="/privacy" className="text-cyan-300 underline">Privacy</Link><Link href="/terms" className="text-cyan-300 underline">Terms</Link></nav>

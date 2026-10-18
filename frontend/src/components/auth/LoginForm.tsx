@@ -115,7 +115,7 @@ export default function LoginForm() {
               placeholder="name@example.com"
             />
           </div>
-          {errors.email && <p className="mt-2 text-sm text-red-400">{errors.email.message}</p>}
+          {errors.email && <p role="alert" className="mt-2 text-sm text-red-400">{errors.email.message}</p>}
         </div>
 
         <div>
@@ -139,7 +139,7 @@ export default function LoginForm() {
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-          {errors.password && <p className="mt-2 text-sm text-red-400">{errors.password.message}</p>}
+          {errors.password && <p role="alert" className="mt-2 text-sm text-red-400">{errors.password.message}</p>}
         </div>
 
         {twoFactorRequired && (

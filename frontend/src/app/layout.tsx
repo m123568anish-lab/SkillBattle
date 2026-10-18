@@ -6,6 +6,7 @@ import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "@/context/AuthContext";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import PageMetadata from "@/components/common/PageMetadata";
+import { CookieConsent, PageEnhancements } from "@/components/common/ExperienceEnhancements";
 
 
 import "./globals.css";
@@ -56,12 +57,14 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} h-full scroll-smooth`}
     >
-      <body className="min-h-screen bg-[#070B14] text-white">
+      <body className="min-h-screen bg-[var(--app-bg)] text-[var(--app-fg)]">
+        <a href="#main-content" className="skip-link">Skip to main content</a>
         <ClerkProvider>
           <AuthProvider>
             <div className="relative">
               <PageMetadata />
               <AuthGuard>{children}</AuthGuard>
+              <PageEnhancements />
             </div>
           </AuthProvider>
 
@@ -75,6 +78,7 @@ export default function RootLayout({
               },
             }}
           />
+          <CookieConsent />
         </ClerkProvider>
       </body>
     </html>

@@ -12,6 +12,7 @@ import ProfileMenu from "./ProfileMenu";
 import { useAuthStore } from "@/store/authStore";
 import { getDashboardPath } from "@/lib/auth-routing";
 
+import { ThemeToggle } from "@/components/common/ExperienceEnhancements";
 type SearchResult = {
   type: string;
   title: string;
@@ -235,3 +236,4 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
     </header>
   );
 }
+          <ThemeToggle />

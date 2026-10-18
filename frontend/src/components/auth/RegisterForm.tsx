@@ -29,6 +29,7 @@ export default function RegisterForm() {
   const { loading, signUp } = useRegister();
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [selectedAccountType, setSelectedAccountType] = useState<"STUDENT" | "COLLEGE" | "COMPANY">(() => {
     const requestedType = searchParams.get("account_type")?.toUpperCase();
     return requestedType === "COLLEGE" || requestedType === "COMPANY" ? requestedType : "STUDENT";
@@ -191,8 +192,8 @@ export default function RegisterForm() {
 
         <div>
           <label htmlFor="register-confirm-password" className="mb-2 block text-sm font-medium text-slate-300">Confirm password</label>
-          <input id="register-confirm-password" type="password" autoComplete="new-password" {...register("confirmPassword")} placeholder="Re-enter your password" className="h-14 w-full rounded-2xl border border-white/10 bg-white/[0.02] px-4 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-500/15" />
-          {errors.confirmPassword && <p className="mt-2 text-sm text-red-400">{errors.confirmPassword.message}</p>}
+          <div className="relative"><input id="register-confirm-password" type={showConfirmation ? "text" : "password"} autoComplete="new-password" {...register("confirmPassword")} aria-invalid={Boolean(errors.confirmPassword)} aria-describedby={errors.confirmPassword ? "register-confirm-password-error" : undefined} placeholder="Re-enter your password" className="h-14 w-full rounded-2xl border border-white/10 bg-white/[0.02] px-4 pr-12 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-500/15" /><button type="button" aria-label={showConfirmation ? "Hide confirmation password" : "Show confirmation password"} onClick={() => setShowConfirmation(!showConfirmation)} className="absolute right-4 top-3.5 text-slate-500 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400">{showConfirmation ? <EyeOff size={18} /> : <Eye size={18} />}</button></div>
+          {errors.confirmPassword && <p id="register-confirm-password-error" role="alert" className="mt-2 text-sm text-red-400">{errors.confirmPassword.message}</p>}
         </div>
 
         <label className="flex items-start gap-3 text-sm text-slate-300">
