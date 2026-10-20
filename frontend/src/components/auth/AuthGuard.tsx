@@ -44,6 +44,13 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const authError = useAuthStore((s) => s.authError);
   const loadUser = useAuthStore((s) => s.loadUser);
 
+  const retryAuthentication = () => {
+    window.dispatchEvent(new Event("skillbattle:retry-auth"));
+    if (typeof window !== "undefined" && localStorage.getItem("access_token")) {
+      void loadUser("legacy");
+    }
+  };
+
   useEffect(() => {
     if (loading || status === "unavailable" || status === "forbidden") return;
 
@@ -104,7 +111,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
       <div className="flex min-h-screen items-center justify-center bg-[#070B14] text-center text-slate-300">
         <div className="space-y-4">
           <p>{authError ?? "Authentication service is temporarily unavailable."}</p>
-          <button type="button" onClick={() => void loadUser()} className="rounded-xl bg-cyan-500 px-4 py-2 font-semibold text-slate-950">Try again</button>
+          <button type="button" onClick={retryAuthentication} className="rounded-xl bg-cyan-500 px-4 py-2 font-semibold text-slate-950">Try again</button>
         </div>
       </div>
     );

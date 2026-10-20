@@ -15,6 +15,7 @@ interface AuthState {
     logout(): Promise<void>;
     loadUser(sessionKey?: string): Promise<void>;
     clearSession(message?: string): void;
+    markUnavailable(message: string): void;
     updateUserPartial(fields: Partial<User>): void;
 }
 
@@ -145,6 +146,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             isAuthenticated: false,
             status: "unauthenticated",
             authError: message ?? null,
+        });
+    },
+
+    markUnavailable(message) {
+        // A provider/bootstrap failure is not proof that the session is invalid.
+        // Protected content remains hidden because isAuthenticated stays false.
+        set({
+            loading: false,
+            isAuthenticated: false,
+            status: "unavailable",
+            authError: message,
         });
     },
 
