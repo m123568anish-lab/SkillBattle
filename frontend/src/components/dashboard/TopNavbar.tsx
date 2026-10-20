@@ -94,15 +94,9 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
       suppressHydrationWarning
       className="
         relative z-20
-        mb-5 flex min-w-0 flex-row items-center justify-between gap-2 rounded-2xl
-        border
-        border-white/[0.08]
-        bg-[#090e19]/80
-        px-2.5 py-2
-        backdrop-blur-xl
-        shadow-sm
-        shadow-black/20
-        sm:mb-7 sm:gap-4 sm:px-4 sm:py-3
+        mb-8 flex min-w-0 flex-row items-center justify-between gap-2 border-b
+        border-white/[0.08] bg-[#090b0f]/90 px-0 py-3
+        sm:gap-4 sm:py-4
       "
     >
       <div className="flex min-w-0 items-center gap-1.5 sm:gap-3">
@@ -121,7 +115,7 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
           href={logoHref}
           aria-label="Go to your SkillBattle dashboard"
           title="Dashboard"
-          className="inline-flex min-w-0 shrink-0 items-center rounded-lg px-1 py-1 text-left transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+          className="inline-flex min-w-0 shrink-0 items-center px-1 py-1 text-left transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
         >
           <span className="truncate text-sm font-black tracking-tight text-white sm:text-xl">
             Skill<span className="text-cyan-300">Battle</span>
@@ -231,7 +225,7 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
         </div>
       </div>
 
-      <div className="absolute left-3 top-full hidden items-center gap-1.5 pt-1 text-[10px] text-slate-500 md:flex lg:left-[calc(theme(spacing.4)+10rem)]">
+        <div className="absolute left-0 top-full hidden items-center gap-1.5 pt-1 text-[10px] text-slate-500 md:flex">
         <span className="text-slate-600">Workspace</span>
         <span aria-hidden="true">/</span>
         <span className="font-medium text-slate-400">{pageLabel}</span>

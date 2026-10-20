@@ -137,7 +137,7 @@ export default function DashboardLayout({ children }: Props) {
   ));
 
   return (
-    <main suppressHydrationWarning className="flex min-h-screen bg-[#060913] text-white lg:h-dvh lg:min-h-0 lg:overflow-hidden">
+    <main suppressHydrationWarning className="flex min-h-screen bg-[#090b0f] text-white lg:h-dvh lg:min-h-0 lg:overflow-hidden">
       {/* Desktop Persistent Responsive Sidebar */}
       <Sidebar />
 
@@ -177,7 +177,7 @@ export default function DashboardLayout({ children }: Props) {
       </AnimatePresence>
 
       {/* Main Content Area */}
-      <section id="main-content" tabIndex={-1} className="min-w-0 flex-1 overflow-auto px-3 pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-3 outline-none sm:px-6 sm:pb-[calc(7.5rem+env(safe-area-inset-bottom))] sm:pt-5 lg:h-full lg:min-h-0 lg:px-8 lg:pb-8 lg:pt-6">
+      <section id="main-content" tabIndex={-1} className="min-w-0 flex-1 overflow-auto px-3 pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-3 outline-none sm:px-6 sm:pb-[calc(7.5rem+env(safe-area-inset-bottom))] sm:pt-5 lg:h-full lg:min-h-0 lg:px-10 lg:pb-10 lg:pt-7">
         <TopNavbar onOpenMobileNav={() => setMobileDrawerOpen(true)} />
         {children}
       </section>

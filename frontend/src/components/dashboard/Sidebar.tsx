@@ -252,12 +252,12 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
       <motion.aside
         suppressHydrationWarning
         initial={false}
-        animate={{ width: isMobile ? "100%" : effectiveCollapsed ? 84 : 272 }}
+        animate={{ width: isMobile ? "100%" : effectiveCollapsed ? 76 : 248 }}
         transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
         className={`flex flex-col select-none relative ${
           isMobile
-            ? "h-full w-full rounded-r-[1.5rem] border-r border-white/10 bg-[#0a0d14] text-white"
-            : "hidden lg:flex my-3 ml-3 rounded-[1.75rem] border border-white/[0.08] bg-[#080d19]/95 backdrop-blur-2xl shadow-2xl shadow-black/60 overflow-hidden"
+            ? "h-full w-full rounded-r-[1.5rem] border-r border-white/10 bg-[#101216] text-white"
+            : "hidden lg:flex m-0 rounded-none border-0 border-r border-white/[0.07] bg-[#0d0f13] shadow-none overflow-hidden"
         }`}
       >
         {/* Subtle Ambient Lighting */}
@@ -265,14 +265,14 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
         <div className="pointer-events-none absolute -bottom-20 -right-20 h-44 w-44 rounded-full bg-violet-500/[0.07] blur-3xl" />
 
         {/* Top Header / Branding */}
-        <div className="relative z-10 flex items-center justify-between border-b border-white/[0.06] px-4 py-4 sm:px-5">
+        <div className="relative z-10 flex items-center justify-between border-b border-white/[0.06] px-4 py-5 sm:px-5">
           <Link
             href={portal === "admin" ? "/admin" : portal === "college" ? "/college/dashboard" : portal === "company" ? "/company/dashboard" : "/dashboard"}
             onClick={onCloseMobile}
             className={`flex items-center gap-3 transition-opacity hover:opacity-90 ${effectiveCollapsed ? "mx-auto" : ""}`}
             title="SkillBattle AI"
           >
-            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400/20 via-cyan-500/10 to-violet-500/20 border border-cyan-400/30 text-cyan-300 shadow-md shadow-cyan-500/10">
+            <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-400/[0.08] text-cyan-300">
               <BrandIcon size={20} className="text-cyan-400" />
             </div>
 

@@ -4,12 +4,12 @@
 :root.dark,
 html.dark {
   color-scheme: dark;
-  --app-bg: #060913;
+  --app-bg: #090b0f;
   --app-fg: #f8fafc;
-  --surface-canvas: #060913;
-  --surface-card: #0a0f1d;
-  --surface-elevated: #10172a;
-  --surface-subtle: #172036;
+  --surface-canvas: #090b0f;
+  --surface-card: #101216;
+  --surface-elevated: #161a21;
+  --surface-subtle: #20252e;
   --border-default: rgba(255, 255, 255, 0.08);
   --border-subtle: rgba(255, 255, 255, 0.04);
   --border-focus: #06b6d4;
