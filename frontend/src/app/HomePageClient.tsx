@@ -22,6 +22,20 @@ import {
   Zap,
 } from "lucide-react";
 
+const journey = [
+  { icon: Code2, title: "Learn", text: "Build foundations with focused tasks and guided practice.", href: "/tasks" },
+  { icon: Flame, title: "Practice", text: "Keep momentum with daily challenges and a visible learning trail.", href: "/challenge" },
+  { icon: Swords, title: "Battle", text: "Pressure-test your reasoning in the Battle Arena.", href: "/battle" },
+  { icon: BrainCircuit, title: "Improve", text: "Use coaching and assessments to choose the next useful step.", href: "/coach" },
+  { icon: BriefcaseBusiness, title: "Discover", text: "Explore real opportunities when you are ready to apply.", href: "/opportunities" },
+];
+
+const faqs = [
+  ["What can I do on SkillBattle?", "You can practice coding, enter supported battles, use learning and career tools, and explore opportunities published in the platform."],
+  ["Are opportunities guaranteed placements?", "No. Opportunities are separate from preparation tools, and application outcomes are managed by the opportunity owner or external employer."],
+  ["Can colleges and companies use the same platform?", "Yes. SkillBattle keeps role-specific spaces for students, colleges, and hiring teams while preserving the permissions for each account."],
+];
+
 const navItems = [
   { label: "Home", href: "#home" },
   { label: "Student", href: "#student" },
@@ -404,6 +418,26 @@ export default function Home() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-4 border-b border-white/10 pb-8 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-sm font-bold uppercase tracking-[0.22em] text-cyan-300">A deliberate path</p>
+            <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">Make every session move your career forward.</h2>
+          </div>
+          <Link href="/opportunities" className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-300 hover:text-cyan-200">Explore opportunities <ArrowRight size={15} /></Link>
+        </div>
+        <div className="relative mt-8 grid gap-3 md:grid-cols-5">
+          {journey.map(({ icon: Icon, title, text, href }, index) => (
+            <Link key={title} href={href} className="group relative rounded-2xl border border-white/[0.09] bg-white/[0.035] p-5 transition hover:-translate-y-1 hover:border-cyan-400/35 hover:bg-cyan-400/[0.05] motion-reduce:transition-none">
+              <span className="text-[10px] font-bold tracking-[0.2em] text-slate-500">0{index + 1}</span>
+              <Icon className="mt-5 h-5 w-5 text-cyan-300" />
+              <h3 className="mt-4 font-bold text-white">{title}</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="rounded-[2rem] border border-white/10 bg-gradient-to-br from-slate-900/80 to-[#101827] p-6 sm:p-8 lg:p-10">
           <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             <div>
@@ -434,6 +468,22 @@ export default function Home() {
               </ul>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="mx-auto grid max-w-7xl gap-8 px-4 py-16 sm:px-6 lg:grid-cols-[.8fr_1.2fr] lg:px-8">
+        <div>
+          <p className="text-sm font-bold uppercase tracking-[0.22em] text-cyan-300">Clear expectations</p>
+          <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">Questions, answered honestly.</h2>
+          <p className="mt-4 max-w-md leading-7 text-slate-400">SkillBattle is designed to make your preparation more deliberate. It does not invent career outcomes or replace hiring decisions.</p>
+        </div>
+        <div className="divide-y divide-white/[0.08] rounded-3xl border border-white/[0.09] bg-white/[0.025] px-6">
+          {faqs.map(([question, answer]) => (
+            <details key={question} className="group py-5">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-bold text-white marker:hidden">{question}<ChevronRight className="h-4 w-4 shrink-0 text-cyan-300 transition-transform group-open:rotate-90" /></summary>
+              <p className="pt-3 pr-6 text-sm leading-6 text-slate-400">{answer}</p>
+            </details>
+          ))}
         </div>
       </section>
 

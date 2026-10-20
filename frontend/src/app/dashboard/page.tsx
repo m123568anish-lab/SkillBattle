@@ -197,6 +197,24 @@ export default function DashboardPage() {
               Start Session <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
             </div>
           </button>
+
+          <button
+            onClick={() => router.push("/challenge")}
+            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-orange-500/20 bg-gradient-to-br from-orange-500/10 via-[#0a0f1d] to-[#050816] p-5 text-left transition hover:border-orange-400/50 hover:shadow-lg hover:shadow-orange-500/10"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-400/10 text-orange-300 ring-1 ring-orange-400/20"><Sparkles className="h-5 w-5" /></div>
+            <div className="mt-4"><h3 className="font-bold text-white text-base group-hover:text-orange-300 transition-colors">Daily Challenge</h3><p className="mt-1 text-xs text-slate-400 leading-relaxed">Take today&apos;s focused challenge and keep your learning rhythm going.</p></div>
+            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-orange-400">Open challenge <ArrowRight className="h-3.5 w-3.5" /></div>
+          </button>
+
+          <button
+            onClick={() => router.push("/coach")}
+            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-[#0a0f1d] to-[#050816] p-5 text-left transition hover:border-cyan-400/50 hover:shadow-lg hover:shadow-cyan-500/10"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-300 ring-1 ring-cyan-400/20"><Bot className="h-5 w-5" /></div>
+            <div className="mt-4"><h3 className="font-bold text-white text-base group-hover:text-cyan-300 transition-colors">AI Coach</h3><p className="mt-1 text-xs text-slate-400 leading-relaxed">Review your next recommendation using your real learning activity.</p></div>
+            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-cyan-400">Meet your coach <ArrowRight className="h-3.5 w-3.5" /></div>
+          </button>
         </div>
 
         <div className="mt-8">
