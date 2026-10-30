@@ -1,5 +1,6 @@
 import {
   Home,
+  BookOpen,
   Sword,
   Trophy,
   Bot,
@@ -150,7 +151,7 @@ export function getMobileNavigation(portal: PortalKind): PortalNavItem[] {
 
   return [
     { title: "Home", href: "/dashboard", icon: Home, category: "mobile", available: true },
-    { title: "Practice", href: "/tasks", icon: Code2, category: "mobile", available: true },
+    { title: "Practice", href: "/practice", icon: BookOpen, category: "mobile", available: true },
     { title: "Battles", href: "/battle", icon: Sword, category: "mobile", available: true },
     { title: "Opportunities", href: "/opportunities", icon: BriefcaseBusiness, category: "mobile", available: true },
     { title: "Profile", href: "/profile", icon: User, category: "mobile", available: true },
@@ -160,6 +161,7 @@ export function getMobileNavigation(portal: PortalKind): PortalNavItem[] {
 export const sidebarItems: SidebarItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: Home, category: "space" },
 
+  { title: "Practice Arena", href: "/practice", icon: BookOpen, category: "train" },
   { title: "Battle Arena", href: "/battle", icon: Sword, category: "train" },
   { title: "Daily Challenges", href: "/challenge", icon: Flame, category: "train" },
   { title: "Practice Tasks", href: "/tasks", icon: Code2, category: "train" },

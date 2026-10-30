@@ -18,6 +18,26 @@ html.dark {
   --text-muted: #64748b;
   --accent-cyan: #06b6d4;
   --accent-violet: #8b5cf6;
+
+  /* Practice Arena Semantic Tokens */
+  --practice-bg: #090c13;
+  --practice-card: #0e131d;
+  --practice-elevated: #151b28;
+  --practice-accent: #6366f1;
+  --practice-accent-subtle: rgba(99, 102, 241, 0.12);
+  --practice-border: rgba(99, 102, 241, 0.2);
+  --practice-border-subtle: rgba(255, 255, 255, 0.07);
+
+  /* Battle Arena Semantic Tokens */
+  --battle-bg: #0b0914;
+  --battle-card: #120e22;
+  --battle-elevated: #1a1433;
+  --battle-accent: #a855f7;
+  --battle-accent-subtle: rgba(168, 85, 247, 0.12);
+  --battle-cyan: #06b6d4;
+  --battle-amber: #f59e0b;
+  --battle-border: rgba(168, 85, 247, 0.25);
+  --battle-glow: 0 0 24px rgba(168, 85, 247, 0.2);
 }
 
 :root[data-theme="light"] {

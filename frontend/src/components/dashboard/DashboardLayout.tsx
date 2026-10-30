@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,7 +13,7 @@ interface Props {
   children: React.ReactNode;
 }
 
-export default function DashboardLayout({ children }: Props) {
+function DashboardLayoutInner({ children }: Props) {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [textEntryFocused, setTextEntryFocused] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -220,5 +220,13 @@ export default function DashboardLayout({ children }: Props) {
         </nav>
       )}
     </main>
+  );
+}
+
+export default function DashboardLayout({ children }: Props) {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#090b0f] text-white flex items-center justify-center">Loading dashboard...</div>}>
+      <DashboardLayoutInner>{children}</DashboardLayoutInner>
+    </Suspense>
   );
 }
