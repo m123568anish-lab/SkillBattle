@@ -6,6 +6,7 @@ export interface BreadcrumbItem {
   label: string;
   href?: string;
   current?: boolean;
+  active?: boolean;
 }
 
 interface BreadcrumbsProps {

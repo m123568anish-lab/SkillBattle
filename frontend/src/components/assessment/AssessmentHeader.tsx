@@ -11,6 +11,8 @@ export interface AssessmentHeaderProps {
   currentIndex?: number;
   totalQuestions?: number;
   onExit?: () => void;
+  onBack?: () => void;
+  xpReward?: number;
   isCollapsiblePanelOpen?: boolean;
   onToggleCollapsiblePanel?: () => void;
   panelToggleLabel?: string;
@@ -25,12 +27,15 @@ export function AssessmentHeader({
   currentIndex,
   totalQuestions,
   onExit,
+  onBack,
+  xpReward,
   isCollapsiblePanelOpen,
   onToggleCollapsiblePanel,
   panelToggleLabel = "Problem Details",
   className = "",
 }: AssessmentHeaderProps) {
   const [isFullscreen, setIsFullscreen] = React.useState(false);
+  const exitHandler = onExit || onBack;
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -66,10 +71,10 @@ export function AssessmentHeader({
     >
       {/* Left: Back & Question Meta */}
       <div className="flex items-center gap-2 md:gap-3 min-w-0">
-        {onExit && (
+        {exitHandler && (
           <button
             type="button"
-            onClick={onExit}
+            onClick={exitHandler}
             aria-label="Exit assessment"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >

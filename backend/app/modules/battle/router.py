@@ -432,7 +432,11 @@ async def battle_socket(
     try:
         while True:
             raw = await websocket.receive_text()
-            message = json.loads(raw)
+            try:
+                message = json.loads(raw)
+            except Exception:
+                continue
+
             event = message.get("event")
             data = message.get("data") or {}
 
@@ -441,7 +445,10 @@ async def battle_socket(
                 await websocket.send_text(json.dumps({"event": "pong"}))
                 continue
 
-            await battle_ws.broadcast(battle_id, event, data)
+            # Defensive validation: Only permit approved client event types
+            allowed_events = {"ping", "chat", "telemetry", "typing", "ready", "submission"}
+            if event in allowed_events:
+                await battle_ws.broadcast(battle_id, event, data)
 
     except WebSocketDisconnect:
         battle_ws.disconnect(battle_id, websocket)

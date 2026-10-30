@@ -153,7 +153,7 @@ export function getMobileNavigation(portal: PortalKind): PortalNavItem[] {
     { title: "Home", href: "/dashboard", icon: Home, category: "mobile", available: true },
     { title: "Practice", href: "/practice", icon: BookOpen, category: "mobile", available: true },
     { title: "Battles", href: "/battle", icon: Sword, category: "mobile", available: true },
-    { title: "Opportunities", href: "/opportunities", icon: BriefcaseBusiness, category: "mobile", available: true },
+    { title: "Leaderboard", href: "/leaderboard", icon: BarChart3, category: "mobile", available: true },
     { title: "Profile", href: "/profile", icon: User, category: "mobile", available: true },
   ];
 }
@@ -161,24 +161,33 @@ export function getMobileNavigation(portal: PortalKind): PortalNavItem[] {
 export const sidebarItems: SidebarItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: Home, category: "space" },
 
-  { title: "Practice Arena", href: "/practice", icon: BookOpen, category: "train" },
-  { title: "Battle Arena", href: "/battle", icon: Sword, category: "train" },
-  { title: "Daily Challenges", href: "/challenge", icon: Flame, category: "train" },
-  { title: "Practice Tasks", href: "/tasks", icon: Code2, category: "train" },
-  { title: "Skill Quest", href: "/campaign", icon: Gamepad2, category: "train" },
-  { title: "Tournaments", href: "/tournament", icon: Trophy, category: "train" },
-  { title: "Leaderboard", href: "/leaderboard", icon: BarChart3, category: "train" },
+  // PRACTICE HUB (LEARN & MASTER)
+  { title: "Practice Hub", href: "/practice", icon: BookOpen, category: "practice" },
+  { title: "Explore Topics", href: "/practice/topics", icon: Layers3, category: "practice" },
+  { title: "Coding Practice", href: "/practice/coding", icon: Code2, category: "practice" },
+  { title: "Tasks & Challenges", href: "/practice/tasks", icon: Flame, category: "practice" },
+  { title: "MCQ Practice", href: "/practice/mcq", icon: HelpCircle, category: "practice" },
+  { title: "My Progress", href: "/practice/progress", icon: Activity, category: "practice" },
 
+  // BATTLE ARENA (COMPETE & RANK)
+  { title: "Battle Arena", href: "/battle", icon: Sword, category: "battle" },
+  { title: "Multiplayer Lobby", href: "/battle/lobby", icon: Users, category: "battle" },
+  { title: "Solo Battle", href: "/battle/solo", icon: Target, category: "battle" },
+  { title: "Daily Championship", href: "/battle/championship", icon: Trophy, category: "battle" },
+  { title: "Leaderboard", href: "/leaderboard", icon: BarChart3, category: "battle" },
+  { title: "Battle History", href: "/battle/history", icon: ShieldCheck, category: "battle" },
+
+  // CAREER & INTERVIEW
+  { title: "AI Interview Prep", href: "/practice/interview", icon: Mic, category: "career" },
   { title: "AI Coach", href: "/coach", icon: Bot, category: "career" },
-  { title: "Assessments", href: "/assessments", icon: ClipboardCheck, category: "career" },
   { title: "Career Roadmap", href: "/career/roadmap", icon: Map, category: "career" },
-  { title: "AI Mock Interview", href: "/interview", icon: Mic, category: "career" },
   { title: "Resume Tools", href: "/career/resume", icon: FileText, category: "career" },
-  { title: "Career Mentor", href: "/career/mentor", icon: Bot, category: "career" },
   { title: "Placement Prep", href: "/placement", icon: Target, category: "career" },
   { title: "Opportunities", href: "/opportunities", icon: BriefcaseBusiness, category: "career" },
 
-  { title: "Friends", href: "/friends", icon: Users, category: "community" },
+  // COMMUNITY & ACCOUNT
+  { title: "Friends & Social", href: "/friends", icon: Users, category: "community" },
+  { title: "Skill Quest", href: "/campaign", icon: Gamepad2, category: "community" },
 
   { title: "Profile", href: "/profile", icon: User, category: "account" },
   { title: "Settings", href: "/settings", icon: Settings, category: "account" },
@@ -189,26 +198,31 @@ export const sidebarCategories: SidebarCategory[] = [
   {
     id: "space",
     label: "Your Space",
-    items: sidebarItems.filter(i => i.category === "space"),
+    items: sidebarItems.filter((i) => i.category === "space"),
   },
   {
-    id: "train",
-    label: "Train & Compete",
-    items: sidebarItems.filter(i => i.category === "train"),
+    id: "practice",
+    label: "Practice Hub",
+    items: sidebarItems.filter((i) => i.category === "practice"),
+  },
+  {
+    id: "battle",
+    label: "Battle Arena",
+    items: sidebarItems.filter((i) => i.category === "battle"),
   },
   {
     id: "career",
     label: "Grow Your Career",
-    items: sidebarItems.filter(i => i.category === "career"),
+    items: sidebarItems.filter((i) => i.category === "career"),
   },
   {
     id: "community",
-    label: "Community",
-    items: sidebarItems.filter(i => i.category === "community"),
+    label: "Community & Quests",
+    items: sidebarItems.filter((i) => i.category === "community"),
   },
   {
     id: "account",
     label: "Account",
-    items: sidebarItems.filter(i => i.category === "account"),
+    items: sidebarItems.filter((i) => i.category === "account"),
   },
 ];

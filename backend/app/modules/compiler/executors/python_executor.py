@@ -27,11 +27,12 @@ class PythonExecutor(BaseExecutor):
             start = self.start_timer()
 
             process = subprocess.run(
-                ["python", source_file],
+                ["python", "-I", source_file],
                 input=stdin,
                 capture_output=True,
                 text=True,
                 timeout=self.timeout,
+                env=self.get_isolated_env(),
             )
 
             elapsed = self.stop_timer(start)

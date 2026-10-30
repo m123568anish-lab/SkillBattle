@@ -93,6 +93,11 @@ class BaseExecutor(ABC):
             * 1000
         )
 
+    def get_isolated_env(self) -> dict[str, str]:
+        """Scrub sensitive environment variables from execution context."""
+        safe_keys = {"PATH", "SYSTEMROOT", "TMP", "TEMP", "USERPROFILE", "LANG", "LC_ALL"}
+        return {k: v for k, v in os.environ.items() if k.upper() in safe_keys}
+
     # ==========================================================
     # Execute
     # ==========================================================
