@@ -59,6 +59,7 @@ interface DashboardState {
     error: string | null;
     loadDashboard: (userId?: string) => Promise<void>;
     refresh: () => Promise<void>;
+    reset: () => void;
 }
 
 const initialCache = getCachedDashboard();
@@ -77,7 +78,18 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     error: null,
 
     async loadDashboard(requestedUserId) {
-        const userId = requestedUserId ?? get().userId;
+        let userId = requestedUserId ?? get().userId;
+        if (!userId && typeof window !== "undefined") {
+            try {
+                const storedUser = localStorage.getItem("skillbattle_user_cache");
+                if (storedUser) {
+                    const parsed = JSON.parse(storedUser);
+                    if (parsed?.id) userId = parsed.id;
+                }
+            } catch {
+                // ignore
+            }
+        }
         if (!userId) return;
 
         if (activeDashboardPromise && activeDashboardUserId === userId) {
@@ -153,5 +165,27 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
 
     async refresh() {
         await get().loadDashboard();
+    },
+
+    reset() {
+        dashboardRequestVersion += 1;
+        activeDashboardPromise = null;
+        activeDashboardUserId = null;
+        if (typeof window !== "undefined") {
+            try {
+                localStorage.removeItem(DASHBOARD_CACHE_KEY);
+            } catch {
+                // ignore
+            }
+        }
+        set({
+            dashboard: null,
+            userId: null,
+            loading: false,
+            isRefreshing: false,
+            isFromCache: false,
+            lastRefreshedAt: null,
+            error: null,
+        });
     },
 }));

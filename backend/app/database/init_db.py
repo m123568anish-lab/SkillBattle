@@ -43,6 +43,7 @@ from app.models import (
     RefreshToken,
     PasswordResetToken,
     Streak,
+    UserDailyActivity,
     Question,
     UserSubmission,
     UserStats,
@@ -89,6 +90,7 @@ __all__ = [
     "RefreshToken",
     "PasswordResetToken",
     "Streak",
+    "UserDailyActivity",
     "BattleParticipant",
     "BattleResult",
     "BattleRoom",
@@ -162,10 +164,12 @@ def init_db() -> None:
                 _repair_college_tables()
                 _repair_company_tables()
                 _repair_battle_tables()
+                _repair_streak_table()
                 logger.info(f"✅ Tables created: {list(Base.metadata.tables.keys())}")
             else:
                 Base.metadata.create_all(bind=engine)
                 _repair_company_tables()
+                _repair_streak_table()
                 logger.info("⚡ Database schema already initialized (%d tables found); verified all registered model tables exist.", len(existing_tables))
 
             _deactivate_legacy_sample_content()
@@ -374,6 +378,31 @@ def _repair_college_tables() -> None:
         logger.info("Checked & created college platform tables.")
     except Exception as e:
         logger.warning(f"College tables repair warning: {e}")
+
+
+
+def _repair_streak_table() -> None:
+    """Ensure streak and user_daily_activities tables, constraints, and indexes exist."""
+    try:
+        inspector = inspect(engine)
+        tables = set(inspector.get_table_names())
+        with engine.begin() as connection:
+            if "streak" in tables:
+                columns = {c["name"] for c in inspector.get_columns("streak")}
+                if "last_activity_date" not in columns:
+                    connection.execute(text('ALTER TABLE "streak" ADD COLUMN "last_activity_date" DATE'))
+                    logger.info("Added missing streak.last_activity_date column")
+                try:
+                    connection.execute(text('CREATE UNIQUE INDEX IF NOT EXISTS "ix_streak_user_id_unique" ON "streak" ("user_id")'))
+                except Exception:
+                    pass
+            if "user_daily_activities" in tables:
+                try:
+                    connection.execute(text('CREATE UNIQUE INDEX IF NOT EXISTS "ix_user_daily_act_user_date" ON "user_daily_activities" ("user_id", "activity_date")'))
+                except Exception:
+                    pass
+    except Exception as e:
+        logger.warning(f"Streak tables repair warning: {e}")
 
 
 def _repair_company_tables() -> None:

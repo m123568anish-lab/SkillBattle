@@ -242,6 +242,21 @@ class DashboardService:
             if created_at:
                 day = created_at.date().isoformat()
                 activity_by_day[day] = activity_by_day.get(day, 0) + int(amount or 0)
+
+        # Incorporate recorded daily qualifying activity dates
+        from app.models.streak import UserDailyActivity
+        daily_acts = (await db.execute(
+            select(UserDailyActivity.activity_date, UserDailyActivity.xp_earned)
+            .where(
+                UserDailyActivity.user_id == user_id,
+                UserDailyActivity.activity_date >= (datetime.utcnow().date() - timedelta(days=84)),
+            )
+        )).all()
+        for act_date, act_xp in daily_acts:
+            if act_date:
+                day_str = act_date.isoformat()
+                activity_by_day[day_str] = max(activity_by_day.get(day_str, 0), int(act_xp or 0))
+
         weekly = [WeeklyActivity(day=day, xp=xp) for day, xp in sorted(activity_by_day.items())]
 
         achievement_list = [

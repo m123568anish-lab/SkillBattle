@@ -21,7 +21,7 @@ from .refresh_token import RefreshToken
 from .password_reset_token import PasswordResetToken
 from .resume import Resume
 from .roadmap import Roadmap, RoadmapTask, RoadmapWeek
-from .streak import Streak
+from .streak import Streak, UserDailyActivity
 from .user import User
 from .question import Question, UserSubmission
 from .question_exposure import QuestionExposure
@@ -70,6 +70,7 @@ __all__ = [
     "RoadmapTask",
     "RoadmapWeek",
     "Streak",
+    "UserDailyActivity",
     "User",
     "UserCampaignProgress",
     "CampaignAttempt",

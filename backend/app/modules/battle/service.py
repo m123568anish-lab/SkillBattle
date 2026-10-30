@@ -879,6 +879,27 @@ class BattleService:
                 stats = stats_res.scalar_one_or_none()
                 if stats:
                     stats.rating = max(0, stats.rating + rating_change)
+                else:
+                    stats = UserStats(
+                        user_id=user.id,
+                        level=1,
+                        rating=user.coding_rating,
+                        xp=0,
+                    )
+                    db.add(stats)
+
+                try:
+                    from app.modules.streak.service import streak_service
+                    await streak_service.record_activity(
+                        db,
+                        user.id,
+                        activity_type="battle",
+                        reference_id=str(battle_id),
+                        xp_earned=xp_earned,
+                        commit=False,
+                    )
+                except Exception:
+                    pass
 
         company_application_result = await db.execute(
             select(CandidateApplication).where(CandidateApplication.assessment_battle_id == battle_id)

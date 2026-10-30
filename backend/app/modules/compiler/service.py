@@ -358,6 +358,19 @@ class CompilerService:
                 xp_status = "pending"
 
         if judge_result.verdict == "Accepted":
+            try:
+                from app.modules.streak.service import streak_service
+                await streak_service.record_activity(
+                    db,
+                    current_user.id,
+                    activity_type="problem_submission",
+                    reference_id=str(submission.id),
+                    xp_earned=xp_earned,
+                    commit=False,
+                )
+            except Exception:
+                logger.exception("Streak activity update failed for submission=%s", submission.id)
+
             # Daily completion is a session state, not a second reward path.
             try:
                 from app.modules.practice.service import mark_daily_complete

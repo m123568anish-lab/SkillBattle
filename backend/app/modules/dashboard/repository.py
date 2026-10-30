@@ -106,13 +106,9 @@ class DashboardRepository:
         db: AsyncSession,
         user_id: str,
     ) -> int:
-        result = await db.execute(
-            select(Streak.current_streak)
-            .where(Streak.user_id == user_id)
-            .order_by(Streak.id.desc())
-            .limit(1)
-        )
-        return result.scalar_one_or_none() or 0
+        from app.modules.streak.service import streak_service
+        data = await streak_service.get_streak(db, str(user_id))
+        return int(data.get("current_streak", 0))
 
 
 dashboard_repository = DashboardRepository()

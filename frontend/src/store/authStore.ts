@@ -2,6 +2,7 @@ import axios from "axios";
 import { create } from "zustand";
 import { LoginRequest, User } from "@/types/auth";
 import { authService } from "@/services/auth.service";
+import { useDashboardStore } from "@/store/dashboardStore";
 
 export type AuthStatus = "loading" | "authenticated" | "unauthenticated" | "unavailable" | "forbidden";
 
@@ -84,7 +85,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         activeLoadUser = null;
         await authService.logout();
         cacheUser(null);
-        if (typeof window !== "undefined") localStorage.removeItem("skillbattle_dashboard_cache");
+        if (typeof window !== "undefined") {
+            localStorage.removeItem("skillbattle_dashboard_cache");
+            try { useDashboardStore.getState().reset(); } catch {} 
+        }
         set({ user: null, loading: false, isAuthenticated: false, status: "unauthenticated", authError: null });
     },
 
@@ -96,7 +100,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             authRequestGeneration += 1;
             activeLoadUser = null;
             cacheUser(null);
-            if (typeof window !== "undefined") localStorage.removeItem("skillbattle_dashboard_cache");
+            if (typeof window !== "undefined") {
+            localStorage.removeItem("skillbattle_dashboard_cache");
+            try { useDashboardStore.getState().reset(); } catch {} 
+        }
             set({
                 user: null,
                 isAuthenticated: false,
@@ -139,7 +146,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         activeAuthSessionKey = null;
         activeLoadUser = null;
         cacheUser(null);
-        if (typeof window !== "undefined") localStorage.removeItem("skillbattle_dashboard_cache");
+        if (typeof window !== "undefined") {
+            localStorage.removeItem("skillbattle_dashboard_cache");
+            try { useDashboardStore.getState().reset(); } catch {} 
+        }
         set({
             user: null,
             loading: false,

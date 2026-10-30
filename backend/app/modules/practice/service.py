@@ -99,4 +99,15 @@ async def mark_daily_complete(db: AsyncSession, user_id: str, problem_id: int, s
         session.status = "COMPLETED"
         session.submission_id = submission_id
         session.completed_at = datetime.utcnow()
+        try:
+            from app.modules.streak.service import streak_service
+            await streak_service.record_activity(
+                db,
+                user_id,
+                activity_type="daily_challenge",
+                reference_id=str(session.id),
+                commit=False,
+            )
+        except Exception:
+            pass
         await db.commit()

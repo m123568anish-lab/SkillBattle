@@ -406,6 +406,20 @@ class AssessmentService:
             question_submissions=question_submission_objs,
         )
 
+        # Record daily activity & streak for completed assessment
+        try:
+            from app.modules.streak.service import streak_service
+            await streak_service.record_activity(
+                db,
+                user_id,
+                activity_type="assessment",
+                reference_id=str(attempt.id),
+                xp_earned=int(attempt.score or 0),
+                commit=False,
+            )
+        except Exception:
+            pass
+
         await db.commit()
         await db.refresh(attempt)
 

@@ -10,6 +10,7 @@ Leaderboard Service
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .repository import (
@@ -43,35 +44,31 @@ class LeaderboardService:
         )
 
         leaderboard = []
+        today = datetime.utcnow().date()
+        yesterday = today - timedelta(days=1)
 
-        for user, xp in rows:
+        for user, xp, streak, stats in rows:
+            user_xp = xp.total_xp if xp else 0
+            user_level = xp.level if xp else 1
+            user_rating = stats.rating if (stats and stats.rating) else (getattr(user, "coding_rating", None) or 1000)
+
+            user_streak = 0
+            if streak:
+                last_d = streak.last_activity_date or (streak.last_active.date() if streak.last_active else None)
+                if last_d in (today, yesterday):
+                    user_streak = streak.current_streak
+
             leaderboard.append(
                 {
-                    "user_id": user.id,
-                    "username": user.username,
-                    "full_name": user.full_name,
-                    "avatar": getattr(
-                        user,
-                        "avatar",
-                        None,
-                    ),
-                    "xp": xp.total_xp,
-                    "level": xp.level,
-                    "streak": getattr(
-                        xp,
-                        "current_streak",
-                        0,
-                    ),
-                    "solved": getattr(
-                        xp,
-                        "problems_solved",
-                        0,
-                    ),
-                    "rating": getattr(
-                        xp,
-                        "rating",
-                        1200,
-                    ),
+                    "user_id": str(user.id),
+                    "username": str(user.username or "player"),
+                    "full_name": str(user.full_name or user.username or "Player"),
+                    "avatar": getattr(user, "avatar_url", None) or getattr(user, "avatar", None),
+                    "xp": user_xp,
+                    "level": user_level,
+                    "streak": user_streak,
+                    "solved": max(0, user_xp // 100),
+                    "rating": user_rating,
                 }
             )
 
@@ -95,39 +92,24 @@ class LeaderboardService:
         db: AsyncSession,
         current_user,
     ):
-
         rank, xp = await leaderboard_repository.get_user_rank(
-
             db,
-
-            current_user.id,
-
+            str(current_user.id),
         )
 
         if xp is None:
-
             return {
-
                 "rank": None,
-
                 "total_users": 0,
-
                 "xp": 0,
-
                 "level": 0,
-
             }
 
         return {
-
             "rank": rank,
-
             "total_users": 10000,
-
             "xp": xp.total_xp,
-
             "level": xp.level,
-
         }
 
 
