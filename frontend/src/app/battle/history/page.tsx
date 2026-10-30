@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import Link from "next/link";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { Breadcrumbs } from "@/components/arena";
+import { Breadcrumbs, BattleNav } from "@/components/arena";
 import {
   Swords,
   Trophy,
@@ -102,6 +102,8 @@ function BattleHistoryInner() {
             { label: "Battle History", href: "/battle/history", active: true },
           ]}
         />
+
+        <BattleNav />
 
         {/* Hero */}
         <section className="relative overflow-hidden rounded-3xl border border-rose-500/20 bg-gradient-to-br from-[#1A0B12] via-[#0E1524] to-[#120B1C] p-6 sm:p-10 shadow-2xl">

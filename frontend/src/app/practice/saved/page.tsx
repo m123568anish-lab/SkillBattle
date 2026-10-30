@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { Breadcrumbs, DifficultyBadge } from "@/components/arena";
+import { Breadcrumbs, DifficultyBadge, PracticeNav } from "@/components/arena";
 import {
   Bookmark,
   Trash2,
@@ -87,6 +87,8 @@ function SavedQuestionsInner() {
             { label: "Saved Questions", href: "/practice/saved", active: true },
           ]}
         />
+
+        <PracticeNav />
 
         {/* Hero */}
         <section className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-gradient-to-br from-[#0E1524] via-[#0B0F17] to-[#141C2E] p-6 sm:p-10 shadow-2xl">

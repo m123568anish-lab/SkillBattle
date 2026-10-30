@@ -7,3 +7,5 @@ export * from "./Timer";
 export * from "./ScoreDisplay";
 export * from "./EmptyState";
 export * from "./LoadingSkeleton";
+export * from "./PracticeNav";
+export * from "./BattleNav";

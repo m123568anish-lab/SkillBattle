@@ -4,7 +4,7 @@ import { useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { Breadcrumbs } from "@/components/arena";
+import { Breadcrumbs, PracticeNav } from "@/components/arena";
 import {
   Brain,
   Sparkles,
@@ -102,6 +102,8 @@ function McqPracticeInner() {
             { label: "MCQ Practice", href: "/practice/mcq", active: true },
           ]}
         />
+
+        <PracticeNav />
 
         {/* Hero */}
         <section className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-gradient-to-br from-[#0E1524] via-[#0B0F17] to-[#141C2E] p-6 sm:p-10 shadow-2xl">

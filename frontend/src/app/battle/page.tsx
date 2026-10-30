@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import BattleArenaCommandCenter from "@/components/battle/BattleArenaCommandCenter";
+import { BattleNav } from "@/components/arena";
 import { battleService, type BattleHistoryItem } from "@/services/battle.service";
 import { dashboardService } from "@/services/dashboard.service";
 
@@ -111,18 +112,21 @@ export default function BattlePage() {
 
   return (
     <DashboardLayout>
-      <BattleArenaCommandCenter
-        skillList={skillList}
-        averageSkill={averageSkill}
-        weakSkills={weakSkills}
-        loading={loading}
-        profileLoadFailed={profileLoadFailed}
-        waitingLoadFailed={waitingLoadFailed}
-        recommendedBattle={recommendedBattle}
-        recommendedBattleTitle={recommendedBattleTitle}
-        userStats={userStats}
-        history={history}
-      />
+      <div className="space-y-6 max-w-7xl mx-auto p-4 sm:p-7">
+        <BattleNav />
+        <BattleArenaCommandCenter
+          skillList={skillList}
+          averageSkill={averageSkill}
+          weakSkills={weakSkills}
+          loading={loading}
+          profileLoadFailed={profileLoadFailed}
+          waitingLoadFailed={waitingLoadFailed}
+          recommendedBattle={recommendedBattle}
+          recommendedBattleTitle={recommendedBattleTitle}
+          userStats={userStats}
+          history={history}
+        />
+      </div>
     </DashboardLayout>
   );
 }

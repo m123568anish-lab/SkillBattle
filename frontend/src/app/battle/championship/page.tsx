@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { Breadcrumbs } from "@/components/arena";
+import { Breadcrumbs, BattleNav } from "@/components/arena";
 import {
   Trophy,
   Flame,
@@ -50,6 +50,8 @@ function ChampionshipInner() {
             { label: "Daily Championship", href: "/battle/championship", active: true },
           ]}
         />
+
+        <BattleNav />
 
         {/* Hero Banner */}
         <section className="relative overflow-hidden rounded-3xl border border-amber-500/30 bg-gradient-to-br from-[#1A1208] via-[#0E1524] to-[#120B1C] p-6 sm:p-10 shadow-2xl">

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { Breadcrumbs } from "@/components/arena";
+import { Breadcrumbs, PracticeNav } from "@/components/arena";
 import { careerService } from "@/services/career.service";
 import {
   Bot,
@@ -129,6 +129,8 @@ function InterviewPracticeInner() {
             { label: "Interview Preparation", href: "/practice/interview", active: true },
           ]}
         />
+
+        <PracticeNav />
 
         {/* Hero */}
         <section className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-gradient-to-br from-[#0E1524] via-[#0B0F17] to-[#141C2E] p-6 sm:p-10 shadow-2xl">

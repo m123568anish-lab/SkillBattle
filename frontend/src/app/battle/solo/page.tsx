@@ -8,6 +8,7 @@ import {
   PageHeader,
   DifficultyBadge,
   StatCard,
+  BattleNav,
 } from "@/components/arena";
 import {
   BookOpen,
@@ -61,6 +62,8 @@ function SoloBattleSelectionContent() {
             { label: "Solo Battle", href: "/battle/solo", current: true },
           ]}
         />
+
+        <BattleNav />
 
         {/* Quick Stats Bar */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

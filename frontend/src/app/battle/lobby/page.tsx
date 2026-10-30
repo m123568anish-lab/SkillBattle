@@ -8,6 +8,7 @@ import {
   PageHeader,
   StatCard,
   DifficultyBadge,
+  BattleNav,
 } from "@/components/arena";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
@@ -188,6 +189,8 @@ export default function BattleLobbyPage() {
             { label: "Lobby", href: "/battle/lobby", current: true },
           ]}
         />
+
+        <BattleNav />
 
         {/* Player Profile & Rating Summary Bar */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

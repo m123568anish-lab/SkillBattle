@@ -12,7 +12,7 @@ import {
   AssessmentActionFooter,
   type TestCaseResult,
 } from "@/components/assessment";
-import { Breadcrumbs } from "@/components/arena";
+import { Breadcrumbs, PracticeNav } from "@/components/arena";
 import {
   CheckCircle2,
   Play,
@@ -533,6 +533,8 @@ function CodingPracticeInner() {
             { label: "Coding Practice", href: "/practice/coding", active: true },
           ]}
         />
+
+        <PracticeNav />
 
         {/* Hero Banner */}
         <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#0E1524] via-[#0B0F17] to-[#121927] p-6 sm:p-8">
