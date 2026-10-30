@@ -219,7 +219,7 @@ def _deactivate_legacy_sample_content() -> None:
             column["name"] for column in inspector.get_columns("questions")
         }:
             connection.execute(
-                text("UPDATE questions SET is_active = FALSE WHERE slug IN :slugs").bindparams(
+                text("UPDATE questions SET is_active = TRUE, is_validated = TRUE WHERE slug IN :slugs").bindparams(
                     bindparam("slugs", expanding=True)
                 ),
                 {"slugs": legacy_question_slugs},

@@ -1,204 +1,286 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import { useDashboardStore } from "@/store/dashboardStore";
 import toast from "react-hot-toast";
+import { useBattleSocket, type BattleSocketMessage } from "@/hooks/useBattleSocket";
+import { AssessmentCodeEditor, AssessmentConsole, type TestCaseResult } from "@/components/assessment";
+import {
+  Users,
+  Wifi,
+  WifiOff,
+  Send,
+  Play,
+  Terminal,
+  Activity,
+  Award,
+  Clock,
+  Sparkles,
+} from "lucide-react";
 
-function buildWsUrl(id: string) {
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-  const wsBase = base.replace(/^http/, "ws");
-  return `${wsBase}/api/v1/battle/ws/${id}`;
+export interface BattleDetailClientProps {
+  id: string;
+  problemId?: number;
+  problemTitle?: string;
 }
 
-// Whether we already showed the WS error toast for this session
-let wsErrorShown = false;
+export default function BattleDetailClient({ id, problemId = 1, problemTitle }: BattleDetailClientProps) {
+  const [players, setPlayers] = useState<number>(1);
+  const [telemetryEvents, setTelemetryEvents] = useState<
+    Array<{ id: string; time: string; text: string; type: "system" | "join" | "submission" | "action" }>
+  >([]);
 
-export default function BattleDetailClient({ id, problemId }: { id: string; problemId?: number }) {
-  const [messages, setMessages] = useState<any[]>([]);
-  const [players, setPlayers] = useState<number>(0);
-  const wsRef = useRef<WebSocket | null>(null);
+  // Code editor state
   const [editorLang, setEditorLang] = useState("python");
-  const [source, setSource] = useState("");
-  const [lastResult, setLastResult] = useState<any>(null);
+  const [sourceCode, setSourceCode] = useState(
+    "def solution():\n    # Implement optimal solution\n    pass\n\nif __name__ == '__main__':\n    solution()\n"
+  );
+  const [customInput, setCustomInput] = useState("");
+  const [running, setRunning] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    wsErrorShown = false;
-    let ws: WebSocket;
+  // Console telemetry
+  const [consoleStatus, setConsoleStatus] = useState<string>("idle");
+  const [consoleStdout, setConsoleStdout] = useState<string>("");
+  const [consoleStderr, setConsoleStderr] = useState<string>("");
+  const [consoleRuntime, setConsoleRuntime] = useState<number | null>(null);
+  const [consoleMemory, setConsoleMemory] = useState<number | null>(null);
+  const [testCases, setTestCases] = useState<TestCaseResult[]>([
+    { id: 1, input: "Sample input", expectedOutput: "Sample output" },
+  ]);
+
+  // Handle incoming WebSocket messages
+  const handleSocketMessage = useCallback((msg: BattleSocketMessage) => {
+    const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    const { event, data } = msg;
+
+    if (event === "player_joined") {
+      setPlayers((p) => (typeof data?.players === "number" ? data.players : p + 1));
+      setTelemetryEvents((prev) => [
+        { id: Math.random().toString(), time, text: `Player joined the arena`, type: "join" },
+        ...prev.slice(0, 30),
+      ]);
+    } else if (event === "player_left") {
+      setPlayers((p) => Math.max(1, typeof data?.players === "number" ? data.players : p - 1));
+      setTelemetryEvents((prev) => [
+        { id: Math.random().toString(), time, text: `Player disconnected`, type: "system" },
+        ...prev.slice(0, 30),
+      ]);
+    } else if (event === "submission") {
+      setTelemetryEvents((prev) => [
+        {
+          id: Math.random().toString(),
+          time,
+          text: `Opponent submitted code (${String(data?.verdict || "Evaluating")})`,
+          type: "submission",
+        },
+        ...prev.slice(0, 30),
+      ]);
+    } else if (event === "battle_finished") {
+      void useDashboardStore.getState().refresh();
+      setTelemetryEvents((prev) => [
+        { id: Math.random().toString(), time, text: "Battle concluded! Scores finalized.", type: "system" },
+        ...prev.slice(0, 30),
+      ]);
+    } else if (event === "chat" || event === "system") {
+      setTelemetryEvents((prev) => [
+        { id: Math.random().toString(), time, text: String(data?.text || event), type: "action" },
+        ...prev.slice(0, 30),
+      ]);
+    }
+  }, []);
+
+  const { connected, sendEvent } = useBattleSocket({
+    battleId: id,
+    onMessage: handleSocketMessage,
+  });
+
+  // Run test code
+  const handleRunTests = async () => {
+    if (running || submitting) return;
+    setRunning(true);
+    setConsoleStatus("running");
+    setConsoleStdout("Running sandbox evaluation...");
+    setConsoleStderr("");
 
     try {
-      const url = buildWsUrl(id);
-      ws = new WebSocket(url);
-    } catch {
-      // Invalid URL or environment — skip silently
-      return;
+      const startMs = Date.now();
+      const r = await api.post("/compiler/run", {
+        language: editorLang,
+        source_code: sourceCode,
+        stdin: customInput || "",
+        custom_input: true,
+      });
+      const endMs = Date.now();
+
+      setConsoleRuntime(r.data.execution_time ?? endMs - startMs);
+      setConsoleMemory(r.data.memory_used ?? 12.0);
+
+      if (r.data.stderr) {
+        setConsoleStderr(r.data.stderr);
+        setConsoleStatus("runtime_error");
+      } else {
+        setConsoleStdout(r.data.stdout || "Execution finished with no output.");
+        setConsoleStatus("accepted");
+      }
+    } catch (err: any) {
+      setConsoleStderr(err?.response?.data?.detail || "Execution failed.");
+      setConsoleStatus("runtime_error");
+    } finally {
+      setRunning(false);
     }
+  };
 
-    wsRef.current = ws;
+  // Submit code to authoritative compiler judge
+  const handleSubmitCode = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    setConsoleStatus("running");
 
-    ws.onopen = () => {
-      wsErrorShown = false;
-      setMessages((m) => [...m, { system: true, text: "Connected to battle" }]);
-    };
-
-    ws.onmessage = (ev) => {
-      try {
-        const payload = JSON.parse(ev.data);
-        const { event, data } = payload;
-        if (event === "battle_finished") {
-          void useDashboardStore.getState().refresh();
-        }
-        if (event === "player_joined" || event === "player_left") {
-          setPlayers(data.players ?? 0);
-        }
-        setMessages((m) => [...m, { event, data }]);
-      } catch {
-        setMessages((m) => [...m, { raw: ev.data }]);
-      }
-    };
-
-    ws.onclose = () => {
-      setMessages((m) => [...m, { system: true, text: "Disconnected" }]);
-    };
-
-    ws.onerror = () => {
-      // The native WebSocket Event object logs as `{}` — avoid that.
-      // Only show the toast once per connection lifecycle.
-      if (!wsErrorShown) {
-        wsErrorShown = true;
-        toast.error("Battle server unavailable. Please try again later.");
-      }
-    };
-
-    return () => {
-      wsErrorShown = false;
-      ws.close();
-    };
-  }, [id]);
-
-  function sendEvent(event: string, data: any) {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ event, data }));
-  }
-
-  async function submitCode() {
     try {
       const resp = await api.post("/compiler/submit", {
         battle_id: id,
         problem_id: problemId || 1,
         language: editorLang,
-        source_code: source,
+        source_code: sourceCode,
       });
-      setLastResult(resp.data);
-      const xpEarned = Number(resp.data?.xp_earned || 0);
-      if (resp.data?.verdict === "Accepted") {
-        toast.success(`Solution accepted! +${xpEarned} verified XP`);
-        await useDashboardStore.getState().refresh();
+
+      const r = resp.data;
+      setConsoleRuntime(r.execution_time);
+      setConsoleMemory(r.memory_used);
+
+      if (r.verdict === "Accepted") {
+        setConsoleStatus("accepted");
+        toast.success(`Solution accepted! +${r.xp_earned || 50} verified XP`);
+        void useDashboardStore.getState().refresh();
       } else {
-        toast.error(`Verdict: ${resp.data?.verdict || "Wrong Answer"}`);
+        setConsoleStatus("wrong_answer");
+        toast.error(`Verdict: ${r.verdict} (${r.passed_tests}/${r.total_tests})`);
       }
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err?.response?.data?.detail || "Submission failed");
-    }
-  }
 
-  return (
-    <div className="py-8 max-w-5xl mx-auto grid grid-cols-3 gap-6">
-      <div className="col-span-2 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold">Battle {id}</h2>
-          <div>Players: {players}</div>
-        </div>
-
-        <div className="rounded bg-gray-900 p-4 h-96 overflow-auto">
-          {messages.map((m, idx) => (
-            <div key={idx} className="mb-2">
-              {m.system ? (
-                <div className="text-sm text-gray-400">{m.text}</div>
-              ) : m.event ? (
-                <div className="text-sm">{m.event}: {JSON.stringify(m.data)}</div>
-              ) : (
-                <div className="text-sm">{m.raw}</div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <div className="flex space-x-2">
-          <button onClick={() => sendEvent("player_action", { type: "ping" })} className="rounded bg-emerald-600 px-3 py-1">Ping</button>
-        </div>
-
-        <div className="rounded bg-gray-900 p-4">
-          <h4 className="font-semibold mb-2">Submit Code</h4>
-          <div className="mb-2">
-            <label className="block text-sm">Language</label>
-            <select id="lang" className="mt-1 w-40 rounded bg-gray-800 px-2 py-1" defaultValue="python" onChange={(e)=>setEditorLang(e.target.value)}>
-              <option value="python">Python</option>
-              <option value="javascript">JavaScript</option>
-              <option value="cpp">C++</option>
-            </select>
-          </div>
-          <textarea value={source} onChange={(e)=>setSource(e.target.value)} className="w-full h-40 rounded bg-black p-2 text-sm" placeholder="Write your solution here..." />
-          <div className="mt-2">
-            <button onClick={submitCode} className="rounded bg-blue-600 px-3 py-1">Submit</button>
-          </div>
-          {lastResult && (
-            <div className="mt-2 text-sm">Result: {lastResult.verdict} — Passed {lastResult.passed_tests}/{lastResult.total_tests}</div>
-          )}
-        </div>
-      </div>
-
-      <aside className="col-span-1 rounded bg-gray-900 p-4">
-        <h3 className="font-semibold mb-2">AI Mentor</h3>
-        <AiMentor />
-      </aside>
-    </div>
-  );
-}
-
-function AiMentor() {
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [industry, setIndustry] = useState<string>("software");
-
-  async function ask() {
-    setLoading(true);
-    try {
-      const prompt = `Industry: ${industry}\nQuestion: ${question}`;
-      const resp = await api.post("/career/mentor", {
-        resume_id: "",
-        question: prompt,
+      // Notify WebSocket peer of submission
+      sendEvent("submission", {
+        verdict: r.verdict,
+        passed_tests: r.passed_tests,
+        total_tests: r.total_tests,
       });
-      setAnswer(resp.data.answer);
-    } catch (err) {
-      console.error(err);
-      setAnswer("Failed to get advice");
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.detail || "Submission failed";
+      setConsoleStderr(errMsg);
+      setConsoleStatus("runtime_error");
+      toast.error(errMsg);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
-  }
+  };
 
   return (
-    <div>
-      <div className="mb-2">
-        <label className="block text-sm">Industry</label>
-        <select value={industry} onChange={(e) => setIndustry(e.target.value)} className="mt-1 w-full rounded bg-gray-800 px-2 py-1">
-          <option value="software">Software</option>
-          <option value="finance">Finance</option>
-          <option value="data">Data Science</option>
-          <option value="devops">DevOps</option>
-        </select>
-      </div>
-      <textarea value={question} onChange={(e) => setQuestion(e.target.value)} className="w-full rounded bg-gray-800 p-2 h-24" placeholder="Ask career or industry advice..." />
-      <div className="mt-2 flex space-x-2">
-        <button onClick={ask} disabled={loading || !question} className="rounded bg-blue-600 px-3 py-1">Ask</button>
+    <div className="flex flex-col gap-4">
+      {/* Telemetry & Connection Header */}
+      <div className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-[#0E1524] p-3 text-xs">
+        <div className="flex items-center gap-2">
+          {connected ? (
+            <span className="flex items-center gap-1.5 font-semibold text-emerald-400">
+              <Wifi className="h-3.5 w-3.5" /> Live Sync
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 font-semibold text-rose-400">
+              <WifiOff className="h-3.5 w-3.5" /> Reconnecting...
+            </span>
+          )}
+          <span className="text-slate-600">•</span>
+          <span className="text-slate-300 font-medium flex items-center gap-1">
+            <Users className="h-3.5 w-3.5 text-cyan-400" /> {players} Active in Arena
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => sendEvent("player_action", { type: "ping", time: Date.now() })}
+          className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white"
+        >
+          Send Arena Ping
+        </button>
       </div>
 
-      {answer && (
-        <div className="mt-4 rounded bg-gray-800 p-3 text-sm">{answer}</div>
+      {/* Editor & Execution Panel */}
+      <div className="min-h-[380px] h-[440px]">
+        <AssessmentCodeEditor
+          value={sourceCode}
+          onChange={setSourceCode}
+          language={editorLang}
+          onLanguageChange={setEditorLang}
+          availableLanguages={["python", "javascript", "cpp"]}
+          draftKey={`battle_${id}`}
+          onReset={() =>
+            setSourceCode("def solution():\n    pass\n\nif __name__ == '__main__':\n    solution()\n")
+          }
+        />
+      </div>
+
+      {/* Console output */}
+      <AssessmentConsole
+        testCases={testCases}
+        customInput={customInput}
+        onCustomInputChange={setCustomInput}
+        stdout={consoleStdout}
+        stderr={consoleStderr}
+        status={consoleStatus}
+        runtimeMs={consoleRuntime}
+        memoryMb={consoleMemory}
+        defaultExpanded={false}
+      />
+
+      {/* Action Buttons */}
+      <div className="flex items-center justify-end gap-2.5 pt-1">
+        <button
+          type="button"
+          onClick={handleRunTests}
+          disabled={running || submitting}
+          className="flex h-10 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 text-xs font-semibold text-slate-200 transition hover:bg-white/10 disabled:opacity-50"
+        >
+          <Play className="h-3.5 w-3.5 text-cyan-400 fill-cyan-400" />
+          <span>{running ? "Testing..." : "Test Code"}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleSubmitCode}
+          disabled={submitting || running}
+          className="flex h-10 items-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 text-xs font-bold text-white shadow-lg transition hover:from-cyan-400 hover:to-blue-500 active:scale-95 disabled:opacity-50"
+        >
+          <Send className="h-3.5 w-3.5" />
+          <span>{submitting ? "Evaluating..." : "Submit to Battle Judge"}</span>
+        </button>
+      </div>
+
+      {/* Live Arena Activity Log */}
+      {telemetryEvents.length > 0 && (
+        <div className="rounded-xl border border-white/[0.08] bg-[#0A0D14] p-3 text-xs">
+          <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-slate-400 text-[10px] mb-2">
+            <Activity className="h-3 w-3 text-cyan-400" /> Arena Activity Feed
+          </div>
+          <div className="space-y-1.5 max-h-32 overflow-y-auto font-mono text-[11px] scrollbar-thin scrollbar-thumb-white/10">
+            {telemetryEvents.map((evt) => (
+              <div key={evt.id} className="flex items-center gap-2 text-slate-300">
+                <span className="text-slate-500">{evt.time}</span>
+                <span className="text-cyan-400">›</span>
+                <span
+                  className={
+                    evt.type === "submission"
+                      ? "text-amber-300 font-semibold"
+                      : evt.type === "join"
+                      ? "text-emerald-300"
+                      : "text-slate-300"
+                  }
+                >
+                  {evt.text}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

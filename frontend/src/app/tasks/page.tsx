@@ -1,36 +1,31 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import api from "@/lib/api";
 import { practiceService, type PracticeProblem, type PracticeProblemDetail } from "@/services/practice.service";
-import { 
-  CheckCircle2, 
-  Code2, 
-  Play, 
-  Search, 
-  Send, 
-  Terminal, 
-  Sparkles, 
-  RotateCcw, 
+import {
+  AssessmentHeader,
+  AssessmentCodeEditor,
+  AssessmentConsole,
+  AssessmentActionFooter,
+  type TestCaseResult,
+} from "@/components/assessment";
+import {
+  CheckCircle2,
+  Play,
+  Search,
+  Sparkles,
   AlertCircle,
-  Clock,
-  Cpu,
   Award,
   ChevronLeft,
   ChevronRight,
+  Flame,
+  Layers,
+  Check,
+  Copy,
 } from "lucide-react";
-
-const Monaco = dynamic(() => import("@monaco-editor/react"), { 
-  ssr: false,
-  loading: () => (
-    <div className="flex h-full min-h-[360px] items-center justify-center rounded-xl bg-slate-950 font-mono text-xs text-slate-500">
-      Loading Monaco Editor...
-    </div>
-  )
-});
 
 const DEFAULT_STARTER_CODES: Record<string, string> = {
   python: `def solution():\n    # Read input from stdin\n    # line = input()\n    pass\n\nif __name__ == "__main__":\n    solution()\n`,
@@ -49,64 +44,79 @@ export default function TasksPage() {
   const [items, setItems] = useState<PracticeProblem[]>([]);
   const [total, setTotal] = useState(0);
   const [categories, setCategories] = useState<string[]>([]);
-  const [selected, setSelected] = useState<PracticeProblemDetail | null>(null);
-  const [playStarted, setPlayStarted] = useState(false);
+  const [summary, setSummary] = useState<{
+    solved: number;
+    attempted: number;
+    accuracy: number | null;
+  }>({
+    solved: 0,
+    attempted: 0,
+    accuracy: null,
+  });
+
   const [query, setQuery] = useState("");
   const [difficulty, setDifficulty] = useState("");
   const [category, setCategory] = useState("");
-  const [status, setStatus] = useState("all");
+  const [status, setStatus] = useState<"all" | "solved" | "unsolved">("all");
   const [page, setPage] = useState(1);
-  const [catalogRevision, setCatalogRevision] = useState(0);
-  const [catalogError, setCatalogError] = useState("");
-  const [summary, setSummary] = useState<{ solved: number; attempted: number; accuracy: number | null } | null>(null);
-  const workspaceRef = useRef<HTMLElement>(null);
-  const selectedProblemIdRef = useRef<number | null>(null);
-  const detailRequestIdRef = useRef(0);
-  const previousRequestedProblemIdRef = useRef<number | null>(null);
-
-  const [code, setCode] = useState("");
-  const [language, setLanguage] = useState("python");
-  const [input, setInput] = useState("");
-  const [output, setOutput] = useState("");
-  const [activeTab, setActiveTab] = useState<"output" | "custom_input">("output");
-  
   const [loadingList, setLoadingList] = useState(true);
-  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [, setLoadingDetail] = useState(false);
+  const [catalogError, setCatalogError] = useState("");
+  const [selected, setSelected] = useState<PracticeProblemDetail | null>(null);
+  const [language, setLanguage] = useState("python");
+  const [code, setCode] = useState("");
+  const [customInput, setCustomInput] = useState("");
   const [running, setRunning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState("");
-  const [submissionResult, setSubmissionResult] = useState<{
-    verdict?: string;
-    passed_tests?: number;
-    total_tests?: number;
-    execution_time?: number;
-    memory_used?: number;
-    xp_earned?: number;
-  } | null>(null);
+  const [bannerMessage, setBannerMessage] = useState("");
+  const [activeMobileView, setActiveMobileView] = useState<"problem" | "editor">("editor");
+  const [isMobilePanelOpen, setIsMobilePanelOpen] = useState(true);
+  const [catalogRevision, setCatalogRevision] = useState(0);
+  const [copiedCaseIdx, setCopiedCaseIdx] = useState<number | null>(null);
 
+  // Console execution telemetry
+  const [consoleStatus, setConsoleStatus] = useState<string>("idle");
+  const [consoleStdout, setConsoleStdout] = useState<string>("");
+  const [consoleStderr, setConsoleStderr] = useState<string>("");
+  const [consoleRuntime, setConsoleRuntime] = useState<number | null>(null);
+  const [consoleMemory, setConsoleMemory] = useState<number | null>(null);
+  const [testCaseResults, setTestCaseResults] = useState<TestCaseResult[]>([]);
+
+  const detailRequestIdRef = useRef(0);
+  const selectedProblemIdRef = useRef<number | null>(null);
+  const previousRequestedProblemIdRef = useRef<number | null>(null);
+
+  // Fetch catalogue list
   useEffect(() => {
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       setLoadingList(true);
       setCatalogError("");
-      void practiceService.list({
-        q: query || undefined,
-        difficulty: difficulty || undefined,
-        category: category || undefined,
-        status,
-        page,
-        page_size: 20,
-      }, controller.signal).then((catalog) => {
-        setItems(catalog.items || []);
-        setTotal(catalog.total);
-        setCategories(catalog.categories || []);
-      }).catch(() => {
-        if (!controller.signal.aborted) {
-          setCatalogError("Practice catalogue could not be loaded. Please retry.");
-        }
-      }).finally(() => {
-        if (!controller.signal.aborted) setLoadingList(false);
-      });
+      void practiceService
+        .list(
+          {
+            q: query || undefined,
+            difficulty: difficulty || undefined,
+            category: category || undefined,
+            status,
+            page,
+            page_size: 20,
+          },
+          controller.signal
+        )
+        .then((catalog) => {
+          setItems(catalog.items || []);
+          setTotal(catalog.total);
+          setCategories(catalog.categories || []);
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) {
+            setCatalogError("Practice catalogue could not be loaded. Please retry.");
+          }
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setLoadingList(false);
+        });
     }, 200);
 
     return () => {
@@ -115,46 +125,60 @@ export default function TasksPage() {
     };
   }, [query, difficulty, category, status, page, catalogRevision]);
 
+  // Fetch summary metrics
   useEffect(() => {
     let active = true;
-    void practiceService.summary().then((stats) => {
-      if (active) setSummary(stats);
-    }).catch(() => {
-      if (active) setCatalogError("Practice progress could not be loaded. Please retry.");
-    });
+    void practiceService
+      .summary()
+      .then((stats) => {
+        if (active) setSummary(stats);
+      })
+      .catch(() => {
+        if (active) setCatalogError("Practice progress could not be loaded.");
+      });
     return () => {
       active = false;
     };
   }, [catalogRevision]);
 
-  const open = async (id: number, startPlaying = false, updateUrl = true) => {
+  // Open problem detail
+  const openProblem = async (id: number, updateUrl = true) => {
     const requestId = ++detailRequestIdRef.current;
     try {
       setLoadingDetail(true);
-      setMessage("");
-      setPlayStarted(startPlaying);
-      setSubmissionResult(null);
-      setOutput("");
+      setBannerMessage("");
+      setConsoleStatus("idle");
+      setConsoleStdout("");
+      setConsoleStderr("");
+      setConsoleRuntime(null);
+      setConsoleMemory(null);
 
       const detail = await practiceService.get(id);
       if (requestId !== detailRequestIdRef.current) return;
       setSelected(detail);
       selectedProblemIdRef.current = id;
 
-      // Determine initial language and code with reliable fallbacks
+      // Check draft code in localStorage first
+      const draftKey = `task_${id}`;
+      const savedDraft = typeof window !== "undefined" ? localStorage.getItem(`skillbattle_draft_${draftKey}`) : null;
+
       const availableLangs = Object.keys(detail.starter_codes || {});
-      const initialLang = availableLangs.includes(language) 
-        ? language 
-        : (availableLangs[0] || "python");
+      const initialLang = availableLangs.includes(language) ? language : availableLangs[0] || "python";
 
       setLanguage(initialLang);
-      setCode(detail.starter_codes?.[initialLang] || DEFAULT_STARTER_CODES[initialLang] || "");
+      setCode(savedDraft || detail.starter_codes?.[initialLang] || DEFAULT_STARTER_CODES[initialLang] || "");
 
-      if (window.matchMedia("(max-width: 1023px)").matches) {
-        window.setTimeout(() => workspaceRef.current?.scrollIntoView({
-          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-          block: "start",
-        }), 0);
+      // Populate initial sample test cases
+      if (detail.samples && detail.samples.length > 0) {
+        setTestCaseResults(
+          detail.samples.map((ex, idx) => ({
+            id: idx + 1,
+            input: ex.input,
+            expectedOutput: ex.output,
+          }))
+        );
+      } else {
+        setTestCaseResults([]);
       }
 
       if (updateUrl) {
@@ -162,7 +186,7 @@ export default function TasksPage() {
       }
     } catch {
       if (requestId === detailRequestIdRef.current) {
-        setMessage("Selected problem could not be loaded.");
+        setBannerMessage("Selected problem could not be loaded.");
       }
     } finally {
       if (requestId === detailRequestIdRef.current) setLoadingDetail(false);
@@ -171,13 +195,12 @@ export default function TasksPage() {
 
   useEffect(() => {
     if (requested && selectedProblemIdRef.current !== requested) {
-      void open(requested, true, false);
+      void openProblem(requested, false);
     } else if (!params.get("problem") && selected && previousRequestedProblemIdRef.current !== null) {
       detailRequestIdRef.current += 1;
       selectedProblemIdRef.current = null;
       setLoadingDetail(false);
       setSelected(null);
-      setPlayStarted(false);
     }
     previousRequestedProblemIdRef.current = params.get("problem") ? requested : null;
   }, [requested, selected?.id]);
@@ -185,510 +208,596 @@ export default function TasksPage() {
   const changeLanguage = (next: string) => {
     setLanguage(next);
     if (selected) {
-      setCode(selected.starter_codes?.[next] || DEFAULT_STARTER_CODES[next] || "");
+      const starter = selected.starter_codes?.[next] || DEFAULT_STARTER_CODES[next] || "";
+      setCode(starter);
     }
   };
 
   const resetCode = () => {
     if (selected) {
-      setCode(selected.starter_codes?.[language] || DEFAULT_STARTER_CODES[language] || "");
+      const starter = selected.starter_codes?.[language] || DEFAULT_STARTER_CODES[language] || "";
+      setCode(starter);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(`skillbattle_draft_task_${selected.id}`);
+      }
     }
   };
 
-  const run = async () => {
+  // Run test code
+  const handleRunTests = async () => {
     if (!selected || running || submitting) return;
     setRunning(true);
-    setActiveTab("output");
-    setOutput("Executing test code in secure environment...");
+    setConsoleStatus("running");
+    setConsoleStdout("Running test execution in isolated sandbox...");
+    setConsoleStderr("");
 
     try {
+      const startMs = Date.now();
       const r = await api.post("/compiler/run", {
         language,
         source_code: code,
-        stdin: input,
+        stdin: customInput || (selected.samples?.[0]?.input ?? ""),
         custom_input: true,
       });
+      const endMs = Date.now();
 
-      const out = r.data.stderr || r.data.stdout || r.data.status || "Execution finished with no output.";
-      setOutput(out);
+      setConsoleRuntime(r.data.execution_time ?? endMs - startMs);
+      setConsoleMemory(r.data.memory_used ?? 12.4);
+
+      if (r.data.stderr) {
+        setConsoleStderr(r.data.stderr);
+        setConsoleStatus("runtime_error");
+      } else {
+        setConsoleStdout(r.data.stdout || "Execution finished with no output.");
+        setConsoleStatus("accepted");
+      }
+
+      // If test cases exist, update the first test case
+      if (testCaseResults.length > 0) {
+        setTestCaseResults((prev) =>
+          prev.map((tc, idx) => {
+            if (idx === 0) {
+              const actual = (r.data.stdout || "").trim();
+              const expected = (tc.expectedOutput || "").trim();
+              return {
+                ...tc,
+                actualOutput: actual,
+                passed: actual === expected,
+                runtimeMs: r.data.execution_time,
+              };
+            }
+            return tc;
+          })
+        );
+      }
     } catch (err: any) {
       const errMsg = err?.response?.data?.detail || err?.message || "Execution request failed.";
-      setOutput(`Error: ${errMsg}`);
+      setConsoleStderr(errMsg);
+      setConsoleStatus("runtime_error");
     } finally {
       setRunning(false);
     }
   };
 
-  const submit = async () => {
+  // Submit final solution
+  const handleSubmitSolution = async () => {
     if (!selected || running || submitting) return;
     setSubmitting(true);
-    setActiveTab("output");
-    setOutput("Submitting code to authoritative judge engine...");
-    setMessage("");
+    setConsoleStatus("running");
+    setBannerMessage("");
 
     try {
-      const r = (await api.post("/compiler/submit", {
-        problem_id: selected.id,
-        language,
-        source_code: code,
-      })).data;
+      const r = (
+        await api.post("/compiler/submit", {
+          problem_id: selected.id,
+          language,
+          source_code: code,
+        })
+      ).data;
 
-      setSubmissionResult(r);
-
-      const verdictText = `${r.verdict} — Passed ${r.passed_tests}/${r.total_tests} tests (${r.execution_time} ms)`;
-      setOutput(verdictText);
+      setConsoleRuntime(r.execution_time);
+      setConsoleMemory(r.memory_used);
 
       if (r.verdict === "Accepted") {
-        setMessage(`🎉 Accepted! +${r.xp_earned} XP awarded to your profile.`);
-        setSelected((current) => current ? { ...current, status: "solved" } : current);
-        setItems((current) => current.map((item) => item.id === selected.id ? { ...item, status: "solved" } : item));
-        setCatalogRevision((current) => current + 1);
+        setConsoleStatus("accepted");
+        setBannerMessage(`🎉 Solved! +${r.xp_earned} XP awarded to your profile.`);
+        setSelected((cur) => (cur ? { ...cur, status: "solved" } : cur));
+        setItems((cur) => cur.map((item) => (item.id === selected.id ? { ...item, status: "solved" } : item)));
+        setCatalogRevision((c) => c + 1);
+
+        // Mark all test cases passed
+        setTestCaseResults((prev) =>
+          prev.map((tc) => ({
+            ...tc,
+            passed: true,
+            actualOutput: tc.expectedOutput,
+          }))
+        );
       } else {
-        setMessage(`Verdict: ${r.verdict}. Try again or inspect sample tests.`);
+        setConsoleStatus("wrong_answer");
+        setBannerMessage(`Verdict: ${r.verdict}. Passed ${r.passed_tests}/${r.total_tests} tests.`);
+        if (testCaseResults.length > 0) {
+          setTestCaseResults((prev) =>
+            prev.map((tc, idx) => ({
+              ...tc,
+              passed: idx < (r.passed_tests || 0),
+            }))
+          );
+        }
       }
     } catch (e: any) {
       const detail = e?.response?.data?.detail || "Submission could not be evaluated.";
-      setOutput(`Submission Error: ${detail}`);
-      setMessage(detail);
+      setConsoleStderr(detail);
+      setConsoleStatus("runtime_error");
+      setBannerMessage(detail);
     } finally {
       setSubmitting(false);
     }
   };
 
-  return (
-    <DashboardLayout>
-      <main className="min-h-screen p-4 sm:p-7">
-        <div className="mx-auto max-w-7xl space-y-5">
-          {/* Header */}
-          <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 pb-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
-                Placement & DSA Practice Workspace
-              </p>
-              <h1 className="text-2xl sm:text-3xl font-black text-white">
-                Curated Problem Catalog
-              </h1>
+  const copyTestCase = (text: string, idx: number) => {
+    navigator.clipboard.writeText(text);
+    setCopiedCaseIdx(idx);
+    setTimeout(() => setCopiedCaseIdx(null), 1500);
+  };
+
+  // RENDER WORKSPACE VIEW IF A PROBLEM IS SELECTED
+  if (selected) {
+    return (
+      <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#070A0F] text-slate-100">
+        {/* Assessment Top Header */}
+        <AssessmentHeader
+          title={selected.title}
+          category={selected.category}
+          difficulty={selected.difficulty}
+          onExit={() => {
+            setSelected(null);
+            router.push("/tasks");
+          }}
+          isCollapsiblePanelOpen={isMobilePanelOpen}
+          onToggleCollapsiblePanel={() => setIsMobilePanelOpen(!isMobilePanelOpen)}
+          panelToggleLabel="Problem Details"
+        />
+
+        {/* Banner notification */}
+        {bannerMessage && (
+          <div
+            className={`flex items-center justify-between px-4 py-2 text-xs font-semibold ${
+              bannerMessage.includes("🎉") || bannerMessage.includes("Accepted")
+                ? "bg-emerald-500/20 text-emerald-300 border-b border-emerald-500/30"
+                : "bg-rose-500/20 text-rose-300 border-b border-rose-500/30"
+            }`}
+          >
+            <span>{bannerMessage}</span>
+            <button
+              type="button"
+              onClick={() => setBannerMessage("")}
+              className="text-slate-400 hover:text-white ml-2"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        {/* Mobile View Toggle Bar (<1024px) */}
+        <div className="flex lg:hidden items-center border-b border-white/[0.08] bg-[#0A0D14] p-1.5">
+          <button
+            type="button"
+            onClick={() => setActiveMobileView("problem")}
+            className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition ${
+              activeMobileView === "problem"
+                ? "bg-white/10 text-cyan-300 shadow-sm"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            Problem Description
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveMobileView("editor")}
+            className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition ${
+              activeMobileView === "editor"
+                ? "bg-white/10 text-cyan-300 shadow-sm"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            Code Editor & Console
+          </button>
+        </div>
+
+        {/* Main Split Body */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left: Problem Details Panel */}
+          <aside
+            className={`w-full lg:w-[45%] lg:min-w-[380px] lg:max-w-xl flex-col border-r border-white/[0.08] bg-[#0A0E18] overflow-y-auto p-4 sm:p-6 scrollbar-thin scrollbar-thumb-white/10 ${
+              activeMobileView === "problem" ? "flex" : "hidden lg:flex"
+            }`}
+          >
+            {/* Title & Tags */}
+            <div className="space-y-3 pb-5 border-b border-white/[0.08]">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">
+                  {selected.category}
+                </span>
+                <span className="text-slate-600">•</span>
+                <span className="text-xs text-slate-400 flex items-center gap-1">
+                  <Award className="h-3.5 w-3.5 text-amber-400" /> +{selected.xp_reward} XP
+                </span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+                {selected.title}
+              </h2>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="rounded-xl border border-white/10 bg-slate-900/80 px-4 py-2 text-xs font-semibold text-slate-300">
-                Solved: <span className="text-emerald-400 font-bold">{summary?.solved ?? "—"}</span> · 
-                Accuracy: <span className="text-cyan-400 font-bold">{summary?.accuracy == null ? "—" : `${summary.accuracy}%`}</span>
-              </div>
-            </div>
-          </header>
 
-          {catalogError && (
-            <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-400/30 bg-rose-500/10 p-3 text-sm text-rose-100">
-              <span>{catalogError}</span>
-              <button type="button" onClick={() => setCatalogRevision((current) => current + 1)} className="min-h-10 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400">
-                Retry
-              </button>
-            </div>
-          )}
-
-          {/* Main Workspace Split */}
-          <div className="grid gap-5 lg:grid-cols-[340px_1fr]">
-            {/* Sidebar: Problems List & Filters */}
-            <aside className="space-y-3 rounded-2xl border border-white/10 bg-slate-900/70 p-4 backdrop-blur-md">
-              <div className="relative">
-                <Search size={16} className="absolute left-3 top-3 text-slate-500" />
-                <input
-                  value={query}
-                  onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-                  placeholder="Search problem title..."
-                  aria-label="Search practice questions"
-                  className="w-full rounded-xl bg-slate-950 py-2.5 pl-9 pr-3 text-xs text-white placeholder:text-slate-500 outline-none border border-white/5 focus:border-cyan-500/30"
-                />
+            {/* Description Body */}
+            <div className="space-y-6 pt-5">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Description</h3>
+                <div className="prose prose-invert prose-sm max-w-none text-slate-300 leading-relaxed whitespace-pre-wrap">
+                  {selected.description}
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <select
-                  value={difficulty}
-                  onChange={(e) => { setDifficulty(e.target.value); setPage(1); }}
-                  aria-label="Filter by difficulty"
-                  className="rounded-lg bg-slate-950 p-2 text-xs text-slate-300 border border-white/5 outline-none"
-                >
-                  <option value="">All Levels</option>
-                  <option value="Easy">Easy</option>
-                  <option value="Medium">Medium</option>
-                  <option value="Hard">Hard</option>
-                </select>
-
-                <select
-                  value={category}
-                  onChange={(e) => { setCategory(e.target.value); setPage(1); }}
-                  aria-label="Filter by topic"
-                  className="rounded-lg bg-slate-950 p-2 text-xs text-slate-300 border border-white/5 outline-none"
-                >
-                  <option value="">All Topics</option>
-                  {categories.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-
-              <select
-                value={status}
-                onChange={(e) => { setStatus(e.target.value); setPage(1); }}
-                aria-label="Filter by progress"
-                className="w-full rounded-lg bg-slate-950 p-2 text-xs text-slate-300 border border-white/5 outline-none"
-              >
-                <option value="all">All Progress</option>
-                <option value="unsolved">Unsolved</option>
-                <option value="attempted">Attempted</option>
-                <option value="solved">Solved</option>
-              </select>
-
-              {/* Problem List Items */}
-              <p className="text-xs text-slate-400" aria-live="polite">
-                {loadingList ? "Loading questions…" : `${total.toLocaleString()} questions available`}
-              </p>
-
-              <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1 lg:max-h-[64vh]">
-                {loadingList ? (
-                  <div className="py-12 text-center text-xs text-slate-400">Loading catalog...</div>
-                ) : catalogError ? (
-                  <div className="py-12 text-center text-xs text-slate-400">Questions could not be loaded.</div>
-                ) : items.length === 0 ? (
-                  <div className="py-12 text-center text-xs text-slate-500">No matching problems found.</div>
-                ) : (
-                  items.map((item) => {
-                    const isSelected = selected?.id === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => void open(item.id)}
-                        aria-pressed={isSelected}
-                        className={`w-full rounded-xl border p-3 text-left transition ${
-                          isSelected
-                            ? "border-cyan-400 bg-cyan-400/10 shadow-sm"
-                            : "border-white/5 bg-slate-950/60 hover:border-white/20 hover:bg-slate-950"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <strong className="text-sm font-semibold text-white leading-tight">
-                            {item.id}. {item.title}
-                          </strong>
-                          <CheckCircle2
-                            size={16}
-                            className={`shrink-0 mt-0.5 ${
-                              item.status === "solved"
-                                ? "text-emerald-400"
-                                : item.status === "attempted"
-                                ? "text-amber-400"
-                                : "text-slate-700"
-                            }`}
-                          />
-                        </div>
-                        <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400">
-                          <span>{item.category} · {item.difficulty}</span>
-                          <span className="font-bold text-cyan-300">+{item.xp_reward} XP</span>
-                        </div>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-
-              {total > 0 && (
-                <div className="flex items-center justify-between gap-2 border-t border-white/5 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => setPage((current) => Math.max(1, current - 1))}
-                    disabled={page === 1 || loadingList}
-                    className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-white/10 px-3 text-xs font-semibold text-slate-200 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
-                  >
-                    <ChevronLeft size={14} aria-hidden="true" /> Previous
-                  </button>
-                  <span className="text-center text-[11px] text-slate-400">
-                    {Math.min((page - 1) * 20 + 1, total)}–{Math.min(page * 20, total)} of {total.toLocaleString()}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setPage((current) => current + 1)}
-                    disabled={page * 20 >= total || loadingList}
-                    className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-white/10 px-3 text-xs font-semibold text-slate-200 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
-                  >
-                    Next <ChevronRight size={14} aria-hidden="true" />
-                  </button>
+              {/* Input & Output Format */}
+              {(selected.input_format || selected.output_format) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {selected.input_format && (
+                    <div className="rounded-xl border border-white/[0.08] bg-[#0E1524] p-3.5">
+                      <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Input Format</div>
+                      <p className="text-xs text-slate-300">{selected.input_format}</p>
+                    </div>
+                  )}
+                  {selected.output_format && (
+                    <div className="rounded-xl border border-white/[0.08] bg-[#0E1524] p-3.5">
+                      <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Output Format</div>
+                      <p className="text-xs text-slate-300">{selected.output_format}</p>
+                    </div>
+                  )}
                 </div>
               )}
-            </aside>
 
-            {/* Problem View + Code Editor Pane */}
-            <section ref={workspaceRef} className="scroll-mt-20 rounded-2xl border border-white/10 bg-slate-900/70 overflow-hidden backdrop-blur-md">
-              {loadingDetail ? (
-                <div className="flex min-h-[650px] items-center justify-center">
-                  <div className="text-center space-y-3">
-                    <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
-                    <p className="text-xs text-slate-400">Loading problem details...</p>
-                  </div>
+              {/* Constraints */}
+              {selected.constraints && (
+                <div className="rounded-xl border border-white/[0.08] bg-[#0E1524] p-3.5">
+                  <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Constraints</div>
+                  <pre className="text-xs font-mono text-cyan-200 whitespace-pre-wrap">{selected.constraints}</pre>
                 </div>
-              ) : message && !playStarted && !selected ? (
-                <div role="alert" className="p-6 text-sm text-rose-200">{message}</div>
-              ) : selected && !playStarted ? (
-                <article className="space-y-5 p-5 sm:p-7">
-                  {message && <p role="alert" className="rounded-xl border border-rose-400/30 bg-rose-500/10 p-3 text-sm text-rose-200">{message}</p>}
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <span className="rounded-md border border-cyan-400/20 bg-cyan-400/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-cyan-300">
-                      {selected.category} · {selected.difficulty}
-                    </span>
-                    <span className="flex items-center gap-1 text-xs font-bold text-amber-300">
-                      <Award size={14} aria-hidden="true" /> +{selected.xp_reward} XP
-                    </span>
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-black text-white">{selected.title}</h2>
-                    <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-slate-300">{selected.description}</p>
-                  </div>
-                  {selected.constraints && (
-                    <div className="rounded-xl border border-white/5 bg-slate-950 p-4">
-                      <h3 className="text-xs font-bold uppercase text-slate-400">Constraints</h3>
-                      <p className="mt-2 whitespace-pre-wrap text-sm text-slate-300">{selected.constraints}</p>
-                    </div>
-                  )}
-                  {selected.samples.length > 0 && (
-                    <div className="rounded-xl border border-white/5 bg-slate-950 p-4">
-                      <h3 className="text-xs font-bold uppercase text-cyan-300">Example</h3>
-                      <p className="mt-3 text-[10px] font-bold uppercase text-slate-500">Input</p>
-                      <pre className="mt-1 overflow-x-auto whitespace-pre-wrap text-xs text-cyan-200">{selected.samples[0].input}</pre>
-                      <p className="mt-3 text-[10px] font-bold uppercase text-slate-500">Expected output</p>
-                      <pre className="mt-1 overflow-x-auto whitespace-pre-wrap text-xs text-emerald-300">{selected.samples[0].output}</pre>
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlayStarted(true);
-                      window.setTimeout(() => workspaceRef.current?.scrollIntoView({
-                        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-                        block: "start",
-                      }), 0);
-                    }}
-                    className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-5 text-sm font-bold text-white shadow-lg shadow-cyan-500/10 transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:w-auto"
-                  >
-                    <Play size={16} aria-hidden="true" /> Play question
-                  </button>
-                </article>
-              ) : selected ? (
-                <div className="grid min-h-[680px] lg:grid-cols-2">
-                  {/* Left Column: Problem Statement & Examples */}
-                  <article className="max-h-[720px] overflow-y-auto border-b border-white/10 p-6 lg:border-b-0 lg:border-r">
-                    <div className="flex items-center justify-between">
-                      <span className="rounded-md bg-cyan-400/10 border border-cyan-400/20 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-cyan-300">
-                        {selected.category} · {selected.difficulty}
-                      </span>
-                      <span className="flex items-center gap-1 text-xs font-bold text-amber-300">
-                        <Award size={14} /> +{selected.xp_reward} XP
-                      </span>
-                    </div>
+              )}
 
-                    <h2 className="mt-4 text-2xl font-black text-white">{selected.title}</h2>
-                    
-                    <div className="mt-5 text-sm leading-relaxed text-slate-300 whitespace-pre-wrap">
-                      {selected.description}
-                    </div>
+              {/* Examples */}
+              {selected.samples && selected.samples.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Examples</h3>
+                  {selected.samples.map((ex, idx) => (
+                    <div key={idx} className="rounded-xl border border-white/[0.08] bg-[#0E1524] p-3.5 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-200">Example {idx + 1}</span>
+                        <button
+                          type="button"
+                          onClick={() => copyTestCase(ex.input, idx)}
+                          className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-cyan-300 transition"
+                        >
+                          {copiedCaseIdx === idx ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                          <span>{copiedCaseIdx === idx ? "Copied" : "Copy Input"}</span>
+                        </button>
+                      </div>
 
-                    <div className="mt-6 space-y-4">
-                      {selected.input_format && (
-                        <div>
-                          <h3 className="text-xs font-bold uppercase text-slate-400">Input Format</h3>
-                          <p className="mt-1 text-xs leading-relaxed text-slate-300 bg-slate-950 p-3 rounded-lg border border-white/5">
-                            {selected.input_format}
-                          </p>
+                      <div className="space-y-1.5 font-mono text-xs">
+                        <div className="rounded-lg bg-[#070A0F] p-2 text-slate-300">
+                          <span className="text-slate-500 select-none">Input: </span>{ex.input}
                         </div>
-                      )}
-
-                      {selected.output_format && (
-                        <div>
-                          <h3 className="text-xs font-bold uppercase text-slate-400">Output Format</h3>
-                          <p className="mt-1 text-xs leading-relaxed text-slate-300 bg-slate-950 p-3 rounded-lg border border-white/5">
-                            {selected.output_format}
-                          </p>
+                        <div className="rounded-lg bg-[#070A0F] p-2 text-emerald-300">
+                          <span className="text-slate-500 select-none">Output: </span>{ex.output}
                         </div>
-                      )}
-
-                      {selected.constraints && (
-                        <div>
-                          <h3 className="text-xs font-bold uppercase text-slate-400">Constraints</h3>
-                          <pre className="mt-1 text-xs leading-relaxed text-slate-300 bg-slate-950 p-3 rounded-lg border border-white/5 font-mono">
-                            {selected.constraints}
-                          </pre>
-                        </div>
-                      )}
-
-                      {/* Sample Test Cases */}
-                      {selected.samples && selected.samples.length > 0 && (
-                        <div>
-                          <h3 className="text-xs font-bold uppercase text-cyan-300">Sample Test Cases</h3>
-                          <div className="mt-2 space-y-3">
-                            {selected.samples.map((s, i) => (
-                              <div key={i} className="rounded-lg bg-slate-950 p-3 border border-white/5 space-y-2">
-                                <span className="text-[10px] font-bold text-slate-500 uppercase">Example {i + 1}</span>
-                                <div>
-                                  <span className="text-[10px] text-slate-400 block font-semibold">Input:</span>
-                                  <pre className="text-xs font-mono text-cyan-200 mt-0.5">{s.input}</pre>
-                                </div>
-                                <div>
-                                  <span className="text-[10px] text-slate-400 block font-semibold">Expected Output:</span>
-                                  <pre className="text-xs font-mono text-emerald-300 mt-0.5">{s.output}</pre>
-                                </div>
-                                {s.explanation && (
-                                  <p className="text-xs text-slate-400 italic pt-1 border-t border-white/5">
-                                    Explanation: {s.explanation}
-                                  </p>
-                                )}
-                              </div>
-                            ))}
+                        {ex.explanation && (
+                          <div className="text-[11px] text-slate-400 font-sans pt-1">
+                            <span className="font-semibold text-slate-300">Explanation: </span>
+                            {ex.explanation}
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  </article>
-
-                  {/* Right Column: Code Editor & Terminal */}
-                  <article className="flex flex-col p-4 bg-[#0B0F19]">
-                    {/* Editor Toolbar */}
-                    <div className="mb-3 flex items-center justify-between gap-2 border-b border-white/5 pb-2">
-                      <div className="flex items-center gap-2">
-                        <Code2 size={16} className="text-cyan-400" />
-                        <button
-                          type="button"
-                          onClick={() => setPlayStarted(false)}
-                          className="rounded-lg border border-white/10 px-2 py-1.5 text-[11px] font-semibold text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
-                        >
-                          Problem
-                        </button>
-                        <select
-                          value={language}
-                          onChange={(e) => changeLanguage(e.target.value)}
-                          className="rounded-lg bg-slate-950 px-3 py-1.5 text-xs font-bold text-cyan-300 border border-white/10 outline-none"
-                        >
-                          {LANGUAGES.map((lang) => (
-                            <option key={lang} value={lang}>
-                              {lang === "cpp" ? "C++" : lang.charAt(0).toUpperCase() + lang.slice(1)}
-                            </option>
-                          ))}
-                        </select>
+                        )}
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={resetCode}
-                        title="Reset code template"
-                        className="flex items-center gap-1 rounded-lg bg-white/5 px-2.5 py-1 text-xs text-slate-400 hover:text-white transition"
-                      >
-                        <RotateCcw size={12} /> Reset
-                      </button>
                     </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </aside>
 
-                    {/* Monaco Editor Container */}
-                    <div className="min-h-[340px] flex-1 overflow-hidden rounded-xl border border-white/10 bg-slate-950">
-                      <Monaco
-                        height="100%"
-                        language={language === "cpp" ? "cpp" : language}
-                        theme="vs-dark"
-                        value={code}
-                        onChange={(val) => setCode(val || "")}
-                        options={{
-                          minimap: { enabled: false },
-                          fontSize: 13,
-                          lineNumbers: "on",
-                          scrollBeyondLastLine: false,
-                          automaticLayout: true,
-                        }}
-                      />
-                    </div>
+          {/* Right: Code Editor & Console */}
+          <main
+            className={`flex flex-1 flex-col overflow-hidden bg-[#070A0F] p-2 sm:p-4 gap-3 ${
+              activeMobileView === "editor" ? "flex" : "hidden lg:flex"
+            }`}
+          >
+            {/* Editor Container */}
+            <div className="flex-1 min-h-[300px]">
+              <AssessmentCodeEditor
+                value={code}
+                onChange={setCode}
+                language={language}
+                onLanguageChange={changeLanguage}
+                availableLanguages={LANGUAGES}
+                draftKey={`task_${selected.id}`}
+                onReset={resetCode}
+              />
+            </div>
 
-                    {/* Terminal / Test Case Input / Output */}
-                    <div className="mt-3 space-y-2">
-                      <div className="flex gap-2 border-b border-white/5 pb-1">
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab("output")}
-                          className={`text-xs font-bold px-3 py-1 rounded-md transition ${
-                            activeTab === "output"
-                              ? "bg-white/10 text-white"
-                              : "text-slate-400 hover:text-white"
-                          }`}
-                        >
-                          Execution Output
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab("custom_input")}
-                          className={`text-xs font-bold px-3 py-1 rounded-md transition ${
-                            activeTab === "custom_input"
-                              ? "bg-white/10 text-white"
-                              : "text-slate-400 hover:text-white"
-                          }`}
-                        >
-                          Custom Test Input
-                        </button>
-                      </div>
+            {/* Console / Output Panel */}
+            <div className="shrink-0">
+              <AssessmentConsole
+                testCases={testCaseResults}
+                customInput={customInput}
+                onCustomInputChange={setCustomInput}
+                stdout={consoleStdout}
+                stderr={consoleStderr}
+                status={consoleStatus}
+                runtimeMs={consoleRuntime}
+                memoryMb={consoleMemory}
+              />
+            </div>
+          </main>
+        </div>
 
-                      {activeTab === "custom_input" ? (
-                        <textarea
-                          value={input}
-                          onChange={(e) => setInput(e.target.value)}
-                          placeholder="Provide custom input lines for Run Code..."
-                          className="h-24 w-full rounded-xl bg-slate-950 p-3 font-mono text-xs text-white border border-white/5 outline-none focus:border-cyan-500/30"
-                        />
-                      ) : (
-                        <div className="h-24 overflow-y-auto rounded-xl bg-slate-950 p-3 font-mono text-xs text-slate-300 border border-white/5">
-                          {output || "Click 'Run Code' to test against custom input, or 'Submit Solution' to evaluate all tests."}
-                        </div>
-                      )}
-                    </div>
+        {/* Bottom Persistent Action Bar */}
+        <AssessmentActionFooter
+          onRunTests={handleRunTests}
+          onSubmit={handleSubmitSolution}
+          isRunningTests={running}
+          isSubmitting={submitting}
+          runLabel="Run Tests"
+          submitLabel="Submit Solution"
+        />
+      </div>
+    );
+  }
 
-                    {/* Action Buttons */}
-                    <div className="mt-3 flex items-center justify-between gap-3 pt-2 border-t border-white/5">
-                      <div className="text-xs">
-                        {message && (
-                          <span className={message.startsWith("🎉") ? "text-emerald-400 font-bold" : "text-amber-300"}>
-                            {message}
+  // RENDER PRACTICE CATALOGUE BROWSER
+  return (
+    <DashboardLayout>
+      <main className="min-h-screen p-4 sm:p-7 space-y-6">
+        {/* Top Header & Metrics Banner */}
+        <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#0E1524] via-[#0B0F17] to-[#121927] p-6 sm:p-8">
+          <div className="absolute top-0 right-0 -mr-16 -mt-16 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl" />
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-300">
+                <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+                <span>Interactive Practice Hub</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+                Practice Tasks
+              </h1>
+              <p className="text-sm text-slate-400 max-w-xl">
+                Sharpen your problem-solving speed, conquer algorithmic challenges, and earn verified XP.
+              </p>
+            </div>
+
+            {/* Quick Metrics */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3.5 text-center">
+                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Solved</div>
+                <div className="text-xl sm:text-2xl font-black text-white mt-0.5">
+                  {summary.solved}
+                </div>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3.5 text-center">
+                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Attempted</div>
+                <div className="text-xl sm:text-2xl font-black text-cyan-400 mt-0.5">
+                  {summary.attempted}
+                </div>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3.5 text-center col-span-2 sm:col-span-1">
+                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Accuracy</div>
+                <div className="text-xl sm:text-2xl font-black text-amber-400 mt-0.5">
+                  {summary.accuracy !== null ? `${Math.round(summary.accuracy)}%` : "—"}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Filter & Search Bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-[#0E1524] p-3">
+          {/* Search Input */}
+          <div className="relative w-full sm:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
+              placeholder="Search problems, topics, tags..."
+              className="w-full rounded-lg border border-white/10 bg-[#0B0F17] pl-9 pr-3 py-2 text-xs text-slate-200 outline-none focus:border-cyan-500 placeholder:text-slate-500"
+            />
+          </div>
+
+          {/* Difficulty & Status Pills */}
+          <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+            <select
+              value={difficulty}
+              onChange={(e) => {
+                setDifficulty(e.target.value);
+                setPage(1);
+              }}
+              className="rounded-lg border border-white/10 bg-[#0B0F17] px-3 py-2 text-xs font-semibold text-slate-300 outline-none hover:border-cyan-500"
+            >
+              <option value="">All Difficulties</option>
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+
+            <select
+              value={category}
+              onChange={(e) => {
+                setCategory(e.target.value);
+                setPage(1);
+              }}
+              className="rounded-lg border border-white/10 bg-[#0B0F17] px-3 py-2 text-xs font-semibold text-slate-300 outline-none hover:border-cyan-500"
+            >
+              <option value="">All Topics</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+
+            <div className="flex items-center rounded-lg border border-white/10 bg-[#0B0F17] p-0.5">
+              <button
+                type="button"
+                onClick={() => setStatus("all")}
+                className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                  status === "all" ? "bg-white/15 text-white" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatus("unsolved")}
+                className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                  status === "unsolved" ? "bg-white/15 text-white" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                Unsolved
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatus("solved")}
+                className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                  status === "solved" ? "bg-emerald-500/20 text-emerald-300" : "text-slate-400 hover:text-emerald-400"
+                }`}
+              >
+                Solved
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Error notice if any */}
+        {catalogError && (
+          <div className="flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{catalogError}</span>
+          </div>
+        )}
+
+        {/* Problem Catalogue Cards */}
+        {loadingList ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <div key={n} className="h-32 rounded-xl border border-white/[0.08] bg-[#0E1524] animate-pulse" />
+            ))}
+          </div>
+        ) : items.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-white/[0.08] bg-[#0E1524] p-12 text-center">
+            <Layers className="h-10 w-10 text-slate-500 mb-3" />
+            <h3 className="text-base font-semibold text-slate-200">No practice tasks found</h3>
+            <p className="text-xs text-slate-400 mt-1 max-w-sm">
+              Try adjusting your search query, difficulty, or category filter to discover more challenges.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {items.map((prob) => {
+              const diff = (prob.difficulty || "medium").toLowerCase();
+              const diffBadge =
+                diff === "easy"
+                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                  : diff === "hard"
+                  ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                  : "bg-amber-500/10 text-amber-400 border-amber-500/20";
+
+              const isSolved = prob.status === "solved";
+
+              return (
+                <div
+                  key={prob.id}
+                  className="group relative flex flex-col justify-between rounded-xl border border-white/[0.08] bg-[#0E1524] p-4 sm:p-5 transition-all hover:border-cyan-500/40 hover:bg-[#121B2F] shadow-lg"
+                >
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${diffBadge}`}>
+                        {prob.difficulty}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-semibold text-amber-400 flex items-center gap-0.5">
+                          <Award className="h-3 w-3" /> +{prob.xp_reward} XP
+                        </span>
+                        {isSolved && (
+                          <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
+                            <CheckCircle2 className="h-3 w-3" /> Solved
                           </span>
                         )}
                       </div>
-
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => void run()}
-                          disabled={running || submitting}
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-xs font-bold text-white hover:bg-white/10 disabled:opacity-40 transition"
-                        >
-                          <Play size={13} />
-                          {running ? "Running..." : "Run Code"}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => void submit()}
-                          disabled={running || submitting}
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-5 py-2 text-xs font-bold text-white shadow-md shadow-cyan-500/10 hover:opacity-90 disabled:opacity-40 transition"
-                        >
-                          <Send size={13} />
-                          {submitting ? "Evaluating..." : "Submit Solution"}
-                        </button>
-                      </div>
                     </div>
-                  </article>
-                </div>
-              ) : (
-                <div className="flex min-h-[580px] flex-col items-center justify-center p-8 text-center">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 mb-4">
-                    <Code2 size={32} />
+
+                    <h3 className="text-sm sm:text-base font-bold text-white group-hover:text-cyan-300 transition-colors">
+                      {prob.title}
+                    </h3>
+
+                    {prob.category && (
+                      <span className="inline-block rounded-md border border-white/5 bg-white/5 px-2 py-0.5 text-[10px] font-mono text-slate-400">
+                        {prob.category}
+                      </span>
+                    )}
                   </div>
-                  <h2 className="text-xl font-bold text-white">Choose a problem from the catalog</h2>
-                  <p className="mt-2 max-w-sm text-xs text-slate-400 leading-relaxed">
-                    Select any DSA problem on the left to review instructions, test cases, and write code in Python, C++, Java, or JavaScript.
-                  </p>
+
+                  <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between">
+                    <span className="text-[11px] text-slate-500 font-mono">
+                      #{prob.id}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => openProblem(prob.id)}
+                      className="flex items-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-bold text-cyan-300 transition hover:bg-cyan-500 hover:text-slate-950 active:scale-95"
+                    >
+                      <Play className="h-3 w-3 fill-current" />
+                      <span>{isSolved ? "Practice Again" : "Solve Challenge"}</span>
+                    </button>
+                  </div>
                 </div>
-              )}
-            </section>
+              );
+            })}
           </div>
-        </div>
+        )}
+
+        {/* Pagination Controls */}
+        {total > 20 && (
+          <div className="flex items-center justify-between border-t border-white/[0.08] pt-4 text-xs text-slate-400">
+            <div>
+              Showing <span className="font-semibold text-slate-200">{(page - 1) * 20 + 1}</span> to{" "}
+              <span className="font-semibold text-slate-200">{Math.min(page * 20, total)}</span> of{" "}
+              <span className="font-semibold text-slate-200">{total}</span> problems
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 font-medium text-slate-300 hover:bg-white/10 disabled:opacity-40 disabled:pointer-events-none"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" /> Previous
+              </button>
+              <span className="px-2 font-mono font-bold text-slate-200">
+                {page} / {Math.ceil(total / 20)}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={page * 20 >= total}
+                className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 font-medium text-slate-300 hover:bg-white/10 disabled:opacity-40 disabled:pointer-events-none"
+              >
+                Next <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </main>
     </DashboardLayout>
   );

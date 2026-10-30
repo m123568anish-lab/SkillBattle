@@ -238,7 +238,9 @@ async def test_college_to_company_verified_skill_and_shortlist_flow(client: Asyn
 
     openings = await client.get("/api/v1/company/openings", headers=student_headers)
     assert openings.status_code == 200, openings.text
-    assert any(item["job_id"] == job.json()["id"] for item in openings.json())
+    openings_data = openings.json()
+    opening_items = openings_data.get("items", openings_data) if isinstance(openings_data, dict) else openings_data
+    assert any(item["job_id"] == job.json()["id"] for item in opening_items)
     application = await client.post(
         "/api/v1/company/applications",
         headers=student_headers,
