@@ -422,7 +422,7 @@ export default function BattleArenaCommandCenter({
 
             <h3 className="mt-4 text-xl font-black text-white">Placement Tournaments & Contests</h3>
             <p className="mt-2 text-sm text-slate-300 leading-relaxed">
-              Participate in institutional placement assessments, company speedruns, and official SkillBattle championship tournaments with verified leaderboard rankings.
+              Participate in institutional placement assessments, company speedruns, and official Qubira championship tournaments with verified leaderboard rankings.
             </p>
           </div>
 

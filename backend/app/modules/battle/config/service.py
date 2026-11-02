@@ -174,7 +174,7 @@ class BattleConfigService:
             },
         },
         "tournament": {
-            "title": "SkillBattle Championship Match",
+            "title": "Qubira Championship Match",
             "description": "High stakes ranked tournament duel.",
             "battle_type": "tournament",
             "difficulty": "hard",

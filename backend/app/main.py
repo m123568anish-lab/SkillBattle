@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
     - Shutdown: Clean up resources
     """
     # Startup
-    logger.info("🚀 SkillBattle API starting up...")
+    logger.info("🚀 Qubira API starting up...")
     
     # Initialize Sentry error tracking if configured
     if settings.SENTRY_DSN and not settings.SENTRY_DSN.startswith("https://placeholder"):
@@ -89,16 +89,16 @@ async def lifespan(app: FastAPI):
 settings = get_settings()
 
 app = FastAPI(
-    title="SkillBattle API",
+    title="Qubira API",
     version="2.0.0",
-    description="Enterprise AI Coding Platform Backend",
+    description="Qubira — Learn. Build. Compete. AI-Powered Technical Learning & Arena Platform",
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
     tags_metadata=[
-        {"name": "Battle", "description": "Battle Arena APIs"},
-        {"name": "Tournament", "description": "Tournament APIs"},
-        {"name": "AI", "description": "Artificial Intelligence APIs"},
+        {"name": "Battle", "description": "Qubira Arena APIs"},
+        {"name": "Tournament", "description": "Championship APIs"},
+        {"name": "AI", "description": "Qubira Mentor & Artificial Intelligence APIs"},
         {"name": "Developer", "description": "Developer Platform APIs"},
     ],
 )

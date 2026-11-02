@@ -151,28 +151,19 @@ export function getMobileNavigation(portal: PortalKind): PortalNavItem[] {
 
   return [
     { title: "Home", href: "/dashboard", icon: Home, category: "mobile", available: true },
-    { title: "Practice", href: "/practice", icon: BookOpen, category: "mobile", available: true },
-    { title: "Battles", href: "/battle", icon: Sword, category: "mobile", available: true },
-    { title: "Leaderboard", href: "/leaderboard", icon: Trophy, category: "mobile", available: true },
+    { title: "Learn", href: "/practice", icon: BookOpen, category: "mobile", available: true },
+    { title: "Arena", href: "/battle", icon: Sword, category: "mobile", available: true },
+    { title: "Rankings", href: "/leaderboard", icon: Trophy, category: "mobile", available: true },
     { title: "Profile", href: "/profile", icon: User, category: "mobile", available: true },
   ];
 }
 
-// ── COMPACT PRIMARY NAVIGATION ──
-// Exactly 8 streamlined entries for a minimal, premium SaaS experience:
-// 1. Dashboard
-// 2. Practice Hub (contains Overview, Explore, MCQ, Coding, Tasks, Progress)
-// 3. Battle Arena (contains Overview, Solo, Multiplayer, Championship, History)
-// 4. Leaderboard
-// 5. Friends
-// 6. Achievements
-// 7. Profile
-// 8. Settings
+// ── COMPACT PRIMARY NAVIGATION (QUBIRA BRANDED) ──
 export const sidebarItems: SidebarItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: Home, category: "main" },
-  { title: "Practice Hub", href: "/practice", icon: BookOpen, category: "main" },
-  { title: "Battle Arena", href: "/battle", icon: Sword, category: "main" },
-  { title: "Leaderboard", href: "/leaderboard", icon: Trophy, category: "main" },
+  { title: "Qubira Learn", href: "/practice", icon: BookOpen, category: "main" },
+  { title: "Qubira Arena", href: "/battle", icon: Sword, category: "main" },
+  { title: "Qubira Rankings", href: "/leaderboard", icon: Trophy, category: "main" },
   { title: "Friends", href: "/friends", icon: Users, category: "social" },
   { title: "Achievements", href: "/achievements", icon: Medal, category: "social" },
   { title: "Profile", href: "/profile", icon: User, category: "account" },

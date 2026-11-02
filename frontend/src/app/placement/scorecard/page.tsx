@@ -9,7 +9,7 @@ export default function PlacementScorecardPage() {
         <BriefcaseBusiness size={28} className="text-cyan-300" />
         <h1 className="mt-4 text-2xl font-bold">Placement scorecards are unavailable</h1>
         <p className="mt-2 text-sm leading-relaxed text-slate-400">
-          SkillBattle does not yet have enough validated assessment and hiring data to calculate a reliable placement score.
+          Qubira does not yet have enough validated assessment and hiring data to calculate a reliable placement score.
           No score or employer eligibility is shown until it can be based on your actual results.
         </p>
         <Link

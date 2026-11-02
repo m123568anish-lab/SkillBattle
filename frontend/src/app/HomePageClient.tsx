@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Footer from "@/components/Footer";
+import { QubiraLogo } from "@/components/brand/QubiraLogo";
 import {
   ArrowRight,
   BrainCircuit,
@@ -23,17 +24,17 @@ import {
 } from "lucide-react";
 
 const journey = [
-  { icon: Code2, title: "Learn", text: "Build foundations with focused tasks and guided practice.", href: "/tasks" },
-  { icon: Flame, title: "Practice", text: "Keep momentum with daily challenges and a visible learning trail.", href: "/challenge" },
-  { icon: Swords, title: "Battle", text: "Pressure-test your reasoning in the Battle Arena.", href: "/battle" },
-  { icon: BrainCircuit, title: "Improve", text: "Use coaching and assessments to choose the next useful step.", href: "/coach" },
+  { icon: Code2, title: "Learn", text: "Build foundations with focused tasks in Qubira Learn.", href: "/practice" },
+  { icon: Flame, title: "Missions", text: "Keep momentum with daily challenges and verified XP.", href: "/practice/tasks" },
+  { icon: Swords, title: "Arena", text: "Pressure-test your reasoning in live Arena Duels.", href: "/battle" },
+  { icon: BrainCircuit, title: "Mentor", text: "Use Qubira Mentor and interview prep for rapid improvement.", href: "/coach" },
   { icon: BriefcaseBusiness, title: "Discover", text: "Explore real opportunities when you are ready to apply.", href: "/opportunities" },
 ];
 
 const faqs = [
-  ["What can I do on SkillBattle?", "You can practice coding, enter supported battles, use learning and career tools, and explore opportunities published in the platform."],
+  ["What can I do on Qubira?", "Qubira is an AI-powered learning and skill development platform where you can master technical skills, prepare for interviews, solve coding challenges in Qubira Code, compete in real-time arena duels, and improve career readiness."],
   ["Are opportunities guaranteed placements?", "No. Opportunities are separate from preparation tools, and application outcomes are managed by the opportunity owner or external employer."],
-  ["Can colleges and companies use the same platform?", "Yes. SkillBattle keeps role-specific spaces for students, colleges, and hiring teams while preserving the permissions for each account."],
+  ["Can colleges and companies use the same platform?", "Yes. Qubira keeps role-specific spaces for students, campuses, and hiring teams while preserving data isolation for each account."],
 ];
 
 const navItems = [
@@ -137,14 +138,7 @@ export default function Home() {
 
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#050816]/65 backdrop-blur-2xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-400/30 bg-gradient-to-br from-cyan-500 to-violet-600 shadow-[0_0_22px_rgba(34,211,238,0.35)]">
-              <Code2 className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <p className="text-lg font-black tracking-tight">SkillBattle</p>
-            </div>
-          </Link>
+          <QubiraLogo variant="full" size="md" href="/" showTagline />
 
           <nav className="hidden items-center gap-8 md:flex">
             {navItems.map((item) => (
@@ -224,19 +218,19 @@ export default function Home() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.15)]">
               <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
-              SkillBattle AI 3.0 • Competitive Learning Platform
+              QUBIRA • Learn. Build. Compete.
             </div>
 
             <h1 className="mt-8 max-w-xl text-4xl font-black leading-[0.96] tracking-[-0.05em] text-white sm:text-5xl lg:text-7xl">
               Master Code.
               <span className="mt-2 block bg-gradient-to-r from-cyan-400 via-teal-300 to-violet-400 bg-clip-text text-transparent">
-                Win Battles.
+                Win Arena Duels.
               </span>
-              <span className="mt-2 block text-slate-100">Get Placed.</span>
+              <span className="mt-2 block text-slate-100">Level Up Fast.</span>
             </h1>
 
             <p className="mt-6 max-w-xl text-base leading-8 text-slate-300 sm:text-lg">
-              A competitive learning platform where students practice coding, join live battles, work through interview questions, and track their progress.
+              Qubira is an AI-powered learning and skill development platform that helps students master technical skills, prepare for interviews, solve coding problems, compete in real-time challenges, and improve career readiness.
             </p>
 
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
@@ -251,17 +245,17 @@ export default function Home() {
                 href="/battle"
                 className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-7 py-3.5 text-base font-semibold text-slate-100 transition hover:border-cyan-400/50 hover:bg-white/10"
               >
-                Live Battle Arena
+                Enter Qubira Arena
                 <ChevronRight className="h-4 w-4" />
               </Link>
             </div>
 
             <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-white/10 pt-8">
               {[
-                "⚡ Live 1v1 Battles",
-                "🤖 AI Career Coach",
-                "🎯 Placement Assessments",
-                "🗺️ Skill Quest Roadmap",
+                "⚡ Live Arena Duels",
+                "🤖 Qubira Mentor",
+                "🎯 Interview Prep",
+                "🗺️ Qubira Paths",
               ].map((tag) => (
                 <span
                   key={tag}
@@ -446,7 +440,7 @@ export default function Home() {
                 Smart support without replacing the human journey.
               </h2>
               <p className="mt-4 max-w-xl text-base leading-8 text-slate-300">
-                SkillBattle uses AI to support learning, coaching, and readiness workflows. It helps students improve and gives colleges and companies clearer insight into candidate preparation without replacing human judgment.
+                Qubira uses AI to support learning, coaching, and readiness workflows. It helps students improve and gives colleges and companies clearer insight into candidate preparation without replacing human judgment.
               </p>
             </div>
 
@@ -475,7 +469,7 @@ export default function Home() {
         <div>
           <p className="text-sm font-bold uppercase tracking-[0.22em] text-cyan-300">Clear expectations</p>
           <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">Questions, answered honestly.</h2>
-          <p className="mt-4 max-w-md leading-7 text-slate-400">SkillBattle is designed to make your preparation more deliberate. It does not invent career outcomes or replace hiring decisions.</p>
+          <p className="mt-4 max-w-md leading-7 text-slate-400">Qubira is designed to make your preparation more deliberate. It helps you develop real skills without guesswork or artificial inflation.</p>
         </div>
         <div className="divide-y divide-white/[0.08] rounded-3xl border border-white/[0.09] bg-white/[0.025] px-6">
           {faqs.map(([question, answer]) => (
@@ -532,7 +526,7 @@ export default function Home() {
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.22em] text-cyan-300">Get started</p>
               <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">
-                Build your next step in SkillBattle.
+                Build your next engineering milestone in Qubira.
               </h2>
             </div>
 

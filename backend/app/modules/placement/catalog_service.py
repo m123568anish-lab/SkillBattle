@@ -6,6 +6,9 @@ LEGACY_GENERATED_COMPANY_NAMES = (
     "SkillBattle General Software Engineering",
     "SkillBattle General Data & AI",
     "SkillBattle General Consulting",
+    "Qubira General Software Engineering",
+    "Qubira General Data & AI",
+    "Qubira General Consulting",
 )
 
 async def list_catalogue(db: AsyncSession, q: str = "", category: str | None = None, role: str | None = None):

@@ -70,7 +70,7 @@ export default function TopicDetailPage() {
           subtitle="Comprehensive conceptual guide, pattern breakdowns, and graded challenge roadmap."
           theme="practice"
           breadcrumbs={[
-            { label: "Practice Arena", href: "/practice" },
+            { label: "Qubira Learn", href: "/practice" },
             { label: "Explore Topics", href: "/practice/topics" },
             { label: topicTitle, href: "#", current: true },
           ]}

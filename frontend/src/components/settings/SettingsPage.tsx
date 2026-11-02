@@ -494,7 +494,7 @@ export default function SettingsPage() {
                   <div className="border-b border-white/[0.06] pb-5">
                     <h3 className="text-xl font-bold text-white">Interface Theme</h3>
                     <p className="text-xs text-slate-400 mt-1">
-                      Choose how SkillBattle AI is rendered. Changes persist to your account profile.
+                      Choose how Qubira is rendered. Changes persist to your account profile.
                     </p>
                   </div>
 
@@ -663,7 +663,7 @@ export default function SettingsPage() {
                         {
                           key: "allow_recruiter_search" as const,
                           title: "Allow Recruiter Discovery",
-                          desc: "Allow companies using SkillBattle's candidate search to find your profile by relevant skill tags.",
+                          desc: "Allow companies using Qubira's candidate search to find your profile by relevant skill tags.",
                         },
                       ].map((item) => (
                         <label
@@ -982,7 +982,7 @@ export default function SettingsPage() {
                   <div className="border-b border-white/[0.06] pb-5">
                     <h3 className="text-xl font-bold text-white">Connected Providers & Identities</h3>
                     <p className="text-xs text-slate-400 mt-1">
-                      Identity providers associated with your SkillBattle AI account
+                      Identity providers associated with your Qubira account
                     </p>
                   </div>
 
@@ -1078,7 +1078,7 @@ export default function SettingsPage() {
 
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border border-rose-500/30 bg-rose-500/[0.08]">
                       <div>
-                        <h4 className="text-sm font-bold text-rose-200">Delete SkillBattle Account</h4>
+                        <h4 className="text-sm font-bold text-rose-200">Delete Qubira Account</h4>
                         <p className="text-xs text-slate-400 mt-0.5">
                           Permanently delete your account, battle records, XP points, and personal identity.
                         </p>

@@ -343,7 +343,7 @@ class DashboardService:
             user=UserSummary(
                 id=str(user.id),
                 username=str(getattr(user, "username", None) or "player"),
-                full_name=str(getattr(user, "full_name", None) or getattr(user, "username", None) or "SkillBattle player"),
+                full_name=str(getattr(user, "full_name", None) or getattr(user, "username", None) or "Qubira engineer"),
                 email=str(getattr(user, "email", None) or ""),
                 avatar_url=getattr(user, "avatar_url", None),
                 role=str(getattr(user, "role", "user") or "user"),

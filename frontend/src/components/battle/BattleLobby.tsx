@@ -112,7 +112,7 @@ export default function BattleLobby() {
           {/* Rank banner */}
           <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-gradient-to-r from-[#0D1226] to-[#070B14] p-5">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">SkillBattle Arena Campaign</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Qubira Arena Campaign</p>
               <h2 className="text-xl font-black text-white mt-1">Earn stars, level up, rank up!</h2>
             </div>
             <div className="flex items-center gap-3 rounded-2xl bg-white/5 border border-white/5 px-5 py-3">

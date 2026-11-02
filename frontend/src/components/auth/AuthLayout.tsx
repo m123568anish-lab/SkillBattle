@@ -1,6 +1,7 @@
 import * as React from "react";
 import Link from "next/link";
-import { ArrowRight, BriefcaseBusiness, Building2, Code2, GraduationCap, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, BriefcaseBusiness, Building2, GraduationCap, Sparkles } from "lucide-react";
+import { QubiraLogo } from "@/components/brand/QubiraLogo";
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -10,16 +11,16 @@ interface AuthLayoutProps {
 }
 
 const ecosystemCards = [
-  { label: "Student", detail: "Learn • Practice • Battle", icon: GraduationCap },
+  { label: "Student", detail: "Learn • Build • Compete", icon: GraduationCap },
   { label: "College", detail: "Assess • Train • Place", icon: Building2 },
   { label: "Company", detail: "Discover • Hire • Scale", icon: BriefcaseBusiness },
 ] as const;
 
 export default function AuthLayout({
   children,
-  eyebrow = "SkillBattle ecosystem",
+  eyebrow = "Qubira Ecosystem",
   title = "Build your competitive edge.",
-  description = "One secure identity for students, colleges, and companies building stronger outcomes together.",
+  description = "One secure identity for students, campuses, and engineering teams mastering technical excellence together.",
 }: AuthLayoutProps) {
   return (
     <main className="min-h-screen bg-[#050816] text-white">
@@ -30,23 +31,18 @@ export default function AuthLayout({
           <div className="pointer-events-none absolute bottom-8 right-10 h-52 w-52 rounded-full bg-violet-500/15 blur-3xl" />
 
           <div className="relative z-10 flex items-center justify-between gap-4">
-            <Link href="/" className="inline-flex w-fit items-center gap-3" aria-label="SkillBattle home">
-              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-violet-600 text-white shadow-[0_0_18px_rgba(34,211,238,0.35)]">
-                <Code2 size={20} />
-              </span>
-              <span className="text-lg font-black tracking-tight">SkillBattle</span>
-            </Link>
+            <QubiraLogo variant="full" size="md" href="/" showTagline />
             <Link href="/" className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-cyan-400/40 hover:text-white lg:hidden">
               Home <ArrowRight size={14} />
             </Link>
           </div>
 
-          <div className="relative z-10 max-w-lg">
+          <div className="relative z-10 max-w-lg my-auto py-8">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-400/25 bg-cyan-400/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-200">
               <Sparkles size={12} />
               {eyebrow}
             </div>
-            <h2 className="text-4xl font-black leading-[0.96] tracking-[-0.06em] text-white sm:text-5xl lg:text-[3.4rem]">
+            <h2 className="text-4xl font-black leading-[0.96] tracking-[-0.06em] text-white sm:text-5xl lg:text-[3.2rem]">
               {title}
             </h2>
             <p className="mt-5 max-w-md text-base leading-7 text-slate-300">{description}</p>
@@ -59,29 +55,23 @@ export default function AuthLayout({
                       <Icon size={16} />
                     </span>
                     <div>
-                      <p className="font-semibold text-white">{label}</p>
+                      <p className="text-sm font-bold text-white">{label}</p>
                       <p className="text-xs text-slate-400">{detail}</p>
                     </div>
                   </div>
-                  <ArrowRight size={15} className="text-slate-500" />
+                  <span className="text-[11px] font-semibold text-cyan-300">Active</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="relative z-10 mt-7 flex flex-col gap-3 text-sm text-slate-300 lg:mt-0">
-            <div className="flex items-center gap-2 border-t border-white/10 pt-5">
-              <ShieldCheck size={18} className="text-violet-300" />
-              <span>Secure access with backend-verified role checks.</span>
-            </div>
-            <Link href="/" className="hidden w-fit items-center gap-2 text-sm text-slate-400 transition hover:text-white lg:inline-flex">
-              Back to SkillBattle <ArrowRight size={15} />
-            </Link>
+          <div className="relative z-10 text-xs text-slate-400">
+            © 2026 Qubira. Learn. Build. Compete.
           </div>
         </section>
 
-        <section className="flex items-start justify-center bg-[#050816] px-4 py-8 sm:px-8 sm:py-10 lg:items-center lg:px-10">
-          <div className="w-full max-w-[560px]">{children}</div>
+        <section className="flex items-center justify-center px-4 py-10 sm:px-8 lg:px-12">
+          <div className="w-full max-w-xl">{children}</div>
         </section>
       </div>
     </main>

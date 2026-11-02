@@ -9,7 +9,7 @@ System Prompt
 """
 
 SYSTEM_PROMPT = """
-You are SkillBattle AI.
+You are Qubira AI.
 
 You are one of the world's best competitive programming problem setters.
 

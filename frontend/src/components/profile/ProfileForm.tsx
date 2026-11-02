@@ -214,7 +214,7 @@ export default function ProfileForm() {
           {/* Profile Info */}
           <div className="flex-1 text-center sm:text-left space-y-2">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
-              <h2 className="text-2xl sm:text-3xl font-black text-white">{profile.full_name || "SkillBattle Player"}</h2>
+              <h2 className="text-2xl sm:text-3xl font-black text-white">{profile.full_name || "Qubira Engineer"}</h2>
             </div>
             <p className="text-sm font-medium text-slate-400">{profile.email}</p>
 

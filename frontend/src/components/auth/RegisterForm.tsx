@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -97,7 +97,7 @@ export default function RegisterForm() {
     <div className="rounded-[30px] border border-white/10 bg-[#0b1220]/90 p-5 shadow-[0_30px_90px_rgba(15,23,42,0.72)] ring-1 ring-white/5 backdrop-blur-xl sm:p-7">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-300">Join SkillBattle</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-300">Join Qubira</p>
           <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-white">Create your identity.</h1>
         </div>
         <div className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200">
@@ -137,7 +137,7 @@ export default function RegisterForm() {
           <div className="space-y-4">
             <div>
               <label htmlFor="organization-name" className="mb-2 block text-sm font-medium text-slate-300">{selectedAccountType === "COLLEGE" ? "Institution name" : "Company name"}</label>
-              <input id="organization-name" name="organization-name" autoComplete="organization" required minLength={2} value={organization.name} onChange={(event) => setOrganization((current) => ({ ...current, name: event.target.value }))} placeholder={selectedAccountType === "COLLEGE" ? "Northfield Institute" : "SkillBattle Labs"} className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.02] px-4 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-500/15" />
+              <input id="organization-name" name="organization-name" autoComplete="organization" required minLength={2} value={organization.name} onChange={(event) => setOrganization((current) => ({ ...current, name: event.target.value }))} placeholder={selectedAccountType === "COLLEGE" ? "Northfield Institute" : "Qubira Labs"} className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.02] px-4 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-500/15" />
             </div>
 
             {selectedAccountType === "COLLEGE" ? (
@@ -203,7 +203,7 @@ export default function RegisterForm() {
         {errors.acceptTerms && <p className="text-sm text-red-400">{errors.acceptTerms.message}</p>}
 
         <GradientButton loading={loading} fullWidth type="submit">
-          {loading ? "Creating account..." : "Create SkillBattle account"}
+          {loading ? "Creating account..." : "Create Qubira account"}
         </GradientButton>
       </form>
 

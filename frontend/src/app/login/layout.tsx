@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Log in",
-  description: "Log in to SkillBattle to continue your student, college, company, or platform administrator workflow.",
+  description: "Log in to Qubira to continue your student, college, company, or platform administrator workflow.",
   alternates: { canonical: "/login" },
   robots: { index: false, follow: false },
 };

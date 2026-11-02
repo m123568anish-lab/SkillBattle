@@ -9,7 +9,7 @@ export default function Features() {
     <Section>
       <Container>
         <SectionHeading
-          title="Why Choose SkillBattle?"
+          title="Why Choose Qubira?"
           subtitle="Everything you need to prepare for placements while enjoying the learning journey."
         />
 

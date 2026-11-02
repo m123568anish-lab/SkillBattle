@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 import HomePageClient from "./HomePageClient";
 
 export const metadata: Metadata = {
-  title: "SkillBattle | AI Coding Battles",
-  description: "Practice real coding problems, compete in supported battles, develop evidence-backed skills, and connect learning to assessment and hiring workflows.",
+  title: "Qubira — Learn. Build. Compete.",
+  description: "Master technical skills, prepare for interviews, solve coding challenges, and compete with developers through Qubira, an intelligent skill development platform.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "SkillBattle | AI Coding Battles",
-    description: "Practice coding, build verified skill evidence, and connect learning to assessment and hiring workflows.",
+    title: "Qubira — Learn. Build. Compete.",
+    description: "Master technical skills, prepare for interviews, solve coding challenges, and compete with developers through Qubira, an intelligent skill development platform.",
     url: "/",
     type: "website",
-    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "SkillBattle coding practice, battles, and hiring platform" }],
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Qubira — Learn. Build. Compete." }],
   },
 };
 

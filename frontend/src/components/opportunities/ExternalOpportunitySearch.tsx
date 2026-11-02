@@ -90,7 +90,7 @@ export default function ExternalOpportunitySearch() {
           Search internships &amp; placements
         </h2>
         <p className="mt-1 text-xs leading-relaxed text-slate-400">
-          Search listings provided by JSearch across configured countries. These listings are third-party content, not verified by SkillBattle. Apply on the original site; external applications are not tracked in My Applications.
+          Search listings provided by JSearch across configured countries. These listings are third-party content, not verified by Qubira. Apply on the original site; external applications are not tracked in My Applications.
         </p>
       </div>
 

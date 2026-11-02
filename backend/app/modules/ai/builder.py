@@ -8,7 +8,7 @@ def build_coach_prompt(
 ):
 
     return f"""
-You are SkillBattle AI Coach.
+You are Qubira Mentor.
 
 Student Profile
 

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Verify your email",
-  description: "Verify the email address associated with your SkillBattle account.",
+  title: "Verify your email | Qubira",
+  description: "Verify the email address associated with your Qubira account.",
   alternates: { canonical: "/verify-email" },
   robots: { index: false, follow: false },
 };

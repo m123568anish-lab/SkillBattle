@@ -256,7 +256,7 @@ function CollegeDashboardPageContent() {
                     </div>
                   )}
                 </Panel>
-                <Panel title="Add an existing student" subtitle="The student must already have a SkillBattle account.">
+                <Panel title="Add an existing student" subtitle="The student must already have a Qubira account.">
                   <form className="space-y-3" onSubmit={(event) => void submitAction(event, async (form) => organizationDashboardService.addCollegeStudent({
                     user_email_or_username: String(form.get("student") || ""),
                     department_id: form.get("department_id") ? Number(form.get("department_id")) : undefined,

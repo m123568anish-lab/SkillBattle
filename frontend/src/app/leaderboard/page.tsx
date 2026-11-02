@@ -140,12 +140,12 @@ export default function LeaderboardPage() {
     <DashboardLayout>
       <div className="space-y-6 pb-12">
         <PageHeader
-          title="Championship Leaderboard"
-          subtitle="Real-time ratings, competitive records, and verified achievements of SkillBattle students."
+          title="Qubira Rankings"
+          subtitle="Real-time ratings, competitive records, and verified achievements of Qubira engineers."
           theme="battle"
           breadcrumbs={[
-            { label: "Battle Arena", href: "/battle" },
-            { label: "Leaderboard", href: "/leaderboard", current: true },
+            { label: "Qubira Arena", href: "/battle" },
+            { label: "Rankings", href: "/leaderboard", current: true },
           ]}
         />
 

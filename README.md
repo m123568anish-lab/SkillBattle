@@ -1,132 +1,134 @@
-# BattleAI / SkillBattle
+# QUBIRA — Learn. Build. Compete.
 
-BattleAI is a full-stack skill-battle application with a FastAPI backend and Next.js frontend. The repository includes local development support, Docker Compose orchestration, and production-ready configuration for PostgreSQL and Nginx.
+**QUBIRA** is an AI-powered technical learning, coding assessment, and competitive skill platform designed to take software engineers from foundational computer science concepts to elite production engineering and interview readiness.
 
-## Status
+---
 
-- ✅ Backend FastAPI app with async lifespan and health endpoints
-- ✅ Frontend Next.js app with dashboard and auth flows
-- ✅ Docker Compose development and production configs
-- ✅ Smoke test script for API verification
-- ✅ Production environment examples under `.env.production.example`
+## 🌟 Official Brand & Feature Architecture
 
-## Getting Started
+- **Brand Name:** QUBIRA
+- **Official Tagline:** *Learn. Build. Compete.*
+- **Official Domain / Support:** `https://qubira.io` · `support@qubira.io`
 
-### 1) Install dependencies
+### Core Product Modules
 
-#### Backend
+| Feature Suite | Platform Section | Description |
+|---|---|---|
+| **Qubira Learn** | `/practice` | Distraction-free conceptual mastery, algorithmic problem sets, and guided curriculum tracks. |
+| **Qubira Code** | `/practice/coding` | Monaco-powered interactive algorithmic code execution, multi-language support, custom testcases, and instant feedback. |
+| **Qubira Quiz** | `/practice/mcq` | Rapid-fire concept reinforcement, multiple-choice quizzes, timed sprints, and knowledge tests. |
+| **Qubira Missions** | `/practice/tasks` | Real-world engineering tasks, debugging puzzles, architectural scenarios, and project challenges. |
+| **Qubira Arena** | `/battle` | The central command center for live and asynchronous developer combat. |
+| **Solo Challenges** | `/battle/solo` | Timed personal best sprints, algorithm challenges, and ranked solo problem solving. |
+| **Arena Duels** | `/battle/lobby` | Real-time synchronized 1v1 coding duels with WebSockets, live test execution, and dynamic ELO ratings. |
+| **Daily Clash** | `/battle/championship` | Daily flagship competition under unified time constraints, verified XP pools, and championship badges. |
+| **Qubira Rankings** | `/leaderboard` | Real-time global, college, and league rating leaderboards with verified student achievements. |
+| **Qubira Mentor** | `/coach` | Context-aware AI coach generating tailored technical roadmaps, mock interviews, and personalized practice recommendations. |
+| **Qubira Paths** | `/roadmap` | Personalized multi-week skill roadmaps aligned to target companies and roles. |
+| **Interview Prep** | `/interview` | AI-evaluated behavioral and technical interview simulations with real-time scoring. |
 
-```powershell
+---
+
+## 🛠️ Technology Stack
+
+- **Frontend:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS, Lucide Icons, Framer Motion, Monaco Editor
+- **Backend:** FastAPI, Python 3.11+, SQLAlchemy 2.0 (async), Pydantic v2
+- **Database:** PostgreSQL (with SQLite compatibility for local testing)
+- **Real-Time:** WebSockets for multiplayer duels, live battle states, and chat
+- **Caching & Queue:** Redis for rate limiting, matchmaking queues, and caching
+- **AI Integration:** Google Gemini, OpenAI, and Ollama support with advisory mentorship guardrails
+- **Deployment:** Vercel (Frontend), Render / Docker Compose (Backend & Workers)
+
+---
+
+## 🚀 Getting Started
+
+### 1) Prerequisites
+
+- Node.js 20+ and npm / yarn
+- Python 3.11+
+- PostgreSQL or local SQLite
+
+### 2) Backend Setup
+
+```bash
 cd backend
 python -m venv .venv
+
+# Windows
 .\.venv\Scripts\Activate.ps1
+
+# Linux / macOS
+source .venv/bin/activate
+
 pip install -r requirements.txt
 ```
 
-#### Frontend
+Create a `.env` file in the `backend/` directory:
 
-```powershell
-cd frontend
-yarn install
+```env
+ENVIRONMENT=development
+DATABASE_URL=sqlite+aiosqlite:///./test.db
+SECRET_KEY=change-this-in-production-to-a-secure-secret-key-64chars
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your-gemini-api-key
 ```
 
-### 2) Run locally
+Run the backend server:
 
-#### Backend
-
-```powershell
-cd backend
-.\.venv\Scripts\Activate.ps1
+```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-#### Frontend
+### 3) Frontend Setup
 
-```powershell
+```bash
 cd frontend
-yarn dev
+npm install
 ```
 
-### 3) Environment
+Create a `.env.local` file in the `frontend/` directory:
 
-Copy the example env file and set secrets:
-
-```powershell
-copy .env.example .env
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-Set `SECRET_KEY` and any other required values before running the application.
+Run the frontend development server:
 
-### Live internships and placement listings
-
-The opportunities page can search JSearch across the country codes configured in the backend. Set `JSEARCH_API_KEY` on the backend (RapidAPI) and configure `JSEARCH_COUNTRIES` as a comma-separated list of up to eight ISO 3166-1 alpha-2 country codes. Search results are attributed to JSearch and link to the original listing/application page; they are not verified by SkillBattle, and externally submitted applications are not tracked in My Applications.
-
-AI summaries use the configured backend AI provider. For OpenAI, set `AI_PROVIDER=openai` and configure `OPENAI_API_KEY` (optionally `OPENAI_MODEL`). For local Ollama, use `AI_PROVIDER=ollama` with a reachable `OLLAMA_URL` and installed `OLLAMA_MODEL`. AI summaries are optional and do not replace the source listing.
-
-## Docker Compose
-
-### Development
-
-```powershell
-docker compose up --build -d
+```bash
+npm run dev
 ```
 
-Services started:
-- `postgres`
-- `backend`
-- `frontend`
-- `nginx`
+Visit [http://localhost:3000](http://localhost:3000) to access the Qubira platform.
 
-To inspect logs:
+---
 
-```powershell
-docker compose logs -f backend
-```
+## 🌐 Production Deployment & Migration Guide
 
-### Production
+When deploying the rebranded application to production:
 
-Copy the production example and start with the production compose file:
+### 1. Vercel (Frontend)
+- Set **Root Directory** to `frontend`.
+- Environment Variables:
+  - `NEXT_PUBLIC_API_URL`: URL of the FastAPI backend (e.g., `https://api.qubira.io` or `https://skillbattle-api-2026.onrender.com`).
+  - `NEXT_PUBLIC_APP_URL`: Frontend canonical URL (e.g., `https://qubira.io`).
+- Custom Domains: Add `qubira.io` and `www.qubira.io` in the Vercel Domains tab.
 
-```powershell
-copy .env.production.example .env.production
-# update values
-docker compose -f docker-compose.prod.yml up --build -d
-```
+### 2. Render / Cloud Hosting (Backend)
+- Environment Variables:
+  - `ENVIRONMENT=production`
+  - `CORS_ORIGINS`: Include `https://qubira.io`, `https://www.qubira.io`, `https://skill-battle-frontend.vercel.app`.
+  - `DATABASE_URL`: Production PostgreSQL connection string.
+- Database Schema: Internal database table and column names remain completely backward-compatible.
 
-## Smoke Test
+### 3. DNS & Email (SMTP)
+- Set transactional email `FROM` header to `Qubira Team <support@qubira.io>`.
+- Configure SPF/DKIM records for `qubira.io` to ensure deliverability of verification and password-reset emails.
 
-A smoke test is available at `scripts/smoke_test.py`.
+---
 
-```powershell
-python scripts\smoke_test.py
-```
+## 📄 License & Intellectual Property
 
-The script performs:
-- backend healthcheck
-- register
-- login
-- dashboard access
-- token refresh
-
-## Important Files
-
-- `docker-compose.yml` - development compose setup
-- `docker-compose.prod.yml` - production compose setup
-- `backend/Dockerfile.prod` - production backend image
-- `backend/entrypoint.sh` - migration startup helper
-- `backend/app/main.py` - FastAPI application entrypoint
-- `backend/app/core/config.py` - environment config
-- `scripts/smoke_test.py` - API smoke test
-
-## Next Steps
-
-1. Verify the app locally with `uvicorn` and `yarn dev`
-2. Confirm Docker Compose startup
-3. Run `scripts/smoke_test.py`
-4. After verification, commit the final documentation and production config
-
-## Notes
-
-- For production, set `ENVIRONMENT=production` and use PostgreSQL.
-- `NEXT_PUBLIC_API_URL` must point to your deployed frontend domain.
-- If you want HTTPS, add Certbot and reverse proxy cert automation later.
+© 2026 QUBIRA. All rights reserved. *Learn. Build. Compete.*

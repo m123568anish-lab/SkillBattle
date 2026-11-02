@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -44,7 +44,7 @@ export default function LoginForm() {
       if (!result?.tokens?.access_token) {
         throw new Error("No access token received.");
       }
-      toast.success("Welcome back to SkillBattle");
+      toast.success("Welcome back to Qubira");
       router.replace(getPostLoginPath(result.user));
     } catch (error: unknown) {
       const detail = (error as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
@@ -67,7 +67,7 @@ export default function LoginForm() {
       </div>
 
       <div className="mb-6 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
-        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Choose your SkillBattle path</p>
+        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Choose your Qubira path</p>
         <div className="grid gap-2 sm:grid-cols-3">
           {roleOptions.map(({ role, label, detail, Icon }) => (
             <button
@@ -161,7 +161,7 @@ export default function LoginForm() {
         </div>
 
         <GradientButton fullWidth loading={loading} type="submit">
-          {loading ? "Signing in..." : "Enter SkillBattle"}
+          {loading ? "Signing in..." : "Enter Qubira"}
         </GradientButton>
       </form>
 

@@ -98,7 +98,7 @@ function BattleHistoryInner() {
       <main className="mx-auto max-w-6xl space-y-7 p-4 sm:p-7">
         <Breadcrumbs
           items={[
-            { label: "Battle Arena", href: "/battle" },
+            { label: "Qubira Arena", href: "/battle" },
             { label: "Battle History", href: "/battle/history", active: true },
           ]}
         />

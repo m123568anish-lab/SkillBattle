@@ -10,7 +10,6 @@ import {
   Trophy,
   History,
   BarChart3,
-  Flame,
 } from "lucide-react";
 
 interface BattleNavProps {
@@ -28,19 +27,19 @@ export function BattleNav({ className = "" }: BattleNavProps) {
       isActive: pathname === "/battle",
     },
     {
-      label: "Solo Battle",
+      label: "Solo Challenges",
       href: "/battle/solo",
       icon: Target,
       isActive: pathname.startsWith("/battle/solo"),
     },
     {
-      label: "Multiplayer",
+      label: "Arena Duels",
       href: "/battle/lobby",
       icon: Users,
       isActive: pathname.startsWith("/battle/lobby") || pathname.startsWith("/battle/waiting"),
     },
     {
-      label: "Daily Championship",
+      label: "Daily Clash",
       href: "/battle/championship",
       icon: Trophy,
       isActive: pathname.startsWith("/battle/championship"),
@@ -55,7 +54,7 @@ export function BattleNav({ className = "" }: BattleNavProps) {
 
   return (
     <nav
-      aria-label="Battle Arena Navigation"
+      aria-label="Qubira Arena Navigation"
       className={`relative flex items-center justify-between gap-2 overflow-x-auto rounded-2xl border border-rose-500/20 bg-[#120B15]/90 p-1.5 backdrop-blur-md scrollbar-none ${className}`}
     >
       <div className="flex items-center gap-1 min-w-max">
@@ -91,7 +90,7 @@ export function BattleNav({ className = "" }: BattleNavProps) {
       <div className="hidden sm:flex items-center gap-1 shrink-0 pl-2 border-l border-white/10">
         <Link
           href="/leaderboard"
-          title="Global Championship Leaderboard"
+          title="Qubira Rankings"
           className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
             pathname.startsWith("/leaderboard")
               ? "bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30"
@@ -99,9 +98,11 @@ export function BattleNav({ className = "" }: BattleNavProps) {
           }`}
         >
           <BarChart3 className="h-3.5 w-3.5 text-amber-400" />
-          <span>Leaderboard</span>
+          <span>Qubira Rankings</span>
         </Link>
       </div>
     </nav>
   );
 }
+
+export default BattleNav;

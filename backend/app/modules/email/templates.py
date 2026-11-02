@@ -1,8 +1,6 @@
 """
 =========================================================
-
-Email Templates
-
+Email Templates — QUBIRA
 =========================================================
 """
 
@@ -12,64 +10,48 @@ from __future__ import annotations
 class EmailTemplates:
 
     @staticmethod
-    def verification(
-
-        username: str,
-
-        verification_url: str,
-
-    ):
-
+    def verification(username: str, verification_url: str) -> str:
         return f"""
 Hello {username},
 
-Welcome to SkillBattle!
+Welcome to Qubira!
 
-Please verify your account.
+Please verify your account using the secure link below:
 
 {verification_url}
 
-Thank you.
+Learn. Build. Compete.
 
-SkillBattle Team
+Thank you,
+The Qubira Team
 """
 
     @staticmethod
-    def password_reset(
-
-        username: str,
-
-        reset_url: str,
-
-    ):
-
+    def password_reset(username: str, reset_url: str) -> str:
         return f"""
 Hello {username},
 
-Reset your password using the link below.
+Reset your Qubira password using the link below:
 
 {reset_url}
 
-If you didn't request this, ignore this email.
+If you did not request this, you can safely ignore this email.
 
-SkillBattle Team
+The Qubira Team
 """
 
     @staticmethod
-    def welcome(
-
-        username: str,
-
-    ):
-
+    def welcome(username: str) -> str:
         return f"""
 Welcome {username}!
 
-Your SkillBattle account is ready.
+Your Qubira account is ready.
 
-Happy Coding!
+Start practicing code, taking interactive quizzes, and joining live challenges!
 
-SkillBattle Team
+Learn. Build. Compete.
+
+The Qubira Team
 """
 
 

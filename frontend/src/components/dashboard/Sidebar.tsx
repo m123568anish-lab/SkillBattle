@@ -22,6 +22,7 @@ import {
 import { getPortalCategories, getPortalKind } from "@/data/dashboard";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "@/store/authStore";
+import { QubiraLogo } from "@/components/brand/QubiraLogo";
 
 interface SidebarProps {
   isMobile?: boolean;
@@ -161,13 +162,13 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
     }
   };
 
-  const displayName = user?.full_name || user?.username || "SkillBattle Player";
+  const displayName = user?.full_name || user?.username || "Qubira Engineer";
   const userInitials = displayName
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase())
-    .join("") || "SB";
+    .join("") || "QB";
 
   const roleDisplay = portal === "admin"
     ? "Platform Admin"
@@ -198,24 +199,13 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
             href={portal === "admin" ? "/admin" : portal === "college" ? "/college/dashboard" : portal === "company" ? "/company/dashboard" : "/dashboard"}
             onClick={onCloseMobile}
             className={`flex items-center gap-2.5 transition-opacity hover:opacity-90 ${effectiveCollapsed ? "mx-auto" : ""}`}
-            title="SkillBattle AI"
+            title="Qubira — Learn. Build. Compete."
           >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-400/10 text-cyan-300">
-              <BrandIcon size={18} className="text-cyan-400" />
-            </div>
-
-            {!effectiveCollapsed && (
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-black tracking-tight text-white">
-                    Skill<span className="text-cyan-400">Battle</span>
-                  </span>
-                  <span className="rounded bg-cyan-400/10 px-1.5 py-0.2 text-[8px] font-black uppercase tracking-wider text-cyan-300 border border-cyan-400/20">
-                    {portalBadge}
-                  </span>
-                </div>
-              </div>
-            )}
+            <QubiraLogo
+              variant={effectiveCollapsed ? "icon" : "full"}
+              size={effectiveCollapsed ? "md" : "sm"}
+              portalBadge={portalBadge}
+            />
           </Link>
 
           {/* Desktop Collapse / Expand Button */}

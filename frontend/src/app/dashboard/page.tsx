@@ -65,7 +65,7 @@ export default function DashboardPage() {
   const activeUser = dashboard?.user ?? {
     id: user?.id ?? "",
     username: user?.username ?? "player",
-    full_name: user?.full_name ?? user?.username ?? "SkillBattle Player",
+    full_name: user?.full_name ?? user?.username ?? "Qubira Engineer",
     email: user?.email ?? "",
     avatar_url: user?.avatar_url ?? null,
     role: user?.role ?? "user",

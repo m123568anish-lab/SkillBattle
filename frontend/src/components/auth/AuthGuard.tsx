@@ -118,7 +118,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
   }
 
   if (status === "forbidden") {
-    return <div className="flex min-h-screen items-center justify-center bg-[#070B14] text-slate-300">Your account is not permitted to access SkillBattle.</div>;
+    return <div className="flex min-h-screen items-center justify-center bg-[#070B14] text-slate-300">Your account is not permitted to access Qubira.</div>;
   }
 
   const organizationSetupRequired = Boolean(user && getPostLoginPath(user) === "/organization-setup");

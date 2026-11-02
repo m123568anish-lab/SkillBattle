@@ -154,10 +154,10 @@ function PracticeHomeContent() {
       <div className="space-y-8 pb-12">
         {/* Practice Header & Sub Navigation */}
         <PageHeader
-          title="Practice Arena"
+          title="Qubira Learn"
           subtitle="A focused, calm, distraction-free environment to master core software concepts and prepare for technical interviews."
           theme="practice"
-          breadcrumbs={[{ label: "Practice Arena", href: "/practice", current: true }]}
+          breadcrumbs={[{ label: "Qubira Learn", href: "/practice", current: true }]}
         />
 
         <PracticeNav />

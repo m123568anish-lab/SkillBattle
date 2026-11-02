@@ -101,7 +101,7 @@ export default function ServerStatus() {
           </div>
           <div>
             <h3 className="font-bold text-white text-base">Server Status</h3>
-            <p className="text-xs text-slate-400">SkillBattle API — Render</p>
+            <p className="text-xs text-slate-400">Qubira Cloud API — Render</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

@@ -84,7 +84,7 @@ export default function MyProgressPage() {
           subtitle="Detailed analytics, topic mastery indices, and data-driven revision recommendations."
           theme="practice"
           breadcrumbs={[
-            { label: "Practice Arena", href: "/practice" },
+            { label: "Qubira Learn", href: "/practice" },
             { label: "My Progress", href: "/practice/progress", current: true },
           ]}
         />

@@ -122,7 +122,7 @@ async def chat(
     
     # Construct AI Provider Prompt with full student context
     prompt = f"""
-You are SkillBattle's AI Placement Coach. You provide concise, actionable, highly structured advice to students preparing for software engineering placements.
+You are Qubira's AI Placement Mentor. You provide concise, actionable, highly structured advice to students preparing for software engineering placements.
 
 Student Context:
 - Name: {ctx['name']}

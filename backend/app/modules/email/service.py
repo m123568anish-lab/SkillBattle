@@ -70,7 +70,7 @@ class EmailService:
 
             recipient,
 
-            "Welcome to SkillBattle",
+            "Welcome to Qubira",
 
             email_templates.welcome(
 

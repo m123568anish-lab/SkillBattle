@@ -138,7 +138,7 @@ export default function CampaignPage() {
                 Solo Campaign Mode
               </span>
               <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-                SkillBattle Arena Campaign
+                Qubira Arena Campaign
               </h1>
               <p className="text-sm text-slate-300 max-w-md">
                 Clear subject nodes to acquire stars, progress up the ranks, and prepare for interviews!

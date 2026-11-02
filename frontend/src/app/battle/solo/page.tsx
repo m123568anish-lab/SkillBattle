@@ -54,12 +54,12 @@ function SoloBattleSelectionContent() {
     <DashboardLayout>
       <div className="space-y-8 pb-12">
         <PageHeader
-          title="Solo Battle Arena"
-          subtitle="Challenge yourself in high-intensity timed MCQ sprints or deep algorithmic coding battles. Beat your personal best and gain Battle Rating."
+          title="Solo Challenges"
+          subtitle="Challenge yourself in high-intensity timed MCQ sprints or deep algorithmic coding battles. Beat your personal best and gain Rating."
           theme="battle"
           breadcrumbs={[
-            { label: "Battle Arena", href: "/battle" },
-            { label: "Solo Battle", href: "/battle/solo", current: true },
+            { label: "Qubira Arena", href: "/battle" },
+            { label: "Solo Challenges", href: "/battle/solo", current: true },
           ]}
         />
 

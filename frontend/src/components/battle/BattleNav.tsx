@@ -23,19 +23,19 @@ export function BattleNav() {
       isActive: pathname === "/battle",
     },
     {
-      label: "Solo Battle",
+      label: "Solo Challenges",
       href: "/battle/solo",
       icon: Target,
       isActive: pathname.startsWith("/battle/solo"),
     },
     {
-      label: "Multiplayer",
+      label: "Arena Duels",
       href: "/battle/lobby",
       icon: Users,
       isActive: pathname.startsWith("/battle/lobby") || pathname.startsWith("/battle/waiting"),
     },
     {
-      label: "Daily Championship",
+      label: "Daily Clash",
       href: "/battle/championship",
       icon: Trophy,
       isActive: pathname.startsWith("/battle/championship"),
@@ -51,7 +51,7 @@ export function BattleNav() {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-rose-500/20 pb-3 gap-3">
       <nav
-        aria-label="Battle Arena Tabs"
+        aria-label="Qubira Arena Tabs"
         className="flex items-center space-x-1 sm:space-x-1.5 overflow-x-auto scrollbar-none py-1 min-w-max"
       >
         {tabs.map((tab) => {
@@ -83,7 +83,7 @@ export function BattleNav() {
       <div className="hidden lg:flex items-center gap-1.5 shrink-0 pl-2">
         <Link
           href="/leaderboard"
-          title="Global Championship Leaderboard"
+          title="Qubira Rankings"
           className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
             pathname.startsWith("/leaderboard")
               ? "bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30"
@@ -91,7 +91,7 @@ export function BattleNav() {
           }`}
         >
           <BarChart3 className="h-3.5 w-3.5 text-amber-400" />
-          <span>Leaderboard</span>
+          <span>Qubira Rankings</span>
         </Link>
       </div>
     </div>

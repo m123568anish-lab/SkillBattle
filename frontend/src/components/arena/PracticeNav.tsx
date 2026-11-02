@@ -35,19 +35,19 @@ export function PracticeNav({ className = "" }: PracticeNavProps) {
       isActive: pathname.startsWith("/practice/topics"),
     },
     {
-      label: "MCQ Practice",
+      label: "Qubira Quiz",
       href: "/practice/mcq",
       icon: Brain,
       isActive: pathname.startsWith("/practice/mcq") || pathname.startsWith("/practice/session"),
     },
     {
-      label: "Coding Practice",
+      label: "Qubira Code",
       href: "/practice/coding",
       icon: Code2,
       isActive: pathname.startsWith("/practice/coding"),
     },
     {
-      label: "Tasks & Challenges",
+      label: "Qubira Missions",
       href: "/practice/tasks",
       icon: Flame,
       isActive: pathname.startsWith("/practice/tasks"),
@@ -62,7 +62,7 @@ export function PracticeNav({ className = "" }: PracticeNavProps) {
 
   return (
     <nav
-      aria-label="Practice Hub Navigation"
+      aria-label="Qubira Learn Navigation"
       className={`relative flex items-center justify-between gap-2 overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#0E1524]/90 p-1.5 backdrop-blur-md scrollbar-none ${className}`}
     >
       <div className="flex items-center gap-1 min-w-max">
@@ -110,7 +110,7 @@ export function PracticeNav({ className = "" }: PracticeNavProps) {
         </Link>
         <Link
           href="/practice/recommendations"
-          title="AI Recommendations"
+          title="Qubira Learning Guide"
           className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
             pathname.startsWith("/practice/recommendations")
               ? "bg-white/10 text-white font-bold"
@@ -124,3 +124,5 @@ export function PracticeNav({ className = "" }: PracticeNavProps) {
     </nav>
   );
 }
+
+export default PracticeNav;

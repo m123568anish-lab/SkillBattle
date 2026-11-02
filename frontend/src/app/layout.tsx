@@ -22,26 +22,26 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://skillbattle.app"),
+  metadataBase: new URL("https://qubira.app"),
   title: {
-    default: "SkillBattle | AI Coding Battles",
-    template: "%s | SkillBattle",
+    default: "Qubira — Learn. Build. Compete.",
+    template: "%s | Qubira",
   },
-  description: "Practice real coding problems, compete in supported battles, develop evidence-backed skills, and connect learning to assessment and hiring workflows.",
-  applicationName: "SkillBattle",
-  keywords: ["coding practice", "coding battles", "interview preparation", "DSA", "AI coach"],
+  description: "Master technical skills, prepare for interviews, solve coding challenges, and compete with developers through Qubira, an intelligent skill development platform.",
+  applicationName: "Qubira",
+  keywords: ["Qubira", "coding practice", "coding battles", "interview preparation", "DSA", "AI mentorship", "system design"],
   icons: { icon: "/icon.svg" },
   openGraph: {
-    title: "SkillBattle | AI Coding Battles",
-    description: "Practice coding, compete in live battles, and build interview-ready skills.",
+    title: "Qubira — Learn. Build. Compete.",
+    description: "Master technical skills, prepare for interviews, solve coding challenges, and compete with developers through Qubira, an intelligent skill development platform.",
     type: "website",
-    siteName: "SkillBattle",
-    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "SkillBattle coding practice, battles, and hiring platform" }],
+    siteName: "Qubira",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Qubira — Learn. Build. Compete." }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "SkillBattle | AI Coding Battles",
-    description: "Practice coding, compete in live battles, and build interview-ready skills.",
+    title: "Qubira — Learn. Build. Compete.",
+    description: "Master technical skills, prepare for interviews, solve coding challenges, and compete with developers through Qubira, an intelligent skill development platform.",
     images: ["/opengraph-image"],
   },
 };

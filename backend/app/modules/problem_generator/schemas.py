@@ -142,6 +142,6 @@ class AIProblemResponse(BaseModel):
 
     problem: GeneratedProblem
 
-    generated_by: str = "SkillBattle AI"
+    generated_by: str = "Qubira AI"
 
     version: str = "1.0"

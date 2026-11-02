@@ -46,8 +46,8 @@ function ChampionshipInner() {
       <main className="mx-auto max-w-6xl space-y-7 p-4 sm:p-7">
         <Breadcrumbs
           items={[
-            { label: "Battle Arena", href: "/battle" },
-            { label: "Daily Championship", href: "/battle/championship", active: true },
+            { label: "Qubira Arena", href: "/battle" },
+            { label: "Daily Clash", href: "/battle/championship", active: true },
           ]}
         />
 

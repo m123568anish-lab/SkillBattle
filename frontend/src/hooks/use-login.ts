@@ -43,7 +43,7 @@ export function useLogin() {
             if (msg.toLowerCase().includes("timeout") || code === "ECONNABORTED") {
                 userFacingMsg = "Server is waking up (Render cold-start). Retrying automatically, please wait a few seconds...";
             } else if (msg.includes("Network Error") || msg.includes("ECONNREFUSED") || code === "ERR_NETWORK") {
-                userFacingMsg = "Network Error: Unable to reach SkillBattle backend server. Please check your connection.";
+                userFacingMsg = "Network Error: Unable to reach Qubira backend server. Please check your connection.";
             } else if (typeof msg === "string" && msg.trim()) {
                 userFacingMsg = msg;
             }

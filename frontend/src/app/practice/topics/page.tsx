@@ -229,7 +229,7 @@ export default function ExploreTopicsPage() {
           subtitle="Discover curated curriculum modules across algorithms, data structures, and production architecture."
           theme="practice"
           breadcrumbs={[
-            { label: "Practice Arena", href: "/practice" },
+            { label: "Qubira Learn", href: "/practice" },
             { label: "Explore Topics", href: "/practice/topics", current: true },
           ]}
         />

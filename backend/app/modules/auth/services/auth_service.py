@@ -596,7 +596,7 @@ class AuthService:
         return {
             "secret": secret,
             "recovery_codes": recovery_codes,
-            "otpauth_url": f"otpauth://totp/SkillBattle:{email}?secret={secret}&issuer=SkillBattle",
+            "otpauth_url": f"otpauth://totp/Qubira:{email}?secret={secret}&issuer=Qubira",
         }
 
     async def verify_two_factor(self, db: AsyncSession, email: str, code: str) -> dict:

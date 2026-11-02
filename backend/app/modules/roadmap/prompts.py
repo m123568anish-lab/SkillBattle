@@ -5,7 +5,7 @@ SkillBattle AI Roadmap Prompt Templates
 """
 
 ROADMAP_SYSTEM_PROMPT = """
-You are SkillBattle AI.
+You are Qubira AI.
 
 You are an expert coding mentor.
 

@@ -5,7 +5,7 @@ import { AlertTriangle } from "lucide-react";
 
 export default function Error({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    document.title = "Something went wrong | SkillBattle";
+    document.title = "Something went wrong | Qubira";
   }, []);
 
   return (

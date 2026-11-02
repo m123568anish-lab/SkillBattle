@@ -12,6 +12,7 @@ import ProfileMenu from "./ProfileMenu";
 import { useAuthStore } from "@/store/authStore";
 import { getDashboardPath } from "@/lib/auth-routing";
 import { ThemeToggle } from "@/components/common/ExperienceEnhancements";
+import QubiraLogo from "@/components/brand/QubiraLogo";
 
 type SearchResult = {
   type: string;
@@ -113,13 +114,11 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
         )}
         <Link
           href={logoHref}
-          aria-label="Go to your SkillBattle dashboard"
+          aria-label="Go to your Qubira dashboard"
           title="Dashboard"
           className="inline-flex min-w-0 shrink-0 items-center px-1 py-1 text-left transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
         >
-          <span className="truncate text-sm font-black tracking-tight text-white sm:text-xl">
-            Skill<span className="text-cyan-300">Battle</span>
-          </span>
+          <QubiraLogo variant="full" size="sm" />
         </Link>
 
         <div className={`relative min-w-0 flex-1 lg:max-w-md ${mobileSearchOpen ? "max-sm:absolute max-sm:left-0 max-sm:right-0 max-sm:top-[calc(100%+0.5rem)] max-sm:z-50 max-sm:rounded-xl max-sm:border max-sm:border-white/10 max-sm:bg-[#090e19] max-sm:p-2 max-sm:shadow-2xl" : "max-sm:hidden"} sm:block`}>
@@ -157,7 +156,7 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
                   setMobileSearchOpen(false);
                 }
               }}
-              aria-label="Search SkillBattle"
+              aria-label="Search Qubira"
               role="combobox"
               aria-autocomplete="list"
               aria-expanded={searchOpen}
@@ -234,7 +233,7 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
       <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-4">
         <button
           type="button"
-          aria-label="Search SkillBattle"
+          aria-label="Search Qubira"
           aria-expanded={mobileSearchOpen}
           onClick={() => {
             const willOpen = !mobileSearchOpen;

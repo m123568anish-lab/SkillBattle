@@ -181,12 +181,12 @@ export default function BattleLobbyPage() {
     <DashboardLayout>
       <div className="space-y-8 pb-12">
         <PageHeader
-          title="Multiplayer Battle Lobby"
-          subtitle="Compete in real-time synchronized coding duels and knowledge sprints against active students globally."
+          title="Arena Duels"
+          subtitle="Compete in real-time synchronized coding duels and knowledge sprints against active engineers globally."
           theme="battle"
           breadcrumbs={[
-            { label: "Battle Arena", href: "/battle" },
-            { label: "Lobby", href: "/battle/lobby", current: true },
+            { label: "Qubira Arena", href: "/battle" },
+            { label: "Arena Duels", href: "/battle/lobby", current: true },
           ]}
         />
 
