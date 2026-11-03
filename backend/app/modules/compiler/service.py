@@ -22,6 +22,7 @@ from app.models.compiler import (
     CodeSubmission,
 )
 from app.models.user import User
+from app.models.user_skill_stat import UserSkillStat
 from app.models.xp import XPLedger
 from app.modules.battle.websocket import battle_ws
 
@@ -312,13 +313,31 @@ class CompilerService:
 
         )
 
-        # Persist the evaluator's authoritative result before reward work.
-        # This keeps a verified wrong answer/compile error available even if
-        # the separate XP or notification integrations are temporarily down.
-        await db.commit()
+        skill_subject = problem.category or "Problem Solving"
+        skill_stat = (
+            await db.execute(
+                select(UserSkillStat)
+                .where(
+                    UserSkillStat.user_id == current_user.id,
+                    UserSkillStat.subject == skill_subject,
+                )
+                .with_for_update()
+            )
+        ).scalar_one_or_none()
+        if skill_stat is None:
+            skill_stat = UserSkillStat(
+                user_id=current_user.id,
+                subject=skill_subject,
+                correct_attempts=0,
+                total_attempts=0,
+            )
+            db.add(skill_stat)
+        skill_stat.total_attempts += 1
+        if submission.verdict == "Accepted":
+            skill_stat.correct_attempts += 1
 
         # ------------------------------------------------------
-        # Award XP once, inside the accepted submission flow
+        # Persist the evaluated submission and all qualifying rewards together
         # ------------------------------------------------------
 
         xp_earned = 0
@@ -338,47 +357,32 @@ class CompilerService:
             if judge_result.runtime_ms <= 200:
                 xp_earned += 50
 
-            try:
-                await xp_service.add_xp(
-                    db,
-                    current_user,
-                    xp_earned,
-                    source="problem_submission",
-                    reference_id=str(submission.id),
-                    description=f"Problem {problem.id} submission {submission.id}",
-                )
-                xp_status = "granted"
-            except Exception:
-                # The evaluated submission remains committed and can be
-                # finalized/retried by a future reward worker.
-                logger.exception("XP finalization failed for submission=%s", submission.id)
-                await db.rollback()
-                await db.refresh(submission)
-                xp_earned = 0
-                xp_status = "pending"
+            await xp_service.add_xp(
+                db,
+                current_user,
+                xp_earned,
+                commit=False,
+                source="problem_submission",
+                reference_id=str(submission.id),
+                description=f"Problem {problem.id} submission {submission.id}",
+            )
+            xp_status = "granted"
 
         if judge_result.verdict == "Accepted":
-            try:
-                from app.modules.streak.service import streak_service
-                await streak_service.record_activity(
-                    db,
-                    current_user.id,
-                    activity_type="problem_submission",
-                    reference_id=str(submission.id),
-                    xp_earned=xp_earned,
-                    commit=False,
-                )
-            except Exception:
-                logger.exception("Streak activity update failed for submission=%s", submission.id)
+            from app.modules.streak.service import streak_service
+            await streak_service.record_activity(
+                db,
+                current_user.id,
+                activity_type="problem_submission",
+                reference_id=str(submission.id),
+                xp_earned=xp_earned,
+                commit=False,
+            )
 
-            # Daily completion is a session state, not a second reward path.
-            try:
-                from app.modules.practice.service import mark_daily_complete
-                await mark_daily_complete(db, current_user.id, problem.id, submission.id)
-            except Exception:
-                # A completed judgement must remain successful if optional
-                # daily-session tracking is temporarily unavailable.
-                logger.exception("Daily practice completion update failed for submission=%s", submission.id)
+            from app.modules.practice.service import mark_daily_complete
+            await mark_daily_complete(db, current_user.id, problem.id, submission.id)
+
+        await db.commit()
 
         try:
             await self.notify_battle(
@@ -455,19 +459,27 @@ class CompilerService:
         if submission.execution_time <= 200:
             amount += 50
 
-        try:
-            await xp_service.add_xp(
-                db,
-                current_user,
-                amount,
-                source="problem_submission",
-                reference_id=str(submission.id),
-                description=f"Problem {problem.id} submission {submission.id}",
-            )
-        except Exception:
-            await db.rollback()
-            logger.exception("XP retry failed for submission=%s", submission.id)
-            return {"submission_id": submission.id, "xp_earned": 0, "xp_status": "pending"}
+        await xp_service.add_xp(
+            db,
+            current_user,
+            amount,
+            commit=False,
+            source="problem_submission",
+            reference_id=str(submission.id),
+            description=f"Problem {problem.id} submission {submission.id}",
+        )
+        from app.modules.streak.service import streak_service
+        await streak_service.record_activity(
+            db,
+            current_user.id,
+            activity_type="problem_submission",
+            reference_id=str(submission.id),
+            xp_earned=amount,
+            commit=False,
+        )
+        from app.modules.practice.service import mark_daily_complete
+        await mark_daily_complete(db, current_user.id, problem.id, submission.id)
+        await db.commit()
 
         return {"submission_id": submission.id, "xp_earned": amount, "xp_status": "granted"}
 

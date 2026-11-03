@@ -14,8 +14,7 @@ interface DashboardHeroProps {
 export default function DashboardHero({ user, stats }: DashboardHeroProps) {
   const name = user.full_name?.trim().split(/\s+/)[0] || user.username || "there";
   const level = Math.max(1, stats.level);
-  const nextLevelXP = Math.max(2500, (level + 1) * 2500);
-  const progress = Math.min(100, Math.round((stats.xp / nextLevelXP) * 100));
+  const progress = stats.level_progress_percent;
   const initials = (user.full_name || user.username || "SB")
     .split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
 
@@ -46,7 +45,9 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
         <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/[0.07]" role="progressbar" aria-label="Progress to next level" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
           <div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-violet-400 transition-[width]" style={{ width: `${progress}%` }} />
         </div>
-        <p className="text-xs text-slate-500 sm:w-36 sm:shrink-0 sm:text-right">{stats.xp.toLocaleString()} XP earned</p>
+        <p className="text-xs text-slate-500 sm:w-36 sm:shrink-0 sm:text-right">
+          {stats.xp_to_next_level.toLocaleString()} XP to level {level + 1}
+        </p>
       </div>
     </section>
   );

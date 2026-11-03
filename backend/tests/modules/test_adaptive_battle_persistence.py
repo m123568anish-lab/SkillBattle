@@ -92,9 +92,11 @@ async def test_daily_battle_cannot_finish_until_every_question_is_submitted(monk
     )
     db = AsyncMock()
     db.execute.side_effect = [
+        SimpleNamespace(scalar_one_or_none=lambda: battle),
         SimpleNamespace(scalar_one_or_none=lambda: None),
         SimpleNamespace(scalars=lambda: SimpleNamespace(all=lambda: [])),
     ]
+    db.scalar.return_value = None
 
     with pytest.raises(ValueError, match="Complete every question"):
         await battle_service.finish_battle(db, battle.id)

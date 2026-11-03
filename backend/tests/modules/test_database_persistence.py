@@ -11,9 +11,14 @@ class FakeSession:
         self.closed = False
         self.fail_on_commit = False
         self.is_active = True
+        self.transaction_active = True
+        self.sync_session = type("SyncSession", (), {"info": {"request_has_database_writes": True}})()
         self.dirty = [1]
         self.new = []
         self.deleted = []
+
+    def in_transaction(self):
+        return self.transaction_active
 
     async def commit(self):
         if self.fail_on_commit:

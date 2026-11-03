@@ -98,6 +98,10 @@ class StreakService:
         target_date = activity_date or datetime.utcnow().date()
         now = datetime.utcnow()
 
+        await db.execute(
+            select(User.id).where(User.id == user_id_str).with_for_update()
+        )
+
         # 1. Idempotently record daily activity
         stmt_act = select(UserDailyActivity).where(
             UserDailyActivity.user_id == user_id_str,

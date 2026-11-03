@@ -1,5 +1,6 @@
 import pytest
 from uuid import uuid4
+from sqlalchemy import select
 
 @pytest.mark.asyncio
 async def test_dashboard_endpoint_success_and_latency(client):
@@ -90,3 +91,49 @@ async def test_dashboard_with_active_roadmap(client):
     data = resp.json()
     assert data["command_center"]["roadmap"]["title"] == "Fullstack Mastery"
     print(f"\n[BENCHMARK] /dashboard with roadmap: {elapsed*1000:.2f}ms")
+
+
+@pytest.mark.asyncio
+async def test_dashboard_reconciles_xp_from_persisted_ledger(client):
+    from app.database.session import AsyncSessionLocal
+    from app.models.xp import XP, XPLedger
+
+    unique_id = uuid4().hex[:8]
+    email = f"dash_xp_{unique_id}@example.com"
+    password = "StrongPass#123"
+
+    reg = await client.post("/auth/register", json={
+        "username": f"dash_xp_{unique_id}",
+        "email": email,
+        "full_name": "Dashboard XP Tester",
+        "password": password,
+    })
+    assert reg.status_code == 201
+    user_id = reg.json()["id"]
+
+    login = await client.post("/auth/login", json={"email": email, "password": password})
+    assert login.status_code == 200
+    token = login.json()["tokens"]["access_token"]
+    headers = {"Authorization": " ".join(("Bearer", token))}
+
+    async with AsyncSessionLocal() as db:
+        xp = (await db.execute(select(XP).where(XP.user_id == user_id))).scalar_one()
+        xp.total_xp = 0
+        db.add(XPLedger(
+            user_id=user_id,
+            amount=175,
+            source="practice",
+            reference_id=f"practice-{unique_id}",
+            description="Verified practice result",
+        ))
+        await db.commit()
+
+    assert headers.get("Authorization", "").startswith("Bearer ")
+    response = await client.get("/dashboard", headers=headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["stats"]["xp"] == 175
+
+    async with AsyncSessionLocal() as db:
+        xp = (await db.execute(select(XP).where(XP.user_id == user_id))).scalar_one()
+        assert xp.total_xp == 175

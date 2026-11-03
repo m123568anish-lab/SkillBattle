@@ -747,7 +747,13 @@ class BattleService:
     # ==========================================================
 
     async def finish_battle(self, db: AsyncSession, battle_id: str):
-        battle = await battle_repository.get_battle(db, battle_id)
+        battle = (
+            await db.execute(
+                select(BattleRoom)
+                .where(BattleRoom.id == battle_id)
+                .with_for_update()
+            )
+        ).scalar_one_or_none()
         if battle is None:
             return None
 
@@ -777,14 +783,9 @@ class BattleService:
 
         # Check if daily adaptive battle or quest battle has unanswered questions
         from app.models.quest_map import QuestProgress
-        quest_progress = None
-        if hasattr(db, "scalar"):
-            try:
-                quest_progress = await db.scalar(
-                    select(QuestProgress).where(QuestProgress.battle_id == battle.id)
-                )
-            except Exception:
-                pass
+        quest_progress = await db.scalar(
+            select(QuestProgress).where(QuestProgress.battle_id == battle.id)
+        )
 
         if getattr(battle, "adaptive_owner_id", None) is not None or (quest_progress is not None and getattr(quest_progress, "status", None) == "IN_PROGRESS"):
             expected_question_ids = {
@@ -888,18 +889,15 @@ class BattleService:
                     )
                     db.add(stats)
 
-                try:
-                    from app.modules.streak.service import streak_service
-                    await streak_service.record_activity(
-                        db,
-                        user.id,
-                        activity_type="battle",
-                        reference_id=str(battle_id),
-                        xp_earned=xp_earned,
-                        commit=False,
-                    )
-                except Exception:
-                    pass
+                from app.modules.streak.service import streak_service
+                await streak_service.record_activity(
+                    db,
+                    user.id,
+                    activity_type="battle",
+                    reference_id=str(battle_id),
+                    xp_earned=xp_earned,
+                    commit=False,
+                )
 
         company_application_result = await db.execute(
             select(CandidateApplication).where(CandidateApplication.assessment_battle_id == battle_id)
@@ -967,4 +965,3 @@ class BattleService:
 
 
 battle_service = BattleService()
-

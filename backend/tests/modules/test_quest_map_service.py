@@ -93,6 +93,7 @@ async def test_quest_battle_cannot_complete_before_every_question(monkeypatch):
     )
     db = AsyncMock()
     db.execute.side_effect = [
+        SimpleNamespace(scalar_one_or_none=lambda: battle),
         SimpleNamespace(scalar_one_or_none=lambda: None),
         SimpleNamespace(scalars=lambda: SimpleNamespace(all=lambda: [])),
     ]

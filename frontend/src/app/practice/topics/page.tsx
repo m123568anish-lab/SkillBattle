@@ -29,8 +29,6 @@ interface TopicItem {
   name: string;
   category: string;
   description: string;
-  totalQuestions: number;
-  completedQuestions: number;
   difficulty: "Easy" | "Medium" | "Hard";
   estimatedHours: number;
   tags: string[];
@@ -44,8 +42,6 @@ const ALL_TOPICS: TopicItem[] = [
     name: "Arrays & Hashing",
     category: "Data Structures",
     description: "Hash maps, prefix sums, frequency counting, and amortized constant-time lookups.",
-    totalQuestions: 24,
-    completedQuestions: 18,
     difficulty: "Easy",
     estimatedHours: 4,
     tags: ["Arrays", "Hash Table", "Prefix Sum"],
@@ -57,8 +53,6 @@ const ALL_TOPICS: TopicItem[] = [
     name: "Two Pointers Technique",
     category: "Algorithms",
     description: "Converging pointers, fast & slow pointers, palindrome verification, and partition schemes.",
-    totalQuestions: 18,
-    completedQuestions: 12,
     difficulty: "Easy",
     estimatedHours: 3,
     tags: ["Two Pointers", "Sorting", "Strings"],
@@ -70,8 +64,6 @@ const ALL_TOPICS: TopicItem[] = [
     name: "Sliding Window",
     category: "Algorithms",
     description: "Fixed and dynamic window patterns, substring search, and subarray sum optimizations.",
-    totalQuestions: 16,
-    completedQuestions: 7,
     difficulty: "Medium",
     estimatedHours: 4,
     tags: ["Sliding Window", "Subarrays", "Optimization"],
@@ -83,8 +75,6 @@ const ALL_TOPICS: TopicItem[] = [
     name: "Linked Lists & Pointers",
     category: "Data Structures",
     description: "Singly, doubly, and circular linked lists, fast-slow cycle detection, and list reversals.",
-    totalQuestions: 20,
-    completedQuestions: 15,
     difficulty: "Medium",
     estimatedHours: 4,
     tags: ["Linked List", "Recursion", "Pointers"],
@@ -96,8 +86,6 @@ const ALL_TOPICS: TopicItem[] = [
     name: "Binary Search",
     category: "Algorithms",
     description: "Logarithmic search on sorted collections, predicate bounds, and rotated arrays.",
-    totalQuestions: 22,
-    completedQuestions: 14,
     difficulty: "Medium",
     estimatedHours: 5,
     tags: ["Binary Search", "Divide & Conquer"],
@@ -109,8 +97,6 @@ const ALL_TOPICS: TopicItem[] = [
     name: "Binary Trees & BST",
     category: "Data Structures",
     description: "DFS, BFS, level-order traversal, LCA, BST validation, and diameter calculations.",
-    totalQuestions: 32,
-    completedQuestions: 8,
     difficulty: "Medium",
     estimatedHours: 8,
     tags: ["Trees", "DFS", "BFS", "Recursion"],
@@ -122,8 +108,6 @@ const ALL_TOPICS: TopicItem[] = [
     name: "Graph Traversal & Shortest Path",
     category: "Algorithms",
     description: "Dijkstra, topological sort, union-find (disjoint sets), and connected components.",
-    totalQuestions: 28,
-    completedQuestions: 6,
     difficulty: "Hard",
     estimatedHours: 10,
     tags: ["Graphs", "Dijkstra", "Topological Sort"],
@@ -135,8 +119,6 @@ const ALL_TOPICS: TopicItem[] = [
     name: "Dynamic Programming (1D & 2D)",
     category: "Algorithms",
     description: "Memoization, bottom-up tabulation, knapsack, LCS, LIS, and state-machine transitions.",
-    totalQuestions: 36,
-    completedQuestions: 5,
     difficulty: "Hard",
     estimatedHours: 12,
     tags: ["DP", "Memoization", "Tabulation"],
@@ -148,8 +130,6 @@ const ALL_TOPICS: TopicItem[] = [
     name: "Distributed Caching & Redis",
     category: "System Design",
     description: "Cache eviction policies (LRU/LFU), write-through/write-back, and thundering herd mitigation.",
-    totalQuestions: 14,
-    completedQuestions: 4,
     difficulty: "Medium",
     estimatedHours: 4,
     tags: ["Caching", "Redis", "Distributed Systems"],
@@ -161,8 +141,6 @@ const ALL_TOPICS: TopicItem[] = [
     name: "SQL, B-Trees & ACID",
     category: "Databases",
     description: "Index scan optimization, isolation levels, transactions, locks, and query planning.",
-    totalQuestions: 16,
-    completedQuestions: 9,
     difficulty: "Medium",
     estimatedHours: 4,
     tags: ["PostgreSQL", "Indexes", "ACID", "Transactions"],
@@ -174,8 +152,6 @@ const ALL_TOPICS: TopicItem[] = [
     name: "React Internals & Concurrency",
     category: "Full-Stack",
     description: "Virtual DOM reconciliation, fibers, hooks lifecycle, memoization, and server components.",
-    totalQuestions: 15,
-    completedQuestions: 11,
     difficulty: "Medium",
     estimatedHours: 3,
     tags: ["React", "JavaScript", "Fiber"],
@@ -188,7 +164,6 @@ export default function ExploreTopicsPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedDifficulty, setSelectedDifficulty] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [sortBy, setSortBy] = useState<"progress" | "questions" | "name">("progress");
 
   const categories = ["All", "Algorithms", "Data Structures", "System Design", "Databases", "Full-Stack"];
   const difficulties = ["All", "Easy", "Medium", "Hard"];
@@ -204,16 +179,8 @@ export default function ExploreTopicsPage() {
       const matchesDifficulty = selectedDifficulty === "All" || topic.difficulty === selectedDifficulty;
 
       return matchesSearch && matchesCategory && matchesDifficulty;
-    }).sort((a, b) => {
-      if (sortBy === "progress") {
-        const progA = a.completedQuestions / a.totalQuestions;
-        const progB = b.completedQuestions / b.totalQuestions;
-        return progB - progA;
-      }
-      if (sortBy === "questions") return b.totalQuestions - a.totalQuestions;
-      return a.name.localeCompare(b.name);
-    });
-  }, [searchQuery, selectedCategory, selectedDifficulty, sortBy]);
+    }).sort((a, b) => a.name.localeCompare(b.name));
+  }, [searchQuery, selectedCategory, selectedDifficulty]);
 
   const resetFilters = () => {
     setSearchQuery("");
@@ -251,18 +218,8 @@ export default function ExploreTopicsPage() {
               />
             </div>
 
-            {/* View Mode & Sort Controls */}
+            {/* View Mode */}
             <div className="flex items-center gap-3 self-end md:self-auto">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-xs font-semibold text-slate-300 focus:border-indigo-500 focus:outline-none"
-              >
-                <option value="progress">Sort: Completion Rate</option>
-                <option value="questions">Sort: Question Count</option>
-                <option value="name">Sort: Alphabetical</option>
-              </select>
-
               <div className="flex items-center rounded-xl border border-white/10 bg-black/40 p-1">
                 <button
                   onClick={() => setViewMode("grid")}
@@ -355,8 +312,6 @@ export default function ExploreTopicsPage() {
         ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredTopics.map((topic) => {
-              const progressPct = Math.round((topic.completedQuestions / topic.totalQuestions) * 100);
-
               return (
                 <div
                   key={topic.id}
@@ -383,23 +338,7 @@ export default function ExploreTopicsPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-3 pt-4 border-t border-white/[0.06]">
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] text-slate-400">
-                        <span>
-                          {topic.completedQuestions} of {topic.totalQuestions} questions
-                        </span>
-                        <span className="font-mono font-semibold text-white">{progressPct}%</span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-indigo-500 transition-all duration-300"
-                          style={{ width: `${progressPct}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center justify-between pt-4 border-t border-white/[0.06]">
                       <div className="flex items-center gap-1.5 text-xs text-slate-400">
                         <Clock className="h-3.5 w-3.5" />
                         <span>~{topic.estimatedHours} hrs</span>
@@ -409,11 +348,10 @@ export default function ExploreTopicsPage() {
                         href={`/practice/topics/${topic.slug}`}
                         className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-500 transition-colors shadow-md shadow-indigo-600/20"
                       >
-                        <span>{progressPct > 0 ? "Continue" : "Start Topic"}</span>
+                        <span>Explore Topic</span>
                         <ArrowRight className="h-3.5 w-3.5" />
                       </Link>
                     </div>
-                  </div>
                 </div>
               );
             })}
@@ -421,8 +359,6 @@ export default function ExploreTopicsPage() {
         ) : (
           <div className="space-y-3">
             {filteredTopics.map((topic) => {
-              const progressPct = Math.round((topic.completedQuestions / topic.totalQuestions) * 100);
-
               return (
                 <div
                   key={topic.id}
@@ -440,9 +376,6 @@ export default function ExploreTopicsPage() {
 
                   <div className="flex items-center gap-6 justify-between sm:justify-end">
                     <div className="text-right min-w-[120px]">
-                      <div className="text-xs font-mono font-bold text-white">
-                        {topic.completedQuestions} / {topic.totalQuestions} Solved
-                      </div>
                       <div className="text-[11px] text-slate-400">~{topic.estimatedHours} hours total</div>
                     </div>
 
@@ -450,7 +383,7 @@ export default function ExploreTopicsPage() {
                       href={`/practice/topics/${topic.slug}`}
                       className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-500 transition-colors shadow-md shadow-indigo-600/20 shrink-0"
                     >
-                      <span>{progressPct > 0 ? "Continue" : "Start"}</span>
+                      <span>Explore</span>
                       <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                   </div>

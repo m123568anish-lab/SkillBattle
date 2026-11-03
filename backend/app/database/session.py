@@ -21,10 +21,31 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy import event
+from sqlalchemy.orm import ORMExecuteState, Session as SyncSession
 
 from app.core.config import normalize_async_database_url, settings
 
 logger = logging.getLogger(__name__)
+
+_REQUEST_HAS_WRITES = "request_has_database_writes"
+
+
+@event.listens_for(SyncSession, "after_flush")
+def _mark_flushed_writes(session: SyncSession, _: object) -> None:
+    session.info[_REQUEST_HAS_WRITES] = True
+
+
+@event.listens_for(SyncSession, "do_orm_execute")
+def _mark_statement_writes(state: ORMExecuteState) -> None:
+    if state.is_insert or state.is_update or state.is_delete:
+        state.session.info[_REQUEST_HAS_WRITES] = True
+
+
+@event.listens_for(SyncSession, "after_commit")
+@event.listens_for(SyncSession, "after_rollback")
+def _clear_request_write_marker(session: SyncSession) -> None:
+    session.info.pop(_REQUEST_HAS_WRITES, None)
 
 # ---------------------------------------------------------
 # Database URL
@@ -130,21 +151,25 @@ async def async_session_ctx() -> AsyncIterator[AsyncSession]:
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
-        yield_succeeded = False
         try:
             yield session
-            yield_succeeded = True
-            if session.is_active and (session.dirty or session.new or session.deleted):
+            if (
+                session.is_active
+                and session.in_transaction()
+                and session.sync_session.info.get(_REQUEST_HAS_WRITES)
+            ):
                 await session.commit()
         except Exception:
             try:
                 await session.rollback()
-            except Exception:
-                pass
-            if not yield_succeeded:
-                logger.exception("Database transaction rolled back due to error in request handler")
-                raise
-            else:
-                logger.warning("Database commit failed after successful response handler; rolled back cleanly")
+            except Exception as rollback_error:
+                logger.error(
+                    "Database rollback failed (%s)",
+                    type(rollback_error).__name__,
+                )
+            logger.exception(
+                "Database transaction failed during request handling or commit; rollback attempted."
+            )
+            raise
         finally:
             await session.close()

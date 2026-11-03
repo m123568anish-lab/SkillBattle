@@ -13,13 +13,13 @@ import {
   type TestCaseResult,
 } from "@/components/assessment";
 import { Breadcrumbs, PracticeNav } from "@/components/arena";
+import { useDashboardStore } from "@/store/dashboardStore";
 import {
   CheckCircle2,
   Play,
   Search,
   Sparkles,
   AlertCircle,
-  Award,
   ChevronLeft,
   ChevronRight,
   Flame,
@@ -300,8 +300,13 @@ function CodingPracticeInner() {
       }
 
       if (res.status === "passed") {
-        setBannerMessage(`Challenge Solved! You earned +${res.xp_awarded ?? selected.xp_reward} XP!`);
+        setBannerMessage(
+          res.xp_awarded
+            ? `Challenge accepted. ${res.xp_awarded} XP was awarded and saved.`
+            : "Challenge accepted. No additional XP was awarded for this problem."
+        );
         setCatalogRevision((r) => r + 1);
+        void useDashboardStore.getState().refresh();
         if (typeof window !== "undefined") {
           localStorage.removeItem(`skillbattle_draft_task_${selected.id}`);
         }
@@ -330,7 +335,6 @@ function CodingPracticeInner() {
           title={selected.title}
           category={selected.category}
           difficulty={selected.difficulty}
-          xpReward={selected.xp_reward}
           onBack={closeProblem}
         />
 
@@ -399,9 +403,6 @@ function CodingPracticeInner() {
                   {selected.category}
                 </span>
                 <span className="text-slate-600">•</span>
-                <span className="text-xs text-slate-400 flex items-center gap-1">
-                  <Award className="h-3.5 w-3.5 text-amber-400" /> +{selected.xp_reward} XP
-                </span>
               </div>
               <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
                 {selected.title}
@@ -702,7 +703,6 @@ function CodingPracticeInner() {
                       </span>
                       <div className="flex items-center gap-1.5">
                         <span className="text-[11px] font-semibold text-amber-400 flex items-center gap-0.5">
-                          <Award className="h-3 w-3" /> +{prob.xp_reward} XP
                         </span>
                         {isSolved && (
                           <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-400">

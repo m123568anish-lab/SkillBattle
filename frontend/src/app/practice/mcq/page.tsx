@@ -25,8 +25,7 @@ interface PresetMode {
   title: string;
   description: string;
   count: number;
-  timeLimit: string;
-  difficulty: "beginner" | "intermediate" | "advanced" | "all";
+  difficulty: "Easy" | "Medium" | "Hard" | "all";
   topic: string;
   badge: string;
   iconBg: string;
@@ -38,8 +37,7 @@ const PRESET_MODES: PresetMode[] = [
     title: "Quick 5-Question Drill",
     description: "Rapid conceptual check. Great for warmups before coding.",
     count: 5,
-    timeLimit: "5 mins",
-    difficulty: "intermediate",
+    difficulty: "Medium",
     topic: "all",
     badge: "Popular",
     iconBg: "from-cyan-500/20 to-blue-500/20 text-cyan-400",
@@ -49,8 +47,7 @@ const PRESET_MODES: PresetMode[] = [
     title: "Data Structures & Algorithms",
     description: "Trees, graphs, dynamic programming, and complexity analysis.",
     count: 10,
-    timeLimit: "10 mins",
-    difficulty: "intermediate",
+    difficulty: "Medium",
     topic: "Data Structures",
     badge: "Core",
     iconBg: "from-purple-500/20 to-pink-500/20 text-purple-400",
@@ -60,8 +57,7 @@ const PRESET_MODES: PresetMode[] = [
     title: "System Design & Architecture",
     description: "Caching, microservices, load balancing, and distributed databases.",
     count: 10,
-    timeLimit: "12 mins",
-    difficulty: "advanced",
+    difficulty: "Hard",
     topic: "System Design",
     badge: "Interview Heavy",
     iconBg: "from-amber-500/20 to-orange-500/20 text-amber-400",
@@ -71,10 +67,9 @@ const PRESET_MODES: PresetMode[] = [
     title: "Full 20-Question Comprehensive",
     description: "Full length assessment covering CS fundamentals and language theory.",
     count: 20,
-    timeLimit: "20 mins",
     difficulty: "all",
     topic: "all",
-    badge: "High XP (+100)",
+    badge: "Mixed difficulty",
     iconBg: "from-emerald-500/20 to-teal-500/20 text-emerald-400",
   },
 ];
@@ -154,9 +149,6 @@ function McqPracticeInner() {
                     <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-300">
                       {mode.badge}
                     </span>
-                    <span className="text-xs font-mono text-slate-400 flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5" /> {mode.timeLimit}
-                    </span>
                   </div>
 
                   <h3 className="text-lg font-bold text-white group-hover:text-purple-300 transition-colors">
@@ -167,7 +159,7 @@ function McqPracticeInner() {
 
                 <div className="mt-5 pt-4 border-t border-white/[0.06] flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-400">
-                    {mode.count} Questions
+                    Up to {mode.count} available questions
                   </span>
 
                   <Link

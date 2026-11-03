@@ -3,7 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import exists, func, select
+from pydantic import BaseModel, Field
+from sqlalchemy import case, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -11,12 +12,23 @@ from app.core.dependencies import get_current_user
 from app.database.session import get_db
 from app.models.compiler import CodeSubmission
 from app.models.problem import Problem
+from app.models.question import Question, UserSubmission
 from app.models.streak import Streak
+from app.models.user import User
+from app.models.user_skill_stat import UserSkillStat
 from app.modules.practice.service import get_or_start_daily, public_problem, submission_statuses
+from app.modules.streak.service import streak_service
+from app.modules.xp.service import xp_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/practice", tags=["Practice Hub"])
+
+
+class MCQAnswerRequest(BaseModel):
+    question_id: int = Field(gt=0)
+    selected_index: int = Field(ge=0)
+
 
 # ==========================================================
 # 1. PRACTICE CATALOG & TOPIC TAXONOMY
@@ -30,8 +42,6 @@ PRACTICE_CATEGORIES = [
         "icon": "Code2",
         "description": "Core syntax, memory models, pointers, and runtime internals.",
         "topics": ["Python", "C++", "Java", "JavaScript", "C"],
-        "total_questions": 140,
-        "completed_questions": 42,
     },
     {
         "id": "dsa",
@@ -48,8 +58,6 @@ PRACTICE_CATEGORIES = [
             "Dynamic Programming",
             "Binary Search",
         ],
-        "total_questions": 220,
-        "completed_questions": 78,
     },
     {
         "id": "computer-science",
@@ -58,8 +66,6 @@ PRACTICE_CATEGORIES = [
         "icon": "Cpu",
         "description": "DBMS, operating systems, computer networks, and system architecture.",
         "topics": ["DBMS & SQL", "Operating Systems", "Computer Networks", "System Design"],
-        "total_questions": 110,
-        "completed_questions": 35,
     },
     {
         "id": "web-dev",
@@ -68,8 +74,6 @@ PRACTICE_CATEGORIES = [
         "icon": "Globe",
         "description": "React reconciliation, Next.js architecture, REST/gRPC, and Node concurrency.",
         "topics": ["HTML & CSS", "JavaScript Engine", "React & Next.js", "Backend APIs"],
-        "total_questions": 95,
-        "completed_questions": 30,
     },
     {
         "id": "ai-ml",
@@ -78,8 +82,6 @@ PRACTICE_CATEGORIES = [
         "icon": "Brain",
         "description": "NumPy matrix ops, model architectures, embeddings, and LLM orchestration.",
         "topics": ["Python for ML", "Data Analysis", "Deep Learning", "Generative AI"],
-        "total_questions": 80,
-        "completed_questions": 18,
     },
     {
         "id": "placement",
@@ -88,8 +90,6 @@ PRACTICE_CATEGORIES = [
         "icon": "Briefcase",
         "description": "Quantitative aptitude, logical reasoning, and technical interview simulations.",
         "topics": ["Quantitative Aptitude", "Logical Reasoning", "Tech Interview", "HR Behavioral"],
-        "total_questions": 160,
-        "completed_questions": 54,
     },
 ]
 
@@ -114,8 +114,6 @@ async def list_practice_topics(
             "name": "Arrays & Hashing",
             "category": "Data Structures & Algorithms",
             "difficulty": "Easy",
-            "question_count": 28,
-            "completed_count": 18,
             "interview_relevance": "Essential",
             "description": "Hash maps, prefix sums, frequency counting, and linear amortized search.",
             "tags": ["Arrays", "Hash Table", "Prefix Sum"],
@@ -126,8 +124,6 @@ async def list_practice_topics(
             "name": "Two Pointers Technique",
             "category": "Data Structures & Algorithms",
             "difficulty": "Easy",
-            "question_count": 22,
-            "completed_count": 14,
             "interview_relevance": "High",
             "description": "Converging bounds, palindrome verification, and fast/slow cyclic detection.",
             "tags": ["Two Pointers", "Sorting", "Strings"],
@@ -138,8 +134,6 @@ async def list_practice_topics(
             "name": "Sliding Window",
             "category": "Data Structures & Algorithms",
             "difficulty": "Medium",
-            "question_count": 18,
-            "completed_count": 8,
             "interview_relevance": "High",
             "description": "Fixed and dynamic window optimizations, longest substring, and subarray sums.",
             "tags": ["Sliding Window", "Subarrays", "Optimization"],
@@ -150,8 +144,6 @@ async def list_practice_topics(
             "name": "Binary Trees & BST",
             "category": "Data Structures & Algorithms",
             "difficulty": "Medium",
-            "question_count": 34,
-            "completed_count": 12,
             "interview_relevance": "Essential",
             "description": "Traversals (DFS/BFS), lowest common ancestor, diameter, and BST validation.",
             "tags": ["Trees", "DFS", "BFS", "Recursion"],
@@ -162,8 +154,6 @@ async def list_practice_topics(
             "name": "Dynamic Programming (1D & 2D)",
             "category": "Data Structures & Algorithms",
             "difficulty": "Hard",
-            "question_count": 36,
-            "completed_count": 6,
             "interview_relevance": "High",
             "description": "Memoization, tabulation, state transitions, knapsack, and sequence alignments.",
             "tags": ["DP", "Memoization", "Tabulation"],
@@ -174,8 +164,6 @@ async def list_practice_topics(
             "name": "DBMS, SQL & Indexing",
             "category": "Computer Science Core",
             "difficulty": "Medium",
-            "question_count": 24,
-            "completed_count": 11,
             "interview_relevance": "Essential",
             "description": "B-Tree scans, transaction isolation levels, ACID, and query optimization.",
             "tags": ["SQL", "Indexes", "ACID", "Transactions"],
@@ -186,8 +174,6 @@ async def list_practice_topics(
             "name": "Operating Systems & Concurrency",
             "category": "Computer Science Core",
             "difficulty": "Medium",
-            "question_count": 26,
-            "completed_count": 10,
             "interview_relevance": "High",
             "description": "Deadlocks, virtual memory paging, process scheduling, and mutex synchronization.",
             "tags": ["Threads", "Paging", "Deadlock", "Virtual Memory"],
@@ -198,8 +184,6 @@ async def list_practice_topics(
             "name": "React Internals & Concurrency",
             "category": "Web & Full-Stack Core",
             "difficulty": "Medium",
-            "question_count": 20,
-            "completed_count": 12,
             "interview_relevance": "High",
             "description": "Fiber reconciliation, state batching, server components, and lifecycle hooks.",
             "tags": ["React", "JavaScript", "Fiber", "Virtual DOM"],
@@ -222,78 +206,21 @@ async def list_practice_topics(
 # ==========================================================
 
 @router.get("/tasks")
-async def get_practice_tasks(current_user=Depends(get_current_user)):
-    """Return unified Daily Tasks and Weekly Challenges for the student."""
-    daily_tasks = [
-        {
-            "id": "task-d-1",
-            "title": "Arrays & Hash Table Mastery",
-            "description": "Complete 5 concept questions on hash collisions and amortized lookups.",
-            "category": "Data Structures",
-            "difficulty": "Easy",
-            "type": "mcq",
-            "target": 5,
-            "progress": 3,
-            "xp_reward": 50,
-            "status": "in_progress",
-            "target_route": "/practice/session?topic=arrays-and-hashing&mode=learn",
-        },
-        {
-            "id": "task-d-2",
-            "title": "Two Pointers Algorithm Problem",
-            "description": "Implement an optimal converging-pointer solution in Python, C++, or Java.",
-            "category": "Algorithms",
-            "difficulty": "Medium",
-            "type": "coding",
-            "target": 1,
-            "progress": 0,
-            "xp_reward": 75,
-            "status": "available",
-            "target_route": "/practice/coding",
-        },
-        {
-            "id": "task-d-3",
-            "title": "Revise SQL Isolation Levels",
-            "description": "Practice transaction bounds and isolation levels in the database track.",
-            "category": "Computer Science",
-            "difficulty": "Medium",
-            "type": "mcq",
-            "target": 5,
-            "progress": 5,
-            "xp_reward": 50,
-            "status": "completed",
-            "target_route": "/practice/session?topic=dbms-and-sql&mode=learn",
-        },
-    ]
-
-    weekly_challenges = [
-        {
-            "id": "challenge-w-1",
-            "title": "Weekly Algorithmic Sprint",
-            "description": "Solve 10 data structure and algorithm challenges across any approved track.",
-            "target": 10,
-            "progress": 7,
-            "days_left": 3,
-            "xp_reward": 250,
-            "status": "in_progress",
-        },
-        {
-            "id": "challenge-w-2",
-            "title": "Technical Interview Readiness",
-            "description": "Complete 1 full mock technical assessment module with >70% accuracy.",
-            "target": 1,
-            "progress": 0,
-            "days_left": 4,
-            "xp_reward": 200,
-            "status": "available",
-        },
-    ]
-
-    return {
-        "daily_tasks": daily_tasks,
-        "weekly_challenges": weekly_challenges,
-        "streak_days": 5,
-    }
+async def get_practice_tasks(
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Return the authenticated user's persisted daily assignment."""
+    daily = await get_or_start_daily(db, current_user.id, False)
+    if daily.get("session"):
+        session = daily["session"]
+        daily["session"] = {
+            "id": session.id,
+            "status": session.status,
+            "completed_at": session.completed_at,
+            "submission_id": session.submission_id,
+        }
+    return {"daily_assignment": daily, "weekly_challenges": []}
 
 
 # ==========================================================
@@ -301,32 +228,276 @@ async def get_practice_tasks(current_user=Depends(get_current_user)):
 # ==========================================================
 
 @router.get("/recommendations")
-async def get_practice_recommendations(current_user=Depends(get_current_user)):
-    """Personalized learning roadmap generated from student attempt history."""
+async def get_practice_recommendations(
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Recommend an active problem based on this user's recorded attempts."""
+    aggregates = (
+        await db.execute(
+            select(
+                Problem.category,
+                func.count(CodeSubmission.id),
+                func.sum(
+                    case((CodeSubmission.verdict == "Accepted", 1), else_=0)
+                ),
+            )
+            .join(CodeSubmission, CodeSubmission.problem_id == Problem.id)
+            .where(
+                CodeSubmission.user_id == current_user.id,
+                Problem.is_active.is_(True),
+            )
+            .group_by(Problem.category)
+        )
+    ).all()
+    if not aggregates:
+        return {"recommendations": [], "message": "Complete a practice submission to receive a recommendation."}
+
+    accepted_problem = select(CodeSubmission.id).where(
+        CodeSubmission.user_id == current_user.id,
+        CodeSubmission.problem_id == Problem.id,
+        CodeSubmission.verdict == "Accepted",
+    )
+    ranked_categories = sorted(
+        aggregates,
+        key=lambda row: (int(row[2] or 0) / int(row[1]), -int(row[1])),
+    )
+    recommendation = None
+    for category, attempt_count, accepted_count in ranked_categories:
+        recommendation = (
+            await db.execute(
+                select(Problem)
+                .where(
+                    Problem.is_active.is_(True),
+                    Problem.category == category,
+                    ~exists(accepted_problem),
+                )
+                .order_by(Problem.id)
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if recommendation is not None:
+            break
+    if recommendation is None:
+        return {"recommendations": [], "message": "No unsolved active problems are available in categories with recorded attempts."}
+
+    problem = recommendation
+    category, attempt_count, accepted_count = next(
+        row for row in ranked_categories if row[0] == problem.category
+    )
+    accuracy = round(int(accepted_count or 0) / int(attempt_count) * 100)
     return {
-        "next_step": {
-            "title": "Strengthen Dynamic Programming (Tabulation)",
-            "topic": "Dynamic Programming",
-            "reason": "Based on 2 recent failed attempts in 2D grid path optimization.",
-            "estimated_minutes": 25,
-            "recommended_action_route": "/practice/session?topic=dynamic-programming&mode=learn",
-        },
-        "weak_concepts": [
-            {"concept": "Dynamic Programming (2D)", "accuracy": 28, "action": "Review Tabulation vs Memoization"},
-            {"concept": "Graph Traversal (BFS / DFS)", "accuracy": 35, "action": "Practice Queue & Visited Sets"},
-            {"concept": "Sliding Window Substrings", "accuracy": 50, "action": "Practice Monotonic Decrement"},
+        "recommendations": [
+            {
+                "id": str(problem.id),
+                "type": "coding",
+                "title": problem.title,
+                "category": category or "Uncategorized",
+                "difficulty": problem.difficulty,
+                "reason": (
+                    f"Your recorded acceptance rate in {category or 'this category'} "
+                    f"is {accuracy}% across {attempt_count} submissions."
+                ),
+                "href": f"/practice/coding?problem={problem.id}",
+            }
         ],
-        "strong_concepts": [
-            {"concept": "Arrays & Hash Maps", "accuracy": 88, "status": "Interview Ready"},
-            {"concept": "Binary Search on Rotated Arrays", "accuracy": 82, "status": "Interview Ready"},
-            {"concept": "Two Pointers", "accuracy": 79, "status": "Interview Ready"},
-        ],
+        "message": None,
     }
 
 
 # ==========================================================
 # 4. EXISTING COMPATIBILITY ENDPOINTS (Problems, Summary, Daily)
 # ==========================================================
+
+
+@router.get("/mcq/questions")
+async def list_mcq_questions(
+    count: int = Query(5, ge=1, le=20),
+    difficulty: str | None = None,
+    topic: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    filters = [
+        Question.is_active.is_(True),
+        Question.question_type == "mcq",
+    ]
+    if difficulty and difficulty.lower() in {"easy", "medium", "hard"}:
+        filters.append(func.lower(Question.difficulty) == difficulty.lower())
+    if topic and topic.lower() != "all":
+        filters.append(func.lower(Question.skill_category).contains(topic.lower()))
+
+    solved = exists(
+        select(UserSubmission.id).where(
+            UserSubmission.user_id == current_user.id,
+            UserSubmission.question_id == Question.id,
+            UserSubmission.solved.is_(True),
+        )
+    )
+    questions = (
+        await db.execute(
+            select(Question)
+            .where(*filters, ~solved)
+            .order_by(func.random())
+            .limit(count)
+        )
+    ).scalars().all()
+    def option_text(option: Any) -> str:
+        if isinstance(option, dict):
+            return str(option.get("text") or option.get("key") or "")
+        return str(option) if isinstance(option, str) else ""
+
+    return {
+        "questions": [
+            {
+                "id": question.id,
+                "question": question.title,
+                "code_snippet": None,
+                "options": [
+                    text for option in (question.options or [])
+                    if (text := option_text(option))
+                ],
+                "concept": question.skill_category,
+                "difficulty": question.difficulty,
+            }
+            for question in questions
+        ]
+    }
+
+
+@router.post("/mcq/answer")
+async def submit_mcq_answer(
+    request: MCQAnswerRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    await db.execute(
+        select(User.id).where(User.id == current_user.id).with_for_update()
+    )
+    question = (
+        await db.execute(
+            select(Question).where(
+                Question.id == request.question_id,
+                Question.is_active.is_(True),
+                Question.question_type == "mcq",
+            )
+        )
+    ).scalar_one_or_none()
+    if question is None:
+        raise HTTPException(status_code=404, detail="Practice question not found.")
+
+    options = []
+    for index, option in enumerate(question.options or []):
+        if isinstance(option, dict):
+            text = str(option.get("text") or option.get("key") or "")
+            key = str(option.get("key") or index)
+        elif isinstance(option, str):
+            text = option
+            key = chr(65 + index)
+        else:
+            continue
+        if text:
+            options.append({"key": key, "text": text})
+    if request.selected_index >= len(options):
+        raise HTTPException(status_code=422, detail="Selected answer is not available.")
+
+    selected_option = options[request.selected_index]
+    correct_value = str(question.correct_option or "").strip().casefold()
+    is_correct = correct_value in {
+        str(request.selected_index).casefold(),
+        str(selected_option.get("key") or "").strip().casefold(),
+        str(selected_option.get("text") or "").strip().casefold(),
+    }
+    existing = (
+        await db.execute(
+            select(UserSubmission)
+            .where(
+                UserSubmission.user_id == current_user.id,
+                UserSubmission.question_id == question.id,
+            )
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
+    solved_before = bool(existing and existing.solved)
+    if existing is None:
+        existing = UserSubmission(
+            user_id=current_user.id,
+            question_id=question.id,
+            language="mcq",
+            source_code=str(request.selected_index),
+        )
+        db.add(existing)
+    existing.language = "mcq"
+    existing.source_code = str(request.selected_index)
+    existing.solved = solved_before or is_correct
+    existing.passed_tests = int(existing.passed_tests or 0) + int(is_correct)
+    existing.total_tests = int(existing.total_tests or 0) + 1
+    existing.execution_time_ms = 0
+
+    skill_stat = (
+        await db.execute(
+            select(UserSkillStat)
+            .where(
+                UserSkillStat.user_id == current_user.id,
+                UserSkillStat.subject == (question.skill_category or "Uncategorized"),
+            )
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
+    if skill_stat is None:
+        skill_stat = UserSkillStat(
+            user_id=current_user.id,
+            subject=question.skill_category or "Uncategorized",
+            correct_attempts=0,
+            total_attempts=0,
+        )
+        db.add(skill_stat)
+    skill_stat.total_attempts += 1
+    if is_correct:
+        skill_stat.correct_attempts += 1
+
+    xp_earned = 0
+    if is_correct:
+        if not solved_before:
+            xp_earned = 25
+            await xp_service.add_xp(
+                db,
+                current_user,
+                xp_earned,
+                commit=False,
+                source="mcq_correct",
+                reference_id=str(question.id),
+                description=f"MCQ question {question.id} answered correctly",
+            )
+        await streak_service.record_activity(
+            db,
+            current_user.id,
+            activity_type="mcq_answer",
+            reference_id=str(question.id),
+            xp_earned=xp_earned,
+            commit=False,
+        )
+
+    await db.commit()
+    return {
+        "correct": is_correct,
+        "correct_index": next(
+            (
+                index for index, option in enumerate(options)
+                if str(question.correct_option or "").strip().casefold()
+                in {
+                    str(index).casefold(),
+                    str(option.get("key") or "").strip().casefold(),
+                    str(option.get("text") or "").strip().casefold(),
+                }
+            ),
+            -1,
+        ),
+        "explanation": question.explanation,
+        "xp_earned": xp_earned,
+        "already_solved": solved_before,
+    }
+
 
 @router.get("/problems")
 async def list_problems(

@@ -14,6 +14,7 @@ from app.models.profile import Profile
 from app.models.problem import Problem
 from app.models.problem_testcase import ProblemTestCase
 from app.models.user import User
+from app.models.user_skill_stat import UserSkillStat
 from app.models.user_stats import UserStats
 from app.models.xp import XP, XPLedger
 from app.modules.auth.schemas.requests import RegisterRequest
@@ -245,6 +246,7 @@ async def test_accepted_compiler_submission_awards_once_and_empty_tests_do_not_r
         )
         session.add(user)
         await session.flush()
+        user_id = user.id
         session.add(UserStats(user_id=user.id, level=1, rating=1000, xp=0))
         problem = Problem(
             title="Verified compiler XP",
@@ -261,6 +263,7 @@ async def test_accepted_compiler_submission_awards_once_and_empty_tests_do_not_r
         )
         session.add(problem)
         await session.flush()
+        problem_id = problem.id
         session.add(ProblemTestCase(
             problem_id=problem.id,
             input_data="1",
@@ -270,32 +273,55 @@ async def test_accepted_compiler_submission_awards_once_and_empty_tests_do_not_r
         await session.commit()
 
         request = SubmitCodeRequest(
-            problem_id=problem.id,
+            problem_id=problem_id,
             language="python",
             source_code="print(1)",
         )
+        with pytest.raises(RuntimeError, match="temporary ledger outage"):
+            await compiler_service.submit_solution(session, user, request)
+        await session.rollback()
+        user = await session.get(User, user_id)
+        assert user is not None
+        rolled_back_submissions = (await session.execute(
+            select(func.count()).select_from(CodeSubmission).where(
+                CodeSubmission.user_id == user_id,
+                CodeSubmission.problem_id == problem_id,
+            )
+        )).scalar_one()
+        assert rolled_back_submissions == 0
+        rolled_back_skill_stats = (await session.execute(
+            select(func.count()).select_from(UserSkillStat).where(
+                UserSkillStat.user_id == user_id,
+                UserSkillStat.subject == "Arrays",
+            )
+        )).scalar_one()
+        assert rolled_back_skill_stats == 0
+
         first = await compiler_service.submit_solution(session, user, request)
-        finalized = await compiler_service.finalize_submission_xp(session, user, first.submission_id)
-        duplicate_finalize = await compiler_service.finalize_submission_xp(session, user, first.submission_id)
         repeated = await compiler_service.submit_solution(session, user, request)
         xp = await xp_repository.get_by_user(session, user.id)
         submissions = (await session.execute(
             select(func.count()).select_from(CodeSubmission).where(
                 CodeSubmission.user_id == user.id,
-                CodeSubmission.problem_id == problem.id,
+                CodeSubmission.problem_id == problem_id,
             )
         )).scalar_one()
 
         assert first.verdict == "Accepted"
-        assert first.xp_earned == 0
-        assert first.xp_status == "pending"
-        assert finalized["xp_status"] == "granted"
-        assert finalized["xp_earned"] == 150
-        assert duplicate_finalize["xp_earned"] == 150
+        assert first.xp_earned == 150
+        assert first.xp_status == "granted"
         assert repeated.verdict == "Accepted"
         assert repeated.xp_earned == 0
         assert xp is not None and xp.total_xp == 150
         assert submissions == 2
+        skill_stat = (await session.execute(
+            select(UserSkillStat).where(
+                UserSkillStat.user_id == user.id,
+                UserSkillStat.subject == "Arrays",
+            )
+        )).scalar_one()
+        assert skill_stat.total_attempts == 2
+        assert skill_stat.correct_attempts == 2
         ledger_count = (await session.execute(
             select(func.count()).select_from(XPLedger).where(
                 XPLedger.user_id == user.id,

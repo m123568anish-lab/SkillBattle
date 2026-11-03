@@ -33,11 +33,9 @@ const ServerStatus = dynamic(() => import("@/components/dashboard/ServerStatus")
 });
 
 import { useDashboard } from "@/hooks/use-dashboard";
-import { useAuthStore } from "@/store/authStore";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const user = useAuthStore((state) => state.user);
   const [mounted, setMounted] = useState(false);
   const {
     dashboard,
@@ -51,26 +49,6 @@ export default function DashboardPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  const defaultStats = {
-    xp: 0,
-    level: user?.level ?? 1,
-    streak: 0,
-    rating: 1000,
-    battles_played: 0,
-    battles_won: 0,
-  };
-
-  const activeStats = dashboard?.stats ?? defaultStats;
-  const activeUser = dashboard?.user ?? {
-    id: user?.id ?? "",
-    username: user?.username ?? "player",
-    full_name: user?.full_name ?? user?.username ?? "Qubira Engineer",
-    email: user?.email ?? "",
-    avatar_url: user?.avatar_url ?? null,
-    role: user?.role ?? "user",
-    is_superuser: Boolean(user?.is_superuser),
-  };
 
   const formattedCacheTime = mounted && lastRefreshedAt
     ? ` from ${new Date(lastRefreshedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
@@ -104,21 +82,24 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Hero Section */}
-        <div>
-          <DashboardHero
-            user={activeUser}
-            stats={activeStats}
-            achievements={dashboard?.achievements ?? []}
-          />
-        </div>
-
-        {/* Stats Grid */}
-        <div className="mt-8">
-          <StatsGrid
-            stats={activeStats}
-          />
-        </div>
+        {dashboard ? (
+          <>
+            <div>
+              <DashboardHero
+                user={dashboard.user}
+                stats={dashboard.stats}
+                achievements={dashboard.achievements}
+              />
+            </div>
+            <div className="mt-8">
+              <StatsGrid stats={dashboard.stats} />
+            </div>
+          </>
+        ) : loading ? (
+          <DashboardPlaceholder minHeight="16rem" />
+        ) : (
+          <DashboardSectionError title="Live student statistics are unavailable" onRetry={refresh} />
+        )}
 
         {/* Quick Action Arena Launchpad */}
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -168,7 +149,7 @@ export default function DashboardPage() {
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-400/10 text-violet-300 ring-1 ring-violet-400/20">
                 <Code2 className="h-5 w-5" />
               </div>
-              <span className="rounded-full bg-violet-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-violet-300">500+</span>
+              <span className="rounded-full bg-violet-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-violet-300">Catalog</span>
             </div>
             <div className="mt-4">
               <h3 className="font-bold text-white text-base group-hover:text-violet-300 transition-colors">Practice Tasks</h3>
@@ -199,7 +180,7 @@ export default function DashboardPage() {
           </button>
 
           <button
-            onClick={() => router.push("/challenge")}
+            onClick={() => router.push("/practice/tasks")}
             className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-orange-500/20 bg-gradient-to-br from-orange-500/10 via-[#0a0f1d] to-[#050816] p-5 text-left transition hover:border-orange-400/50 hover:shadow-lg hover:shadow-orange-500/10"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-400/10 text-orange-300 ring-1 ring-orange-400/20"><Sparkles className="h-5 w-5" /></div>

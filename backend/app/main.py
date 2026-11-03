@@ -224,13 +224,13 @@ def readiness():
                 "schema": "valid",
                 "tables": len(tables),
             }
-    except Exception as e:
-        logger.error(f"❌ Readiness check failed: {e}", exc_info=True)
+    except Exception as exc:
+        logger.error("Readiness check failed (%s)", type(exc).__name__)
         return {
             "success": False,
             "status": "not_ready",
             "database": "disconnected",
-            "error": str(e),
+            "error": "Database readiness check failed.",
         }
 
 
@@ -273,11 +273,11 @@ def health_detailed():
                 },
                 "routes": len(app.routes),
             }
-    except Exception as e:
-        logger.error(f"❌ Detailed health check failed: {e}", exc_info=True)
+    except Exception as exc:
+        logger.error("Detailed health check failed (%s)", type(exc).__name__)
         return {
             "success": False,
             "status": "unhealthy",
             "timestamp": __import__("datetime").datetime.utcnow().isoformat(),
-            "error": str(e),
+            "error": "Detailed health check failed.",
         }

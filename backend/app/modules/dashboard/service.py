@@ -10,7 +10,7 @@ Dashboard Service
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 
@@ -23,6 +23,10 @@ from app.modules.profile.service import profile_service
 from app.modules.roadmap.service import roadmap_service
 from app.modules.xp.service import xp_service
 from app.models.xp import XPLedger
+from app.models.compiler import CodeSubmission
+from app.models.daily_practice import DailyPracticeSession
+from app.models.question import UserSubmission
+from app.models.streak import Streak, UserDailyActivity
 
 from app.modules.dashboard.repository import (
     dashboard_repository,
@@ -36,6 +40,8 @@ from app.modules.dashboard.schemas import (
     Achievement,
     AIRecommendation,
     DailyChallenge,
+    SkillProgress,
+    RecentActivity,
 )
 
 
@@ -205,51 +211,162 @@ class DashboardService:
 
         challenge = await dashboard_repository.get_daily_challenge(db)
         achievements = await dashboard_repository.get_achievements(db, user_id)
-        battles_played, battles_won = await dashboard_repository.get_battle_stats(db, user_id)
-        current_streak = await dashboard_repository.get_current_streak(db, user_id)
+        battles_played, battles_won, battles_lost = await dashboard_repository.get_battle_stats(db, user_id)
+        current_streak, longest_streak = await dashboard_repository.get_streak_stats(db, user_id)
 
-        user_xp = await xp_service.get_user_xp(db, current_user)
+        user_xp = await xp_service.reconcile_xp(db, current_user, commit=False)
         total_xp = int(user_xp.total_xp or 0)
         user_level = int(user_xp.level or 1)
-        rating = 1000
+        next_level_xp = user_level * 500
+        level_floor_xp = (user_level - 1) * 500
+        level_progress_percent = min(
+            100,
+            max(0, round((total_xp - level_floor_xp) / 500 * 100)),
+        )
+
+        coding_attempts = int(
+            (await db.execute(
+                select(func.count(CodeSubmission.id)).where(
+                    CodeSubmission.user_id == user_id,
+                )
+            )).scalar_one_or_none() or 0
+        )
+        mcq_attempts = int(
+            (await db.execute(
+                select(
+                    func.coalesce(
+                        func.sum(
+                            case(
+                                (UserSubmission.total_tests > 0, UserSubmission.total_tests),
+                                else_=1,
+                            )
+                        ),
+                        0,
+                    )
+                ).where(
+                    UserSubmission.user_id == user_id
+                )
+            )).scalar_one_or_none() or 0
+        )
+        practice_attempted = coding_attempts + mcq_attempts
+        practice_completed = int(
+            (await db.execute(
+                select(func.count(func.distinct(CodeSubmission.problem_id))).where(
+                    CodeSubmission.user_id == user_id,
+                    CodeSubmission.verdict == "Accepted",
+                )
+            )).scalar_one_or_none() or 0
+        )
+        practice_completed += int(
+            (await db.execute(
+                select(func.count(func.distinct(UserSubmission.question_id))).where(
+                    UserSubmission.user_id == user_id,
+                    UserSubmission.solved.is_(True),
+                )
+            )).scalar_one_or_none() or 0
+        )
+        correct_coding_attempts = int(
+            (await db.execute(
+                select(func.count(CodeSubmission.id)).where(
+                    CodeSubmission.user_id == user_id,
+                    CodeSubmission.verdict == "Accepted",
+                )
+            )).scalar_one_or_none() or 0
+        )
+        correct_mcq_attempts = int(
+            (await db.execute(
+                select(
+                    func.coalesce(
+                        func.sum(
+                            case(
+                                (UserSubmission.total_tests > 0, UserSubmission.passed_tests),
+                                (UserSubmission.solved.is_(True), 1),
+                                else_=0,
+                            )
+                        ),
+                        0,
+                    )
+                ).where(
+                    UserSubmission.user_id == user_id
+                )
+            )).scalar_one_or_none() or 0
+        )
+        practice_tasks_completed = int(
+            (await db.execute(
+                select(func.count(DailyPracticeSession.id)).where(
+                    DailyPracticeSession.user_id == user_id,
+                    DailyPracticeSession.status == "COMPLETED",
+                )
+            )).scalar_one_or_none() or 0
+        )
+        daily_challenge_completed = bool(
+            challenge is not None
+            and (await db.execute(
+                select(DailyPracticeSession.id).where(
+                    DailyPracticeSession.user_id == user_id,
+                    DailyPracticeSession.session_date == datetime.utcnow().date(),
+                    DailyPracticeSession.challenge_id == challenge.id,
+                    DailyPracticeSession.status == "COMPLETED",
+                ).limit(1)
+            )).scalar_one_or_none()
+        )
+        practice_accuracy = (
+            round((correct_coding_attempts + correct_mcq_attempts) / practice_attempted * 100, 1)
+            if practice_attempted
+            else None
+        )
         stats_rating = (
             await db.execute(
                 select(UserStats.rating).where(UserStats.user_id == user_id)
             )
         ).scalar_one_or_none()
-        if stats_rating is not None:
-            rating = stats_rating or 1000
+        rating = int(stats_rating or 0)
 
         stats = DashboardStats(
             xp=total_xp,
             level=user_level,
+            next_level_xp=next_level_xp,
+            xp_to_next_level=max(0, next_level_xp - total_xp),
+            level_progress_percent=level_progress_percent,
             streak=current_streak,
+            longest_streak=longest_streak,
             rating=rating,
             battles_played=battles_played,
+            battles_completed=battles_played,
             battles_won=battles_won,
+            battles_lost=battles_lost,
+            practice_attempted=practice_attempted,
+            practice_completed=practice_completed,
+            practice_tasks_completed=practice_tasks_completed,
+            practice_accuracy=practice_accuracy,
+            daily_challenge_completed=daily_challenge_completed,
         )
 
+        today = datetime.utcnow().date()
+        activity_start = today - timedelta(days=6)
         activity_result = await db.execute(
             select(XPLedger.created_at, XPLedger.amount)
             .where(
                 XPLedger.user_id == user_id,
-                XPLedger.created_at >= datetime.utcnow() - timedelta(days=84),
+                XPLedger.created_at >= datetime.combine(activity_start, datetime.min.time()),
             )
             .order_by(XPLedger.created_at.asc())
         )
-        activity_by_day: dict[str, int] = {}
+        activity_by_day: dict[str, int] = {
+            (activity_start + timedelta(days=offset)).isoformat(): 0
+            for offset in range(7)
+        }
         for created_at, amount in activity_result.all():
             if created_at:
                 day = created_at.date().isoformat()
                 activity_by_day[day] = activity_by_day.get(day, 0) + int(amount or 0)
 
-        # Incorporate recorded daily qualifying activity dates
-        from app.models.streak import UserDailyActivity
+        # Include qualifying activity that earned no XP.
         daily_acts = (await db.execute(
             select(UserDailyActivity.activity_date, UserDailyActivity.xp_earned)
             .where(
                 UserDailyActivity.user_id == user_id,
-                UserDailyActivity.activity_date >= (datetime.utcnow().date() - timedelta(days=84)),
+                UserDailyActivity.activity_date >= activity_start,
             )
         )).all()
         for act_date, act_xp in daily_acts:
@@ -280,6 +397,15 @@ class DashboardService:
             )
         )
         skill_evidence = list(skill_result.all())
+        skill_progress = [
+            SkillProgress(
+                subject=str(subject),
+                correct_attempts=int(correct or 0),
+                total_attempts=int(total or 0),
+                accuracy_percent=round((correct or 0) / total * 100) if total else 0,
+            )
+            for subject, correct, total in skill_evidence
+        ]
         weakest_skill = min(
             skill_evidence,
             key=lambda row: row[1] / row[2],
@@ -308,7 +434,7 @@ class DashboardService:
             recommendation = AIRecommendation(
                 title="Build on your battle activity",
                 message=f"You have {stats.battles_played} recorded battles. Try a new practice topic to add skill evidence.",
-                progress=min(stats.battles_played, 100),
+                progress=0,
                 action="Explore practice",
             )
 
@@ -316,9 +442,10 @@ class DashboardService:
             daily = DailyChallenge(
                 id="0",
                 title="No daily challenge available",
-                difficulty="Easy",
+                difficulty="Unavailable",
                 description="Check back later for a new challenge.",
                 xp_reward=0,
+                is_completed=False,
             )
         else:
             daily = DailyChallenge(
@@ -329,8 +456,11 @@ class DashboardService:
                     f"Solve today's {getattr(challenge, 'category', 'coding') or 'coding'} challenge "
                     "to maintain your streak."
                 ),
-                xp_reward=int(getattr(challenge, "xp_reward", 100) or 100),
+                xp_reward=int(getattr(challenge, "xp_reward", 0) or 0),
+                is_completed=daily_challenge_completed,
             )
+
+        recent_activity = await dashboard_repository.get_recent_activity(db, user_id)
 
         command_center = await self.get_command_center(
             db,
@@ -342,8 +472,8 @@ class DashboardService:
         return DashboardResponse(
             user=UserSummary(
                 id=str(user.id),
-                username=str(getattr(user, "username", None) or "player"),
-                full_name=str(getattr(user, "full_name", None) or getattr(user, "username", None) or "Qubira engineer"),
+                username=str(getattr(user, "username", None) or ""),
+                full_name=str(getattr(user, "full_name", None) or getattr(user, "username", None) or ""),
                 email=str(getattr(user, "email", None) or ""),
                 avatar_url=getattr(user, "avatar_url", None),
                 role=str(getattr(user, "role", "user") or "user"),
@@ -354,6 +484,15 @@ class DashboardService:
             achievements=achievement_list,
             ai_recommendation=recommendation,
             daily_challenge=daily,
+            skill_progress=skill_progress,
+            recent_activity=[
+                RecentActivity(
+                    activity_type=activity.activity_type,
+                    activity_date=activity.activity_date.isoformat(),
+                    xp_earned=activity.xp_earned,
+                )
+                for activity in recent_activity
+            ],
             command_center=command_center,
         )
 

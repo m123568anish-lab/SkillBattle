@@ -2,7 +2,6 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Breadcrumbs, DifficultyBadge, PracticeNav } from "@/components/arena";
 import { practiceService, type DailyPayload } from "@/services/practice.service";
@@ -10,33 +9,9 @@ import {
   CalendarDays,
   Flame,
   Play,
-  Trophy,
   CheckCircle2,
-  Sparkles,
-  Award,
-  Zap,
-  Target,
-  Clock,
-  ShieldCheck,
-  ChevronRight,
-  ArrowRight,
-  Check,
-  Brain,
-  Code2,
   ListTodo,
 } from "lucide-react";
-
-interface Quest {
-  id: string;
-  title: string;
-  category: "coding" | "mcq" | "learning";
-  xp: number;
-  progress: number;
-  total: number;
-  completed: boolean;
-  actionText: string;
-  href: string;
-}
 
 function PracticeTasksInner() {
   const router = useRouter();
@@ -45,52 +20,11 @@ function PracticeTasksInner() {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
 
-  const [quests, setQuests] = useState<Quest[]>([
-    {
-      id: "quest_1",
-      title: "Daily Algorithm Challenge",
-      category: "coding",
-      xp: 50,
-      progress: 0,
-      total: 1,
-      completed: false,
-      actionText: "Solve Algorithm",
-      href: "/practice/coding",
-    },
-    {
-      id: "quest_2",
-      title: "Complete 10 MCQ Practice Drills",
-      category: "mcq",
-      xp: 35,
-      progress: 6,
-      total: 10,
-      completed: false,
-      actionText: "Continue Drills",
-      href: "/practice/session?topic=all&count=10",
-    },
-    {
-      id: "quest_3",
-      title: "Explore System Architecture Topics",
-      category: "learning",
-      xp: 25,
-      progress: 1,
-      total: 1,
-      completed: true,
-      actionText: "Completed",
-      href: "/practice/topics/system-design",
-    },
-  ]);
-
   useEffect(() => {
     practiceService
       .daily()
       .then((data) => {
         setDaily(data);
-        if (data.session?.status === "COMPLETED") {
-          setQuests((prev) =>
-            prev.map((q) => (q.id === "quest_1" ? { ...q, completed: true, progress: 1 } : q))
-          );
-        }
       })
       .catch(() => setError("Daily challenge details are unavailable."))
       .finally(() => setLoading(false));
@@ -119,6 +53,7 @@ function PracticeTasksInner() {
     weekday: "long",
     month: "short",
     day: "numeric",
+    timeZone: "UTC",
   });
 
   return (
@@ -148,7 +83,7 @@ function PracticeTasksInner() {
                 Daily Tasks & Missions
               </h1>
               <p className="max-w-xl text-sm sm:text-base text-slate-300">
-                Consistency is how engineers master system design and algorithms. Solve daily challenges to maintain your streak and earn verified badges.
+                Your daily assignment and streak are updated from qualifying activity recorded for your account.
               </p>
             </div>
 
@@ -159,7 +94,7 @@ function PracticeTasksInner() {
               </div>
               <div className="text-left">
                 <div className="text-3xl font-black text-white">
-                  {daily?.streak ?? 0}
+                  {daily ? daily.streak ?? 0 : "—"}
                   <span className="text-lg font-bold text-amber-400"> days</span>
                 </div>
                 <div className="text-xs font-semibold uppercase tracking-wider text-amber-300/80">
@@ -193,10 +128,10 @@ function PracticeTasksInner() {
                   )}
                 </div>
                 <h3 className="text-xl sm:text-2xl font-bold text-white">
-                  {daily?.challenge?.title || "Daily Algorithmic Focus"}
+                  {daily?.challenge?.title || (daily?.available ? "Daily challenge" : "No daily challenge available")}
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-400">
-                  Solve today&apos;s curated problem to extend your streak and gain +50 verified XP.
+                  A successful submission is evaluated and saved before its progress is shown as complete.
                 </p>
               </div>
 
@@ -210,11 +145,11 @@ function PracticeTasksInner() {
                   <button
                     type="button"
                     onClick={startDailyChallenge}
-                    disabled={starting || loading}
+                    disabled={starting || loading || !daily?.available}
                     className="inline-flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-cyan-500/20 transition hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50 active:scale-95"
                   >
                     <Play className="h-4 w-4 fill-white" />
-                    <span>{starting ? "Launching..." : "Start Daily Problem"}</span>
+                    <span>{starting ? "Launching..." : daily?.available ? "Start Daily Problem" : "Unavailable"}</span>
                   </button>
                 )}
               </div>
@@ -222,139 +157,27 @@ function PracticeTasksInner() {
           </div>
         </section>
 
-        {/* Today's Quests & Progress */}
+        {/* Persisted daily assignment */}
         <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <ListTodo className="h-5 w-5 text-cyan-400" />
-                <span>Today&apos;s Learning Quests</span>
-              </h2>
-              <p className="text-xs text-slate-400">
-                Complete daily quests to maximize XP and keep your study routine structured.
-              </p>
-            </div>
-            <div className="text-xs font-semibold text-cyan-400">
-              {quests.filter((q) => q.completed).length} / {quests.length} Completed
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {quests.map((q) => (
-              <div
-                key={q.id}
-                className={`relative rounded-2xl border p-5 transition flex flex-col justify-between ${
-                  q.completed
-                    ? "border-emerald-500/20 bg-emerald-950/10"
-                    : "border-white/[0.08] bg-[#0E1524] hover:border-cyan-500/30"
-                }`}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                        q.category === "coding"
-                          ? "bg-blue-500/15 text-blue-300"
-                          : q.category === "mcq"
-                          ? "bg-purple-500/15 text-purple-300"
-                          : "bg-emerald-500/15 text-emerald-300"
-                      }`}
-                    >
-                      {q.category === "coding" ? (
-                        <Code2 className="h-3 w-3" />
-                      ) : q.category === "mcq" ? (
-                        <Brain className="h-3 w-3" />
-                      ) : (
-                        <Sparkles className="h-3 w-3" />
-                      )}
-                      {q.category}
-                    </span>
-                    <span className="text-xs font-bold text-amber-400 flex items-center gap-1">
-                      <Award className="h-3.5 w-3.5" /> +{q.xp} XP
-                    </span>
-                  </div>
-
-                  <h3 className="text-sm font-bold text-white">{q.title}</h3>
-
-                  {/* Progress Bar */}
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[11px] text-slate-400">
-                      <span>Progress</span>
-                      <span className="font-mono">
-                        {q.progress} / {q.total}
-                      </span>
-                    </div>
-                    <div className="h-1.5 w-full rounded-full bg-white/5 overflow-hidden">
-                      <div
-                        className={`h-full transition-all duration-500 ${
-                          q.completed ? "bg-emerald-400" : "bg-cyan-400"
-                        }`}
-                        style={{ width: `${Math.min(100, (q.progress / q.total) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-5 pt-3 border-t border-white/[0.06]">
-                  {q.completed ? (
-                    <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-400 py-1">
-                      <Check className="h-4 w-4" />
-                      <span>Quest Completed</span>
-                    </div>
-                  ) : (
-                    <Link
-                      href={q.href}
-                      className="flex items-center justify-center gap-1 rounded-xl bg-white/5 hover:bg-white/10 px-4 py-2 text-xs font-bold text-white transition hover:text-cyan-300"
-                    >
-                      <span>{q.actionText}</span>
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </Link>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Weekly Milestone Track */}
-        <section className="rounded-2xl border border-white/[0.08] bg-[#0E1524] p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Trophy className="h-4 w-4 text-amber-400" />
-                <span>Weekly Mastery Goals</span>
-              </h3>
-              <p className="text-xs text-slate-400">
-                Reach weekly milestones to unlock bonus rating points and platform achievements.
-              </p>
-            </div>
-            <span className="text-xs font-mono text-amber-400">+250 Weekly Bonus</span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-            <div className="rounded-xl border border-white/5 bg-[#0B0F17] p-4 flex items-center justify-between">
-              <div className="space-y-1">
-                <div className="text-xs font-bold text-white">7-Day Consistency Master</div>
-                <div className="text-xs text-slate-400">Maintain streak without missing a day</div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-bold text-cyan-400">
-                  {Math.min(7, daily?.streak ?? 0)} / 7
-                </div>
-                <div className="text-[10px] text-slate-500 uppercase">Days</div>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-white/5 bg-[#0B0F17] p-4 flex items-center justify-between">
-              <div className="space-y-1">
-                <div className="text-xs font-bold text-white">Algorithm Marathon</div>
-                <div className="text-xs text-slate-400">Solve 5 medium-difficulty coding problems</div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-bold text-emerald-400">3 / 5</div>
-                <div className="text-[10px] text-slate-500 uppercase">Solved</div>
-              </div>
-            </div>
+          <div className="rounded-2xl border border-white/[0.08] bg-[#0E1524] p-6">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <ListTodo className="h-5 w-5 text-cyan-400" />
+              Today&apos;s recorded assignment
+            </h2>
+            <p className="mt-2 text-sm text-slate-400">
+              {loading
+                ? "Loading the assignment saved for your account."
+                : daily?.session?.status === "COMPLETED"
+                  ? "Your daily assignment is recorded as complete."
+                  : daily?.session
+                    ? "Your daily assignment is saved and in progress."
+                    : daily?.available
+                      ? "No assignment has been started today."
+                      : daily?.reason || "No assignment is currently available."}
+            </p>
+            {daily?.problem && (
+              <p className="mt-3 text-xs text-slate-500">Assigned problem: {daily.problem.title}</p>
+            )}
           </div>
         </section>
       </main>

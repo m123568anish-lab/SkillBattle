@@ -35,6 +35,33 @@ export interface DailyPayload {
   is_revision?: boolean;
 }
 
+export interface PracticeRecommendation {
+  id: string;
+  type: "coding";
+  title: string;
+  category: string;
+  difficulty: string;
+  reason: string;
+  href: string;
+}
+
+export interface MCQQuestion {
+  id: number;
+  question: string;
+  code_snippet: string | null;
+  options: string[];
+  concept: string;
+  difficulty: string;
+}
+
+export interface MCQAnswerResult {
+  correct: boolean;
+  correct_index: number;
+  explanation: string;
+  xp_earned: number;
+  already_solved: boolean;
+}
+
 export interface CompilerRunResult {
   status: string;
   stdout?: string;
@@ -58,6 +85,7 @@ export interface CompilerSubmitResult {
   execution_time?: number;
   memory_used?: number;
   xp_awarded?: number;
+  xp_status?: string;
   test_cases?: Array<{
     input: string;
     expected_output?: string;
@@ -89,6 +117,22 @@ export const practiceService = {
   daily: async () => (await api.get<DailyPayload>("/practice/daily")).data,
 
   startDaily: async () => (await api.post<DailyPayload>("/practice/daily/start")).data,
+
+  recommendations: async () =>
+    (await api.get<{
+      recommendations: PracticeRecommendation[];
+      message: string | null;
+    }>("/practice/recommendations")).data,
+
+  mcqQuestions: async (params: {
+    count: number;
+    difficulty?: string;
+    topic?: string;
+  }) =>
+    (await api.get<{ questions: MCQQuestion[] }>("/practice/mcq/questions", { params })).data,
+
+  answerMcq: async (payload: { question_id: number; selected_index: number }) =>
+    (await api.post<MCQAnswerResult>("/practice/mcq/answer", payload)).data,
 
   run: async (payload: {
     language: string;
@@ -132,6 +176,7 @@ export const practiceService = {
       execution_time: d.execution_time,
       memory_used: d.memory_used,
       xp_awarded: d.xp_earned,
+      xp_status: d.xp_status,
       test_cases: [],
     };
   },

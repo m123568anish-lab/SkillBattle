@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +10,7 @@ from app.models.challenge import Challenge
 from app.models.compiler import CodeSubmission
 from app.models.daily_practice import DailyPracticeSession
 from app.models.problem import Problem
+from app.models.user import User
 from app.modules.dashboard.repository import dashboard_repository
 
 
@@ -56,12 +57,16 @@ async def choose_daily_problem(db: AsyncSession, user_id: str, challenge: Challe
     statuses = await submission_statuses(db, user_id)
     unsolved = [problem for problem in problems if statuses.get(problem.id) != "solved"]
     candidates = unsolved or problems
-    selected = candidates[date.today().toordinal() % len(candidates)]
+    selected = candidates[datetime.utcnow().date().toordinal() % len(candidates)]
     return selected, not bool(unsolved)
 
 
 async def get_or_start_daily(db: AsyncSession, user_id: str, start: bool) -> dict:
-    today = date.today()
+    today = datetime.utcnow().date()
+    if start:
+        await db.execute(
+            select(User.id).where(User.id == user_id).with_for_update()
+        )
     existing = (await db.execute(
         select(DailyPracticeSession).where(
             DailyPracticeSession.user_id == user_id, DailyPracticeSession.session_date == today
@@ -90,7 +95,7 @@ async def mark_daily_complete(db: AsyncSession, user_id: str, problem_id: int, s
     session = (await db.execute(
         select(DailyPracticeSession).where(
             DailyPracticeSession.user_id == user_id,
-            DailyPracticeSession.session_date == date.today(),
+            DailyPracticeSession.session_date == datetime.utcnow().date(),
             DailyPracticeSession.problem_id == problem_id,
             DailyPracticeSession.status == "IN_PROGRESS",
         )
@@ -99,15 +104,11 @@ async def mark_daily_complete(db: AsyncSession, user_id: str, problem_id: int, s
         session.status = "COMPLETED"
         session.submission_id = submission_id
         session.completed_at = datetime.utcnow()
-        try:
-            from app.modules.streak.service import streak_service
-            await streak_service.record_activity(
-                db,
-                user_id,
-                activity_type="daily_challenge",
-                reference_id=str(session.id),
-                commit=False,
-            )
-        except Exception:
-            pass
-        await db.commit()
+        from app.modules.streak.service import streak_service
+        await streak_service.record_activity(
+            db,
+            user_id,
+            activity_type="daily_challenge",
+            reference_id=str(session.id),
+            commit=False,
+        )

@@ -8,7 +8,7 @@ Production Ready
 =========================================================
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 
 
@@ -33,11 +33,22 @@ class UserSummary(BaseModel):
 class DashboardStats(BaseModel):
     xp: int
     level: int
+    next_level_xp: int
+    xp_to_next_level: int
+    level_progress_percent: int
     streak: int
+    longest_streak: int
     rating: int
 
     battles_played: int
+    battles_completed: int
     battles_won: int
+    battles_lost: int
+    practice_attempted: int
+    practice_completed: int
+    practice_tasks_completed: int
+    practice_accuracy: float | None = None
+    daily_challenge_completed: bool
 
 
 # =========================================================
@@ -81,6 +92,20 @@ class DailyChallenge(BaseModel):
     difficulty: str
     description: str
     xp_reward: int
+    is_completed: bool = False
+
+
+class SkillProgress(BaseModel):
+    subject: str
+    correct_attempts: int
+    total_attempts: int
+    accuracy_percent: int
+
+
+class RecentActivity(BaseModel):
+    activity_type: str
+    activity_date: str
+    xp_earned: int
 
 
 # =========================================================
@@ -100,6 +125,8 @@ class DashboardResponse(BaseModel):
     ai_recommendation: AIRecommendation
 
     daily_challenge: DailyChallenge
+    skill_progress: List[SkillProgress] = Field(default_factory=list)
+    recent_activity: List[RecentActivity] = Field(default_factory=list)
 
     command_center: Optional[dict] = None
 

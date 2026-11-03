@@ -103,6 +103,11 @@ class XPService:
             raise ValueError("XP amount must be positive")
 
         user_id = str(current_user.id)
+        # Serialize rewards per user so a retry cannot race the ledger check.
+        await db.execute(
+            select(User.id).where(User.id == user_id).with_for_update()
+        )
+
         # Idempotency check: if reference_id is provided, verify whether already awarded
         if reference_id is not None:
             existing_ledger_stmt = select(XPLedger).where(
