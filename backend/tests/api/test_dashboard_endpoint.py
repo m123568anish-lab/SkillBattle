@@ -36,6 +36,35 @@ async def test_dashboard_endpoint_success_and_latency(client):
 
 
 @pytest.mark.asyncio
+async def test_versioned_leaderboard_returns_numeric_metrics_for_new_account(client):
+    from app.database.session import AsyncSessionLocal
+    from app.models.xp import XP
+
+    unique_id = uuid4().hex[:8]
+    registration = await client.post("/auth/register", json={
+        "username": f"leader_{unique_id}",
+        "email": f"leader_{unique_id}@example.com",
+        "full_name": "Leaderboard Tester",
+        "password": "StrongPass#123",
+    })
+    assert registration.status_code == 201, registration.text
+    user_id = registration.json()["id"]
+
+    async with AsyncSessionLocal() as db:
+        xp = (await db.execute(select(XP).where(XP.user_id == user_id))).scalar_one()
+        xp.total_xp = 1_000_000_000
+        await db.commit()
+
+    response = await client.get("/api/v1/leaderboard")
+
+    assert response.status_code == 200, response.text
+    entries = response.json()["leaderboard"]
+    entry = next(item for item in entries if item["user_id"] == user_id)
+    assert isinstance(entry["xp"], int)
+    assert isinstance(entry["rating"], int)
+
+
+@pytest.mark.asyncio
 async def test_dashboard_with_active_roadmap(client):
     from app.models.roadmap import Roadmap, RoadmapWeek, RoadmapTask
     from app.database.session import AsyncSessionLocal

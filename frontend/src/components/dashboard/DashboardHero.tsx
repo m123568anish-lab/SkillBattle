@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Flame, Shield, Sparkles } from "lucide-react";
 import type { UserSummary, DashboardStats, Achievement } from "@/types/dashboard";
+import { formatDashboardNumber } from "@/lib/dashboard-data.mjs";
 
 interface DashboardHeroProps {
   user: UserSummary;
@@ -46,7 +47,7 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
           <div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-violet-400 transition-[width]" style={{ width: `${progress}%` }} />
         </div>
         <p className="text-xs text-slate-500 sm:w-36 sm:shrink-0 sm:text-right">
-          {stats.xp_to_next_level.toLocaleString()} XP to level {level + 1}
+          {formatDashboardNumber(stats.xp_to_next_level)} XP to level {level + 1}
         </p>
       </div>
     </section>

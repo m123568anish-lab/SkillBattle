@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Crown } from "lucide-react";
 import { leaderboardService, type LeaderboardEntry } from "@/services/leaderboard.service";
+import { formatDashboardNumber } from "@/lib/dashboard-data.mjs";
 
 export default function LeaderboardWidget() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -66,7 +67,7 @@ export default function LeaderboardWidget() {
                 </div>
               </div>
               <span className="font-semibold text-cyan-400">
-                {user.xp.toLocaleString()} XP
+                {formatDashboardNumber(user.xp)} XP
               </span>
             </div>
           ))}

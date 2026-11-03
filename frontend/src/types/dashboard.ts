@@ -24,8 +24,51 @@ export interface DashboardStats {
   practice_attempted: number;
   practice_completed: number;
   practice_tasks_completed: number;
-  practice_accuracy: number | null;
+  practice_accuracy?: number | null;
   daily_challenge_completed: boolean;
+}
+
+export interface DashboardCommandCenter {
+  student_state: {
+    xp: number;
+    streak: number;
+    target_company: string;
+    study_hours: { configured: boolean; minutes: number };
+  };
+  next_best_action: {
+    title: string;
+    type: string;
+    why: string;
+    skill_name?: string;
+  };
+  daily_actions: Array<{
+    type: string;
+    title: string;
+    description: string;
+    time: string;
+    priority?: string;
+  }>;
+  placement_readiness: {
+    state?: string;
+    confidence?: string;
+    matrix?: Record<string, unknown>;
+  };
+  skill_gaps: Array<{
+    skill_id?: string;
+    skill_name: string;
+    priority: string;
+    reason: string;
+    mastery?: string;
+    confidence?: string;
+    trend?: string;
+  }>;
+  roadmap: {
+    title: string;
+    progress: number;
+    milestone: string;
+  };
+  study_hours: { configured: boolean; minutes: number };
+  summary: { strong_skills: number; weak_skills: number; gap_count: number };
 }
 
 export interface Achievement {
@@ -75,6 +118,7 @@ export interface DashboardResponse {
   achievements: Achievement[];
   ai_recommendation: AIRecommendation;
   daily_challenge: DailyChallenge;
-  skill_progress: SkillProgress[];
-  recent_activity: RecentActivity[];
+  skill_progress?: SkillProgress[];
+  recent_activity?: RecentActivity[];
+  command_center?: DashboardCommandCenter | null;
 }

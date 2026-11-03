@@ -2,13 +2,14 @@
 
 import { ArrowUpRight, Flame, Swords, Target } from "lucide-react";
 import type { DashboardStats } from "@/types/dashboard";
+import { formatDashboardNumber } from "@/lib/dashboard-data.mjs";
 
 export default function StatsGrid({ stats }: { stats: DashboardStats }) {
   const winRate = stats.battles_played ? Math.round((stats.battles_won / stats.battles_played) * 100) : null;
   const metrics = [
-    { label: "Arena", value: stats.rating.toLocaleString(), detail: `${stats.battles_won}W · ${stats.battles_lost}L · ${stats.battles_completed} completed`, icon: Swords, tone: "text-cyan-300" },
+    { label: "Arena", value: formatDashboardNumber(stats.rating), detail: `${stats.battles_won}W · ${stats.battles_lost}L · ${stats.battles_completed} completed`, icon: Swords, tone: "text-cyan-300" },
     { label: "Momentum", value: `${stats.streak} day${stats.streak === 1 ? "" : "s"}`, detail: `${stats.longest_streak} days longest`, icon: Flame, tone: "text-orange-300" },
-    { label: "Skill growth", value: `${stats.xp.toLocaleString()} XP`, detail: `${stats.practice_completed} solved · ${winRate === null ? "no completed battles" : `${winRate}% battle win rate`}`, icon: Target, tone: "text-violet-300" },
+    { label: "Skill growth", value: `${formatDashboardNumber(stats.xp)} XP`, detail: `${stats.practice_completed} solved · ${winRate === null ? "no completed battles" : `${winRate}% battle win rate`}`, icon: Target, tone: "text-violet-300" },
   ];
 
   return (

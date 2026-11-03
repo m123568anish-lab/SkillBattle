@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { isAxiosError } from "axios";
 
+import { isDashboardCachePayload } from "@/lib/dashboard-data.mjs";
 import {
     dashboardService,
     DashboardResponse,
@@ -19,16 +20,23 @@ function getCachedDashboard(): DashboardCachePayload | null {
     try {
         const stored = localStorage.getItem(DASHBOARD_CACHE_KEY);
         if (!stored) return null;
-        const parsed = JSON.parse(stored) as DashboardCachePayload;
+        const parsed: unknown = JSON.parse(stored);
         const userStored = localStorage.getItem("skillbattle_user_cache");
         if (!userStored) return null;
-        const parsedUser = JSON.parse(userStored);
-        if (!parsedUser?.id || !parsed?.userId || parsedUser.id !== parsed.userId) {
+        const parsedUser: unknown = JSON.parse(userStored);
+        if (
+            typeof parsedUser !== "object" ||
+            parsedUser === null ||
+            !("id" in parsedUser) ||
+            typeof parsedUser.id !== "string"
+        ) {
+            localStorage.removeItem(DASHBOARD_CACHE_KEY);
             return null;
         }
-        if (parsed?.data?.user?.id && parsed?.timestamp) {
+        if (isDashboardCachePayload(parsed, parsedUser.id)) {
             return parsed;
         }
+        localStorage.removeItem(DASHBOARD_CACHE_KEY);
     } catch {
         // Ignore parse error
     }
