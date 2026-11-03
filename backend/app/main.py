@@ -2,6 +2,7 @@ import logging
 import os
 import platform
 import sys
+import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -34,6 +35,32 @@ from app.middleware.request_id import RequestIDMiddleware
 from app.middleware.timing import TimingMiddleware
 from app.middleware.xss_guard import XSSGuardMiddleware
 logger = logging.getLogger(__name__)
+
+
+def _safe_traceback_frames(exc: BaseException) -> str:
+    chain = []
+    seen = set()
+    current = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        chain.append(current)
+        current = current.__cause__ or (
+            None if current.__suppress_context__ else current.__context__
+        )
+
+    formatted = []
+    for chained_exception in reversed(chain):
+        frames = traceback.extract_tb(chained_exception.__traceback__)
+        frame_lines = [
+            f'  File "{frame.filename}", line {frame.lineno}, in {frame.name}'
+            for frame in frames
+        ]
+        formatted.append(
+            f"{type(chained_exception).__name__} traceback:\n"
+            + ("\n".join(frame_lines) if frame_lines else "  <no traceback frames>")
+        )
+
+    return "\nCaused by:\n".join(formatted)
 
 
 @asynccontextmanager
@@ -203,12 +230,15 @@ async def global_exception_handler(
     request: Request,
     exc: Exception,
 ):
+    request_id = getattr(request.state, "request_id", "unavailable")
     logger.error(
-        "Unhandled exception on %s %s: %s",
+        "Unhandled request exception request_id=%s method=%s path=%s "
+        "exception_type=%s\n%s",
+        request_id,
         request.method,
         request.url.path,
-        exc,
-        exc_info=True,
+        type(exc).__name__,
+        _safe_traceback_frames(exc),
     )
     return JSONResponse(
         status_code=500,
