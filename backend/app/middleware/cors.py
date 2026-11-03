@@ -20,6 +20,7 @@ _DEVELOPMENT_ORIGINS: list[str] = [
 ]
 
 _PRODUCTION_ORIGINS: list[str] = [
+    "https://skill-battle-frontend.vercel.app",
     "https://skill-battle-one.vercel.app",
     "https://skill-battle-z2fa.vercel.app",
     "https://skill-battle.vercel.app",

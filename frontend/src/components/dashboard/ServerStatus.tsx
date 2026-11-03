@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Activity, CheckCircle, XCircle, Clock, Wifi, RefreshCw, ExternalLink } from "lucide-react";
 
-const BACKEND_URL = (process.env.NEXT_PUBLIC_API_URL || "https://skillbattle-api-2026.onrender.com")
+const BACKEND_URL = (process.env.NEXT_PUBLIC_API_URL || "https://skillbattle-backend.onrender.com")
   .trim()
   .replace(/\/+$/, "")
   .replace(/\/api\/v1$/, "");
@@ -21,7 +21,7 @@ export default function ServerStatus() {
     setRefreshing(true);
     const start = Date.now();
     try {
-      const res = await fetch(`${BACKEND_URL}/health`, {
+      const res = await fetch("/api/health", {
         signal: AbortSignal.timeout(8000),
         cache: "no-store",
       });

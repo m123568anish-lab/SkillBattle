@@ -6,13 +6,17 @@ export type { ApiResponse, ApiValidationError, PaginatedResponse } from "@/types
 const normalizeBaseUrl = (value: string | undefined): string => {
     const defaultUrl =
         process.env.NODE_ENV === "production"
-            ? "https://skillbattle-api-2026.onrender.com"
+            ? "https://skillbattle-backend.onrender.com"
             : "http://localhost:8000";
     const base = (value || defaultUrl).trim().replace(/\/+$/, "");
     return base.replace(/\/api\/v1$/, "");
 };
 
-const API_BASE_URL = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_URL);
+// Browser requests use Next.js rewrites; server-side requests use the configured API origin.
+const API_BASE_URL =
+    typeof window === "undefined"
+        ? normalizeBaseUrl(process.env.NEXT_PUBLIC_API_URL)
+        : "";
 
 const api = axios.create({
     baseURL: `${API_BASE_URL}/api/v1`,
