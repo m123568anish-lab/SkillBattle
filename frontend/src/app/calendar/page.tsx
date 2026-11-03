@@ -29,9 +29,27 @@ function heatColor(count: number) {
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
+type StreakSummary = {
+  current_streak: number;
+  best_streak: number;
+};
+
+function isStreakSummary(value: unknown): value is StreakSummary {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "current_streak" in value &&
+    typeof value.current_streak === "number" &&
+    "best_streak" in value &&
+    typeof value.best_streak === "number"
+  );
+}
+
 export default function CalendarPage() {
-  const [streak, setStreak] = useState<any>(null);
+  const [streak, setStreak] = useState<StreakSummary | null>(null);
+  const [streakError, setStreakError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const today = new Date().toISOString().split("T")[0];
   const activityMap: Record<string, number> = {};
@@ -44,11 +62,31 @@ export default function CalendarPage() {
   }
 
   useEffect(() => {
-    api.get("/streak")
-      .then((r) => setStreak(r.data))
-      .catch(() => setStreak({ current_streak: 0, best_streak: 0 }))
-      .finally(() => setLoading(false));
-  }, []);
+    let active = true;
+    setLoading(true);
+    setStreakError(null);
+    api.get<unknown>("/streak")
+      .then((response) => {
+        if (!isStreakSummary(response.data)) {
+          throw new Error("The streak response did not match the expected format.");
+        }
+        if (active) setStreak(response.data);
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setStreak(null);
+          setStreakError(
+            error instanceof Error ? error.message : "Streak data could not be loaded.",
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [reloadKey]);
 
   const totalActive = heatmapDays.filter((d) => d.count > 0).length;
   const totalSessions = heatmapDays.reduce((a, b) => a + b.count, 0);
@@ -64,11 +102,24 @@ export default function CalendarPage() {
         </p>
       </div>
 
+      {streakError && (
+        <div role="alert" className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200">
+          <span>Streak data could not be loaded: {streakError}</span>
+          <button
+            type="button"
+            onClick={() => setReloadKey((key) => key + 1)}
+            className="font-semibold underline"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Streak & Stats Cards */}
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "Current Streak", value: `${streak?.current_streak ?? 0} 🔥`, icon: Flame, color: "from-orange-500 to-red-500" },
-          { label: "Best Streak",    value: `${streak?.best_streak ?? 0} days`, icon: Target,  color: "from-yellow-500 to-amber-500" },
+          { label: "Current Streak", value: loading ? "…" : streak ? `${streak.current_streak} 🔥` : "Unavailable", icon: Flame, color: "from-orange-500 to-red-500" },
+          { label: "Best Streak",    value: loading ? "…" : streak ? `${streak.best_streak} days` : "Unavailable", icon: Target,  color: "from-yellow-500 to-amber-500" },
           { label: "Active Days",    value: totalActive,                          icon: Calendar, color: "from-cyan-500 to-blue-500" },
           { label: "Total Sessions", value: totalSessions,                        icon: Zap,    color: "from-violet-500 to-indigo-500" },
         ].map((card, i) => (

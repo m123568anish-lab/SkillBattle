@@ -8,6 +8,7 @@ from app.modules.dashboard.router import router as dashboard_router
 from app.modules.battle.router import router as battle_router
 from app.modules.friend.router import router as friend_router
 from app.modules.leaderboard.router import router as leaderboard_router
+from app.modules.streak.router import router as streak_router
 from app.modules.tournament.router import router as tournament_router
 from app.modules.interview.router import router as interview_router
 from app.modules.problem_generator.router import router as problem_router
@@ -29,6 +30,8 @@ from app.modules.audit.router import router as audit_router
 from app.modules.organization_onboarding.router import router as organization_onboarding_router
 from app.modules.practice.router import router as practice_router
 from app.modules.compiler.router import router as compiler_router
+from app.modules.xp.router import router as xp_router
+from app.modules.assessment_engine.routers.assessment_router import skills_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -36,6 +39,9 @@ api_router.include_router(auth_router)
 api_router.include_router(profile_router)
 api_router.include_router(dashboard_router)
 api_router.include_router(battle_router)
+api_router.include_router(xp_router)
+api_router.include_router(streak_router)
+api_router.include_router(skills_router)
 api_router.include_router(friend_router)
 api_router.include_router(leaderboard_router)
 api_router.include_router(tournament_router)

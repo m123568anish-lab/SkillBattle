@@ -65,6 +65,51 @@ async def test_versioned_leaderboard_returns_numeric_metrics_for_new_account(cli
 
 
 @pytest.mark.asyncio
+async def test_versioned_student_data_routes_are_registered_and_scoped(client):
+    unique_id = uuid4().hex[:8]
+    email = f"routes_{unique_id}@example.com"
+    password = "StrongPass#123"
+
+    registration = await client.post("/auth/register", json={
+        "username": f"routes_{unique_id}",
+        "email": email,
+        "full_name": "Versioned Routes Tester",
+        "password": password,
+    })
+    assert registration.status_code == 201, registration.text
+
+    login = await client.post("/auth/login", json={"email": email, "password": password})
+    assert login.status_code == 200, login.text
+    token = login.json()["tokens"]["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    endpoints = (
+        ("/api/v1/dashboard", dict),
+        ("/api/v1/battle/history", dict),
+        ("/api/v1/leaderboard/me", dict),
+        ("/api/v1/xp", dict),
+        ("/api/v1/xp/history", list),
+        ("/api/v1/streak", dict),
+        ("/api/v1/skills/profile", dict),
+        ("/api/v1/skills/gaps", dict),
+        ("/api/v1/skills/placement-readiness", dict),
+        ("/api/v1/practice/recommendations", dict),
+    )
+    responses = {}
+    for path, expected_type in endpoints:
+        response = await client.get(path, headers=headers)
+        assert response.status_code == 200, f"{path}: {response.status_code} {response.text}"
+        assert isinstance(response.json(), expected_type), path
+        responses[path] = response.json()
+
+    command_center = responses["/api/v1/dashboard"]["command_center"]
+    assert isinstance(command_center["placement_readiness"]["matrix"], dict)
+    history = responses["/api/v1/battle/history"]
+    assert history["history"] == []
+    assert history["total"] == 0
+
+
+@pytest.mark.asyncio
 async def test_dashboard_with_active_roadmap(client):
     from app.models.roadmap import Roadmap, RoadmapWeek, RoadmapTask
     from app.database.session import AsyncSessionLocal

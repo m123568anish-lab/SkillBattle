@@ -16,7 +16,7 @@ interface LeaderboardEntry {
   rank: number;
   user_id: string;
   username: string;
-  name?: string;
+  full_name?: string;
   avatar?: string | null;
   rating: number;
   xp: number;
@@ -80,7 +80,7 @@ export default function LeaderboardPage() {
     const query = searchQuery.toLowerCase();
     return board.filter((entry) =>
       entry.username.toLowerCase().includes(query)
-      || (entry.name?.toLowerCase().includes(query) ?? false),
+      || (entry.full_name?.toLowerCase().includes(query) ?? false),
     );
   }, [board, searchQuery]);
 
@@ -115,7 +115,7 @@ export default function LeaderboardPage() {
               <div className="h-12 w-12 rounded-full border-2 border-slate-400 bg-slate-800 flex items-center justify-center font-bold text-slate-200 mx-auto">
                 2
               </div>
-              <h4 className="font-bold text-white text-sm truncate">{filteredBoard[1].name}</h4>
+              <h4 className="font-bold text-white text-sm truncate">{filteredBoard[1].full_name || filteredBoard[1].username}</h4>
               <div className="font-mono text-sm font-extrabold text-slate-300">
                 {filteredBoard[1].xp.toLocaleString()} XP
               </div>
@@ -130,7 +130,7 @@ export default function LeaderboardPage() {
               <div className="h-14 w-14 rounded-full border-2 border-amber-400 bg-amber-500/20 flex items-center justify-center font-black text-amber-300 text-lg mx-auto shadow-lg shadow-amber-500/20">
                 1
               </div>
-              <h4 className="font-black text-white text-base truncate">{filteredBoard[0].name}</h4>
+              <h4 className="font-black text-white text-base truncate">{filteredBoard[0].full_name || filteredBoard[0].username}</h4>
               <div className="font-mono text-base font-black text-amber-400">
                 {filteredBoard[0].xp.toLocaleString()} XP
               </div>
@@ -147,7 +147,7 @@ export default function LeaderboardPage() {
               <div className="h-12 w-12 rounded-full border-2 border-amber-600 bg-slate-800 flex items-center justify-center font-bold text-amber-500 mx-auto">
                 3
               </div>
-              <h4 className="font-bold text-white text-sm truncate">{filteredBoard[2].name}</h4>
+              <h4 className="font-bold text-white text-sm truncate">{filteredBoard[2].full_name || filteredBoard[2].username}</h4>
               <div className="font-mono text-sm font-extrabold text-amber-500">
                 {filteredBoard[2].xp.toLocaleString()} XP
               </div>
@@ -258,7 +258,7 @@ export default function LeaderboardPage() {
                           </div>
                           <div>
                             <span className="font-bold text-white block">
-                              {entry.name || entry.username}
+                              {entry.full_name || entry.username}
                               {entry.is_current_user && (
                                 <span className="ml-2 text-[10px] text-purple-300 font-normal border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 rounded">
                                   You
