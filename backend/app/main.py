@@ -131,22 +131,22 @@ app.include_router(health_router)
 register_routers(app)
 
 # TEMPORARY: Remove after verifying the Render production route graph.
-logger.info("========== QUBIRA PRODUCTION ROUTE DIAGNOSTICS ==========")
+logger.warning("========== QUBIRA PRODUCTION ROUTE DIAGNOSTICS ==========")
 try:
-    logger.info(
+    logger.warning(
         "Runtime cwd=%s python=%s main_file=%s render_commit=%s",
         os.getcwd(),
         platform.python_version(),
         Path(__file__).resolve(),
         os.environ.get("RENDER_GIT_COMMIT", "Not exposed"),
     )
-    logger.info("FastAPI title=%s version=%s", app.title, app.version)
+    logger.warning("FastAPI title=%s version=%s", app.title, app.version)
 
     route_paths = app.openapi().get("paths", {})
-    logger.info("OpenAPI path_count=%d", len(route_paths))
+    logger.warning("OpenAPI path_count=%d", len(route_paths))
     for path in sorted(route_paths):
         if any(group in path.lower() for group in ("xp", "streak", "skills", "leaderboard")):
-            logger.info("Registered route path=%s", path)
+            logger.warning("Registered route path=%s", path)
 
     expected_routes = (
         "/api/v1/xp",
@@ -159,7 +159,7 @@ try:
     )
     for path in expected_routes:
         status = "FOUND" if path in route_paths else "MISSING"
-        logger.info("Expected route status=%s path=%s", status, path)
+        logger.warning("Expected route status=%s path=%s", status, path)
 
     source_modules = (
         "app.api.v1.router",
@@ -172,7 +172,7 @@ try:
     for module_name in source_modules:
         module = sys.modules.get(module_name)
         source_path = getattr(module, "__file__", None) if module else None
-        logger.info(
+        logger.warning(
             "Imported module=%s source_file=%s",
             module_name,
             Path(source_path).resolve() if source_path else "NOT_LOADED",
@@ -180,7 +180,7 @@ try:
 except Exception:
     logger.exception("Temporary production route diagnostics failed")
 finally:
-    logger.info("========== END QUBIRA PRODUCTION ROUTE DIAGNOSTICS ==========")
+    logger.warning("========== END QUBIRA PRODUCTION ROUTE DIAGNOSTICS ==========")
 
 
 @app.exception_handler(SkillBattleException)
