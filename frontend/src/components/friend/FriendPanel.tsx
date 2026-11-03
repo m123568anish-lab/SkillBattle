@@ -9,11 +9,8 @@ import {
   Plus,
   Trash2,
   UserPlus,
-  Check,
   X,
   Trophy,
-  Zap,
-  MessageSquare,
 } from "lucide-react";
 
 export default function FriendPanel() {
@@ -21,8 +18,10 @@ export default function FriendPanel() {
   const [loading, setLoading] = useState(true);
   const [friendId, setFriendId] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [addingFriend, setAddingFriend] = useState(false);
   const [hoveredFriend, setHoveredFriend] = useState<string | null>(null);
+  const [removingFriendId, setRemovingFriendId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -33,6 +32,7 @@ export default function FriendPanel() {
         if (active) setFriends(response.friends);
       } catch (error: unknown) {
         console.error(error);
+        if (active) setLoadError("Your friends could not be loaded. Please refresh and try again.");
       } finally {
         if (active) setLoading(false);
       }
@@ -69,13 +69,20 @@ export default function FriendPanel() {
   }
 
   async function handleRemoveFriend(friendUserId: string) {
+    setRemovingFriendId(friendUserId);
     try {
+      await friendService.removeFriend(friendUserId);
       setFriends((current) =>
         current.filter((f) => f.user_id !== friendUserId)
       );
       toast.success("Friend removed.");
-    } catch {
-      toast.error("Failed to remove friend.");
+    } catch (error: unknown) {
+      const detail = error && typeof error === "object" && "response" in error
+        ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : undefined;
+      toast.error(detail || "Failed to remove friend.");
+    } finally {
+      setRemovingFriendId(null);
     }
   }
 
@@ -175,13 +182,6 @@ export default function FriendPanel() {
               <p className="text-xs text-slate-400 mt-1">Your squad members</p>
             </div>
           </div>
-          <motion.div
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            className="rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 px-4 py-2 text-sm font-bold"
-          >
-            {friends.length}/{10}
-          </motion.div>
         </div>
 
         {loading ? (
@@ -199,6 +199,10 @@ export default function FriendPanel() {
             </div>
             <p className="mt-4 text-slate-400">Loading your squad...</p>
           </motion.div>
+        ) : loadError ? (
+          <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
+            {loadError}
+          </p>
         ) : friends.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -217,7 +221,7 @@ export default function FriendPanel() {
             className="space-y-3"
           >
             <AnimatePresence>
-              {friends.map((friend, index) => (
+              {friends.map((friend) => (
                 <motion.div
                   key={friend.user_id}
                   variants={itemVariants}
@@ -235,20 +239,14 @@ export default function FriendPanel() {
                         className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-violet-500"
                       >
                         <span className="text-sm font-bold text-white">
-                          {friend.user_id[0].toUpperCase()}
+                          {(friend.full_name || friend.username).charAt(0).toUpperCase()}
                         </span>
                       </motion.div>
 
                       {/* Info */}
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-white">{friend.user_id}</span>
-                          {index === 0 && (
-                            <span className="inline-flex items-center rounded-full bg-yellow-500/20 border border-yellow-500/30 px-2 py-0.5 text-xs font-bold text-yellow-300">
-                              <Trophy className="h-3 w-3 mr-1" />
-                              Leader
-                            </span>
-                          )}
+                          <span className="font-semibold text-white">{friend.full_name || friend.username}</span>
                         </div>
                         <div className="text-xs text-slate-400">
                           Joined {new Date(friend.created_at).toLocaleDateString()}
@@ -268,16 +266,8 @@ export default function FriendPanel() {
                       <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.95 }}
-                        className="rounded-full bg-cyan-500/20 border border-cyan-500/30 p-2 text-cyan-400 hover:bg-cyan-500/30 transition"
-                        title="Send message"
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                      </motion.button>
-
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
                         onClick={() => handleRemoveFriend(friend.user_id)}
+                        disabled={removingFriendId === friend.user_id}
                         className="rounded-full bg-red-500/20 border border-red-500/30 p-2 text-red-400 hover:bg-red-500/30 transition"
                         title="Remove friend"
                       >
@@ -285,64 +275,12 @@ export default function FriendPanel() {
                       </motion.button>
                     </motion.div>
                   </div>
-
-                  {/* Stats Bar */}
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{
-                      opacity: hoveredFriend === friend.user_id ? 1 : 0,
-                    }}
-                    className="mt-3 grid grid-cols-3 gap-2 pt-3 border-t border-white/5"
-                  >
-                    <div className="text-center">
-                      <Zap className="h-4 w-4 text-yellow-400 mx-auto mb-1" />
-                      <div className="text-xs text-slate-400">Active</div>
-                    </div>
-                    <div className="text-center">
-                      <Trophy className="h-4 w-4 text-cyan-400 mx-auto mb-1" />
-                      <div className="text-xs text-slate-400">5 Wins</div>
-                    </div>
-                    <div className="text-center">
-                      <Check className="h-4 w-4 text-emerald-400 mx-auto mb-1" />
-                      <div className="text-xs text-slate-400">Online</div>
-                    </div>
-                  </motion.div>
                 </motion.div>
               ))}
             </AnimatePresence>
           </motion.div>
         )}
       </motion.div>
-
-      {/* Squad Stats Card */}
-      {friends.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="rounded-3xl border border-white/10 bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 p-8 text-white shadow-2xl backdrop-blur-xl"
-        >
-          <h3 className="text-xl font-bold mb-4">Squad Overview</h3>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="rounded-2xl bg-white/5 border border-white/10 p-4 text-center">
-              <div className="text-2xl font-black text-cyan-400">{friends.length}</div>
-              <div className="text-xs text-slate-400 mt-1">Total Members</div>
-            </div>
-            <div className="rounded-2xl bg-white/5 border border-white/10 p-4 text-center">
-              <div className="text-2xl font-black text-yellow-400">
-                {friends.length * 5}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">Combined Wins</div>
-            </div>
-            <div className="rounded-2xl bg-white/5 border border-white/10 p-4 text-center">
-              <div className="text-2xl font-black text-emerald-400">
-                {Math.round((friends.length / 10) * 100)}%
-              </div>
-              <div className="text-xs text-slate-400 mt-1">Squad Full</div>
-            </div>
-          </div>
-        </motion.div>
-      )}
     </div>
   );
 }

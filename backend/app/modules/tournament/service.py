@@ -13,6 +13,7 @@ Production Version
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -115,10 +116,11 @@ class TournamentService:
     async def list_tournaments(
         self,
         db: AsyncSession,
+        current_user,
     ):
-
         return await tournament_repository.list_tournaments(
             db,
+            str(current_user.id),
         )
 
         # =====================================================
@@ -135,6 +137,7 @@ class TournamentService:
         tournament = await tournament_repository.get_tournament(
             db,
             tournament_id,
+            for_update=True,
         )
 
         if tournament is None:
@@ -148,6 +151,12 @@ class TournamentService:
             raise ValueError(
                 "Tournament registration is closed."
             )
+
+        registration_end = tournament.registration_end
+        if registration_end.tzinfo is not None:
+            registration_end = registration_end.astimezone(timezone.utc).replace(tzinfo=None)
+        if registration_end <= datetime.utcnow():
+            raise ValueError("Tournament registration has ended.")
 
         participant = await tournament_repository.get_participant(
             db,

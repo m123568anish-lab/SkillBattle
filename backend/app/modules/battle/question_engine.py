@@ -348,7 +348,7 @@ class QuestionEngine:
 
             # Fallback if invalid
             if not is_valid:
-                logger.warning(f"AI generated question failed validation. Using fallback question for {question_type}.")
+                logger.warning("AI generated question failed validation; looking for an existing validated question.")
                 return await self._get_fallback_question(db, question_type, difficulty)
 
             question = Question(
@@ -397,33 +397,9 @@ class QuestionEngine:
         if qtype == "coding":
             raise ValueError("No valid coding question available; a coding challenge requires executable test cases.")
 
-        # Emergency synthetic question
-        fallback = Question(
-            title=f"Sample {qtype.upper()} Question",
-            slug=f"sample-{qtype}-{func.random()}",
-            description=f"Analyze the following {qtype} concept.",
-            difficulty=difficulty,
-            question_type=qtype,
-            options=[
-                {"key": "A", "text": "Option A (Correct)"},
-                {"key": "B", "text": "Option B"},
-                {"key": "C", "text": "Option C"},
-                {"key": "D", "text": "Option D"},
-            ],
-            correct_option="A",
-            buggy_code="def solution():\n    return False # Bug: should return True",
-            fixed_code_reference="def solution():\n    return True",
-            rubric={"concepts": ["Logic", "Syntax"]},
-            explanation="Sample explanation.",
-            topic_tags=["General"],
-            skill_category="Problem Solving",
-            is_ai_generated=False,
-            is_validated=True,
+        raise ValueError(
+            f"No validated {qtype} question is available; configure eligible question data before retrying."
         )
-        db.add(fallback)
-        await db.commit()
-        await db.refresh(fallback)
-        return fallback
 
     async def resolve_questions_for_sections(
         self,

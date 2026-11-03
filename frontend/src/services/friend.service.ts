@@ -3,6 +3,9 @@ import { API_ENDPOINTS } from "@/lib/api-constants";
 
 export interface FriendResponse {
   user_id: string;
+  username: string;
+  full_name: string | null;
+  avatar_url: string | null;
   created_at: string;
 }
 
@@ -19,6 +22,10 @@ class FriendService {
   async addFriend(friendId: string) {
     const response = await api.post<FriendResponse>(API_ENDPOINTS.FRIEND.ADD, { friend_id: friendId });
     return response.data;
+  }
+
+  async removeFriend(friendId: string) {
+    await api.delete(`${API_ENDPOINTS.FRIEND.LIST}${encodeURIComponent(friendId)}`);
   }
 }
 

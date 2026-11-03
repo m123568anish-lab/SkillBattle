@@ -84,12 +84,22 @@ export const careerService = {
       headers: { "Content-Type": "multipart/form-data" },
     });
 
-    const payload = res.data?.upload ?? res.data ?? {};
+    const payload = res.data;
+    if (
+      !payload ||
+      payload.success !== true ||
+      typeof payload.resume_id !== "string" ||
+      !payload.resume_id ||
+      typeof payload.message !== "string"
+    ) {
+      throw new Error("The resume upload response was incomplete.");
+    }
+
     return {
-      success: payload.success ?? true,
-      message: payload.message ?? "Resume uploaded successfully.",
-      resume_id: payload.resume_id ?? "",
-      status: payload.status ?? (payload.success === false ? "error" : "uploaded"),
+      success: true,
+      message: payload.message,
+      resume_id: payload.resume_id,
+      status: typeof payload.status === "string" ? payload.status : undefined,
       metadata: payload.metadata ?? null,
       analysis: payload.analysis ?? null,
     };

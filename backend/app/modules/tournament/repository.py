@@ -12,7 +12,7 @@ Production Async Version
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.tournament import (
@@ -60,38 +60,56 @@ class TournamentRepository:
         self,
         db: AsyncSession,
         tournament_id: str,
+        *,
+        for_update: bool = False,
     ) -> Tournament | None:
-
-        result = await db.execute(
-
-            select(Tournament).where(
-
-                Tournament.id == tournament_id
-
-            )
-
-        )
+        stmt = select(Tournament).where(Tournament.id == tournament_id)
+        if for_update:
+            stmt = stmt.with_for_update()
+        result = await db.execute(stmt)
 
         return result.scalar_one_or_none()
 
     async def list_tournaments(
         self,
         db: AsyncSession,
+        user_id: str,
     ):
-
-        result = await db.execute(
-
-            select(Tournament)
-
-            .order_by(
-
-                Tournament.starts_at.asc()
-
-            )
-
+        participant_count = (
+            select(func.count(TournamentParticipant.id))
+            .where(TournamentParticipant.tournament_id == Tournament.id)
+            .correlate(Tournament)
+            .scalar_subquery()
         )
-
-        return list(result.scalars().all())
+        is_registered = (
+            select(TournamentParticipant.id)
+            .where(
+                TournamentParticipant.tournament_id == Tournament.id,
+                TournamentParticipant.user_id == user_id,
+            )
+            .correlate(Tournament)
+            .exists()
+        )
+        result = await db.execute(
+            select(Tournament, participant_count, is_registered)
+            .order_by(Tournament.starts_at.asc())
+        )
+        return [
+            {
+                "id": tournament.id,
+                "title": tournament.title,
+                "description": tournament.description,
+                "difficulty": tournament.difficulty,
+                "tournament_type": tournament.tournament_type,
+                "status": tournament.status,
+                "max_players": tournament.max_players,
+                "registered_players": int(registered_players or 0),
+                "registration_end": tournament.registration_end,
+                "starts_at": tournament.starts_at,
+                "is_registered": bool(is_registered),
+            }
+            for tournament, registered_players, is_registered in result.all()
+        ]
 
     # =====================================================
     # Participants

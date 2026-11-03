@@ -159,23 +159,7 @@ class BattleService:
             company_application.assessment_status = "in_progress"
             company_application.assessment_score = None
 
-        # Auto-add a friend if available and max_players > 1
-        from app.modules.friend.service import friend_service
-        friends = await friend_service.get_friends(db, current_user)
-        if friends and request.max_players > 1:
-            friend_row = friends[0]
-            friend_user_id = (
-                friend_row.friend_id
-                if friend_row.user_id == current_user.id
-                else friend_row.user_id
-            )
-            friend_participant = BattleParticipant(
-                battle_id=battle.id,
-                user_id=friend_user_id,
-                score=0,
-                rank=2,
-            )
-            await battle_repository.add_participant(db, friend_participant)
+
 
         if commit:
             await db.commit()

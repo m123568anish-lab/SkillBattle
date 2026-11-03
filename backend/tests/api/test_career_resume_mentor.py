@@ -7,7 +7,22 @@ from app.api.v1.mentor import mentor_service
 from app.core.dependencies import get_current_user
 from app.database.session import get_db
 from app.main import app
+from app.modules.career.api.resume import ResumeSaveRequest, audit_projects_and_ats
 from app.modules.career.services.upload_service import upload_service
+
+
+def test_resume_audit_suggestions_do_not_invent_project_claims():
+    report = audit_projects_and_ats(
+        ResumeSaveRequest(
+            title="Resume",
+            projects=[{"name": "Sample App", "description": "A small application"}],
+        )
+    )
+
+    suggestions = [issue.suggested_rewrite for issue in report.project_issues]
+    assert suggestions
+    assert all("35%" not in suggestion and "1,000+" not in suggestion for suggestion in suggestions)
+    assert any("verifiable" in suggestion for suggestion in suggestions)
 
 
 @pytest.mark.asyncio
@@ -41,6 +56,35 @@ async def test_upload_service_returns_top_level_success_payload():
     assert result["resume_id"] == "resume-123"
     assert result["metadata"]["filename"] == "resume.pdf"
     assert result["analysis"]["status"] == "ok"
+
+
+@pytest.mark.asyncio
+async def test_saving_resume_edits_without_an_uploaded_resume_returns_conflict(client):
+    previous_overrides = app.dependency_overrides.copy()
+    user = SimpleNamespace(id="user-no-resume", username="student", full_name="Student", email="student@example.com")
+
+    async def fake_execute(_stmt):
+        return SimpleNamespace(scalars=lambda: SimpleNamespace(first=lambda: None))
+
+    async def override_get_db():
+        return SimpleNamespace(execute=fake_execute)
+
+    async def override_get_current_user():
+        return user
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
+
+    try:
+        response = await client.post(
+            "/api/v1/career/resume",
+            json={"title": "Resume", "skills": [], "education": [], "experience": [], "projects": [], "certifications": []},
+        )
+        assert response.status_code == 409
+        assert response.json()["detail"] == "Upload a resume before saving resume edits."
+    finally:
+        app.dependency_overrides.clear()
+        app.dependency_overrides.update(previous_overrides)
 
 
 @pytest.mark.asyncio

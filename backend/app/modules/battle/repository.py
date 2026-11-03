@@ -150,9 +150,16 @@ class BattleRepository:
     ) -> BattleParticipant | None:
 
         result = await db.execute(
-            select(BattleParticipant).where(
-                BattleParticipant.user_id == user_id
+            select(BattleParticipant)
+            .join(BattleRoom, BattleRoom.id == BattleParticipant.battle_id)
+            .where(
+                BattleParticipant.user_id == user_id,
+                BattleRoom.status.notin_(
+                    ["completed", "finalized", "result", "analysis", "evaluating", "cancelled", "abandoned"]
+                ),
             )
+            .order_by(BattleRoom.created_at.desc())
+            .limit(1)
         )
 
         return result.scalar_one_or_none()

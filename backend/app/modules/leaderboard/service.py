@@ -21,24 +21,12 @@ from .ranking import (
     calculate_rank,
 )
 
-from .cache import (
-    leaderboard_cache,
-)
-
-
 class LeaderboardService:
 
     async def get_global_leaderboard(
         self,
         db: AsyncSession,
     ):
-        cached = leaderboard_cache.get(
-            "global",
-        )
-
-        if cached:
-            return cached
-
         rows = await leaderboard_repository.global_leaderboard(
             db,
         )
@@ -47,10 +35,14 @@ class LeaderboardService:
         today = datetime.utcnow().date()
         yesterday = today - timedelta(days=1)
 
-        for user, xp, streak, stats in rows:
+        for user, xp, streak, stats, solved, battles_count, wins, losses, draws in rows:
             user_xp = xp.total_xp if xp else 0
             user_level = xp.level if xp else 1
-            user_rating = stats.rating if (stats and stats.rating) else (getattr(user, "coding_rating", None) or 1000)
+            user_rating = (
+                stats.rating
+                if stats and stats.rating is not None
+                else int(user.coding_rating or 0)
+            )
 
             user_streak = 0
             if streak:
@@ -61,14 +53,23 @@ class LeaderboardService:
             leaderboard.append(
                 {
                     "user_id": str(user.id),
-                    "username": str(user.username or "player"),
-                    "full_name": str(user.full_name or user.username or "Player"),
+                    "username": str(user.username),
+                    "full_name": str(user.full_name),
                     "avatar": getattr(user, "avatar_url", None) or getattr(user, "avatar", None),
                     "xp": user_xp,
                     "level": user_level,
                     "streak": user_streak,
-                    "solved": max(0, user_xp // 100),
+                    "solved": int(solved or 0),
                     "rating": user_rating,
+                    "wins": wins,
+                    "losses": losses,
+                    "draws": draws,
+                    "battles_count": battles_count,
+                    "win_rate": (
+                        round(wins / (wins + losses) * 100, 1)
+                        if wins + losses
+                        else 0
+                    ),
                 }
             )
 
@@ -80,11 +81,6 @@ class LeaderboardService:
             "leaderboard": leaderboard,
         }
 
-        leaderboard_cache.set(
-            "global",
-            result,
-        )
-
         return result
 
     async def my_rank(
@@ -92,24 +88,24 @@ class LeaderboardService:
         db: AsyncSession,
         current_user,
     ):
-        rank, xp = await leaderboard_repository.get_user_rank(
+        rank, xp, total_users = await leaderboard_repository.get_user_rank(
             db,
             str(current_user.id),
         )
 
-        if xp is None:
+        if rank is None:
             return {
                 "rank": None,
-                "total_users": 0,
+                "total_users": total_users,
                 "xp": 0,
-                "level": 0,
+                "level": 1,
             }
 
         return {
             "rank": rank,
-            "total_users": 10000,
-            "xp": xp.total_xp,
-            "level": xp.level,
+            "total_users": total_users,
+            "xp": int(xp.total_xp or 0) if xp else 0,
+            "level": int(xp.level or 1) if xp else 1,
         }
 
 

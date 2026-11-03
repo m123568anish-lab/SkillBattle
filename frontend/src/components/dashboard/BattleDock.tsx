@@ -2,15 +2,14 @@
 
 import { useState, useCallback, memo } from "react";
 import { useRouter } from "next/navigation";
-import { Sword, Users, Play, Code2, ShieldAlert, Zap } from "lucide-react";
+import { Sword, Users, Play, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 import GradientButton from "@/components/ui/gradient-button";
 
 const BATTLE_MODES = [
-  { id: "1v1-ranked", title: "1v1 Ranked Match", icon: Sword, desc: "High stakes competitive coding battle", duration: "15 min", xp: "+120 XP", color: "from-rose-500 to-pink-600" },
-  { id: "1v1-casual", title: "Casual Duel", icon: Users, desc: "Play casually against matches", duration: "10 min", xp: "+60 XP", color: "from-violet-500 to-purple-600" },
-  { id: "friend", title: "Friend Challenge", icon: Code2, desc: "Invite a custom friend to battle", duration: "Custom", xp: "+80 XP", color: "from-amber-500 to-orange-600" },
-  { id: "practice", title: "Solo Practice", icon: Play, desc: "Solve practice tasks at your own pace", duration: "Unlimited", xp: "+30 XP", color: "from-emerald-500 to-teal-600" }
+  { id: "matchmaking", title: "Find a player", icon: Sword, desc: "Join the server-managed battle queue.", color: "from-rose-500 to-pink-600" },
+  { id: "room", title: "Create or join a room", icon: Users, desc: "Create a persisted room or join with its battle ID.", color: "from-violet-500 to-purple-600" },
+  { id: "practice", title: "Solo practice", icon: Play, desc: "Open the available individual practice workflows.", color: "from-emerald-500 to-teal-600" }
 ];
 
 const ModeCard = memo(function ModeCard({
@@ -48,13 +47,6 @@ const ModeCard = memo(function ModeCard({
           }`}>
             <Icon size={18} />
           </div>
-          <span className={`text-[10px] font-black tracking-widest px-2 py-1 rounded-full transition-all ${
-            isSelected
-              ? "text-cyan-300 bg-cyan-500/20"
-              : "text-slate-500 bg-white/5"
-          }`}>
-            {mode.duration}
-          </span>
         </div>
 
         <div>
@@ -72,15 +64,6 @@ const ModeCard = memo(function ModeCard({
           </p>
         </div>
 
-        {/* XP reward badge */}
-        <div className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-lg w-fit transition-all ${
-          isSelected
-            ? "bg-cyan-500/25 text-cyan-200"
-            : "bg-white/5 text-slate-400 group-hover:bg-white/10"
-        }`}>
-          <Zap size={12} />
-          {mode.xp}
-        </div>
       </div>
     </motion.button>
   );
@@ -88,17 +71,15 @@ const ModeCard = memo(function ModeCard({
 
 export default memo(function BattleDock() {
   const router = useRouter();
-  const [selectedMode, setSelectedMode] = useState("1v1-ranked");
-  const [difficulty, setDifficulty] = useState("medium");
-  const [language, setLanguage] = useState("python");
+  const [selectedMode, setSelectedMode] = useState("matchmaking");
 
   const handleStartBattle = useCallback(() => {
     if (selectedMode === "practice") {
       router.push("/battle/solo");
     } else {
-      router.push(`/battle?mode=${selectedMode}&difficulty=${difficulty}&lang=${language}`);
+      router.push("/battle/lobby");
     }
-  }, [selectedMode, difficulty, language, router]);
+  }, [selectedMode, router]);
 
   const selectedModeData = BATTLE_MODES.find(m => m.id === selectedMode);
 
@@ -127,7 +108,7 @@ export default memo(function BattleDock() {
           <h3 className="text-sm font-black uppercase tracking-wider text-cyan-400 flex items-center gap-2">
             <Zap size={14} className="animate-pulse" /> Battle Arena Modes
           </h3>
-          <p className="text-xs text-slate-400 mt-1">Select your battle format and start competing</p>
+          <p className="text-xs text-slate-400 mt-1">Choose a supported battle workflow</p>
         </div>
       </motion.div>
 
@@ -155,44 +136,13 @@ export default memo(function BattleDock() {
           ))}
         </motion.div>
 
-        {/* Quick Settings Panel */}
+        {/* Selected workflow */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3 }}
           className="lg:col-span-4 rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/60 to-slate-950/40 p-5 sm:p-6 space-y-5 flex flex-col"
         >
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-              Difficulty Level
-            </label>
-            <select
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value)}
-              className="w-full text-sm font-semibold rounded-xl border border-white/10 bg-slate-950/50 px-4 py-2.5 text-white outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/20 transition-all"
-            >
-              <option value="easy">🟢 Easy</option>
-              <option value="medium">🟡 Medium</option>
-              <option value="hard">🔴 Hard</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-              Programming Language
-            </label>
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className="w-full text-sm font-semibold rounded-xl border border-white/10 bg-slate-950/50 px-4 py-2.5 text-white outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/20 transition-all"
-            >
-              <option value="python">🐍 Python</option>
-              <option value="javascript">⚡ JavaScript</option>
-              <option value="cpp">⚙️ C++</option>
-              <option value="java">☕ Java</option>
-            </select>
-          </div>
-
           {/* Mode info card */}
           {selectedModeData && (
             <motion.div
@@ -211,7 +161,7 @@ export default memo(function BattleDock() {
           <GradientButton onClick={handleStartBattle} fullWidth className="mt-auto">
             <span className="flex items-center justify-center gap-2 font-black text-sm tracking-wide">
               <Zap size={16} />
-              START BATTLE
+              {selectedMode === "practice" ? "OPEN PRACTICE" : "OPEN BATTLE LOBBY"}
             </span>
           </GradientButton>
         </motion.div>
@@ -219,4 +169,3 @@ export default memo(function BattleDock() {
     </motion.div>
   );
 });
-

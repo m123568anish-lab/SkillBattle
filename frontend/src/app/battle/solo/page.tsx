@@ -1,53 +1,73 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
   PageHeader,
-  DifficultyBadge,
-  StatCard,
   BattleNav,
 } from "@/components/arena";
 import {
   BookOpen,
   Code2,
-  Clock,
-  Zap,
-  Target,
-  Trophy,
-  Flame,
-  ArrowRight,
   ShieldAlert,
   Play,
-  Layers,
-  Sparkles,
 } from "lucide-react";
+import { api } from "@/lib/api";
+import toast from "react-hot-toast";
+import { practiceService } from "@/services/practice.service";
 
-function SoloBattleSelectionContent() {
+export default function SoloBattleSelectionPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const initialMode = searchParams.get("mode") || "all";
 
   // MCQ Config state
   const [mcqCategory, setMcqCategory] = useState("Algorithms & Data Structures");
   const [mcqDifficulty, setMcqDifficulty] = useState("Medium");
-  const [mcqDuration, setMcqDuration] = useState(5); // minutes
   const [mcqQuestionsCount, setMcqQuestionsCount] = useState(10);
 
   // Coding Config state
   const [codingDifficulty, setCodingDifficulty] = useState("Medium");
   const [codingLanguage, setCodingLanguage] = useState("python");
+  const [creatingBattle, setCreatingBattle] = useState(false);
 
   const handleStartMcq = () => {
-    router.push(
-      `/battle/solo/mcq?category=${encodeURIComponent(mcqCategory)}&difficulty=${mcqDifficulty}&duration=${mcqDuration}&count=${mcqQuestionsCount}`
-    );
+    const params = new URLSearchParams({
+      topic: mcqCategory,
+      difficulty: mcqDifficulty.toLowerCase(),
+      count: String(mcqQuestionsCount),
+    });
+    router.push(`/practice/session?${params.toString()}`);
   };
 
-  const handleStartCoding = () => {
-    router.push(`/battle/1?mode=solo&lang=${codingLanguage}&diff=${codingDifficulty}`);
+  const handleStartCoding = async () => {
+    setCreatingBattle(true);
+    try {
+      const catalog = await practiceService.list({
+        difficulty: codingDifficulty.toLowerCase(),
+        page: 1,
+        page_size: 1,
+      });
+      const problem = catalog.items[0];
+      if (!problem) {
+        toast.error(`No ${codingDifficulty.toLowerCase()} coding problems are available right now.`);
+        return;
+      }
+
+      const { data } = await api.post<{ id: string }>("/battle/create", {
+        title: "Solo coding challenge",
+        difficulty: codingDifficulty.toLowerCase(),
+        problem_id: problem.id,
+        battle_type: "general",
+        battle_mode: "solo",
+        max_players: 1,
+      });
+      if (!data.id) throw new Error("The server did not return a battle ID.");
+      router.push(`/battle/${encodeURIComponent(data.id)}?lang=${encodeURIComponent(codingLanguage)}`);
+    } catch {
+      toast.error("Unable to create a coding battle. Please try again.");
+    } finally {
+      setCreatingBattle(false);
+    }
   };
 
   return (
@@ -55,7 +75,7 @@ function SoloBattleSelectionContent() {
       <div className="space-y-8 pb-12">
         <PageHeader
           title="Solo Challenges"
-          subtitle="Challenge yourself in high-intensity timed MCQ sprints or deep algorithmic coding battles. Beat your personal best and gain Rating."
+          subtitle="Practice with database-backed MCQ questions or create a server-managed coding challenge."
           theme="battle"
           breadcrumbs={[
             { label: "Qubira Arena", href: "/battle" },
@@ -65,41 +85,9 @@ function SoloBattleSelectionContent() {
 
         <BattleNav />
 
-        {/* Quick Stats Bar */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            label="Solo Rating"
-            value="1,240 ELO"
-            subtext="Platinum Tier Competitor"
-            icon={Trophy}
-            variant="battle"
-          />
-          <StatCard
-            label="Fastest Solve"
-            value="42s"
-            subtext="Arrays & Two Pointers sprint"
-            icon={Zap}
-            variant="amber"
-          />
-          <StatCard
-            label="Win Streak"
-            value="6 Battles"
-            subtext="Flawless completion rate"
-            icon={Flame}
-            variant="emerald"
-          />
-          <StatCard
-            label="Battle XP"
-            value="+1,850"
-            subtext="Earned through timed duels"
-            icon={Target}
-            variant="neutral"
-          />
-        </div>
-
         {/* Two Large Distinct Mode Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Card 1: MCQ Solo Battle */}
+          {/* Card 1: MCQ Practice */}
           <div className="rounded-3xl border border-purple-500/30 bg-gradient-to-br from-purple-950/30 via-slate-900/60 to-slate-950/90 p-6 sm:p-8 space-y-6 backdrop-blur-xl shadow-2xl relative overflow-hidden flex flex-col justify-between">
             <div className="absolute top-0 right-0 -mt-10 -mr-10 h-48 w-48 rounded-full bg-purple-500/10 blur-3xl pointer-events-none" />
 
@@ -109,14 +97,14 @@ function SoloBattleSelectionContent() {
                   <BookOpen className="h-6 w-6" />
                 </div>
                 <span className="rounded-full border border-purple-500/40 bg-purple-500/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-purple-300">
-                  Speed Duel
+                  Question practice
                 </span>
               </div>
 
               <div>
-                <h2 className="text-2xl font-black text-white">MCQ Solo Sprint</h2>
+                <h2 className="text-2xl font-black text-white">MCQ Practice</h2>
                 <p className="mt-1 text-xs sm:text-sm text-slate-300 leading-relaxed">
-                  Rapid-fire conceptual challenges under strict time pressure. Test your mastery of algorithmic invariants, system design, and language runtimes.
+                  Answer eligible questions from the database. Your submitted answers and qualifying rewards are saved to your account.
                 </p>
               </div>
 
@@ -139,7 +127,7 @@ function SoloBattleSelectionContent() {
                   </select>
                 </div>
 
-                {/* Difficulty & Duration Row */}
+                {/* Difficulty and question count */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
@@ -165,24 +153,17 @@ function SoloBattleSelectionContent() {
 
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                      Duration
+                      Number of questions
                     </label>
-                    <div className="flex items-center gap-1.5">
-                      {[3, 5, 10].map((mins) => (
-                        <button
-                          key={mins}
-                          type="button"
-                          onClick={() => setMcqDuration(mins)}
-                          className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition-all cursor-pointer ${
-                            mcqDuration === mins
-                              ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
-                              : "border border-white/10 bg-white/[0.04] text-slate-400 hover:text-white"
-                          }`}
-                        >
-                          {mins}m
-                        </button>
+                    <select
+                      value={mcqQuestionsCount}
+                      onChange={(event) => setMcqQuestionsCount(Number(event.target.value))}
+                      className="w-full rounded-lg border border-white/10 bg-black/50 px-3 py-2 text-xs font-bold text-white focus:border-purple-500 focus:outline-none"
+                    >
+                      {[5, 10, 20].map((count) => (
+                        <option key={count} value={count}>{count}</option>
                       ))}
-                    </div>
+                    </select>
                   </div>
                 </div>
               </div>
@@ -196,7 +177,7 @@ function SoloBattleSelectionContent() {
                 className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-6 py-4 text-sm font-black text-white shadow-xl shadow-purple-600/30 hover:scale-[1.01] hover:shadow-purple-500/40 transition-all cursor-pointer"
               >
                 <Play className="h-4 w-4 fill-current" />
-                <span>Launch MCQ Sprint ({mcqDuration} Mins)</span>
+                <span>Start MCQ Practice ({mcqQuestionsCount} Questions)</span>
               </button>
             </div>
           </div>
@@ -282,10 +263,11 @@ function SoloBattleSelectionContent() {
               <button
                 type="button"
                 onClick={handleStartCoding}
+                disabled={creatingBattle}
                 className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 px-6 py-4 text-sm font-black text-slate-950 shadow-xl shadow-cyan-500/25 hover:scale-[1.01] hover:shadow-cyan-400/40 transition-all cursor-pointer"
               >
                 <Play className="h-4 w-4 fill-current" />
-                <span>Launch Coding IDE ({codingDifficulty})</span>
+                <span>{creatingBattle ? "Creating battle..." : `Launch Coding IDE (${codingDifficulty})`}</span>
               </button>
             </div>
           </div>
@@ -298,22 +280,14 @@ function SoloBattleSelectionContent() {
             <span>Solo Battle Rules & Rating Invariants</span>
           </h3>
           <p className="leading-relaxed">
-            1. Leaving an active timed battle counts as a forfeit and will record an incomplete attempt.
+            1. Battle status and any recorded result are determined by the server.
             <br />
-            2. In Coding battles, all test cases must pass within execution limits (2.0s runtime, 256MB memory).
+            2. Coding submissions are evaluated by the server-side judge.
             <br />
-            3. Rating points (ELO) are awarded upon completion based on execution speed and accuracy.
+            3. Rewards and rating changes are shown only when returned by the server.
           </p>
         </div>
       </div>
     </DashboardLayout>
-  );
-}
-
-export default function SoloBattleSelectionPage() {
-  return (
-    <Suspense fallback={<div className="p-8 text-center text-slate-400">Loading Solo Battle Arena...</div>}>
-      <SoloBattleSelectionContent />
-    </Suspense>
   );
 }

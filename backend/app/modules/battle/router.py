@@ -446,7 +446,7 @@ async def battle_socket(
                 continue
 
             # Defensive validation: Only permit approved client event types
-            allowed_events = {"ping", "chat", "telemetry", "typing", "ready", "submission"}
+            allowed_events = {"ping", "chat", "telemetry", "typing", "ready"}
             if event in allowed_events:
                 await battle_ws.broadcast(battle_id, event, data)
 

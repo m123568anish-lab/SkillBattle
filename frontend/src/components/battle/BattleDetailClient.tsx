@@ -6,29 +6,25 @@ import { useDashboardStore } from "@/store/dashboardStore";
 import toast from "react-hot-toast";
 import { useBattleSocket, type BattleSocketMessage } from "@/hooks/useBattleSocket";
 import { AssessmentCodeEditor, AssessmentConsole, type TestCaseResult } from "@/components/assessment";
+import { practiceService } from "@/services/practice.service";
 import {
   Users,
   Wifi,
   WifiOff,
   Send,
   Play,
-  Terminal,
   Activity,
-  Award,
-  Clock,
-  Sparkles,
 } from "lucide-react";
 
 export interface BattleDetailClientProps {
   id: string;
   problemId?: number;
-  problemTitle?: string;
 }
 
-export default function BattleDetailClient({ id, problemId = 1, problemTitle }: BattleDetailClientProps) {
-  const [players, setPlayers] = useState<number>(1);
+export default function BattleDetailClient({ id, problemId }: BattleDetailClientProps) {
+  const [players, setPlayers] = useState<number | null>(null);
   const [telemetryEvents, setTelemetryEvents] = useState<
-    Array<{ id: string; time: string; text: string; type: "system" | "join" | "submission" | "action" }>
+    Array<{ id: string; time: string; text: string; type: "system" | "join" | "action" }>
   >([]);
 
   // Code editor state
@@ -46,9 +42,48 @@ export default function BattleDetailClient({ id, problemId = 1, problemTitle }: 
   const [consoleStderr, setConsoleStderr] = useState<string>("");
   const [consoleRuntime, setConsoleRuntime] = useState<number | null>(null);
   const [consoleMemory, setConsoleMemory] = useState<number | null>(null);
-  const [testCases, setTestCases] = useState<TestCaseResult[]>([
-    { id: 1, input: "Sample input", expectedOutput: "Sample output" },
-  ]);
+  const [testCases, setTestCases] = useState<TestCaseResult[]>([]);
+  const [loadedProblemTitle, setLoadedProblemTitle] = useState<string | null>(null);
+  const [problemLoadError, setProblemLoadError] = useState<string | null>(null);
+  const [problemLoading, setProblemLoading] = useState(Boolean(problemId));
+
+  useEffect(() => {
+    setProblemLoadError(null);
+    setLoadedProblemTitle(null);
+    setTestCases([]);
+
+    if (!problemId) {
+      setProblemLoadError("This battle does not reference a valid coding problem.");
+      setProblemLoading(false);
+      return;
+    }
+
+    let active = true;
+    setProblemLoading(true);
+    practiceService.get(problemId).then((problem) => {
+      if (!active) return;
+      setLoadedProblemTitle(problem.title);
+      setProblemLoadError(null);
+      setTestCases(
+        problem.samples.map((sample, index) => ({
+          id: index + 1,
+          input: sample.input,
+          expectedOutput: sample.output,
+        }))
+      );
+    }).catch((error: unknown) => {
+      if (!active) return;
+      console.error("Failed to load battle problem samples:", error);
+      setProblemLoadError("Battle problem details are unavailable.");
+      setTestCases([]);
+    }).finally(() => {
+      if (active) setProblemLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [problemId]);
 
   // Handle incoming WebSocket messages
   const handleSocketMessage = useCallback((msg: BattleSocketMessage) => {
@@ -56,25 +91,15 @@ export default function BattleDetailClient({ id, problemId = 1, problemTitle }: 
     const { event, data } = msg;
 
     if (event === "player_joined") {
-      setPlayers((p) => (typeof data?.players === "number" ? data.players : p + 1));
+      if (typeof data?.players === "number") setPlayers(data.players);
       setTelemetryEvents((prev) => [
         { id: Math.random().toString(), time, text: `Player joined the arena`, type: "join" },
         ...prev.slice(0, 30),
       ]);
     } else if (event === "player_left") {
-      setPlayers((p) => Math.max(1, typeof data?.players === "number" ? data.players : p - 1));
+      if (typeof data?.players === "number") setPlayers(data.players);
       setTelemetryEvents((prev) => [
         { id: Math.random().toString(), time, text: `Player disconnected`, type: "system" },
-        ...prev.slice(0, 30),
-      ]);
-    } else if (event === "submission") {
-      setTelemetryEvents((prev) => [
-        {
-          id: Math.random().toString(),
-          time,
-          text: `Opponent submitted code (${String(data?.verdict || "Evaluating")})`,
-          type: "submission",
-        },
         ...prev.slice(0, 30),
       ]);
     } else if (event === "battle_finished") {
@@ -115,7 +140,7 @@ export default function BattleDetailClient({ id, problemId = 1, problemTitle }: 
       const endMs = Date.now();
 
       setConsoleRuntime(r.data.execution_time ?? endMs - startMs);
-      setConsoleMemory(r.data.memory_used ?? 12.0);
+      setConsoleMemory(r.data.memory_used ?? null);
 
       if (r.data.stderr) {
         setConsoleStderr(r.data.stderr);
@@ -135,13 +160,17 @@ export default function BattleDetailClient({ id, problemId = 1, problemTitle }: 
   // Submit code to authoritative compiler judge
   const handleSubmitCode = async () => {
     if (submitting) return;
+    if (!problemId || problemLoading || problemLoadError) {
+      toast.error(problemLoadError || "Battle problem details are still loading or unavailable.");
+      return;
+    }
     setSubmitting(true);
     setConsoleStatus("running");
 
     try {
       const resp = await api.post("/compiler/submit", {
         battle_id: id,
-        problem_id: problemId || 1,
+        problem_id: problemId,
         language: editorLang,
         source_code: sourceCode,
       });
@@ -152,19 +181,17 @@ export default function BattleDetailClient({ id, problemId = 1, problemTitle }: 
 
       if (r.verdict === "Accepted") {
         setConsoleStatus("accepted");
-        toast.success(`Solution accepted! +${r.xp_earned || 50} verified XP`);
+        toast.success(
+          typeof r.xp_earned === "number"
+            ? `Solution accepted! +${r.xp_earned} verified XP`
+            : "Solution accepted."
+        );
         void useDashboardStore.getState().refresh();
       } else {
         setConsoleStatus("wrong_answer");
         toast.error(`Verdict: ${r.verdict} (${r.passed_tests}/${r.total_tests})`);
       }
 
-      // Notify WebSocket peer of submission
-      sendEvent("submission", {
-        verdict: r.verdict,
-        passed_tests: r.passed_tests,
-        total_tests: r.total_tests,
-      });
     } catch (err: any) {
       const errMsg = err?.response?.data?.detail || "Submission failed";
       setConsoleStderr(errMsg);
@@ -191,7 +218,7 @@ export default function BattleDetailClient({ id, problemId = 1, problemTitle }: 
           )}
           <span className="text-slate-600">•</span>
           <span className="text-slate-300 font-medium flex items-center gap-1">
-            <Users className="h-3.5 w-3.5 text-cyan-400" /> {players} Active in Arena
+            <Users className="h-3.5 w-3.5 text-cyan-400" /> {players ?? "—"} Active in Arena
           </span>
         </div>
 
@@ -205,6 +232,8 @@ export default function BattleDetailClient({ id, problemId = 1, problemTitle }: 
       </div>
 
       {/* Editor & Execution Panel */}
+      {loadedProblemTitle && <h3 className="text-sm font-semibold text-slate-300">{loadedProblemTitle}</h3>}
+      {problemLoadError && <p role="alert" className="text-sm text-amber-300">{problemLoadError}</p>}
       <div className="min-h-[380px] h-[440px]">
         <AssessmentCodeEditor
           value={sourceCode}
@@ -247,7 +276,7 @@ export default function BattleDetailClient({ id, problemId = 1, problemTitle }: 
         <button
           type="button"
           onClick={handleSubmitCode}
-          disabled={submitting || running}
+          disabled={submitting || running || problemLoading || Boolean(problemLoadError)}
           className="flex h-10 items-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 text-xs font-bold text-white shadow-lg transition hover:from-cyan-400 hover:to-blue-500 active:scale-95 disabled:opacity-50"
         >
           <Send className="h-3.5 w-3.5" />
@@ -268,11 +297,9 @@ export default function BattleDetailClient({ id, problemId = 1, problemTitle }: 
                 <span className="text-cyan-400">›</span>
                 <span
                   className={
-                    evt.type === "submission"
-                      ? "text-amber-300 font-semibold"
-                      : evt.type === "join"
-                      ? "text-emerald-300"
-                      : "text-slate-300"
+                    evt.type === "join"
+                        ? "text-emerald-300"
+                        : "text-slate-300"
                   }
                 >
                   {evt.text}

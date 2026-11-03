@@ -38,6 +38,7 @@ export default function CareerResumePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { upload, uploading } = useUpload();
 
   // Analysis Report
@@ -48,6 +49,16 @@ export default function CareerResumePage() {
   const [newProjName, setNewProjName] = useState("");
   const [newProjDesc, setNewProjDesc] = useState("");
 
+  const updateResume = (updated: ResumeData) => {
+    setResume({
+      ...updated,
+      ats_score: undefined,
+      placement_score: undefined,
+      ai_summary: undefined,
+    });
+    setAnalysisReport(null);
+  };
+
   // Check existing resume on mount
   useEffect(() => {
     fetchResume();
@@ -56,16 +67,19 @@ export default function CareerResumePage() {
   const fetchResume = async () => {
     try {
       setLoading(true);
+      setLoadError(null);
+      setAnalysisReport(null);
       const data = await careerService.getUserResume();
-      if (data && data.full_name) {
+      if (data) {
         setResume(data);
         setPhase("analysis");
       } else {
+        setResume(null);
         setPhase("upload");
       }
     } catch (err) {
       console.error("Failed to load resume:", err);
-      setPhase("upload");
+      setLoadError("Your saved resume could not be loaded.");
     } finally {
       setLoading(false);
     }
@@ -99,6 +113,7 @@ export default function CareerResumePage() {
       setSaving(true);
       const saved = await careerService.saveResume(resume);
       setResume(saved);
+      setAnalysisReport(null);
       toast.success("Resume saved successfully!");
     } catch (err) {
       console.error("Failed to save resume:", err);
@@ -112,78 +127,9 @@ export default function CareerResumePage() {
     if (!resume) return;
     try {
       setAnalyzing(true);
-      await new Promise((r) => setTimeout(r, 1500));
-
-      let atsScore = 100;
-      const issues: Array<{
-        project_name: string;
-        issue_type: string;
-        problem_found: string;
-        recommendation: string;
-        suggested_rewrite: string;
-      }> = [];
-      const recommendations: string[] = [];
-
-      if (!resume.github && !resume.linkedin) {
-        atsScore -= 10;
-        recommendations.push(
-          "Add a GitHub or LinkedIn profile link to improve technical visibility."
-        );
-      }
-      if (resume.skills.length < 5) {
-        atsScore -= 15;
-        recommendations.push(
-          "List more technical skills. Aim for at least 8-10 relevant technologies."
-        );
-      }
-      if (!resume.projects || resume.projects.length === 0) {
-        atsScore -= 20;
-        recommendations.push(
-          "Include at least 2 strong software projects with measurable impacts."
-        );
-      } else {
-        resume.projects.forEach((p) => {
-          if (p.description.length < 50) {
-            atsScore -= 5;
-            issues.push({
-              project_name: p.name,
-              issue_type: "Weak Description",
-              problem_found:
-                "Description is too short and lacks measurable metrics.",
-              recommendation:
-                "Use the STAR method (Situation, Task, Action, Result).",
-              suggested_rewrite:
-                "Developed " +
-                p.name +
-                " resulting in 30% performance increase, serving 10k+ users.",
-            });
-          }
-        });
-      }
-
-      const report = {
-        ats_score: Math.max(atsScore, 30),
-        placement_readiness_score: Math.max(atsScore - 5, 20),
-        summary_verdict:
-          atsScore >= 80
-            ? "Your resume is well-optimized for ATS systems."
-            : "Your resume requires structural improvements to pass ATS filters.",
-        project_issues: issues,
-        actionable_recommendations: recommendations,
-      };
-
+      const report = await careerService.analyzeResume(resume);
       setAnalysisReport(report);
-      setResume((prev) =>
-        prev
-          ? {
-              ...prev,
-              ats_score: report.ats_score,
-              placement_score: report.placement_readiness_score,
-              ai_summary: report.summary_verdict,
-            }
-          : null
-      );
-      toast.success("ATS & Project Analysis Complete!");
+      toast.success("Resume audit complete.");
     } catch (err) {
       console.error("Failed to analyze resume:", err);
       toast.error("Error analyzing resume.");
@@ -195,7 +141,7 @@ export default function CareerResumePage() {
   const handleAddSkill = () => {
     if (!newSkill.trim() || !resume) return;
     if (!resume.skills.includes(newSkill.trim())) {
-      setResume({
+      updateResume({
         ...resume,
         skills: [...resume.skills, newSkill.trim()],
       });
@@ -205,7 +151,7 @@ export default function CareerResumePage() {
 
   const handleRemoveSkill = (skill: string) => {
     if (!resume) return;
-    setResume({
+    updateResume({
       ...resume,
       skills: resume.skills.filter((s) => s !== skill),
     });
@@ -215,10 +161,10 @@ export default function CareerResumePage() {
     if (!newProjName.trim() || !resume) return;
     const newProj = {
       name: newProjName.trim(),
-      description: newProjDesc.trim() || "Developed high-performance software application.",
+      description: newProjDesc.trim(),
       tech_stack: [],
     };
-    setResume({
+    updateResume({
       ...resume,
       projects: [...(resume.projects || []), newProj],
     });
@@ -230,8 +176,15 @@ export default function CareerResumePage() {
     if (!resume) return;
     const updated = [...(resume.projects || [])];
     updated.splice(idx, 1);
-    setResume({ ...resume, projects: updated });
+    updateResume({ ...resume, projects: updated });
   };
+
+  const atsScore =
+    analysisReport?.ats_score ??
+    (resume?.ats_score && resume.ats_score > 0 ? resume.ats_score : null);
+  const placementScore =
+    analysisReport?.placement_readiness_score ??
+    (resume?.placement_score && resume.placement_score > 0 ? resume.placement_score : null);
 
   // Loading state
   if (loading) {
@@ -239,6 +192,19 @@ export default function CareerResumePage() {
       <DashboardLayout>
         <div className="flex h-96 items-center justify-center">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <DashboardLayout>
+        <div role="alert" className="flex items-center justify-between gap-4 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+          <span>{loadError}</span>
+          <button type="button" onClick={() => void fetchResume()} className="font-semibold underline">
+            Retry
+          </button>
         </div>
       </DashboardLayout>
     );
@@ -338,19 +304,19 @@ export default function CareerResumePage() {
                 {
                   icon: <Zap className="h-6 w-6" />,
                   title: "ATS Optimization",
-                  desc: "We'll analyze your resume for ATS compatibility",
+                  desc: "Rule-based checks of resume structure and project descriptions",
                   color: "from-yellow-500 to-orange-500",
                 },
                 {
                   icon: <Target className="h-6 w-6" />,
-                  title: "Placement Screening",
-                  desc: "Get your placement readiness score",
+                  title: "Resume Completeness",
+                  desc: "Review the completeness of information you provided",
                   color: "from-cyan-500 to-blue-500",
                 },
                 {
                   icon: <Clock className="h-6 w-6" />,
-                  title: "Instant Analysis",
-                  desc: "Results in seconds with detailed insights",
+                  title: "Evidence-based Suggestions",
+                  desc: "Use only outcomes and details you can verify",
                   color: "from-violet-500 to-pink-500",
                 },
               ].map((card, i) => (
@@ -390,8 +356,8 @@ export default function CareerResumePage() {
                   Resume Screening & ATS Optimization
                 </h1>
                 <p className="mt-1 text-sm text-slate-400">
-                  Enhance your resume for ATS systems and improve your placement
-                  readiness with AI-powered insights.
+                  Review resume structure and project descriptions using transparent,
+                  rule-based checks. Scores are estimates, not hiring predictions.
                 </p>
               </div>
 
@@ -443,14 +409,14 @@ export default function CareerResumePage() {
                 className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-6 flex items-center gap-4 hover:border-emerald-500/60 transition"
               >
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500 text-slate-950 font-black text-2xl shadow-lg flex-shrink-0">
-                  {resume.ats_score || 75}%
+                  {atsScore == null ? "—" : `${atsScore}%`}
                 </div>
                 <div>
                   <h4 className="font-bold text-white text-sm md:text-base">
                     ATS Score
                   </h4>
                   <p className="text-xs text-emerald-300 mt-0.5">
-                    Corporate ATS optimized
+                    Rule-based structure estimate
                   </p>
                 </div>
               </motion.div>
@@ -462,14 +428,14 @@ export default function CareerResumePage() {
                 className="rounded-3xl border border-violet-500/30 bg-violet-500/10 p-6 flex items-center gap-4 hover:border-violet-500/60 transition"
               >
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-500 text-white font-black text-2xl shadow-lg flex-shrink-0">
-                  {resume.placement_score || 80}%
+                  {placementScore == null ? "—" : `${placementScore}%`}
                 </div>
                 <div>
                   <h4 className="font-bold text-white text-sm md:text-base">
-                    Placement Score
+                    Readiness Estimate
                   </h4>
                   <p className="text-xs text-violet-300 mt-0.5">
-                    Shortlist probability
+                    Not a shortlist prediction
                   </p>
                 </div>
               </motion.div>
@@ -588,7 +554,7 @@ export default function CareerResumePage() {
                   <input
                     value={resume.full_name || ""}
                     onChange={(e) =>
-                      setResume({ ...resume, full_name: e.target.value })
+                      updateResume({ ...resume, full_name: e.target.value })
                     }
                     placeholder="Full Name"
                     className="rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white placeholder:text-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 outline-none transition"
@@ -597,7 +563,7 @@ export default function CareerResumePage() {
                   <input
                     value={resume.email || ""}
                     onChange={(e) =>
-                      setResume({ ...resume, email: e.target.value })
+                      updateResume({ ...resume, email: e.target.value })
                     }
                     placeholder="Email"
                     className="rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white placeholder:text-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 outline-none transition"
@@ -606,7 +572,7 @@ export default function CareerResumePage() {
                   <input
                     value={resume.phone || ""}
                     onChange={(e) =>
-                      setResume({ ...resume, phone: e.target.value })
+                      updateResume({ ...resume, phone: e.target.value })
                     }
                     placeholder="Phone"
                     className="rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white placeholder:text-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 outline-none transition"
@@ -615,7 +581,7 @@ export default function CareerResumePage() {
                   <input
                     value={resume.location || ""}
                     onChange={(e) =>
-                      setResume({ ...resume, location: e.target.value })
+                      updateResume({ ...resume, location: e.target.value })
                     }
                     placeholder="Location"
                     className="rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white placeholder:text-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 outline-none transition"
@@ -624,7 +590,7 @@ export default function CareerResumePage() {
                   <input
                     value={resume.github || ""}
                     onChange={(e) =>
-                      setResume({ ...resume, github: e.target.value })
+                      updateResume({ ...resume, github: e.target.value })
                     }
                     placeholder="GitHub URL"
                     className="rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white placeholder:text-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 outline-none transition"
@@ -633,7 +599,7 @@ export default function CareerResumePage() {
                   <input
                     value={resume.linkedin || ""}
                     onChange={(e) =>
-                      setResume({ ...resume, linkedin: e.target.value })
+                      updateResume({ ...resume, linkedin: e.target.value })
                     }
                     placeholder="LinkedIn URL"
                     className="rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white placeholder:text-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 outline-none transition"
@@ -730,7 +696,7 @@ export default function CareerResumePage() {
                         onChange={(e) => {
                           const updated = [...(resume.projects || [])];
                           updated[idx].description = e.target.value;
-                          setResume({ ...resume, projects: updated });
+                          updateResume({ ...resume, projects: updated });
                         }}
                         placeholder="Project description..."
                         className="w-full rounded-xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white placeholder:text-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 outline-none transition"

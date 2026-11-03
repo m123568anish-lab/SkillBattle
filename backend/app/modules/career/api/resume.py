@@ -15,7 +15,6 @@ from app.database.session import get_db
 from app.core.dependencies import get_current_user
 from app.models.user import User
 from app.models.resume import Resume
-from app.models.xp import XP
 
 router = APIRouter(prefix="/resume", tags=["Career Resume"])
 
@@ -79,21 +78,11 @@ class ATSAnalysisResponse(BaseModel):
     actionable_recommendations: List[str]
 
 
-# --- Helper: Fetch XP Level Safely ---
-async def get_user_xp_and_level(db: AsyncSession, user_id: str) -> tuple[int, int]:
-    stmt = select(XP).where(XP.user_id == user_id)
-    res = await db.execute(stmt)
-    xp_rec = res.scalar_one_or_none()
-    if xp_rec:
-        return xp_rec.total_xp, xp_rec.level
-    return 0, 1
-
-
 # --- Project Audit Engine ---
 STRONG_VERBS = ["engineered", "developed", "architected", "built", "implemented", "optimized", "scaled", "designed", "created", "spearheaded", "reduced", "increased"]
 METRIC_PATTERNS = [r'\d+%', r'\d+\s*ms', r'\d+\s*k', r'\d+\s*m', r'\$\d+', r'\d+\s*users', r'\d+\s*qps', r'\d+\s*x']
 
-def audit_projects_and_ats(resume: ResumeSaveRequest, user_level: int) -> ATSAnalysisResponse:
+def audit_projects_and_ats(resume: ResumeSaveRequest) -> ATSAnalysisResponse:
     skills = [s.strip().lower() for s in resume.skills if s.strip()]
     projects = resume.projects or []
     
@@ -109,7 +98,14 @@ def audit_projects_and_ats(resume: ResumeSaveRequest, user_level: int) -> ATSAna
     if len(resume.education) > 0: base_ats += 10
 
     ats_score = min(100, base_ats)
-    placement_score = min(100, int(60 + (user_level * 3) + (len(projects) * 5) + (len(skills) * 2)))
+    placement_score = min(
+        100,
+        40
+        + min(len(skills), 10) * 3
+        + min(len(projects), 4) * 5
+        + (10 if resume.github or resume.linkedin else 0)
+        + (10 if resume.education else 0),
+    )
 
     # 2. Audit Projects for Weaknesses
     project_issues: List[ProjectIssueItem] = []
@@ -119,8 +115,8 @@ def audit_projects_and_ats(resume: ResumeSaveRequest, user_level: int) -> ATSAna
             project_name="General Project Section",
             issue_type="Missing Projects",
             problem_found="No software projects listed in resume.",
-            recommendation="Add at least 2 full-stack, AI, or system design projects to showcase your technical skills.",
-            suggested_rewrite="Example: 'SkillBattle Coding Arena - Engineered real-time competitive coding platform using FastAPI, WebSockets, and Next.js.'"
+            recommendation="Add projects you have built and can explain, including your contribution and verifiable outcomes.",
+            suggested_rewrite="Describe a project you actually completed, your specific contribution, and any results you can verify."
         ))
     else:
         for idx, p in enumerate(projects):
@@ -135,9 +131,9 @@ def audit_projects_and_ats(resume: ResumeSaveRequest, user_level: int) -> ATSAna
                 project_issues.append(ProjectIssueItem(
                     project_name=p_name,
                     issue_type="Missing Metrics",
-                    problem_found="Project description lacks quantifiable impact numbers (e.g. 40% faster, 10k users, <50ms latency).",
-                    recommendation="Quantify your project achievements with numbers, speed improvements, or user scale.",
-                    suggested_rewrite=f"'{p_desc} Improved query execution speed by 35% and handled 1,000+ concurrent requests.'" if p_desc else f"Engineered {p_name} achieving <100ms API response latency across 5,000+ requests."
+                    problem_found="Project description does not include measurable outcomes; include measurements only when verifiable.",
+                    recommendation="Include measured impact only when you have evidence for it; do not invent metrics.",
+                    suggested_rewrite=f"Add a measured, verifiable outcome for {p_name}, if one is available."
                 ))
 
             # Check 2: Action Verbs
@@ -148,7 +144,7 @@ def audit_projects_and_ats(resume: ResumeSaveRequest, user_level: int) -> ATSAna
                     issue_type="Weak Action Verbs",
                     problem_found="Project bullet point starts with weak or passive phrases.",
                     recommendation="Start bullet points with strong action verbs (e.g. Architected, Engineered, Optimized).",
-                    suggested_rewrite=f"Architected and deployed {p_name} using modern cloud infrastructure and asynchronous APIs."
+                    suggested_rewrite=f"Start with an accurate action verb describing your contribution to {p_name}."
                 ))
 
             # Check 3: Missing Tech Stack
@@ -158,7 +154,7 @@ def audit_projects_and_ats(resume: ResumeSaveRequest, user_level: int) -> ATSAna
                     issue_type="Missing Tech Stack",
                     problem_found="Tech stack tools and frameworks are not explicitly mentioned.",
                     recommendation="Explicitly list frameworks, databases, and protocols used (e.g., Python, PostgreSQL, Redis, React).",
-                    suggested_rewrite=f"Built using Tech Stack: Python, FastAPI, React, PostgreSQL, and Redis."
+                    suggested_rewrite="List only the languages, frameworks, and tools you actually used."
                 ))
 
     # 3. Actionable General Recommendations
@@ -170,13 +166,13 @@ def audit_projects_and_ats(resume: ResumeSaveRequest, user_level: int) -> ATSAna
     if not resume.linkedin:
         recommendations.append("Include your LinkedIn profile link to improve ATS social proof matching.")
     if not any("sql" in s or "database" in s for s in skills):
-        recommendations.append("Include SQL or database technologies in your skills list (crucial for 90%+ SDE campus placements).")
+        recommendations.append("If you have relevant SQL or database experience, include those skills in your resume.")
     if len(recommendations) == 0:
-        recommendations.append("Your resume structure is strong! Keep practicing mock interviews and competitive battles.")
+        recommendations.append("These checks found no missing fields. Review the content for accuracy; this is not an external ATS evaluation.")
 
     verdict = (
-        f"ATS Score is {ats_score}%. " +
-        (f"Found {len(project_issues)} specific project improvements needed to maximize recruiter shortlist rates." if project_issues else "Projects are well-structured with metrics!")
+        f"Rule-based resume structure estimate: {ats_score}/100. " +
+        (f"Found {len(project_issues)} items to review." if project_issues else "No project issues were detected by these checks.")
     )
 
     return ATSAnalysisResponse(
@@ -220,18 +216,10 @@ async def save_user_resume(
     resume = res.scalars().first()
 
     if not resume:
-        resume = Resume(
-            user_id=current_user.id,
-            title=req.title,
-            original_filename="saved_resume.json",
-            stored_filename="saved_resume.json",
-            file_path="/storage/resumes/saved.json",
-            file_size=1024,
-            mime_type="application/json",
-            raw_text="SkillBattle Interactive Resume Data",
-            active=True
+        raise HTTPException(
+            status_code=409,
+            detail="Upload a resume before saving resume edits.",
         )
-        db.add(resume)
 
     resume.title = req.title
     resume.full_name = req.full_name or current_user.full_name or current_user.username
@@ -247,8 +235,7 @@ async def save_user_resume(
     resume.projects = req.projects
     resume.certifications = req.certifications
 
-    user_xp, user_level = await get_user_xp_and_level(db, current_user.id)
-    analysis = audit_projects_and_ats(req, user_level)
+    analysis = audit_projects_and_ats(req)
 
     resume.ats_score = analysis.ats_score
     resume.placement_score = analysis.placement_readiness_score
@@ -266,9 +253,8 @@ async def analyze_resume_and_projects(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Exclusively checks ATS Score and performs an in-depth audit of project descriptions,
-    identifying weak bullet points, missing metrics, and providing suggested project rewrites.
+    Performs rule-based structure checks and reviews project descriptions.
+    Suggestions must not introduce unverified claims or metrics.
     Does NOT overwrite the user's resume!
     """
-    user_xp, user_level = await get_user_xp_and_level(db, current_user.id)
-    return audit_projects_and_ats(req, user_level)
+    return audit_projects_and_ats(req)

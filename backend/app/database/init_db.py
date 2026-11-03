@@ -17,7 +17,7 @@ definitions are registered.
 import logging
 import os
 
-from sqlalchemy import bindparam, inspect, text
+from sqlalchemy import inspect, text
 
 from app.database.base import Base
 from app.database.database import engine
@@ -172,7 +172,6 @@ def init_db() -> None:
                 _repair_streak_table()
                 logger.info("⚡ Database schema already initialized (%d tables found); verified all registered model tables exist.", len(existing_tables))
 
-            _deactivate_legacy_sample_content()
         except Exception as e:
             # Some DB backends may raise an OperationalError on concurrent create_all
             # (e.g., multiple reload processes trying to create the same table).
@@ -187,47 +186,6 @@ def init_db() -> None:
     except Exception as e:
         logger.error(f"❌ Failed to create tables: {e}", exc_info=True)
         raise
-
-
-def _deactivate_legacy_sample_content() -> None:
-    """Hide only the exact records inserted by the removed built-in sample seeders."""
-    inspector = inspect(engine)
-    tables = set(inspector.get_table_names())
-    legacy_problem_slugs = (
-        "two-sum",
-        "reverse-string",
-        "valid-parentheses",
-        "binary-search",
-        "maximum-subarray",
-    )
-    legacy_question_slugs = (
-        "time-complexity-quicksort-worst-case",
-        "acid-properties-dbms",
-        "access-array-element",
-        "sum-two-integers",
-        "fix-off-by-one-loop-bug",
-        "explain-rest-vs-graphql",
-    )
-
-    with engine.begin() as connection:
-        if "problems" in tables and "is_active" in {
-            column["name"] for column in inspector.get_columns("problems")
-        }:
-            connection.execute(
-                text("UPDATE problems SET is_active = FALSE WHERE slug IN :slugs").bindparams(
-                    bindparam("slugs", expanding=True)
-                ),
-                {"slugs": legacy_problem_slugs},
-            )
-        if "questions" in tables and "is_active" in {
-            column["name"] for column in inspector.get_columns("questions")
-        }:
-            connection.execute(
-                text("UPDATE questions SET is_active = TRUE, is_validated = TRUE WHERE slug IN :slugs").bindparams(
-                    bindparam("slugs", expanding=True)
-                ),
-                {"slugs": legacy_question_slugs},
-            )
 
 
 def _repair_users_table() -> None:

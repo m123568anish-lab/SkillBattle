@@ -1,20 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import api from "@/services/api";
-import { Lock, Unlock, Star, Trophy, Flame, Zap } from "lucide-react";
+import { Lock, Unlock } from "lucide-react";
+
+interface AchievementRecord {
+  id: number;
+  title: string;
+  description: string;
+  icon: string;
+  unlocked: boolean;
+  earned_at: string | null;
+}
 
 export default function AchievementsPage() {
-  const [achievements, setAchievements] = useState<any[]>([]);
+  const [achievements, setAchievements] = useState<AchievementRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadAchievements = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get<AchievementRecord[]>("/achievements/user");
+      setAchievements(response.data);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Could not load achievements.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    api.get("/achievements/user")
-      .then((r) => setAchievements(r.data))
-      .catch((e) => console.error(e))
-      .finally(() => setLoading(false));
-  }, []);
+    void loadAchievements();
+  }, [loadAchievements]);
 
   const unlocked = achievements.filter((a) => a.unlocked);
   const locked = achievements.filter((a) => !a.unlocked);
@@ -41,6 +61,17 @@ export default function AchievementsPage() {
         <div className="flex h-64 items-center justify-center">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
         </div>
+      ) : error ? (
+        <div role="alert" className="rounded-2xl border border-rose-500/30 bg-rose-950/30 p-6 text-slate-200">
+          <p>{error}</p>
+          <button type="button" onClick={() => void loadAchievements()} className="mt-4 rounded-lg bg-white/10 px-4 py-2 font-semibold hover:bg-white/15">
+            Retry
+          </button>
+        </div>
+      ) : achievements.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-white/10 bg-slate-900/30 p-8 text-slate-400">
+          No achievements have been recorded for this account yet.
+        </div>
       ) : (
         <div className="space-y-8">
           {/* Unlocked Section */}
@@ -59,8 +90,9 @@ export default function AchievementsPage() {
                   <h3 className="font-extrabold text-white">{ach.title}</h3>
                   <p className="mt-1 text-xs text-slate-400">{ach.description}</p>
                   <div className="mt-4 flex items-center gap-2">
-                    <Star className="h-3.5 w-3.5 text-yellow-400" />
-                    <span className="text-xs font-bold text-yellow-400">{ach.xp_threshold} XP Required</span>
+                    <span className="text-xs font-bold text-emerald-300">
+                      {ach.earned_at ? `Earned ${new Date(ach.earned_at).toLocaleDateString()}` : "Recorded"}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -84,7 +116,7 @@ export default function AchievementsPage() {
                     <p className="mt-1 text-xs text-slate-500">{ach.description}</p>
                     <div className="mt-4 flex items-center gap-2">
                       <Lock className="h-3.5 w-3.5 text-slate-500" />
-                      <span className="text-xs font-bold text-slate-500">Requires {ach.xp_threshold} XP</span>
+                      <span className="text-xs font-bold text-slate-500">Not yet unlocked</span>
                     </div>
                   </div>
                 ))}

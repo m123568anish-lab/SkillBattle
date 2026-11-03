@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   AssessmentHeader,
@@ -12,18 +12,10 @@ import {
 } from "@/components/assessment";
 import { practiceService, type PracticeProblemDetail } from "@/services/practice.service";
 import {
-  Flame,
   Swords,
-  Timer as TimerIcon,
   AlertTriangle,
   Award,
-  Trophy,
   CheckCircle2,
-  XCircle,
-  ArrowRight,
-  RotateCcw,
-  Shield,
-  Zap,
 } from "lucide-react";
 
 const STARTER_CODES: Record<string, string> = {
@@ -36,7 +28,6 @@ const STARTER_CODES: Record<string, string> = {
 const LANGUAGES = ["python", "javascript", "cpp", "java"];
 
 function SoloCodingBattleInner() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const problemIdParam = searchParams.get("id");
 
@@ -49,11 +40,8 @@ function SoloCodingBattleInner() {
   const [running, setRunning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Competitive timer: 20 minutes (1200 seconds)
-  const [timeLeft, setTimeLeft] = useState(1200);
   const [battleFinished, setBattleFinished] = useState(false);
-  const [showForfeitModal, setShowForfeitModal] = useState(false);
-  const [eloDelta, setEloDelta] = useState<number | null>(null);
+  const [xpAwarded, setXpAwarded] = useState<number | null>(null);
 
   // Telemetry
   const [consoleStatus, setConsoleStatus] = useState<string>("idle");
@@ -110,29 +98,6 @@ function SoloCodingBattleInner() {
     void fetchTargetProblem();
   }, [problemIdParam]);
 
-  // Countdown timer
-  useEffect(() => {
-    if (battleFinished || loading || timeLeft <= 0) return;
-    const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          setBattleFinished(true);
-          setEloDelta(-15);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [battleFinished, loading, timeLeft]);
-
-  const formatTimer = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
-
   const handleRunTests = async () => {
     if (!problem || running || battleFinished) return;
     setRunning(true);
@@ -165,6 +130,7 @@ function SoloCodingBattleInner() {
       }
     } catch {
       setConsoleStatus("failed");
+      setConsoleStderr("Submission failed. Please retry.");
       setConsoleStderr("Execution failed.");
     } finally {
       setRunning(false);
@@ -202,9 +168,7 @@ function SoloCodingBattleInner() {
       }
 
       if (res.status === "passed") {
-        const speedBonus = timeLeft > 600 ? 10 : 5;
-        const awardedElo = 25 + speedBonus;
-        setEloDelta(awardedElo);
+        setXpAwarded(res.xp_awarded ?? null);
         setBattleFinished(true);
       }
     } catch {
@@ -212,12 +176,6 @@ function SoloCodingBattleInner() {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const confirmForfeit = () => {
-    setEloDelta(-20);
-    setBattleFinished(true);
-    setShowForfeitModal(false);
   };
 
   if (loading) {
@@ -251,34 +209,17 @@ function SoloCodingBattleInner() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 rounded-lg bg-rose-500/15 border border-rose-500/30 px-2.5 py-1 text-xs font-bold text-rose-400">
             <Swords className="h-4 w-4" />
-            <span>SOLO CODING BATTLE</span>
+            <span>CODING PRACTICE</span>
           </div>
           <span className="text-sm font-bold text-white hidden sm:inline">
             {problem.title}
           </span>
         </div>
 
-        {/* Live Timer */}
         <div className="flex items-center gap-4">
-          <div
-            className={`flex items-center gap-2 rounded-xl px-4 py-1.5 font-mono text-sm font-black border transition ${
-              timeLeft < 180
-                ? "border-rose-500 bg-rose-500/20 text-rose-300 animate-pulse"
-                : "border-white/10 bg-white/5 text-slate-200"
-            }`}
-          >
-            <TimerIcon className="h-4 w-4 text-rose-400" />
-            <span>{formatTimer(timeLeft)}</span>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowForfeitModal(true)}
-            disabled={battleFinished}
-            className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-bold text-rose-300 hover:bg-rose-500 hover:text-white transition disabled:opacity-40"
-          >
-            Forfeit
-          </button>
+          <Link href="/battle/solo" className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:bg-white/10">
+            Exit practice
+          </Link>
         </div>
       </header>
 
@@ -293,10 +234,8 @@ function SoloCodingBattleInner() {
               </span>
               <span className="text-slate-600">•</span>
               <span className="text-xs text-slate-400 flex items-center gap-1">
-                <Award className="h-3.5 w-3.5 text-amber-400" /> +{problem.xp_reward} XP
+                <Award className="h-3.5 w-3.5 text-amber-400" /> Configured reward: {problem.xp_reward} XP
               </span>
-              <span className="text-slate-600">•</span>
-              <span className="text-xs text-cyan-400 font-bold">+25-35 ELO</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
               {problem.title}
@@ -377,77 +316,25 @@ function SoloCodingBattleInner() {
         canSubmit={!battleFinished}
       />
 
-      {/* Forfeit Confirmation Modal */}
-      {showForfeitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-rose-500/30 bg-[#0E1524] p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center gap-3 text-rose-400">
-              <AlertTriangle className="h-6 w-6" />
-              <h3 className="text-lg font-bold">Forfeit Battle?</h3>
-            </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Surrendering will immediately end this match and deduct <strong>20 ELO rating points</strong>. Are you sure you want to forfeit?
-            </p>
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowForfeitModal(false)}
-                className="rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-white/5"
-              >
-                Continue Battle
-              </button>
-              <button
-                type="button"
-                onClick={confirmForfeit}
-                className="rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-white hover:bg-rose-600 transition"
-              >
-                Yes, Forfeit
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Post-Battle Results Overlay */}
+      {/* Persisted submission result */}
       {battleFinished && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-fadeIn">
           <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-gradient-to-br from-[#0E1524] via-[#0B0F17] to-[#141C2E] p-8 text-center space-y-6 shadow-2xl">
             <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 to-amber-500 text-white shadow-lg mx-auto">
-              {(eloDelta ?? 0) > 0 ? (
-                <Trophy className="h-8 w-8 text-yellow-300" />
-              ) : (
-                <XCircle className="h-8 w-8 text-rose-200" />
-              )}
+              <CheckCircle2 className="h-8 w-8 text-yellow-300" />
             </div>
 
             <div>
-              <h2 className="text-2xl sm:text-3xl font-black text-white">
-                {(eloDelta ?? 0) > 0 ? "Battle Conquered!" : "Match Concluded"}
-              </h2>
+              <h2 className="text-2xl sm:text-3xl font-black text-white">Submission accepted</h2>
               <p className="text-xs text-slate-400 mt-1">
-                {(eloDelta ?? 0) > 0
-                  ? "All test cases passed with flying colors."
-                  : "Time expired or match was forfeited."}
+                The server evaluated the submission and recorded its result.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Rating Delta</div>
-                <div
-                  className={`text-2xl font-black mt-1 ${
-                    (eloDelta ?? 0) > 0 ? "text-emerald-400" : "text-rose-400"
-                  }`}
-                >
-                  {(eloDelta ?? 0) > 0 ? `+${eloDelta}` : eloDelta} ELO
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Time Remaining</div>
-                <div className="text-2xl font-black text-white mt-1 font-mono">
-                  {formatTimer(timeLeft)}
-                </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">XP awarded by server</div>
+              <div className="text-2xl font-black text-amber-300 mt-1">
+                {xpAwarded === null ? "Not returned" : `${xpAwarded} XP`}
               </div>
             </div>
 

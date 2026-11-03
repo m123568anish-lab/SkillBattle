@@ -324,7 +324,14 @@ async def complete_interview(
     session.finished_at = datetime.utcnow()
     await db.commit()
 
-    rating = "Exceeds Expectations (Strong Hire)" if session.overall_score >= 80 else ("Meets Expectations (Hire)" if session.overall_score >= 60 else "Needs Improvement")
+    if not scores:
+        rating = "No scored answers"
+    elif session.overall_score >= 80:
+        rating = "Strong practice response"
+    elif session.overall_score >= 60:
+        rating = "Developing practice response"
+    else:
+        rating = "More practice recommended"
 
     return {
         "status": "success",

@@ -91,6 +91,57 @@ but the actual deployed values cannot be verified here.
   status, and readiness without returning connection details. Other database
   health error responses no longer include raw exception text.
 - No migration was created for these changes.
+- Battle lobby and room actions now use authenticated server endpoints. The UI
+  no longer fabricates queue counts, opponents, room codes, rating metrics, or
+  successful joins; legacy matchmaking and championship URLs redirect to the
+  supported lobby and persisted tournament listing.
+- The legacy battle-history screen now reads authenticated battle records.
+  Fabricated solo-MCQ questions/results and local-only coding timer/ELO rewards
+  were removed; the MCQ path uses persisted practice, and coding completion
+  displays only the XP amount returned by the server.
+- Battle queue status now ignores completed rooms and selects the latest active
+  room for the authenticated user. Creating a room no longer silently adds one
+  of the user's friends as a participant.
+- Leaderboard, tournament registration, and achievement surfaces now use
+  persisted records rather than fabricated profiles, counts, or XP-threshold
+  unlocks. Startup no longer mutates legacy content based on hardcoded slugs,
+  and question generation no longer creates a synthetic sample question.
+- Battle details now load sample cases from the stored coding problem and no
+  longer substitute a sample payload, memory figure, XP reward, or problem ID.
+  The solo launcher selects a real problem from the practice catalogue.
+- Battle WebSocket clients can no longer broadcast their own `submission`
+  verdicts as opponent activity. WebSocket authentication and participant
+  membership checks are still unresolved and must be completed before treating
+  live room activity as trusted.
+- The client-only company speedrun, which assigned local ranks and XP bonuses
+  without persisting a session, has been disabled and redirects to supported
+  coding challenges with an explicit explanation.
+- Friend removal now calls the authenticated delete endpoint before updating
+  local state. Synthetic friend wins, online status, leadership, and squad-cap
+  metrics were removed; a failed friend-list request is no longer shown as an
+  empty list.
+- Resume analysis now calls the backend rule-based audit instead of generating
+  local scores and invented project metrics. Suggestions no longer assert
+  unverified accomplishments, score cards have no hardcoded defaults, and
+  editing cannot create a record with a fabricated file path or upload metadata.
+- Resume upload responses must include a successful server result and resume ID;
+  incomplete payloads now surface as errors instead of success-shaped defaults.
+- Mock interview feedback is labeled as a rubric score, not AI evaluation or a
+  hiring decision; completion bands describe practice performance and handle
+  sessions with no scored answers.
+- The server-status widget no longer sends a `NEXT_PUBLIC_UPTIMEROBOT_API_KEY`
+  from the browser or displays a fabricated uptime history. It reports only
+  direct API reachability and response time.
+
+## Repository-wide audit boundary
+
+The implementation is still a targeted repair, not a completed inventory of
+every production feature. Profile/settings, college/company workflows, admin
+challenge creation, career roadmap, external opportunities, and legacy AI
+interview services still need feature-by-feature verification. Static prompt
+suggestions, form placeholders, language/category lists, and test fixtures are
+not themselves evidence of fake user records and should be retained unless a
+specific production data-flow defect is confirmed.
 
 ## Existing persistence and boundaries
 
@@ -137,10 +188,15 @@ read-only verification of the requested production tables remain outstanding.
 
 ## Local verification
 
-- Full backend test suite: 136 passed (62 warnings).
-- Final focused persistence, MCQ persistence/isolation, and dashboard tests: 9 passed.
+- Full backend test suite: 142 passed (62 warnings).
+- Focused persistence, MCQ persistence/isolation, and battle lifecycle tests:
+  9 passed.
 - Next.js 16.2.9 production build and TypeScript validation: passed.
-- Frontend ESLint: passed with 7 existing warnings in unrelated files.
+- Frontend ESLint: passed with 7 warnings in unrelated files.
 - `git diff --check`: passed.
+- Focused resume API tests: 4 passed.
+- Browser smoke test of the protected company-speedrun route redirected to
+  login; Clerk development authentication did not initialize in the local
+  environment, so no authenticated browser flow was verified.
 - The MCQ account-isolation test uses a local in-memory SQLite database. No
-  production database, deployment, or browser-based auth/session flow was run.
+  production database or deployment was accessed.

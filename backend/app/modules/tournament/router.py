@@ -30,6 +30,7 @@ from app.core.dependencies import (
 )
 
 from app.models.user import User
+from app.modules.tournament.schemas import TournamentResponse
 
 from app.modules.tournament.schemas import (
     CreateTournamentRequest,
@@ -80,8 +81,16 @@ async def create_tournament(
 
     db: AsyncSession = Depends(get_db),
 
+    current_user: User = Depends(get_current_user),
 ):
-
+    if not current_user.is_superuser and str(current_user.role).strip().upper() not in {
+        "ADMIN",
+        "PLATFORM_ADMIN",
+    }:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only platform administrators can create tournaments.",
+        )
     try:
 
         return await tournament_service.create_tournament(
@@ -92,7 +101,7 @@ async def create_tournament(
 
         )
 
-    except Exception as exc:
+    except ValueError as exc:
 
         raise HTTPException(
 
@@ -134,7 +143,7 @@ async def join_tournament(
 
         )
 
-    except Exception as exc:
+    except ValueError as exc:
 
         raise HTTPException(
 
@@ -181,6 +190,7 @@ async def leave_tournament(
 
 @router.get(
     "",
+    response_model=list[TournamentResponse],
 )
 async def tournaments(
 
@@ -188,11 +198,13 @@ async def tournaments(
         get_db,
     ),
 
+    current_user: User = Depends(get_current_user),
 ):
 
     return await tournament_service.list_tournaments(
 
         db,
+        current_user,
 
     )
 

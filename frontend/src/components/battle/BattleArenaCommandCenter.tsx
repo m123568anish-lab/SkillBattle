@@ -31,20 +31,13 @@ type Skill = {
   sources?: string[];
 };
 
-type RecommendedBattle = {
-  id: string;
-  title?: string;
-  difficulty?: string;
-  status?: string;
-  max_players?: number;
-  created_at?: string;
-};
-
 type UserProfileStats = {
-  rating: number;
-  total_xp: number;
-  level: number;
-  battles_count: number;
+  rating: number | null;
+  total_xp: number | null;
+  level: number | null;
+  battles_count: number | null;
+  xp_to_next_level: number | null;
+  level_progress_percent: number | null;
   win_rate?: number;
 };
 
@@ -54,22 +47,20 @@ export default function BattleArenaCommandCenter({
   weakSkills,
   loading,
   profileLoadFailed,
-  waitingLoadFailed,
-  recommendedBattle,
-  recommendedBattleTitle,
+  historyLoadFailed,
   userStats,
   history,
+  onRetry,
 }: {
   skillList: Skill[];
   averageSkill: number;
   weakSkills: Skill[];
   loading: boolean;
   profileLoadFailed: boolean;
-  waitingLoadFailed: boolean;
-  recommendedBattle: RecommendedBattle | null;
-  recommendedBattleTitle: string;
+  historyLoadFailed: boolean;
   userStats: UserProfileStats;
   history: BattleHistoryItem[];
+  onRetry: () => void;
 }) {
   const router = useRouter();
 
@@ -82,10 +73,10 @@ export default function BattleArenaCommandCenter({
     return { label: "Competitor", color: "text-slate-300 border-slate-700 bg-slate-800/50" };
   };
 
-  const ratingTier = getRatingTier(userStats.rating);
-  const nextLevelXp = userStats.level * 500;
-  const currentLevelXpProgress = userStats.total_xp % 500;
-  const levelProgressPercent = Math.min(100, Math.round((currentLevelXpProgress / 500) * 100));
+  const ratingTier = userStats.rating === null
+    ? { label: profileLoadFailed ? "Unavailable" : "No data", color: "text-slate-300 border-slate-700 bg-slate-800/50" }
+    : getRatingTier(userStats.rating);
+  const levelProgressPercent = Math.min(100, Math.max(0, userStats.level_progress_percent ?? 0));
 
   return (
     <div className="space-y-8 pb-12 text-white">
@@ -107,7 +98,7 @@ export default function BattleArenaCommandCenter({
             </h1>
 
             <p className="mt-4 max-w-2xl text-base text-slate-300 md:text-lg leading-relaxed">
-              Step into high-stakes algorithmic duels, adaptive knowledge battles, and placement assessments evaluated by our server-authoritative judging engine.
+              Practice with server-provided questions, create coding battles, and access available placement workflows.
             </p>
           </div>
 
@@ -119,7 +110,7 @@ export default function BattleArenaCommandCenter({
               className="inline-flex items-center gap-2.5 rounded-2xl bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-600/25 transition hover:scale-[1.02] hover:shadow-cyan-500/20 active:scale-[0.99]"
             >
               <BookOpen size={16} />
-              Start MCQ Battle
+              Start MCQ Practice
             </button>
 
             <button
@@ -133,7 +124,7 @@ export default function BattleArenaCommandCenter({
 
             <button
               type="button"
-              onClick={() => router.push("/battle/queue")}
+              onClick={() => router.push("/battle/lobby")}
               className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-5 py-3.5 text-sm font-bold text-slate-200 transition hover:border-cyan-400/50 hover:bg-white/10 hover:text-white"
             >
               <Users size={16} />
@@ -146,10 +137,10 @@ export default function BattleArenaCommandCenter({
       {/* ── Navigation Strip (No QuestMap) ── */}
       <nav aria-label="Battle Arena sections" className="flex gap-2 overflow-x-auto border-b border-white/10 pb-3 text-sm">
         {[
-          { label: "MCQ Battle", href: "/battle/solo?mode=mcq", icon: BookOpen },
+          { label: "MCQ Practice", href: "/battle/solo?mode=mcq", icon: BookOpen },
           { label: "Coding Battle", href: "/battle/solo?mode=coding", icon: Code2 },
-          { label: "Multiplayer Queue", href: "/battle/queue", icon: Users },
-          { label: "Tournaments", href: "/tournaments", icon: Trophy },
+          { label: "Multiplayer Queue", href: "/battle/lobby", icon: Users },
+          { label: "Tournaments", href: "/tournament", icon: Trophy },
           { label: "Placement Prep", href: "/battle/placement-prep", icon: ShieldCheck },
           { label: "Battle History", href: "/analytics", icon: TrendingUp },
         ].map((item) => {
@@ -182,10 +173,10 @@ export default function BattleArenaCommandCenter({
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-white">{userStats.rating}</span>
+            <span className="text-3xl font-black text-white">{userStats.rating ?? (profileLoadFailed ? "Unavailable" : "—")}</span>
             <span className="text-xs text-slate-400">Elo points</span>
           </div>
-          <p className="mt-2 text-xs text-slate-400">Earned in 1v1 ranked duels & solo challenges</p>
+          <p className="mt-2 text-xs text-slate-400">Current account rating</p>
         </motion.div>
 
         <motion.div
@@ -197,11 +188,13 @@ export default function BattleArenaCommandCenter({
           <div className="flex items-center justify-between">
             <span className="text-xs uppercase tracking-[0.2em] text-slate-400 font-semibold">Verified XP & Level</span>
             <span className="rounded-full border border-violet-400/30 bg-violet-500/10 px-2.5 py-0.5 text-[10px] font-bold text-violet-300">
-              Level {userStats.level}
+              Level {userStats.level ?? (profileLoadFailed ? "Unavailable" : "—")}
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-yellow-300">{userStats.total_xp.toLocaleString()}</span>
+            <span className="text-3xl font-black text-yellow-300">
+              {userStats.total_xp === null ? (profileLoadFailed ? "Unavailable" : "—") : userStats.total_xp.toLocaleString()}
+            </span>
             <span className="text-xs text-slate-400">XP</span>
           </div>
           <div className="mt-2 h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
@@ -210,7 +203,11 @@ export default function BattleArenaCommandCenter({
               style={{ width: `${levelProgressPercent}%` }}
             />
           </div>
-          <p className="mt-1 text-[10px] text-slate-400">{500 - currentLevelXpProgress} XP to Level {userStats.level + 1}</p>
+          <p className="mt-1 text-[10px] text-slate-400">
+            {userStats.xp_to_next_level === null
+              ? "Progress unavailable"
+              : `${userStats.xp_to_next_level} XP to next level`}
+          </p>
         </motion.div>
 
         <motion.div
@@ -226,10 +223,12 @@ export default function BattleArenaCommandCenter({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-white">{userStats.battles_count}</span>
+            <span className="text-3xl font-black text-white">
+              {userStats.battles_count ?? (profileLoadFailed ? "Unavailable" : "—")}
+            </span>
             <span className="text-xs text-slate-400">Total duels</span>
           </div>
-          <p className="mt-2 text-xs text-slate-400">Across MCQ, Coding, and Ranked matches</p>
+          <p className="mt-2 text-xs text-slate-400">Persisted completed battle records</p>
         </motion.div>
 
         <motion.div
@@ -245,7 +244,9 @@ export default function BattleArenaCommandCenter({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-emerald-300">{averageSkill > 0 ? `${averageSkill}%` : "Ready"}</span>
+            <span className="text-3xl font-black text-emerald-300">
+              {profileLoadFailed ? "Unavailable" : skillList.length ? `${averageSkill}%` : "No evidence"}
+            </span>
             <span className="text-xs text-slate-400">Readiness</span>
           </div>
           <p className="mt-2 text-xs text-slate-400">Calculated from verified skill evidence</p>
@@ -259,7 +260,7 @@ export default function BattleArenaCommandCenter({
             <span className="text-[10px] font-bold uppercase tracking-[0.28em] text-cyan-300">Dominant Modes</span>
             <h2 className="text-2xl font-black text-white">Choose Your Battle Discipline</h2>
           </div>
-          <span className="text-xs text-slate-400">Server verified • Instant XP • Real-time judge</span>
+          <span className="text-xs text-slate-400">Question availability and rewards are determined by the server</span>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -275,35 +276,18 @@ export default function BattleArenaCommandCenter({
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-400/30 bg-violet-500/15 px-3 py-1 text-xs font-bold text-violet-300">
                   <BookOpen size={13} />
-                  Adaptive Knowledge Sprint
-                </span>
-                <span className="rounded-full bg-white/5 border border-white/10 px-3 py-1 text-xs font-semibold text-slate-300">
-                  10 Questions • +150 XP
+                  Database-backed MCQ practice
                 </span>
               </div>
 
               <h3 className="mt-5 text-2xl font-black text-white group-hover:text-violet-200 transition">
-                MCQ Battle Arena
+                MCQ Practice
               </h3>
 
               <p className="mt-2 text-sm text-slate-300 leading-relaxed">
-                Test your mastery of core Computer Science: Algorithms, Data Structures, System Design, SQL, OOP, OS, and Networking. Features adaptive timing, immediate solution review, and placement readiness verification.
+                Answer eligible Computer Science questions retrieved from the database. Submitted answers are persisted to your account.
               </p>
 
-              <div className="mt-5 grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="rounded-xl border border-white/5 bg-slate-950/40 p-2.5">
-                  <p className="text-[10px] uppercase text-slate-400">Pace</p>
-                  <p className="mt-1 font-bold text-white">Adaptive</p>
-                </div>
-                <div className="rounded-xl border border-white/5 bg-slate-950/40 p-2.5">
-                  <p className="text-[10px] uppercase text-slate-400">Questions</p>
-                  <p className="mt-1 font-bold text-violet-300">10 Per Duel</p>
-                </div>
-                <div className="rounded-xl border border-white/5 bg-slate-950/40 p-2.5">
-                  <p className="text-[10px] uppercase text-slate-400">Reward</p>
-                  <p className="mt-1 font-bold text-yellow-300">+15 XP / correct</p>
-                </div>
-              </div>
             </div>
 
             <div className="mt-7">
@@ -312,7 +296,7 @@ export default function BattleArenaCommandCenter({
                 onClick={() => router.push("/battle/solo?mode=mcq")}
                 className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-600/30 transition hover:brightness-110 active:scale-[0.99]"
               >
-                Launch MCQ Battle
+                Launch MCQ Practice
                 <ArrowRight size={16} />
               </button>
             </div>
@@ -333,7 +317,7 @@ export default function BattleArenaCommandCenter({
                   Competitive DSA IDE
                 </span>
                 <span className="rounded-full bg-white/5 border border-white/10 px-3 py-1 text-xs font-semibold text-slate-300">
-                  Multi-Language • +150 XP
+                  Multiple language choices
                 </span>
               </div>
 
@@ -342,10 +326,10 @@ export default function BattleArenaCommandCenter({
               </h3>
 
               <p className="mt-2 text-sm text-slate-300 leading-relaxed">
-                Solve competitive programming challenges in Python, JavaScript, C++, or Java. Features real-time testcase execution, custom inputs, memory & runtime profiling, and server-verified XP awards.
+                Create a coding battle from available database questions and submit work through the server-managed battle flow.
               </p>
 
-              <div className="mt-5 grid grid-cols-3 gap-2 text-center text-xs">
+              <div className="mt-5 grid grid-cols-2 gap-2 text-center text-xs">
                 <div className="rounded-xl border border-white/5 bg-slate-950/40 p-2.5">
                   <p className="text-[10px] uppercase text-slate-400">Languages</p>
                   <p className="mt-1 font-bold text-white">Py, JS, C++, Java</p>
@@ -353,10 +337,6 @@ export default function BattleArenaCommandCenter({
                 <div className="rounded-xl border border-white/5 bg-slate-950/40 p-2.5">
                   <p className="text-[10px] uppercase text-slate-400">Judge</p>
                   <p className="mt-1 font-bold text-cyan-300">Authoritative</p>
-                </div>
-                <div className="rounded-xl border border-white/5 bg-slate-950/40 p-2.5">
-                  <p className="text-[10px] uppercase text-slate-400">Max XP</p>
-                  <p className="mt-1 font-bold text-yellow-300">+150 XP</p>
                 </div>
               </div>
             </div>
@@ -385,24 +365,24 @@ export default function BattleArenaCommandCenter({
                 Live Matchmaking
               </div>
               <span className="rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300">
-                Live Queue Active
+                Server queue
               </span>
             </div>
 
-            <h3 className="mt-4 text-xl font-black text-white">1v1 Multiplayer Ranked Queue</h3>
+            <h3 className="mt-4 text-xl font-black text-white">Battle Matchmaking</h3>
             <p className="mt-2 text-sm text-slate-300 leading-relaxed">
-              Queue into an instant duel with a live opponent of similar rating. Race to solve algorithmic problems with WebSocket synchronizations and real-time scoreboard broadcasts.
+              Join the server-managed queue. The backend creates a battle only when another player is matched; queueing does not guarantee an immediate opponent.
             </p>
           </div>
 
           <div className="mt-6 flex items-center justify-between pt-4 border-t border-white/5">
-            <span className="text-xs text-slate-400">Stakes: ±25 Rating • Anti-Cheat Telemetry</span>
+            <span className="text-xs text-slate-400">Server-managed matchmaking</span>
             <button
               type="button"
-              onClick={() => router.push("/battle/queue")}
+              onClick={() => router.push("/battle/lobby")}
               className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-500/40 bg-indigo-600/20 px-4 py-2 text-xs font-bold text-indigo-200 transition hover:bg-indigo-600 hover:text-white"
             >
-              Enter Queue
+              Open Matchmaking
               <ArrowRight size={13} />
             </button>
           </div>
@@ -416,21 +396,21 @@ export default function BattleArenaCommandCenter({
                 Championships
               </div>
               <span className="rounded-full bg-white/5 border border-white/10 px-2.5 py-0.5 text-[11px] font-semibold text-slate-300">
-                Scheduled & On-Demand
+              Available listings
               </span>
             </div>
 
             <h3 className="mt-4 text-xl font-black text-white">Placement Tournaments & Contests</h3>
             <p className="mt-2 text-sm text-slate-300 leading-relaxed">
-              Participate in institutional placement assessments, company speedruns, and official Qubira championship tournaments with verified leaderboard rankings.
+              Browse available tournaments and placement assessments. Registration and results are provided by their authenticated services.
             </p>
           </div>
 
           <div className="mt-6 flex items-center justify-between pt-4 border-t border-white/5">
-            <span className="text-xs text-slate-400">Institutional & Public Tournaments</span>
+            <span className="text-xs text-slate-400">Available tournament records</span>
             <button
               type="button"
-              onClick={() => router.push("/tournaments")}
+              onClick={() => router.push("/tournament")}
               className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-600/20 px-4 py-2 text-xs font-bold text-amber-200 transition hover:bg-amber-600 hover:text-white"
             >
               View Tournaments
@@ -459,7 +439,10 @@ export default function BattleArenaCommandCenter({
 
           <div className="space-y-3.5">
             {profileLoadFailed ? (
-              <p role="alert" className="text-sm text-rose-300">Skill evidence could not be retrieved from the server.</p>
+              <div role="alert" className="flex items-center justify-between gap-3 text-sm text-rose-300">
+                <span>Skill evidence could not be retrieved from the server.</span>
+                <button type="button" onClick={onRetry} className="font-bold underline">Retry</button>
+              </div>
             ) : skillList.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-slate-400">
                 No skill signals recorded yet. Complete an MCQ or Coding battle to establish your verified placement matrix.
@@ -482,7 +465,7 @@ export default function BattleArenaCommandCenter({
                   </div>
                   <div className="mt-1.5 flex justify-between text-[11px] text-slate-400">
                     <span>{skill.attempts} verified attempts</span>
-                    <span>{skill.score >= 70 ? "Placement Ready" : "Target Practice"}</span>
+                    <span>Recorded evidence</span>
                   </div>
                 </div>
               ))
@@ -540,7 +523,7 @@ export default function BattleArenaCommandCenter({
             <p className="mt-2 text-xs text-slate-200 leading-relaxed">
               {weakSkills[0]?.skill
                 ? `Launch an adaptive session targeting ${weakSkills[0].skill} to close this skill gap before placement evaluations.`
-                : "Play a quick 10-question MCQ battle or algorithmic duel to refresh your live skill profile."}
+                : "Complete an available practice session to build verified skill evidence."}
             </p>
             <div className="mt-3 flex gap-2">
               <button
@@ -548,7 +531,7 @@ export default function BattleArenaCommandCenter({
                 onClick={() => router.push("/battle/solo?mode=mcq")}
                 className="rounded-xl bg-cyan-500/20 border border-cyan-400/30 px-3 py-1.5 text-xs font-bold text-cyan-200 hover:bg-cyan-500/30 transition"
               >
-                Target with MCQ Sprint →
+                Target with MCQ Practice →
               </button>
             </div>
           </div>
@@ -571,11 +554,16 @@ export default function BattleArenaCommandCenter({
           </button>
         </div>
 
-        {history.length === 0 ? (
+        {historyLoadFailed ? (
+          <div role="alert" className="rounded-2xl border border-rose-500/30 bg-rose-950/20 p-8 text-center text-rose-200">
+            <p>Battle history could not be retrieved from the server.</p>
+            <button type="button" onClick={onRetry} className="mt-3 font-bold underline">Retry</button>
+          </div>
+        ) : history.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-slate-400 space-y-3">
             <p className="text-base font-semibold text-white">No battle history recorded yet</p>
             <p className="text-xs text-slate-400 max-w-md mx-auto">
-              Launch your first MCQ Battle or Coding challenge to record match results, earn verified XP, and establish your placement evidence.
+              Complete an available practice session or server-created coding battle to record activity and build verified skill evidence.
             </p>
             <div className="pt-2 flex justify-center gap-3">
               <button
@@ -583,7 +571,7 @@ export default function BattleArenaCommandCenter({
                 onClick={() => router.push("/battle/solo?mode=mcq")}
                 className="rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white hover:bg-violet-500 transition"
               >
-                Play MCQ Battle
+                Play MCQ Practice
               </button>
               <button
                 type="button"
@@ -611,7 +599,7 @@ export default function BattleArenaCommandCenter({
                 {history.map((item) => (
                   <tr key={item.battle_id} className="transition hover:bg-white/[0.02]">
                     <td className="py-3.5 pl-2 font-medium text-white">
-                      {item.title || "Competitive Battle"}
+                      {item.title || "Battle"}
                     </td>
                     <td className="py-3.5">
                       <span className="rounded-lg bg-white/5 border border-white/10 px-2 py-0.5 text-xs text-slate-300">
@@ -628,7 +616,7 @@ export default function BattleArenaCommandCenter({
                         </span>
                       ) : (
                         <span className="rounded-full bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-400">
-                          Rank #{item.rank || 1}
+                          {item.rank ? `Rank #${item.rank}` : "Completed"}
                         </span>
                       )}
                     </td>
@@ -636,7 +624,7 @@ export default function BattleArenaCommandCenter({
                       +{item.xp_earned} XP
                     </td>
                     <td className="py-3.5 pr-2 text-right text-xs text-slate-400">
-                      {item.created_at ? new Date(item.created_at).toLocaleDateString() : "Recent"}
+                      {item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}
                     </td>
                   </tr>
                 ))}

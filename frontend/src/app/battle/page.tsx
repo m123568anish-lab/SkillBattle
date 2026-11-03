@@ -10,105 +10,91 @@ import { dashboardService } from "@/services/dashboard.service";
 export default function BattlePage() {
   const [loading, setLoading] = useState(true);
   const [profileLoadFailed, setProfileLoadFailed] = useState(false);
-  const [waitingLoadFailed, setWaitingLoadFailed] = useState(false);
+  const [historyLoadFailed, setHistoryLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [skillList, setSkillList] = useState<Array<{ skill: string; score: number; attempts: number; verified: boolean; sources: string[] }>>([]);
   const [weakSkills, setWeakSkills] = useState<Array<{ skill: string; score: number; attempts: number; verified: boolean; sources: string[] }>>([]);
   const [averageSkill, setAverageSkill] = useState(0);
   const [history, setHistory] = useState<BattleHistoryItem[]>([]);
   const [userStats, setUserStats] = useState({
-    rating: 1000,
-    total_xp: 0,
-    level: 1,
-    battles_count: 0,
+    rating: null as number | null,
+    total_xp: null as number | null,
+    level: null as number | null,
+    battles_count: null as number | null,
+    xp_to_next_level: null as number | null,
+    level_progress_percent: null as number | null,
   });
-  const [recommendedBattle, setRecommendedBattle] = useState<{
-    id: string;
-    title?: string;
-    difficulty?: string;
-    status?: string;
-    max_players?: number;
-    created_at?: string;
-  } | null>(null);
-  const [recommendedBattleTitle, setRecommendedBattleTitle] = useState("Recommended battle");
-
   useEffect(() => {
     let active = true;
 
     const loadBattleData = async () => {
-      try {
-        const [dashboardResponse, waitingBattles, historyResponse] = await Promise.all([
-          dashboardService.getDashboard(),
-          battleService.getWaitingBattles().catch(() => []),
-          battleService.getHistory(5, 0).catch(() => ({ history: [], total: 0 })),
-        ]);
+      setLoading(true);
+      const [dashboardResult, historyResult] = await Promise.allSettled([
+        dashboardService.getDashboard(),
+        battleService.getHistory(5, 0),
+      ]);
 
-        if (!active) return;
+      if (!active) return;
 
-        // User stats
-        const extractedRating = Number(dashboardResponse?.stats?.rating ?? 1000);
-        const extractedXp = Number(dashboardResponse?.stats?.xp ?? 0);
-        const extractedLevel = Number(dashboardResponse?.stats?.level ?? 1);
-        const extractedBattles = Number(
-          dashboardResponse?.stats?.battles_played ?? historyResponse?.total ?? 0
-        );
-
+      if (dashboardResult.status === "fulfilled") {
+        const dashboardResponse = dashboardResult.value;
+        const stats = dashboardResponse.stats;
         setUserStats({
-          rating: extractedRating,
-          total_xp: extractedXp,
-          level: extractedLevel,
-          battles_count: Math.max(extractedBattles, (historyResponse?.history || []).length),
+          rating: stats.rating,
+          total_xp: stats.xp,
+          level: stats.level,
+          battles_count: stats.battles_completed,
+          xp_to_next_level: stats.xp_to_next_level,
+          level_progress_percent: stats.level_progress_percent,
         });
 
-        setHistory(historyResponse?.history || []);
-
-        const readinessMatrix = dashboardResponse?.command_center?.placement_readiness?.matrix ?? {};
-        const derivedSkills = Object.entries(readinessMatrix).map(([skill, value]) => ({
-          skill: String(skill),
-          score: Number((value as any)?.score ?? 0),
-          attempts: Number((value as any)?.evidence_count ?? 0),
-          verified: Number((value as any)?.evidence_count ?? 0) > 0,
-          sources: [String(skill)],
+        const readinessMatrix = dashboardResponse.command_center?.placement_readiness?.matrix ?? {};
+        const skills = Object.entries(readinessMatrix).map(([skill, value]) => ({
+          skill,
+          score: Number((value as { score?: number })?.score ?? 0),
+          attempts: Number((value as { evidence_count?: number })?.evidence_count ?? 0),
+          verified: Number((value as { evidence_count?: number })?.evidence_count ?? 0) > 0,
+          sources: [skill],
         }));
-
-        const normalizedSkills = derivedSkills.length > 0
-          ? derivedSkills
-          : [{ skill: "CS Fundamentals", score: 75, attempts: 1, verified: true, sources: ["profile"] }];
-
-        const nextWeakSkills = [...normalizedSkills].sort((a, b) => a.score - b.score).slice(0, 3);
-        const scoreAvg = Math.round(
-          normalizedSkills.reduce((sum, skill) => sum + skill.score, 0) / normalizedSkills.length,
-        );
-
-        setSkillList(normalizedSkills);
+        const nextWeakSkills = [...skills].sort((a, b) => a.score - b.score).slice(0, 3);
+        const scoreAvg = skills.length
+          ? Math.round(skills.reduce((sum, skill) => sum + skill.score, 0) / skills.length)
+          : 0;
+        setSkillList(skills);
         setWeakSkills(nextWeakSkills);
         setAverageSkill(scoreAvg);
         setProfileLoadFailed(false);
-
-        const defaultBattle = awaitingBattleChoice(waitingBattles);
-        setRecommendedBattle(defaultBattle);
-        setRecommendedBattleTitle(defaultBattle?.title || "Recommended battle");
-        setWaitingLoadFailed(false);
-      } catch {
-        if (!active) return;
+      } else {
+        setUserStats({
+          rating: null,
+          total_xp: null,
+          level: null,
+          battles_count: null,
+          xp_to_next_level: null,
+          level_progress_percent: null,
+        });
         setSkillList([]);
         setWeakSkills([]);
         setAverageSkill(0);
-        setRecommendedBattle(null);
-        setRecommendedBattleTitle("Recommended battle");
         setProfileLoadFailed(true);
-        setWaitingLoadFailed(true);
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
       }
+
+      if (historyResult.status === "fulfilled") {
+        setHistory(historyResult.value.history);
+        setHistoryLoadFailed(false);
+      } else {
+        setHistory([]);
+        setHistoryLoadFailed(true);
+      }
+
+      setLoading(false);
     };
 
     void loadBattleData();
     return () => {
       active = false;
     };
-  }, []);
+  }, [reloadKey]);
 
   return (
     <DashboardLayout>
@@ -120,29 +106,12 @@ export default function BattlePage() {
           weakSkills={weakSkills}
           loading={loading}
           profileLoadFailed={profileLoadFailed}
-          waitingLoadFailed={waitingLoadFailed}
-          recommendedBattle={recommendedBattle}
-          recommendedBattleTitle={recommendedBattleTitle}
+          historyLoadFailed={historyLoadFailed}
           userStats={userStats}
           history={history}
+          onRetry={() => setReloadKey((key) => key + 1)}
         />
       </div>
     </DashboardLayout>
   );
-}
-
-function awaitingBattleChoice(waitingBattles: any[]) {
-  const firstBattle = waitingBattles?.[0];
-  if (!firstBattle) {
-    return null;
-  }
-
-  return {
-    id: String(firstBattle.id ?? "solo"),
-    title: firstBattle.title || "Open battle",
-    difficulty: firstBattle.difficulty || "Medium",
-    status: firstBattle.status || "Ready",
-    max_players: firstBattle.max_players ?? 1,
-    created_at: firstBattle.created_at,
-  };
 }

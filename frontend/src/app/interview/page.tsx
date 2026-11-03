@@ -99,7 +99,7 @@ export default function AIMockInterviewPage() {
       setActiveSession(refreshed?.find((session) => session.id === activeSession.id) ?? null);
       setFeedback({
         score: result.overall_score ?? 0,
-        feedback: `Session completed. Performance rating: ${result.performance_rating ?? "Needs Improvement"}`,
+        feedback: `Session completed. Practice rubric: ${result.performance_rating ?? "not provided"}`,
         xp_earned: 0,
       });
     } catch (error) {
@@ -297,7 +297,7 @@ export default function AIMockInterviewPage() {
                     <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-6 space-y-3 animate-in fade-in duration-300">
                       <div className="flex items-center justify-between">
                         <span className="flex items-center gap-2 font-bold text-emerald-400">
-                          <CheckCircle2 className="h-5 w-5" /> AI Score: {Number(feedback.score ?? activeSession.overall_score ?? 0)}/100
+                          <CheckCircle2 className="h-5 w-5" /> Rubric Score: {Number(feedback.score ?? activeSession.overall_score ?? 0)}/100
                         </span>
                         <span className="flex items-center gap-1 text-xs font-bold text-violet-400 bg-violet-500/20 px-3 py-1 rounded-full">
                           <Award className="h-3.5 w-3.5" /> +{feedback.xp_earned ?? 0} XP
