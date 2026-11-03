@@ -12,7 +12,7 @@ Production Async Version
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
@@ -43,6 +43,20 @@ async def get_streak(
         longest_streak=streak_data["best_streak"],
         is_active_today=streak_data.get("is_active_today", False),
     )
+
+
+@router.get("/activity")
+async def get_activity_history(
+    days: int = Query(default=84, ge=1, le=365),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    activities = await streak_service.get_activity_history(
+        db,
+        str(current_user.id),
+        days=days,
+    )
+    return {"activities": activities}
 
 
 @router.post(

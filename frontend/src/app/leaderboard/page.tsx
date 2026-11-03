@@ -3,7 +3,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { PageHeader } from "@/components/arena";
-import api from "@/lib/api";
+import {
+  leaderboardService,
+  type LeaderboardEntry as ApiLeaderboardEntry,
+  type MyRankResponse,
+} from "@/services/leaderboard.service";
 import { useAuthStore } from "@/store/authStore";
 import {
   Trophy,
@@ -12,34 +16,7 @@ import {
   Search,
 } from "lucide-react";
 
-interface LeaderboardEntry {
-  rank: number;
-  user_id: string;
-  username: string;
-  full_name?: string;
-  avatar?: string | null;
-  rating: number;
-  xp: number;
-  solved: number;
-  wins: number;
-  losses: number;
-  draws: number;
-  battles_count: number;
-  win_rate: number;
-  streak: number;
-  is_current_user: boolean;
-}
-
-interface MyRankResponse {
-  rank: number | null;
-  total_users: number;
-  xp: number;
-  level: number;
-}
-
-interface LeaderboardResponse {
-  leaderboard: Omit<LeaderboardEntry, "is_current_user">[];
-}
+type LeaderboardEntry = ApiLeaderboardEntry & { is_current_user: boolean };
 
 export default function LeaderboardPage() {
   const currentUser = useAuthStore((state) => state.user);
@@ -55,16 +32,16 @@ export default function LeaderboardPage() {
     setError(null);
     try {
       const [leaderboardResponse, rankResponse] = await Promise.all([
-        api.get<LeaderboardResponse>("/leaderboard"),
-        api.get<MyRankResponse>("/leaderboard/me"),
+        leaderboardService.getLeaderboard(),
+        leaderboardService.getMyRank(),
       ]);
-      const entries = leaderboardResponse.data.leaderboard.map((item, index) => ({
+      const entries = leaderboardResponse.leaderboard.map((item, index) => ({
         ...item,
         rank: index + 1,
         is_current_user: item.user_id === currentUser?.id,
       }));
       setBoard(entries);
-      setMyRank(rankResponse.data);
+      setMyRank(rankResponse);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Could not load the leaderboard.");
     } finally {

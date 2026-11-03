@@ -93,6 +93,7 @@ async def test_versioned_student_data_routes_are_registered_and_scoped(client):
         ("/api/v1/skills/profile", dict),
         ("/api/v1/skills/gaps", dict),
         ("/api/v1/skills/placement-readiness", dict),
+        ("/api/v1/streak/activity", dict),
         ("/api/v1/practice/recommendations", dict),
     )
     responses = {}
@@ -107,6 +108,68 @@ async def test_versioned_student_data_routes_are_registered_and_scoped(client):
     history = responses["/api/v1/battle/history"]
     assert history["history"] == []
     assert history["total"] == 0
+
+    from app.database.session import AsyncSessionLocal
+    from app.modules.streak.service import streak_service
+
+    async with AsyncSessionLocal() as db:
+        await streak_service.record_activity(
+            db,
+            registration.json()["id"],
+            activity_type="verified_test_activity",
+            reference_id=f"activity-{unique_id}",
+            xp_earned=25,
+            commit=True,
+        )
+
+    second_unique_id = uuid4().hex[:8]
+    second_registration = await client.post("/auth/register", json={
+        "username": f"routes_{second_unique_id}",
+        "email": f"routes_{second_unique_id}@example.com",
+        "full_name": "Second Route Tester",
+        "password": password,
+    })
+    assert second_registration.status_code == 201, second_registration.text
+    second_login = await client.post("/auth/login", json={
+        "email": f"routes_{second_unique_id}@example.com",
+        "password": password,
+    })
+    assert second_login.status_code == 200, second_login.text
+    second_headers = {
+        "Authorization": f"Bearer {second_login.json()['tokens']['access_token']}",
+    }
+
+    first_activity = await client.get("/api/v1/streak/activity", headers=headers)
+    second_activity = await client.get("/api/v1/streak/activity", headers=second_headers)
+    assert first_activity.status_code == 200, first_activity.text
+    assert len(first_activity.json()["activities"]) == 1
+    assert first_activity.json()["activities"][0]["xp_earned"] == 25
+    assert second_activity.status_code == 200, second_activity.text
+    assert second_activity.json()["activities"] == []
+
+
+def test_required_versioned_routes_are_registered():
+    from app.main import app
+
+    required_routes = {
+        "/api/v1/dashboard": "GET",
+        "/api/v1/xp": "GET",
+        "/api/v1/streak": "GET",
+        "/api/v1/streak/activity": "GET",
+        "/api/v1/skills/profile": "GET",
+        "/api/v1/skills/gaps": "GET",
+        "/api/v1/skills/placement-readiness": "GET",
+        "/api/v1/leaderboard": "GET",
+        "/api/v1/leaderboard/me": "GET",
+        "/api/v1/battle/history": "GET",
+        "/api/v1/practice/recommendations": "GET",
+        "/api/v1/practice/summary": "GET",
+    }
+    routes = app.openapi()["paths"]
+
+    for path, method in required_routes.items():
+        assert path in routes, f"Missing {path}"
+        assert method.lower() in routes[path], f"Missing {method} {path}"
 
 
 @pytest.mark.asyncio

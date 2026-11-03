@@ -2,7 +2,8 @@
 
 import Editor from "@monaco-editor/react";
 import { Maximize2, Minimize2, Play, RefreshCw, Send } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import api from "@/lib/api";
 
 type Language = "python" | "cpp" | "java" | "javascript";
 type Question = {
@@ -32,25 +33,21 @@ export default function BattleArea() {
   const [showTests, setShowTests] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [darkEditor, setDarkEditor] = useState(true);
-  const apiUrl = useMemo(() => (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/+$/, ""), []);
-
   const loadQuestion = useCallback(async () => {
     setLoading(true);
     setResult(null);
     try {
-      const token = localStorage.getItem("access_token");
-      const suffix = question ? `?exclude_question_id=${question.id}` : "";
-      const response = await fetch(`${apiUrl}/api/battle/next-question${suffix}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      const response = await api.get<Question>("/api/battle/next-question", {
+        baseURL: "",
+        params: question ? { exclude_question_id: question.id } : undefined,
       });
-      if (!response.ok) throw new Error("Unable to load a question.");
-      setQuestion(await response.json());
+      setQuestion(response.data);
     } catch (error) {
       setResult(error instanceof Error ? error.message : "Unable to load a question.");
     } finally {
       setLoading(false);
     }
-  }, [apiUrl, question]);
+  }, [question]);
 
   useEffect(() => {
     void loadQuestion();
@@ -61,14 +58,20 @@ export default function BattleArea() {
     setLoading(true);
     setResult(null);
     try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch(`${apiUrl}/api/battle/submit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ question_id: question.id, language, source_code: code, submit }),
+      const response = await api.post<{
+        accepted: boolean;
+        passed_tests: number;
+        total_tests: number;
+        execution_time_ms: number;
+      }>("/api/battle/submit", {
+        question_id: question.id,
+        language,
+        source_code: code,
+        submit,
+      }, {
+        baseURL: "",
       });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.detail || "Execution failed.");
+      const payload = response.data;
       setResult(`${payload.accepted ? "Accepted" : "Not accepted"} · ${payload.passed_tests}/${payload.total_tests} tests · ${payload.execution_time_ms}ms`);
     } catch (error) {
       setResult(error instanceof Error ? error.message : "Execution failed.");

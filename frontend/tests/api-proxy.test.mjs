@@ -11,6 +11,10 @@ test("browser API requests use the same-origin Next.js proxy", async () => {
     new URL("src/components/dashboard/ServerStatus.tsx", root),
     "utf8",
   );
+  const battleArea = await readFile(
+    new URL("src/components/BattleArea.tsx", root),
+    "utf8",
+  );
 
   assert.match(
     apiSource,
@@ -19,6 +23,8 @@ test("browser API requests use the same-origin Next.js proxy", async () => {
   assert.match(apiSource, /baseURL:\s*`\$\{API_BASE_URL\}\/api\/v1`/);
   assert.match(nextConfig, /source:\s*"\/api\/v1\/:path\*"/);
   assert.match(nextConfig, /destination:\s*`\$\{apiOrigin\}\/api\/v1\/:path\*`/);
+  assert.match(nextConfig, /source:\s*"\/api\/battle\/:path\*"/);
+  assert.match(nextConfig, /destination:\s*`\$\{apiOrigin\}\/api\/battle\/:path\*`/);
   assert.match(nextConfig, /source:\s*"\/api\/health"/);
   assert.match(nextConfig, /destination:\s*`\$\{apiOrigin\}\/health`/);
   assert.match(serverStatus, /fetch\("\/api\/health"/);
@@ -26,4 +32,7 @@ test("browser API requests use the same-origin Next.js proxy", async () => {
     nextConfig,
     /process\.env\.NEXT_PUBLIC_API_URL \|\| "https:\/\/skillbattle-backend\.onrender\.com"/,
   );
+  assert.match(battleArea, /api\.get<Question>\("\/api\/battle\/next-question"/);
+  assert.match(battleArea, /api\.post<\{/);
+  assert.doesNotMatch(battleArea, /NEXT_PUBLIC_API_URL|localStorage\.getItem/);
 });
