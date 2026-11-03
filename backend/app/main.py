@@ -1,5 +1,10 @@
 import logging
+import os
+import platform
+import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
@@ -115,7 +120,6 @@ app.add_middleware(SecurityHeadersMiddleware)
 configure_cors(app)
 
 # CORS must be added LAST so it wraps all inner middlewares and exception responses
-import os
 from fastapi.staticfiles import StaticFiles
 
 os.makedirs("uploads/avatars", exist_ok=True)
@@ -125,6 +129,58 @@ app.include_router(battle_ws_router)
 app.include_router(metrics_router)
 app.include_router(health_router)
 register_routers(app)
+
+# TEMPORARY: Remove after verifying the Render production route graph.
+logger.info("========== QUBIRA PRODUCTION ROUTE DIAGNOSTICS ==========")
+try:
+    logger.info(
+        "Runtime cwd=%s python=%s main_file=%s render_commit=%s",
+        os.getcwd(),
+        platform.python_version(),
+        Path(__file__).resolve(),
+        os.environ.get("RENDER_GIT_COMMIT", "Not exposed"),
+    )
+    logger.info("FastAPI title=%s version=%s", app.title, app.version)
+
+    route_paths = app.openapi().get("paths", {})
+    logger.info("OpenAPI path_count=%d", len(route_paths))
+    for path in sorted(route_paths):
+        if any(group in path.lower() for group in ("xp", "streak", "skills", "leaderboard")):
+            logger.info("Registered route path=%s", path)
+
+    expected_routes = (
+        "/api/v1/xp",
+        "/api/v1/streak",
+        "/api/v1/skills/profile",
+        "/api/v1/skills/gaps",
+        "/api/v1/skills/placement-readiness",
+        "/api/v1/leaderboard",
+        "/api/v1/leaderboard/me",
+    )
+    for path in expected_routes:
+        status = "FOUND" if path in route_paths else "MISSING"
+        logger.info("Expected route status=%s path=%s", status, path)
+
+    source_modules = (
+        "app.api.v1.router",
+        "app.core.router_registry",
+        "app.modules.xp.router",
+        "app.modules.streak.router",
+        "app.modules.leaderboard.router",
+        "app.modules.assessment_engine.routers.assessment_router",
+    )
+    for module_name in source_modules:
+        module = sys.modules.get(module_name)
+        source_path = getattr(module, "__file__", None) if module else None
+        logger.info(
+            "Imported module=%s source_file=%s",
+            module_name,
+            Path(source_path).resolve() if source_path else "NOT_LOADED",
+        )
+except Exception:
+    logger.exception("Temporary production route diagnostics failed")
+finally:
+    logger.info("========== END QUBIRA PRODUCTION ROUTE DIAGNOSTICS ==========")
 
 
 @app.exception_handler(SkillBattleException)
