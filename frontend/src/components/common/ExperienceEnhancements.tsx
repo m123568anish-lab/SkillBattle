@@ -2,16 +2,114 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowUp, ExternalLink, HelpCircle, Mail, Moon, Sun, X } from "lucide-react";
+import { ArrowUp, Check, ExternalLink, HelpCircle, Laptop, Mail, Moon, Palette, Sun, X } from "lucide-react";
+import { toast } from "react-hot-toast";
+import api from "@/services/api";
+import { useAuthStore } from "@/store/authStore";
+import { useTheme, type ThemePreference } from "./ThemeProvider";
 
 const CONSENT_KEY = "skillbattle-cookie-consent";
-const THEME_KEY = "skillbattle-theme";
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
-  useEffect(() => { const stored = localStorage.getItem(THEME_KEY); if (stored === "light" || stored === "dark") setTheme(stored); }, []);
-  function toggle() { const next = theme === "dark" ? "light" : "dark"; setTheme(next); localStorage.setItem(THEME_KEY, next); document.documentElement.dataset.theme = next; document.documentElement.classList.toggle("dark", next === "dark"); }
-  return <button type="button" onClick={toggle} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`} className="rounded-xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400">{theme === "dark" ? <Sun size={17}/> : <Moon size={17}/>}</button>;
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const { preference, resolvedTheme, setPreference } = useTheme();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const options: { value: ThemePreference; label: string; Icon: typeof Sun }[] = [
+    { value: "light", label: "Light", Icon: Sun },
+    { value: "dark", label: "Dark", Icon: Moon },
+    { value: "system", label: "System", Icon: Laptop },
+  ];
+
+  const selectedLabel =
+    preference === "system"
+      ? "System"
+      : resolvedTheme === "light"
+        ? "Light"
+        : "Dark";
+
+  const selectedIcon =
+    preference === "system"
+      ? Laptop
+      : resolvedTheme === "light"
+        ? Sun
+        : Moon;
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [open]);
+
+  async function chooseTheme(next: ThemePreference) {
+    setPreference(next);
+    setOpen(false);
+    if (!isAuthenticated) return;
+    try {
+      await api.put("/profile/preferences", { theme: next });
+    } catch {
+      toast.error("Theme is applied on this device, but could not be saved to your account.");
+    }
+  }
+
+  const CurrentIcon = selectedIcon;
+
+  return (
+    <div className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-label={`Theme: ${selectedLabel}. Change theme preference`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="inline-flex h-10 items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] px-2.5 text-sm font-medium text-[var(--text-secondary)] shadow-[0_1px_0_rgba(0,0,0,0.12)] transition hover:border-[var(--accent)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+      >
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-[var(--surface-elevated)] text-[var(--accent-strong)]">
+          <CurrentIcon size={14} aria-hidden="true" />
+        </span>
+        <span className="hidden sm:inline">{selectedLabel}</span>
+        <Palette size={14} aria-hidden="true" className="opacity-70" />
+      </button>
+      {open && (
+        <>
+          <div
+            className="fixed inset-0 z-30"
+            aria-hidden="true"
+            onClick={() => setOpen(false)}
+          />
+          <div
+            role="menu"
+            aria-label="Theme preference"
+            className="absolute right-0 top-full z-40 mt-2 w-44 rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] p-1.5 shadow-[0_18px_45px_rgba(0,0,0,0.28)]"
+          >
+            {options.map(({ value, label, Icon }) => (
+              <button
+                key={value}
+                type="button"
+                role="menuitemradio"
+                aria-checked={preference === value}
+                onClick={() => void chooseTheme(value)}
+                className="flex min-h-10 w-full items-center gap-2 rounded-lg px-2.5 text-sm text-[var(--text-secondary)] transition hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+              >
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[var(--surface-card)] text-[var(--accent-strong)]">
+                  <Icon size={15} aria-hidden="true" />
+                </span>
+                <span className="flex-1 text-left">{label}</span>
+                {preference === value && <Check size={15} className="text-[var(--accent-strong)]" aria-hidden="true" />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 export function CookieConsent() {
@@ -19,7 +117,7 @@ export function CookieConsent() {
   useEffect(() => setChoice(localStorage.getItem(CONSENT_KEY)), []);
   if (choice) return null;
   const save = (value: "necessary" | "all") => { localStorage.setItem(CONSENT_KEY, value); setChoice(value); };
-  return <section role="dialog" aria-label="Cookie preferences" className="fixed inset-x-3 bottom-3 z-[70] mx-auto max-w-xl rounded-2xl border border-white/10 bg-slate-950 p-4 shadow-2xl sm:bottom-5"><p className="text-sm font-semibold text-white">Privacy choices</p><p className="mt-1 text-xs leading-5 text-slate-300">We use essential storage to keep this experience working. Optional analytics remain disabled unless you allow them.</p><div className="mt-3 flex flex-wrap gap-2"><button onClick={() => save("necessary")} className="min-h-10 rounded-xl border border-white/15 px-3 text-sm text-white">Essential only</button><button onClick={() => save("all")} className="min-h-10 rounded-xl bg-cyan-400 px-3 text-sm font-bold text-slate-950">Allow optional</button><Link href="/privacy" className="min-h-10 px-2 py-2 text-sm text-cyan-300 underline">Privacy</Link></div></section>;
+  return <section role="dialog" aria-label="Cookie preferences" className="fixed inset-x-3 bottom-3 z-[70] mx-auto max-w-xl rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] p-4 text-[var(--text-primary)] shadow-2xl sm:bottom-5"><p className="text-sm font-semibold">Privacy choices</p><p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">We use essential storage to keep this experience working. Optional analytics remain disabled unless you allow them.</p><div className="mt-3 flex flex-wrap gap-2"><button onClick={() => save("necessary")} className="min-h-10 rounded-lg border border-[var(--border-default)] px-3 text-sm">Essential only</button><button onClick={() => save("all")} className="min-h-10 rounded-lg bg-[var(--accent)] px-3 text-sm font-bold text-[var(--text-on-accent)]">Allow optional</button><Link href="/privacy" className="min-h-10 px-2 py-2 text-sm text-[var(--accent-strong)] underline">Privacy</Link></div></section>;
 }
 
 function SupportControl() {
@@ -37,11 +135,11 @@ function SupportControl() {
   }, [open]);
 
   return <>
-    {open && <section id="support-options" role="dialog" aria-label="Support options" className="fixed bottom-[calc(9.5rem+env(safe-area-inset-bottom))] left-4 z-40 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-white/10 bg-slate-950/95 p-4 shadow-2xl backdrop-blur lg:bottom-20">
-      <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-bold text-white">Need a hand?</p><p className="mt-1 text-xs leading-5 text-slate-300">Browse guidance first, or email support when you need help with your account.</p></div><button type="button" onClick={() => setOpen(false)} aria-label="Close support options" className="rounded-lg p-1.5 text-slate-300 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"><X size={16} /></button></div>
-      <div className="mt-4 grid gap-2"><Link href="/support" onClick={() => setOpen(false)} className="flex min-h-11 items-center justify-between rounded-xl bg-cyan-400 px-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200">Open support center <ExternalLink size={16} aria-hidden="true" /></Link><a href="mailto:support@qubira.io?subject=Qubira%20support" className="flex min-h-11 items-center justify-between rounded-xl border border-white/10 px-3 text-sm font-semibold text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400">Email support <Mail size={16} aria-hidden="true" /></a></div>
+    {open && <section id="support-options" role="dialog" aria-label="Support options" className="fixed bottom-[calc(9.5rem+env(safe-area-inset-bottom))] left-4 z-40 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] p-4 text-[var(--text-primary)] shadow-2xl lg:bottom-20">
+      <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-bold">Need a hand?</p><p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">Browse guidance first, or email support when you need help with your account.</p></div><button type="button" onClick={() => setOpen(false)} aria-label="Close support options" className="rounded-lg p-1.5 text-[var(--text-secondary)] transition hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"><X size={16} /></button></div>
+      <div className="mt-4 grid gap-2"><Link href="/support" onClick={() => setOpen(false)} className="flex min-h-11 items-center justify-between rounded-lg bg-[var(--accent)] px-3 text-sm font-bold text-[var(--text-on-accent)] transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">Open support center <ExternalLink size={16} aria-hidden="true" /></Link><a href="mailto:support@qubira.io?subject=Qubira%20support" className="flex min-h-11 items-center justify-between rounded-lg border border-[var(--border-default)] px-3 text-sm font-semibold transition hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">Email support <Mail size={16} aria-hidden="true" /></a></div>
     </section>}
-    <button ref={triggerRef} type="button" onClick={() => setOpen((current) => !current)} aria-expanded={open} aria-controls="support-options" aria-label={open ? "Close support options" : "Open support options"} className="fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom))] left-4 z-40 inline-flex h-11 w-11 items-center justify-center rounded-full border border-cyan-400/30 bg-slate-900 text-cyan-200 shadow-xl transition hover:bg-slate-800 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 lg:bottom-6">{open ? <X size={18} aria-hidden="true" /> : <HelpCircle size={18} aria-hidden="true" />}</button>
+    <button ref={triggerRef} type="button" onClick={() => setOpen((current) => !current)} aria-expanded={open} aria-controls="support-options" aria-label={open ? "Close support options" : "Open support options"} className="fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom))] left-4 z-40 inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border-default)] bg-[var(--surface-elevated)] text-[var(--accent-strong)] shadow-xl transition hover:bg-[var(--surface-subtle)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] lg:bottom-6">{open ? <X size={18} aria-hidden="true" /> : <HelpCircle size={18} aria-hidden="true" />}</button>
   </>;
 }
 

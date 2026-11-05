@@ -4,6 +4,7 @@ import Editor from "@monaco-editor/react";
 import { Maximize2, Minimize2, Play, RefreshCw, Send } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import api from "@/lib/api";
+import { useTheme } from "@/components/common/ThemeProvider";
 
 type Language = "python" | "cpp" | "java" | "javascript";
 type Question = {
@@ -25,6 +26,7 @@ const boilerplate: Record<Language, string> = {
 };
 
 export default function BattleArea() {
+  const { resolvedTheme } = useTheme();
   const [question, setQuestion] = useState<Question | null>(null);
   const [language, setLanguage] = useState<Language>("python");
   const [code, setCode] = useState(boilerplate.python);
@@ -32,7 +34,6 @@ export default function BattleArea() {
   const [loading, setLoading] = useState(false);
   const [showTests, setShowTests] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
-  const [darkEditor, setDarkEditor] = useState(true);
   const loadQuestion = useCallback(async () => {
     setLoading(true);
     setResult(null);
@@ -91,7 +92,6 @@ export default function BattleArea() {
           <select value={language} onChange={(event) => { const next = event.target.value as Language; setLanguage(next); setCode(boilerplate[next]); }} className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm dark:border-white/10 dark:bg-slate-900" aria-label="Programming language">
             <option value="python">Python 3</option><option value="cpp">C++</option><option value="java">Java</option><option value="javascript">JavaScript</option>
           </select>
-          <button type="button" onClick={() => setDarkEditor((value) => !value)} className="rounded-lg border border-slate-300 px-3 py-2 text-xs dark:border-white/10">{darkEditor ? "Light editor" : "Dark editor"}</button>
           <button type="button" onClick={() => setFullscreen((value) => !value)} className="rounded-lg border border-slate-300 p-2 dark:border-white/10" aria-label="Toggle full screen">{fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}</button>
           <button type="button" onClick={() => void loadQuestion()} className="rounded-lg border border-slate-300 p-2 dark:border-white/10" aria-label="Refresh question"><RefreshCw size={16} /></button>
         </div>
@@ -108,9 +108,9 @@ export default function BattleArea() {
           <div className="mt-3 space-y-3">{question?.examples?.map((example, index) => <div key={`${example.input}-${index}`} className="rounded-xl border border-slate-200 p-4 dark:border-white/10"><p className="text-xs font-bold uppercase text-slate-500">Example {index + 1}</p><pre className="mt-2 overflow-x-auto text-sm">Input: {example.input}{"\n"}Output: {example.output}</pre></div>)}</div>
           {showTests && <p className="mt-3 text-xs text-slate-500">Hidden tests are only evaluated after submission.</p>}
         </article>
-        <div className="flex min-w-0 flex-col bg-slate-950">
-          <Editor height="540px" language={language === "javascript" ? "javascript" : language} theme={darkEditor ? "vs-dark" : "light"} value={code} onChange={(value) => setCode(value || "")} options={{ minimap: { enabled: false }, automaticLayout: true, fontSize: 14, scrollBeyondLastLine: false }} />
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 p-4"><span className="text-sm text-slate-300">{result || "Run public tests before submitting."}</span><div className="flex gap-2"><button type="button" disabled={loading} onClick={() => void execute(false)} className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-4 py-2 text-sm font-bold transition-all duration-300 hover:bg-white/10 disabled:opacity-50"><Play size={15} /> Run Tests</button><button type="button" disabled={loading} onClick={() => void execute(true)} className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-4 py-2 text-sm font-bold text-slate-950 transition-all duration-300 hover:bg-cyan-400 disabled:opacity-50"><Send size={15} /> Submit Code</button></div></div>
+        <div className="flex min-w-0 flex-col bg-[var(--surface-card)]">
+          <Editor height="540px" language={language === "javascript" ? "javascript" : language} theme={resolvedTheme === "dark" ? "vs-dark" : "light"} value={code} onChange={(value) => setCode(value || "")} options={{ minimap: { enabled: false }, automaticLayout: true, fontSize: 14, scrollBeyondLastLine: false }} />
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-default)] p-4"><span className="text-sm text-[var(--text-secondary)]">{result || "Run public tests before submitting."}</span><div className="flex gap-2"><button type="button" disabled={loading} onClick={() => void execute(false)} className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-default)] px-4 py-2 text-sm font-bold transition hover:bg-[var(--surface-subtle)] disabled:opacity-50"><Play size={15} /> Run Tests</button><button type="button" disabled={loading} onClick={() => void execute(true)} className="inline-flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-bold text-[var(--text-on-accent)] transition hover:brightness-95 disabled:opacity-50"><Send size={15} /> Submit Code</button></div></div>
         </div>
       </div>
     </section>

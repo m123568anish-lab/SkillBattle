@@ -137,7 +137,7 @@ function DashboardLayoutInner({ children }: Props) {
   ));
 
   return (
-    <main suppressHydrationWarning className="flex min-h-screen bg-[#090b0f] text-white lg:h-dvh lg:min-h-0 lg:overflow-hidden">
+    <main suppressHydrationWarning className="flex min-h-screen bg-[var(--surface-canvas)] text-[var(--text-primary)] lg:h-dvh lg:min-h-0 lg:overflow-hidden">
       {/* Desktop Persistent Responsive Sidebar */}
       <Sidebar />
 
@@ -168,7 +168,7 @@ function DashboardLayoutInner({ children }: Props) {
               aria-modal="true"
               aria-label="Navigation menu"
               tabIndex={-1}
-              className="relative z-10 h-full w-[min(86vw,22rem)] shadow-2xl shadow-black"
+              className="relative z-10 h-full w-[min(86vw,22rem)] shadow-2xl"
             >
               <Sidebar isMobile onCloseMobile={() => setMobileDrawerOpen(false)} />
             </motion.div>
@@ -177,14 +177,14 @@ function DashboardLayoutInner({ children }: Props) {
       </AnimatePresence>
 
       {/* Main Content Area */}
-      <section id="main-content" tabIndex={-1} className="min-w-0 flex-1 overflow-auto px-3 pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-3 outline-none sm:px-6 sm:pb-[calc(7.5rem+env(safe-area-inset-bottom))] sm:pt-5 lg:h-full lg:min-h-0 lg:px-10 lg:pb-10 lg:pt-7">
+      <section id="main-content" tabIndex={-1} className="min-w-0 flex-1 overflow-auto bg-[var(--surface-canvas)] px-3 pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-3 outline-none sm:px-6 sm:pb-[calc(7.5rem+env(safe-area-inset-bottom))] sm:pt-5 lg:h-full lg:min-h-0 lg:px-10 lg:pb-10 lg:pt-7">
         <TopNavbar onOpenMobileNav={() => setMobileDrawerOpen(true)} />
         {children}
       </section>
 
       {/* Mobile Bottom Navigation Bar */}
       {!hideDock && (
-        <nav aria-label="Primary mobile navigation" className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 z-30 w-[calc(100%-1.5rem)] max-w-[30rem] -translate-x-1/2 rounded-[1.6rem] border border-white/[0.12] bg-[#0b0f15]/90 px-2 py-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.55)] backdrop-blur-xl lg:hidden">
+        <nav aria-label="Primary mobile navigation" className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 z-30 w-[calc(100%-1.5rem)] max-w-[30rem] -translate-x-1/2 rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] px-2 py-1.5 shadow-xl lg:hidden">
         <div className="mx-auto flex h-12 items-center justify-around gap-0.5">
           {mobileNavigation.map((tab) => {
             const active = isActive(tab.href);
@@ -195,7 +195,7 @@ function DashboardLayoutInner({ children }: Props) {
                   type="button"
                   aria-label={tab.title}
                   onClick={() => setMobileDrawerOpen(true)}
-                  className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-0.5 py-1.5 text-[9px] font-semibold leading-none tracking-normal text-slate-400 transition hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 motion-reduce:transition-none"
+                  className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg px-0.5 py-1.5 text-[9px] font-semibold leading-none tracking-normal text-[var(--text-muted)] transition hover:text-[var(--text-primary)] motion-reduce:transition-none"
                 >
                   <tab.icon size={20} />
                   <span>{tab.title}</span>
@@ -208,7 +208,7 @@ function DashboardLayoutInner({ children }: Props) {
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
                 className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-0.5 py-1.5 text-[9px] font-semibold leading-none tracking-normal transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 motion-reduce:transition-none ${
-                  active ? "text-cyan-300 font-bold drop-shadow-[0_0_8px_rgba(34,211,238,0.35)]" : "text-slate-400 hover:text-slate-200"
+                  active ? "text-[var(--accent-strong)] font-bold" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 }`}
               >
                 <tab.icon size={19} strokeWidth={active ? 2.5 : 2} />
@@ -225,7 +225,7 @@ function DashboardLayoutInner({ children }: Props) {
 
 export default function DashboardLayout({ children }: Props) {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#090b0f] text-white flex items-center justify-center">Loading dashboard...</div>}>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-[var(--surface-canvas)] text-[var(--text-secondary)]">Loading workspace…</div>}>
       <DashboardLayoutInner>{children}</DashboardLayoutInner>
     </Suspense>
   );

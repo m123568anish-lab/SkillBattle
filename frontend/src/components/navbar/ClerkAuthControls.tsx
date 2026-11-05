@@ -21,11 +21,11 @@ export default function ClerkAuthControls({ compact = false }: ClerkAuthControls
   }
 
   const signInClassName = compact
-    ? "rounded-xl px-2 py-2 text-center text-xs font-bold text-slate-300 hover:bg-white/10"
-    : "px-4 py-2 text-sm font-semibold text-slate-300 transition-colors duration-200 hover:text-white";
+    ? "min-h-10 rounded-lg px-2 py-2 text-center text-xs font-bold text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)]"
+    : "min-h-10 rounded-md px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]";
   const signUpClassName = compact
-    ? "rounded-xl bg-cyan-500 px-2 py-2 text-center text-xs font-bold text-slate-950"
-    : "group relative px-5 py-2 text-sm font-bold text-white transition-all duration-300 hover:scale-105";
+    ? "min-h-10 rounded-lg bg-[var(--accent)] px-2 py-2 text-center text-xs font-bold text-[var(--text-on-accent)]"
+    : "min-h-10 rounded-md bg-[var(--accent)] px-5 py-2 text-sm font-bold text-[var(--text-on-accent)] transition hover:brightness-95";
 
   return (
     <div className={compact ? "grid grid-cols-2 gap-2" : "flex items-center gap-2"}>

@@ -29,6 +29,7 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { authService } from "@/services/auth.service";
 import { toast } from "react-hot-toast";
+import { useTheme, type ThemePreference } from "@/components/common/ThemeProvider";
 
 type SettingTab =
   | "appearance"
@@ -105,6 +106,7 @@ const defaultNotifications: NotificationPreferences = {
 
 export default function SettingsPage() {
   const user = useAuthStore((state) => state.user);
+  const { preference, setPreference } = useTheme();
   const [activeTab, setActiveTab] = useState<SettingTab>("appearance");
 
   useEffect(() => {
@@ -114,7 +116,7 @@ export default function SettingsPage() {
   }, []);
 
   // Appearance Theme state
-  const [theme, setTheme] = useState<"dark" | "light" | "system">("dark");
+  const [theme, setTheme] = useState<ThemePreference>(preference);
   const [themeSaving, setThemeSaving] = useState(false);
 
   // Notification Preferences state
@@ -168,16 +170,18 @@ export default function SettingsPage() {
         }>("/profile/preferences");
         if (!active) return;
         if (response.data.theme === "dark" || response.data.theme === "light" || response.data.theme === "system") {
-          setTheme(response.data.theme);
+          const savedTheme = response.data.theme as ThemePreference;
+          setTheme(savedTheme);
+          setPreference(savedTheme);
         }
         if (response.data.notification_preferences) {
           setNotifications((prev) => ({ ...prev, ...response.data.notification_preferences }));
         }
       } catch {
-        // Fallback to local storage theme if API fails
-        const localTheme = localStorage.getItem("theme");
+        const localTheme = localStorage.getItem("qubira-theme");
         if (localTheme === "light" || localTheme === "dark" || localTheme === "system") {
           setTheme(localTheme);
+          setPreference(localTheme);
         }
       } finally {
         if (active) setNotifLoading(false);
@@ -187,7 +191,11 @@ export default function SettingsPage() {
     return () => {
       active = false;
     };
-  }, [activeTab]);
+  }, [activeTab, setPreference]);
+
+  useEffect(() => {
+    setTheme(preference);
+  }, [preference]);
 
   // 2. Load privacy sharing settings & 2FA status only when needed
   useEffect(() => {
@@ -236,20 +244,10 @@ export default function SettingsPage() {
   // Theme change handler
   async function handleThemeChange(newTheme: "dark" | "light" | "system") {
     setTheme(newTheme);
+    setPreference(newTheme);
     setThemeSaving(true);
 
-    // Apply to DOM
-    if (newTheme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else if (newTheme === "light") {
-      document.documentElement.classList.remove("dark");
-    } else {
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      document.documentElement.classList.toggle("dark", prefersDark);
-    }
-
     try {
-      localStorage.setItem("theme", newTheme);
       await api.put("/profile/preferences", {
         theme: newTheme,
         notification_preferences: notifications,
@@ -500,9 +498,9 @@ export default function SettingsPage() {
 
                   <div className="grid gap-4 sm:grid-cols-3">
                     {[
-                      { id: "dark" as const, title: "Dark Arena", desc: "Deep charcoal near-black surfaces", icon: Moon },
-                      { id: "light" as const, title: "Clean Light", desc: "Crisp white & cool slate contrast", icon: Sun },
-                      { id: "system" as const, title: "System Sync", desc: "Matches your operating system", icon: Laptop },
+                      { id: "dark" as const, title: "Ink & Lime", desc: "Layered charcoal with a clear lime accent", icon: Moon },
+                      { id: "light" as const, title: "Paper & Ink", desc: "Warm paper, dark type, restrained lime", icon: Sun },
+                      { id: "system" as const, title: "Follow system", desc: "Use your operating system preference", icon: Laptop },
                     ].map((option) => {
                       const Icon = option.icon;
                       const selected = theme === option.id;

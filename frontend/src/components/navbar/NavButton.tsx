@@ -24,8 +24,9 @@ export default function NavButton({
   if (variant === "ghost") {
     return (
       <button
+        type="button"
         onClick={handleClick}
-        className="px-4 py-2 text-sm font-semibold text-slate-300 transition-colors duration-200 hover:text-white"
+        className="min-h-10 rounded-md px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
       >
         {title}
       </button>
@@ -34,14 +35,11 @@ export default function NavButton({
 
   return (
     <button
+      type="button"
       onClick={handleClick}
-      className="group relative px-5 py-2 text-sm font-bold text-white transition-all duration-300 hover:scale-105"
+      className="min-h-10 rounded-md bg-[var(--accent)] px-5 py-2 text-sm font-bold text-[var(--text-on-accent)] transition hover:brightness-95 focus-visible:outline-none"
     >
-      <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 opacity-90 transition-opacity duration-300 group-hover:opacity-100" />
-      <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-400 to-violet-500 opacity-0 blur-md transition-opacity duration-300 group-hover:opacity-60" />
-      <span className="relative z-10 block rounded-xl border border-white/10 px-4 py-2 bg-[#070B14]/20 shadow-inner group-hover:border-cyan-300/50">
-        {title}
-      </span>
+      {title}
     </button>
   );
 }

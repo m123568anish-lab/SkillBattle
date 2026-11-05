@@ -1,12 +1,14 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import { Toaster } from "react-hot-toast";
 
 import { AuthProvider } from "@/context/AuthContext";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import PageMetadata from "@/components/common/PageMetadata";
 import { CookieConsent, PageEnhancements } from "@/components/common/ExperienceEnhancements";
+import { ThemeProvider, themeBootstrapScript } from "@/components/common/ThemeProvider";
 
 
 import "./globals.css";
@@ -56,30 +58,38 @@ export default function RootLayout({
       lang="en"
       data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} h-full scroll-smooth`}
+      suppressHydrationWarning
     >
       <body className="min-h-screen bg-[var(--app-bg)] text-[var(--app-fg)]">
+        <Script
+          id="qubira-theme-bootstrap"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themeBootstrapScript }}
+        />
         <a href="#main-content" className="skip-link">Skip to main content</a>
-        <ClerkProvider>
-          <AuthProvider>
-            <div className="relative">
-              <PageMetadata />
-              <AuthGuard>{children}</AuthGuard>
-              <PageEnhancements />
-            </div>
-          </AuthProvider>
+        <ThemeProvider>
+          <ClerkProvider>
+            <AuthProvider>
+              <div className="relative">
+                <PageMetadata />
+                <AuthGuard>{children}</AuthGuard>
+                <PageEnhancements />
+              </div>
+            </AuthProvider>
 
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              style: {
-                background: "#111827",
-                color: "#fff",
-                border: "1px solid rgba(255,255,255,0.1)",
-              },
-            }}
-          />
-          <CookieConsent />
-        </ClerkProvider>
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                style: {
+                  background: "var(--surface-elevated)",
+                  color: "var(--text-primary)",
+                  border: "1px solid var(--border-default)",
+                },
+              }}
+            />
+            <CookieConsent />
+          </ClerkProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -1,12 +1,15 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Shield, Users, Activity, Settings, LayoutDashboard, LogOut, Code, Server, Database } from "lucide-react";
+import { Shield, Users, Activity, Settings, LayoutDashboard, LogOut, Code, Server, Database, Menu, X } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import QubiraLogo from "@/components/brand/QubiraLogo";
+import { ThemeToggle } from "@/components/common/ExperienceEnhancements";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
@@ -66,16 +69,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   ];
 
   return (
-    <div className="flex min-h-screen bg-[#050505] text-slate-200 selection:bg-violet-500/30">
+    <div className="flex min-h-screen bg-[var(--surface-canvas)] text-[var(--text-primary)] selection:bg-[var(--accent)]/30">
       {/* Admin Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-white/5 bg-black/40 backdrop-blur-2xl">
+      <aside className="fixed inset-y-0 left-0 z-50 hidden w-72 flex-col border-r border-[var(--border-default)] bg-[var(--surface-card)] lg:flex">
         <div className="flex h-20 items-center gap-3 px-8">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 shadow-lg shadow-violet-500/20">
-            <Shield className="h-5 w-5 text-white" />
-          </div>
-          <span className="text-xl font-black tracking-tight text-white">
-            Battle<span className="text-violet-500">Admin</span>
-          </span>
+          <QubiraLogo variant="full" size="sm" portalBadge="ADMIN" />
         </div>
 
         <nav className="flex-1 space-y-1.5 px-4 py-6">
@@ -133,25 +131,42 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Main Admin Content Area */}
-      <main className="ml-72 flex-1">
-        <header className="sticky top-0 z-40 flex h-20 items-center justify-between border-b border-white/5 bg-[#050505]/80 px-10 backdrop-blur-xl">
+      <main id="main-content" className="min-w-0 flex-1 lg:ml-72">
+        <header className="sticky top-0 z-40 flex min-h-16 items-center justify-between gap-4 border-b border-[var(--border-default)] bg-[var(--surface-canvas)] px-4 sm:px-6 lg:h-20 lg:px-10">
+          <div className="flex items-center gap-3 lg:hidden">
+            <button type="button" onClick={() => setMobileNavOpen((open) => !open)} aria-label={mobileNavOpen ? "Close admin navigation" : "Open admin navigation"} aria-expanded={mobileNavOpen} className="rounded-lg border border-[var(--border-default)] p-2 text-[var(--text-secondary)]">
+              {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+            <QubiraLogo variant="icon" size="sm" />
+          </div>
           <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse" />
-            <span className="text-sm font-semibold text-slate-400">Live System Monitor</span>
+            <div className="h-2 w-2 rounded-full bg-[var(--status-success)]" />
+            <span className="hidden text-sm font-semibold text-[var(--text-secondary)] sm:inline">Live System Monitor</span>
           </div>
           
           <div className="flex items-center gap-4">
-             <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-1.5">
-                <div className="h-6 w-6 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500" />
-                <span className="text-sm font-bold text-white">{user?.username || user?.full_name}</span>
-                <span className="rounded bg-violet-500/20 px-2 py-0.5 text-xs font-bold text-violet-400 uppercase">
+             <ThemeToggle />
+             <div className="hidden items-center gap-3 rounded-full border border-[var(--border-default)] bg-[var(--surface-card)] px-4 py-1.5 sm:flex">
+                <span className="text-sm font-bold text-[var(--text-primary)]">{user?.username || user?.full_name}</span>
+                <span className="rounded bg-[var(--accent)]/15 px-2 py-0.5 text-xs font-bold text-[var(--accent-strong)] uppercase">
                   {user?.role}
                 </span>
              </div>
           </div>
         </header>
-        
-        <div className="p-10">
+
+        {mobileNavOpen && (
+          <nav aria-label="Admin navigation" className="border-b border-[var(--border-default)] bg-[var(--surface-card)] p-3 lg:hidden">
+            {navItems.map((item) => (
+              <Link key={item.href} href={item.href} onClick={() => setMobileNavOpen(false)} className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]">
+                <item.icon className="h-4 w-4" />
+                {item.title}
+              </Link>
+            ))}
+          </nav>
+        )}
+
+        <div className="p-4 sm:p-6 lg:p-10">
           {children}
         </div>
       </main>

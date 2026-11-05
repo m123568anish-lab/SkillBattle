@@ -1,0 +1,620 @@
+{
+  "schema": "clarification-questions/v1",
+  "generated_at": "2026-11-05T13:15:39Z",
+  "user_input": "Implement the user's requested Qubira full-product design transformation directly in the active frontend at D:\\BattleAI, preserving existing route behavior, APIs/data contracts, and unrelated working-tree edits. Read AGENTS.md and applicable instructions plus the relevant Next.js guide under frontend/node_modules/next/dist/docs before changes. Inspect the active frontend and prior theme/design infrastructure first; limit changes to frontend brand/design/theme and closely related docs. Preserve backend/app/main.py and backend/tests/api/test_global_exception_logging.py exactly as found; do not deploy or commit. Validate focused/full frontend tests, typecheck, lint, build, and relevant backend regressions where feasible; use browser tools/screenshots if available and report truthful limitations. This is execution, not planning.",
+  "title": "Qubira Frontend Design Transformation",
+  "assessment_snapshot": {
+    "intro": "The supplied task metadata describes an in-place, brownfield design/theme transformation of SkillBattle's active Next.js frontend, backed by Python, with behavior and scope constraints:",
+    "bullets": [
+      "The target is the existing frontend; the supplied project fact identifies Next.js but does not state its major version or the existing component library.",
+      "The brief names a Qubira full-product design transformation but provides no screenshots, staging URL, Figma/Storybook reference, or design-token source.",
+      "The requested scope is frontend brand/design/theme and closely related documentation; preserve routes, API/data contracts, unrelated working-tree edits, and the two named backend files; do not deploy or commit."
+    ]
+  },
+  "proposed_outcome": "Transform the active SkillBattle frontend to the requested Qubira product identity and visual system without changing existing route behavior or API/data contracts, while preserving unrelated working-tree edits and leaving the specified backend files untouched. Keep the existing frontend framework, routing, and state patterns unless the user confirms otherwise; validate the requested frontend checks and relevant backend regressions where feasible, and do not deploy or commit.",
+  "scope": [
+    "frontend",
+    "backend",
+    "generic"
+  ],
+  "status": "answered",
+  "questions": [
+    {
+      "id": "F1",
+      "kit": "frontend",
+      "field": "target.framework",
+      "title": "Frontend framework",
+      "question": "Confirm the framework and version for this design transformation. Should it remain on the existing Next.js version (the exact installed version can be confirmed from the project manifest), or should a different framework/version be targeted?",
+      "importance": "required",
+      "impact": 5,
+      "recommended": "Next.js — preserve the existing version; confirm its exact version from the project manifest",
+      "default": null,
+      "prefilled": true,
+      "prefilled_value": "Next.js — preserve the existing version; confirm its exact version from the project manifest",
+      "answer": {
+        "value": "Next.js — preserve the existing version; confirm its exact version from the project manifest",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "Next.js — preserve the existing version; confirm its exact version from the project manifest",
+          "label": "Keep the existing Next.js version (confirm exact version from the project manifest)"
+        },
+        {
+          "value": "Next.js — use a new version specified by the user",
+          "label": "Next.js at a newly specified version"
+        },
+        {
+          "value": "React with Vite — specify version",
+          "label": "React with Vite (specify version)"
+        },
+        {
+          "value": "Other framework and version",
+          "label": "Other framework and version"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "F2",
+      "kit": "frontend",
+      "field": "target.component_library",
+      "title": "Component/UI library",
+      "question": "Which existing or target component/UI library should the Qubira transformation use? Confirm keeping the current stack, or name the library and version.",
+      "importance": "required",
+      "impact": 5,
+      "recommended": "Preserve the current component library and add no new library",
+      "default": null,
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "Preserve the current component library and add no new library",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "Preserve the current component library and add no new library",
+          "label": "Preserve the current component library; add no new library"
+        },
+        {
+          "value": "Tailwind CSS only; no component library",
+          "label": "Tailwind CSS only; no component library"
+        },
+        {
+          "value": "shadcn/ui — specify version",
+          "label": "shadcn/ui (specify version)"
+        },
+        {
+          "value": "MUI — specify major version",
+          "label": "MUI (specify major version)"
+        },
+        {
+          "value": "Other library and version",
+          "label": "Other library and version"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "F3",
+      "kit": "frontend",
+      "field": "visual.screenshots",
+      "title": "Visual references",
+      "question": "Provide screenshots or a screen recording of the current UI, or a staging/production URL. If the Qubira target is in a Figma file, provide that link as well; include representative full-product screens and important states where possible.",
+      "importance": "required",
+      "impact": 5,
+      "recommended": null,
+      "default": null,
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "Current production website: https://skill-battle-one.vercel.app/\n\nThe project has been rebranded as Qubira. Use the existing website and repository as the baseline for the redesign.\n\nCreate a completely distinctive visual identity rather than copying the current AI-generated SaaS appearance.\n\nDesign direction:\n- Premium editorial design.\n- Swiss-inspired layouts and typography.\n- Competitive sports and developer-platform visual language.\n- Warm, minimalist surfaces.\n- Distinctive page compositions.\n- Professional coding workspaces.\n- Original illustrations and visual assets where useful.\n\nSupport both Light and Dark themes with a persistent theme selector: Light, Dark, and System.\n\nDo not treat the production URL as the final design reference. The objective is to substantially improve and redesign the existing product.",
+        "source": "user"
+      },
+      "depends_on": null,
+      "type": "text"
+    },
+    {
+      "id": "F4",
+      "kit": "frontend",
+      "field": "visual.design_system",
+      "title": "Qubira design system",
+      "question": "What is the source of truth for the Qubira visual direction and design tokens? Provide a design-system/brand-guide URL, Figma or Storybook link, token file path, or explicit written instructions for colors, typography, spacing, and component styling.",
+      "importance": "required",
+      "impact": 5,
+      "recommended": null,
+      "default": "match existing pixel-by-pixel using extracted CSS custom properties",
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "Create a new original Qubira design system.\n\nBrand identity:\n- Name: Qubira.\n- Personality: Intelligent, competitive, modern, student-first, professional and distinctive.\n\nLight theme:\n- Warm paper: #F1EEE6\n- Ink: #171A19\n- Acid lime: #D8F36A\n- Restrained coral accents.\n- Muted stone borders.\n\nDark theme:\n- Deep ink: #171A19\n- Layered charcoal surfaces.\n- Warm white typography.\n- Acid lime: #D8F36A\n- Restrained coral accents.\n\nUse semantic CSS variables and design tokens.\n\nTypography should be editorial, readable and distinctive. Use intentional whitespace, structured grids, meaningful alignment and page-specific layouts.\n\nAvoid generic AI-generated SaaS design patterns, excessive gradients, neon glow, glassmorphism, repetitive cards, decorative charts and unnecessary animations.\n\nEvery page should have its own visual personality while maintaining one recognizable Qubira identity.\n\nThe theme toggle must support Light, Dark and System modes and persist across all pages and sessions.",
+        "source": "user"
+      },
+      "depends_on": null,
+      "type": "text"
+    },
+    {
+      "id": "F5",
+      "kit": "frontend",
+      "field": "compliance.accessibility",
+      "title": "Accessibility target",
+      "question": "Which accessibility standard should the transformed frontend meet?",
+      "importance": "recommended",
+      "impact": 4,
+      "recommended": "WCAG 2.1 AA",
+      "default": "WCAG 2.1 AA",
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "WCAG 2.2 AA",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "WCAG 2.1 AA",
+          "label": "WCAG 2.1 AA"
+        },
+        {
+          "value": "WCAG 2.2 AA",
+          "label": "WCAG 2.2 AA"
+        },
+        {
+          "value": "Section 508",
+          "label": "Section 508"
+        },
+        {
+          "value": "none / not required",
+          "label": "No formal standard required"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "F6",
+      "kit": "frontend",
+      "field": "compatibility.browsers",
+      "title": "Browser targets",
+      "question": "Which browsers and runtime versions must the transformed frontend support?",
+      "importance": "recommended",
+      "impact": 3,
+      "recommended": "modern evergreen (Chrome, Firefox, Safari, Edge — latest 2 major versions)",
+      "default": "modern evergreen (Chrome, Firefox, Safari, Edge — latest 2 major versions)",
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "modern evergreen (Chrome, Firefox, Safari, Edge — latest 2 major versions)",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "modern evergreen (Chrome, Firefox, Safari, Edge — latest 2 major versions)",
+          "label": "Modern evergreen (latest 2 major versions of Chrome, Firefox, Safari, Edge)"
+        },
+        {
+          "value": "Chrome and Edge latest 2 major versions",
+          "label": "Chrome and Edge (latest 2 major versions)"
+        },
+        {
+          "value": "Match the existing browserslist configuration",
+          "label": "Match the existing browserslist configuration"
+        },
+        {
+          "value": "Other — specify browsers and versions",
+          "label": "Other (specify browsers and versions)"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "F7",
+      "kit": "frontend",
+      "field": "responsive.breakpoints",
+      "title": "Responsive strategy",
+      "question": "What responsive/adaptive strategy should the Qubira transformation follow?",
+      "importance": "recommended",
+      "impact": 4,
+      "recommended": "mobile-first using existing breakpoints detected from codebase",
+      "default": "mobile-first using existing breakpoints detected from codebase",
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "mobile-first using existing breakpoints detected from codebase",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "mobile-first using existing breakpoints detected from codebase",
+          "label": "Mobile-first, preserving existing breakpoints"
+        },
+        {
+          "value": "match current layout exactly",
+          "label": "Match the current layout exactly"
+        },
+        {
+          "value": "desktop-first",
+          "label": "Desktop-first"
+        },
+        {
+          "value": "Other — specify strategy and breakpoints",
+          "label": "Other (specify strategy and breakpoints)"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "F8",
+      "kit": "frontend",
+      "field": "i18n.locales",
+      "title": "Locales in scope",
+      "question": "Which locales are in scope? List locale codes, say “none,” or confirm preserving the current locale set and i18n library.",
+      "importance": "optional",
+      "impact": 2,
+      "recommended": null,
+      "default": "preserve current locales; keep existing i18n library if present",
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "Preserve the existing locale set and existing internationalization implementation. Do not introduce a new i18n library or change existing translation keys. Ensure all redesigned components support existing localized content and flexible text lengths.",
+        "source": "user"
+      },
+      "depends_on": null,
+      "type": "text"
+    },
+    {
+      "id": "F9",
+      "kit": "frontend",
+      "field": "state_mgmt.preference",
+      "title": "State management",
+      "question": "Should the transformation keep the existing client/server-state approach, or do you require a particular state-management library?",
+      "importance": "optional",
+      "impact": 2,
+      "recommended": "preserve existing pattern if identifiable; otherwise recommend minimal (component state + server-state library)",
+      "default": "preserve existing pattern if identifiable; otherwise recommend minimal (component state + server-state library)",
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "preserve existing pattern if identifiable; otherwise recommend minimal (component state + server-state library)",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "preserve existing pattern if identifiable; otherwise recommend minimal (component state + server-state library)",
+          "label": "Preserve the existing pattern; otherwise use a minimal approach"
+        },
+        {
+          "value": "component state only",
+          "label": "Component state only"
+        },
+        {
+          "value": "Redux Toolkit",
+          "label": "Redux Toolkit"
+        },
+        {
+          "value": "Zustand",
+          "label": "Zustand"
+        },
+        {
+          "value": "Other — specify library/pattern",
+          "label": "Other (specify library/pattern)"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "F10",
+      "kit": "frontend",
+      "field": "routing.preference",
+      "title": "Routing strategy",
+      "question": "Confirm the routing implementation the design transformation must retain. All existing route behavior must remain unchanged; name any preferred router or special URL requirements.",
+      "importance": "optional",
+      "impact": 4,
+      "recommended": "match existing routing implementation and preserve all route behavior",
+      "default": "use the de-facto router for the chosen target framework",
+      "prefilled": true,
+      "prefilled_value": "match existing routing implementation and preserve all route behavior",
+      "answer": {
+        "value": "match existing routing implementation and preserve all route behavior",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "match existing routing implementation and preserve all route behavior",
+          "label": "Keep the existing router and preserve all route behavior"
+        },
+        {
+          "value": "Next.js App Router",
+          "label": "Next.js App Router"
+        },
+        {
+          "value": "Next.js Pages Router",
+          "label": "Next.js Pages Router"
+        },
+        {
+          "value": "Other — specify router and URL requirements",
+          "label": "Other (specify router and URL requirements)"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "B1",
+      "kit": "backend",
+      "field": "target.framework",
+      "title": "Backend framework",
+      "question": "The stated change is frontend-only. Confirm that there is no backend framework/version migration; if a backend change is intended, specify the target framework and major version.",
+      "importance": "required",
+      "impact": 4,
+      "recommended": null,
+      "default": null,
+      "prefilled": true,
+      "prefilled_value": "No backend transformation; preserve the existing Python backend framework and version (specific framework/version not included in the supplied project facts).",
+      "answer": {
+        "value": "No backend framework or version migration.\n\nKeep the existing FastAPI backend and its installed version. This is primarily a frontend design and UX transformation. Only make minimal backend changes when strictly necessary for frontend integration, existing functionality, or fixing confirmed bugs.",
+        "source": "user"
+      },
+      "depends_on": null,
+      "type": "text"
+    },
+    {
+      "id": "B2",
+      "kit": "backend",
+      "field": "api.contract_preservation",
+      "title": "API contract policy",
+      "question": "Confirm the required external API contract policy for this work.",
+      "importance": "required",
+      "impact": 5,
+      "recommended": "must preserve",
+      "default": "must preserve",
+      "prefilled": true,
+      "prefilled_value": "must preserve",
+      "answer": {
+        "value": "must preserve",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "must preserve",
+          "label": "Must preserve all existing API endpoints, payloads, and status codes"
+        },
+        {
+          "value": "partial: specify contracts",
+          "label": "Preserve only specified contracts (list them)"
+        },
+        {
+          "value": "can break with versioning",
+          "label": "Breaking changes allowed only with API versioning"
+        },
+        {
+          "value": "can break",
+          "label": "Breaking changes allowed"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "B3",
+      "kit": "backend",
+      "field": "data.migration_strategy",
+      "title": "Data migration",
+      "question": "Confirm that this frontend-only transformation requires no database or data migration, or specify another data migration approach.",
+      "importance": "required",
+      "impact": 4,
+      "recommended": "no migration",
+      "default": "TBD / assess in research phase",
+      "prefilled": true,
+      "prefilled_value": "no migration",
+      "answer": {
+        "value": "no migration",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "no migration",
+          "label": "No migration (backend/data remain untouched)"
+        },
+        {
+          "value": "in-place",
+          "label": "In-place schema/data changes"
+        },
+        {
+          "value": "dual-write",
+          "label": "Dual-write during transition"
+        },
+        {
+          "value": "new schema",
+          "label": "New schema with data migration"
+        },
+        {
+          "value": "TBD / assess in research phase",
+          "label": "TBD; assess in research phase"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "B4",
+      "kit": "backend",
+      "field": "auth.framework",
+      "title": "Authentication and authorization",
+      "question": "Should the existing authentication/authorization mechanism and its frontend integration remain unchanged? If a specific framework or identity provider is in scope, name it and its version.",
+      "importance": "recommended",
+      "impact": 3,
+      "recommended": "preserve existing auth mechanism; detect from codebase",
+      "default": "preserve existing auth mechanism; detect from codebase",
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "preserve existing auth mechanism; detect from codebase",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "preserve existing auth mechanism; detect from codebase",
+          "label": "Preserve the existing auth mechanism"
+        },
+        {
+          "value": "Preserve existing JWT claims",
+          "label": "Preserve existing JWT claims"
+        },
+        {
+          "value": "Other — specify framework/provider and version",
+          "label": "Other (specify framework/provider and version)"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "B5",
+      "kit": "backend",
+      "field": "nfr.sla",
+      "title": "Performance and availability targets",
+      "question": "Are there explicit latency, throughput, or availability targets the frontend change must retain?",
+      "importance": "recommended",
+      "impact": 2,
+      "recommended": "match current production baseline; no regression",
+      "default": "match current production baseline; no regression",
+      "prefilled": false,
+      "prefilled_value": null,
+      "answer": {
+        "value": "match current production baseline; no regression",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "match current production baseline; no regression",
+          "label": "Match the current production baseline; no regression"
+        },
+        {
+          "value": "p95 latency below 200 ms",
+          "label": "p95 latency below 200 ms"
+        },
+        {
+          "value": "availability 99.9%",
+          "label": "Availability 99.9%"
+        },
+        {
+          "value": "Other — specify measurable SLA",
+          "label": "Other (specify measurable SLA)"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "G1",
+      "kit": "generic",
+      "field": "success.definition",
+      "title": "Definition of done",
+      "question": "What outcome defines success for the Qubira transformation?",
+      "importance": "required",
+      "impact": 5,
+      "recommended": null,
+      "default": "feature parity with the current system; all existing user-facing behaviors preserved",
+      "prefilled": true,
+      "prefilled_value": "Implement the requested Qubira brand/design/theme transformation in the active frontend while preserving existing route behavior, API/data contracts, and unrelated working-tree edits; keep the two named backend files unchanged and perform the requested validation where feasible.",
+      "answer": {
+        "value": "The transformation is complete when the actual Qubira website has been redesigned across all existing routes and user roles, with a distinctive original design system and fully functioning Light, Dark and System themes.\n\nRequired outcomes:\n\n1. A recognizable Qubira brand identity.\n2. Complete redesign of the actual application shell, sidebar, topbar, footer and navigation.\n3. Redesigned student dashboard, Daily Challenges, Practice Tasks, Battle Arena, Puzzle Quest, profile, settings and career pages.\n4. Redesigned college, company and platform-admin experiences.\n5. Page-specific layouts rather than repetitive dashboard templates.\n6. Fully functional and persistent theme switching across every route and component.\n7. Responsive and accessible desktop, tablet and mobile experiences.\n8. All existing features, routes, authentication, API contracts and real data preserved.\n9. No demo data presented as real production data.\n10. No unused replacement components or disconnected pages.\n11. No significant performance regressions.\n\nVerification must include actual browser screenshots in Light and Dark modes, representative desktop and mobile routes, TypeScript, lint, frontend tests, production build and relevant backend regression tests.\n\nDo not declare completion based on source-code changes alone. Verify the rendered application.\n\nDeliver a detailed report listing changed files, migrated routes, test results, screenshots and incomplete functionality.",
+        "source": "user"
+      },
+      "depends_on": null,
+      "type": "text"
+    },
+    {
+      "id": "G2",
+      "kit": "generic",
+      "field": "out_of_scope",
+      "title": "Out-of-scope boundaries",
+      "question": "Confirm the explicit boundaries and anything else that must not be changed.",
+      "importance": "recommended",
+      "impact": 5,
+      "recommended": null,
+      "default": "no explicit exclusions; agent will infer from project structure",
+      "prefilled": true,
+      "prefilled_value": "Backend implementation is out of scope; preserve backend/app/main.py and backend/tests/api/test_global_exception_logging.py byte-for-byte. Do not deploy or commit. Preserve unrelated working-tree edits. Limit changes to frontend brand/design/theme and closely related docs.",
+      "answer": {
+        "value": "Do not:\n\n- Migrate Next.js to another framework.\n- Replace FastAPI.\n- Replace Clerk authentication.\n- Replace PostgreSQL or SQLAlchemy.\n- Change existing API contracts.\n- Perform destructive database migrations.\n- Delete existing users, XP, battles, submissions, or learning history.\n- Remove working features.\n- Introduce fake production data.\n- Create duplicate navigation systems or duplicate feature engines.\n- Add unnecessary dependencies.\n- Change existing deployment infrastructure without authorization.\n\nThe task is a complete visual, UX and frontend architecture transformation, not a greenfield rebuild.\n\nPreserve all existing functional capabilities and improve them where required for the new design.",
+        "source": "user"
+      },
+      "depends_on": null,
+      "type": "text"
+    },
+    {
+      "id": "G3",
+      "kit": "generic",
+      "field": "existing_tests.posture",
+      "title": "Existing test policy",
+      "question": "Confirm which existing checks are expected to pass and whether existing tests may be rewritten. The supplied brief requests focused/full frontend tests, typecheck, lint, build, and relevant backend regressions where feasible.",
+      "importance": "recommended",
+      "impact": 4,
+      "recommended": "partial: focused/full frontend tests, typecheck, lint, build, and relevant backend regressions where feasible",
+      "default": "must pass",
+      "prefilled": true,
+      "prefilled_value": "partial: focused/full frontend tests, typecheck, lint, build, and relevant backend regressions where feasible",
+      "answer": {
+        "value": "partial: focused/full frontend tests, typecheck, lint, build, and relevant backend regressions where feasible",
+        "source": "user"
+      },
+      "depends_on": null,
+      "options": [
+        {
+          "value": "must pass",
+          "label": "All existing tests must pass"
+        },
+        {
+          "value": "can rewrite",
+          "label": "Existing tests may be replaced with equivalent coverage"
+        },
+        {
+          "value": "ignore",
+          "label": "Existing test suite may be ignored; create new tests"
+        },
+        {
+          "value": "partial: focused/full frontend tests, typecheck, lint, build, and relevant backend regressions where feasible",
+          "label": "Run the requested frontend checks and relevant backend regressions where feasible"
+        }
+      ],
+      "allow_other": true,
+      "type": "single_select"
+    },
+    {
+      "id": "G5",
+      "kit": "generic",
+      "field": "constraints.additional",
+      "title": "Additional constraints",
+      "question": "Add any requirements, exclusions, dependencies, compliance rules, or operational constraints not covered above.",
+      "importance": "optional",
+      "impact": 3,
+      "recommended": null,
+      "default": "None beyond the decisions listed in this specification.",
+      "prefilled": true,
+      "prefilled_value": "None beyond the decisions listed in this specification.",
+      "answer": {
+        "value": "## Additional Qubira Requirements\n\n### 1. Actual implementation\nAll redesign work must happen in the real existing repository. Identify the components used by actual application layouts and replace them. Do not create unused mockups or alternative components.\n\n### 2. Complete page coverage\nInspect every existing route and migrate the entire product. Do not stop after redesigning the homepage or dashboard.\n\n### 3. Dual-theme completeness\nLight, Dark and System themes must work across:\n- Sidebar and topbar.\n- All dashboards.\n- Daily Challenges and Practice Tasks.\n- Coding editor and console.\n- Battle Arena and tournaments.\n- Existing Candy Crush-style Puzzle Quest.\n- Profile and settings.\n- Modals, forms, dropdowns and tables.\n- Charts and notifications.\n- College, company and admin interfaces.\n\n### 4. Real data\nPreserve real user data and existing backend integrations. Do not introduce hardcoded demo statistics, fake progress, mock users or simulated successful operations.\n\n### 5. Original visual design\nDo not apply one generic template to all pages. Use different visual compositions for competition, coding, career, learning, gaming and administration.\n\n### 6. Existing functionality\nPreserve all existing routes, navigation behavior, Clerk sessions, XP, user profiles, battle records, coding submissions, tournaments, Puzzle Quest progression and role permissions.\n\n### 7. Performance\nThe current website has experienced slow loading and API timeout issues. The redesign must not make performance worse. Lazy-load heavy features and avoid unnecessary network requests.\n\n### 8. Verification\nRequire real browser verification, desktop and mobile screenshots, Light and Dark theme testing, and honest reporting of incomplete features.\n\n### 9. Implementation discipline\nImplement in manageable phases, validate each phase, and continue through the entire route inventory. Do not stop after generating a plan or design system.\n\n### 10. Branding\nUse Qubira consistently in all new user-facing branding. Preserve existing technical identifiers and historical records where changing them would risk regressions.",
+        "source": "user"
+      },
+      "depends_on": null,
+      "type": "text"
+    }
+  ]
+}

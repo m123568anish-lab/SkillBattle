@@ -1,555 +1,267 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import Footer from "@/components/Footer";
+import { useEffect, useRef, useState } from "react";
 import { QubiraLogo } from "@/components/brand/QubiraLogo";
+import { ThemeToggle } from "@/components/common/ExperienceEnhancements";
 import {
+  ArrowDownRight,
   ArrowRight,
   BrainCircuit,
   BriefcaseBusiness,
   Building2,
-  ChevronRight,
   Code2,
-  Flame,
   GraduationCap,
   Menu,
-  ShieldCheck,
-  Sparkles,
   Swords,
-  Users,
   X,
-  Zap,
 } from "lucide-react";
 
-const journey = [
-  { icon: Code2, title: "Learn", text: "Build foundations with focused tasks in Qubira Learn.", href: "/practice" },
-  { icon: Flame, title: "Missions", text: "Keep momentum with daily challenges and verified XP.", href: "/practice/tasks" },
-  { icon: Swords, title: "Arena", text: "Pressure-test your reasoning in live Arena Duels.", href: "/battle" },
-  { icon: BrainCircuit, title: "Mentor", text: "Use Qubira Mentor and interview prep for rapid improvement.", href: "/coach" },
-  { icon: BriefcaseBusiness, title: "Discover", text: "Explore real opportunities when you are ready to apply.", href: "/opportunities" },
-];
-
-const faqs = [
-  ["What can I do on Qubira?", "Qubira is an AI-powered learning and skill development platform where you can master technical skills, prepare for interviews, solve coding challenges in Qubira Code, compete in real-time arena duels, and improve career readiness."],
-  ["Are opportunities guaranteed placements?", "No. Opportunities are separate from preparation tools, and application outcomes are managed by the opportunity owner or external employer."],
-  ["Can colleges and companies use the same platform?", "Yes. Qubira keeps role-specific spaces for students, campuses, and hiring teams while preserving data isolation for each account."],
-];
-
-const navItems = [
-  { label: "Home", href: "#home" },
-  { label: "Student", href: "#student" },
-  { label: "College", href: "#college" },
-  { label: "Company", href: "#company" },
-  { label: "Battles", href: "#battles" },
-];
-
-const roleCards = [
+const audiences = [
   {
-    label: "Student",
-    icon: GraduationCap,
-    title: "Learn. Practice. Battle. Improve.",
-    text: "Build coding confidence through practice, AI guidance, rankings, and placement-ready skill development.",
-    href: "/register?account_type=STUDENT",
-    cta: "Explore Student Platform",
-  },
-  {
-    label: "College",
-    icon: Building2,
-    title: "Assess. Track. Drive placements.",
-    text: "Manage students, run assessments, and turn skill data into stronger placement outcomes for your campus.",
-    href: "/register?account_type=COLLEGE",
-    cta: "Explore College Platform",
-  },
-  {
-    label: "Company",
-    icon: BriefcaseBusiness,
-    title: "Discover. Assess. Hire.",
-    text: "Find talent, evaluate skills, and streamline hiring with a single platform designed for recruiters and teams.",
-    href: "/register?account_type=COMPANY",
-    cta: "Explore Hiring Platform",
-  },
-];
-
-const featureCards = [
-  {
-    icon: BrainCircuit,
-    title: "AI Coach",
-    text: "Get guided feedback, recommendations, and learning support that adapts to the skill gap you are trying to close.",
-  },
-  {
-    icon: Swords,
-    title: "Battle Arena",
-    text: "Practice under pressure with competitive coding rounds that test speed, reasoning, and problem-solving ability.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Skill Profile",
-    text: "Track progress, monitor readiness, and create a clearer story around the skills that matter for placement and hiring.",
-  },
-  {
-    icon: Users,
-    title: "Placement Ecosystem",
-    text: "Connect the student journey from learning and assessment to college visibility and company discovery.",
-  },
-];
-
-const battleSteps = [
-  {
+    id: "students",
     number: "01",
-    title: "Practice skills",
-    text: "Sharpen coding, logic, and interview readiness with targeted learning experiences.",
+    title: "For students",
+    heading: "Build proof, not just plans.",
+    text: "Practice technical skills, prepare for interviews, and show what you can do through real work.",
+    href: "/register?account_type=STUDENT",
+    link: "Explore the student experience",
+    icon: GraduationCap,
   },
   {
+    id: "colleges",
     number: "02",
-    title: "Enter battle",
-    text: "Join live coding rounds and test your ability under time pressure and real challenge conditions.",
+    title: "For colleges",
+    heading: "Bring progress into focus.",
+    text: "Coordinate learning and assessments with a clearer view of student readiness.",
+    href: "/register?account_type=COLLEGE",
+    link: "Explore the campus workspace",
+    icon: Building2,
   },
   {
+    id: "companies",
     number: "03",
-    title: "Improve skill profile",
-    text: "Use your performance data to focus on priority areas and improve your readiness for opportunities.",
+    title: "For companies",
+    heading: "Meet skills with evidence.",
+    text: "Discover candidates and run structured evaluations through a workspace built for hiring teams.",
+    href: "/register?account_type=COMPANY",
+    link: "Explore the hiring workspace",
+    icon: BriefcaseBusiness,
   },
 ];
 
-const ecosystemFlow = [
-  "Student practice",
-  "Battle performance",
-  "Assessment insights",
-  "Skill profile",
-  "College / Company visibility",
-  "Placement readiness",
+const experiences = [
+  {
+    number: "A",
+    label: "Practice",
+    title: "Make the fundamentals stick.",
+    text: "Work through coding tasks and focused challenges at your own pace.",
+    href: "/practice",
+    icon: Code2,
+  },
+  {
+    number: "B",
+    label: "Compete",
+    title: "Think clearly under pressure.",
+    text: "Enter coding battles and test your problem-solving in a live arena.",
+    href: "/battle",
+    icon: Swords,
+  },
+  {
+    number: "C",
+    label: "Reflect",
+    title: "Turn effort into direction.",
+    text: "Use your profile and coaching tools to decide what to strengthen next.",
+    href: "/coach",
+    icon: BrainCircuit,
+  },
 ];
 
 export default function Home() {
-  const router = useRouter();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
-  const goToBattle = () => router.push("/battle");
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setMobileMenuOpen(false);
+      menuButtonRef.current?.focus();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [mobileMenuOpen]);
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-[#050816] text-white">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-[-10%] top-[-10%] h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
-        <div className="absolute right-[-5%] top-20 h-80 w-80 rounded-full bg-violet-600/20 blur-3xl" />
-        <div className="absolute bottom-10 left-1/3 h-64 w-64 rounded-full bg-fuchsia-500/15 blur-3xl" />
-      </div>
+    <main id="main-content" className="min-h-screen overflow-x-clip bg-[var(--surface-canvas)] text-[var(--text-primary)]">
+      <header className="sticky top-0 z-50 border-b border-[var(--border-default)] bg-[var(--surface-canvas)]/95 backdrop-blur">
+        <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-10">
+          <QubiraLogo variant="full" size="sm" href="/" />
 
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#050816]/65 backdrop-blur-2xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <QubiraLogo variant="full" size="md" href="/" showTagline />
-
-          <nav className="hidden items-center gap-8 md:flex">
-            {navItems.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                className="text-sm font-medium text-slate-300 transition hover:text-white"
-              >
-                {item.label}
-              </Link>
-            ))}
+          <nav aria-label="Main navigation" className="hidden items-center gap-7 lg:flex">
+            <a href="#approach" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]">Approach</a>
+            <a href="#students" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]">Students</a>
+            <a href="#colleges" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]">Colleges</a>
+            <a href="#companies" className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]">Companies</a>
           </nav>
 
-          <div className="hidden items-center gap-3 sm:flex">
-            <Link
-              href="/login"
-              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-cyan-400/50 hover:text-white"
-            >
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Link href="/login" className="hidden min-h-10 items-center px-3 text-sm font-semibold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:inline-flex">
               Log in
             </Link>
-            <Link
-              href="/register"
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-500 to-violet-600 px-4 py-2 text-sm font-bold text-white shadow-[0_12px_30px_rgba(37,99,235,0.45)] transition hover:scale-[1.01]"
-            >
-              Start now
-              <ArrowRight className="h-4 w-4" />
+            <Link href="/register" className="hidden min-h-10 items-center gap-2 rounded-md bg-[var(--accent)] px-4 text-sm font-bold text-[var(--text-on-accent)] transition hover:brightness-95 lg:inline-flex">
+              Get started <ArrowRight size={15} aria-hidden="true" />
             </Link>
+            <button ref={menuButtonRef} type="button" aria-label={mobileMenuOpen ? "Close menu" : "Open menu"} aria-expanded={mobileMenuOpen} aria-controls="public-mobile-navigation" onClick={() => setMobileMenuOpen((open) => !open)} className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-[var(--border-default)] text-[var(--text-primary)] lg:hidden">
+              {mobileMenuOpen ? <X size={19} /> : <Menu size={19} />}
+            </button>
           </div>
-
-          <button
-            type="button"
-            aria-label="Toggle mobile menu"
-            aria-expanded={isMobileMenuOpen}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-100 md:hidden"
-            onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-          >
-            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
         </div>
-
-        {isMobileMenuOpen && (
-          <div className="border-t border-white/10 bg-[#050816]/95 px-4 py-4 md:hidden">
-            <div className="flex flex-col gap-3">
-              {navItems.map((item) => (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="rounded-xl border border-white/5 bg-white/5 px-4 py-3 text-sm font-medium text-slate-200"
-                >
-                  {item.label}
-                </Link>
-              ))}
-              <div className="mt-2 grid grid-cols-2 gap-3">
-                <Link
-                  href="/login"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-semibold text-slate-100"
-                >
-                  Log in
-                </Link>
-                <Link
-                  href="/register"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-4 py-3 text-center text-sm font-bold text-white"
-                >
-                  Start now
-                </Link>
-              </div>
+        {mobileMenuOpen && (
+          <nav id="public-mobile-navigation" aria-label="Mobile navigation" className="grid gap-1 border-t border-[var(--border-default)] bg-[var(--surface-card)] p-3 lg:hidden">
+            {[
+              ["Approach", "#approach"],
+              ["Students", "#students"],
+              ["Colleges", "#colleges"],
+              ["Companies", "#companies"],
+            ].map(([label, href]) => (
+              <a key={href} href={href} onClick={() => setMobileMenuOpen(false)} className="flex min-h-11 items-center rounded-md px-3 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]">{label}</a>
+            ))}
+            <div className="grid grid-cols-2 gap-2 border-t border-[var(--border-default)] pt-3">
+              <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="flex min-h-11 items-center justify-center rounded-md border border-[var(--border-default)] text-sm font-semibold">Log in</Link>
+              <Link href="/register" onClick={() => setMobileMenuOpen(false)} className="flex min-h-11 items-center justify-center rounded-md bg-[var(--accent)] text-sm font-bold text-[var(--text-on-accent)]">Get started</Link>
             </div>
-          </div>
+          </nav>
         )}
       </header>
 
-      <section id="home" className="relative mx-auto max-w-7xl px-4 pb-16 pt-16 sm:px-6 lg:px-8 lg:pb-20 lg:pt-20">
-        <div className="grid items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
+      <section className="mx-auto grid max-w-7xl gap-12 px-4 pb-20 pt-14 sm:px-6 sm:pb-24 sm:pt-20 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:px-10 lg:pb-28 lg:pt-24">
+        <div>
+          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
+            <span className="h-px w-8 bg-[var(--accent-strong)]" />
+            A skill platform for what comes next
+          </p>
+          <h1 className="mt-7 max-w-3xl font-semibold leading-[0.98] tracking-[-0.055em] text-[clamp(3.2rem,8vw,6.8rem)]">
+            Make your next move <span className="font-serif italic text-[var(--accent-strong)]">count.</span>
+          </h1>
+          <p className="mt-7 max-w-xl text-base leading-7 text-[var(--text-secondary)] sm:text-lg sm:leading-8">
+            Build technical ability through practice, sharpen it in competition, and make your progress visible when opportunity arrives.
+          </p>
+          <div className="mt-9 flex flex-wrap items-center gap-3">
+            <Link href="/register" className="inline-flex min-h-12 items-center gap-3 rounded-md bg-[var(--accent)] px-5 text-sm font-bold text-[var(--text-on-accent)] transition hover:brightness-95">
+              Start building <ArrowRight size={17} aria-hidden="true" />
+            </Link>
+            <a href="#approach" className="inline-flex min-h-12 items-center gap-2 px-4 text-sm font-semibold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]">
+              See how it works <ArrowDownRight size={17} aria-hidden="true" />
+            </a>
+          </div>
+          <div className="mt-12 flex flex-wrap gap-x-8 gap-y-3 border-t border-[var(--border-default)] pt-5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+            <span>Practice with purpose</span>
+            <span>Compete with intent</span>
+            <span>Progress with evidence</span>
+          </div>
+        </div>
+
+        <div className="relative min-w-0 border-y border-[var(--border-default)] py-5 sm:py-7">
+          <div aria-hidden="true" className="absolute inset-y-0 left-[2.4rem] w-px bg-[var(--border-default)] sm:left-[3.1rem]" />
+          <p className="mb-6 pl-[4.5rem] text-xs font-bold uppercase tracking-[0.18em] text-[var(--text-muted)] sm:pl-20">The Qubira loop</p>
+          <ol className="space-y-2">
+            {experiences.map(({ number, label, title, text, href, icon: Icon }) => (
+              <li key={number}>
+                <Link href={href} className="group relative grid grid-cols-[3.5rem_1fr_auto] items-start gap-4 rounded-lg px-2 py-4 transition hover:bg-[var(--surface-card)] sm:grid-cols-[4.5rem_1fr_auto] sm:px-3">
+                  <span className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-default)] bg-[var(--surface-canvas)] text-xs font-bold text-[var(--accent-strong)] sm:h-12 sm:w-12">{number}</span>
+                  <span className="min-w-0">
+                    <span className="block text-[10px] font-bold uppercase tracking-[0.17em] text-[var(--text-muted)]">{label}</span>
+                    <span className="mt-1 block text-base font-semibold leading-snug text-[var(--text-primary)] sm:text-lg">{title}</span>
+                    <span className="mt-1.5 block max-w-sm text-sm leading-6 text-[var(--text-secondary)]">{text}</span>
+                  </span>
+                  <Icon aria-hidden="true" className="mt-1 h-5 w-5 text-[var(--text-muted)] transition group-hover:text-[var(--accent-strong)]" />
+                </Link>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section id="approach" className="border-y border-[var(--border-default)] bg-[var(--surface-card)]">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-14 sm:px-6 sm:py-16 lg:grid-cols-[0.8fr_1.2fr] lg:px-10">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.15)]">
-              <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
-              QUBIRA • Learn. Build. Compete.
-            </div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent-strong)]">One journey, clear stages</p>
+            <h2 className="mt-4 max-w-md text-3xl font-semibold leading-tight tracking-[-0.035em] sm:text-4xl">Learn by doing. Grow by showing.</h2>
+          </div>
+          <div className="grid gap-0 sm:grid-cols-3">
+            {experiences.map((item, index) => (
+              <div key={item.number} className={`py-5 sm:px-5 sm:py-1 ${index ? "border-t border-[var(--border-default)] sm:border-l sm:border-t-0" : ""}`}>
+                <span className="text-xs font-bold text-[var(--text-muted)]">{item.number}</span>
+                <h3 className="mt-4 text-lg font-semibold">{item.label}</h3>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-            <h1 className="mt-8 max-w-xl text-4xl font-black leading-[0.96] tracking-[-0.05em] text-white sm:text-5xl lg:text-7xl">
-              Master Code.
-              <span className="mt-2 block bg-gradient-to-r from-cyan-400 via-teal-300 to-violet-400 bg-clip-text text-transparent">
-                Win Arena Duels.
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-10">
+        <div className="mb-10 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent-strong)]">Designed around your role</p>
+            <h2 className="mt-4 max-w-xl text-3xl font-semibold tracking-[-0.035em] sm:text-4xl">The right workspace for every next step.</h2>
+          </div>
+          <p className="max-w-md text-sm leading-6 text-[var(--text-secondary)]">Students, colleges, and companies share a connected skills ecosystem—with dedicated workflows for each.</p>
+        </div>
+        <div className="grid border-y border-[var(--border-default)] lg:grid-cols-3">
+          {audiences.map(({ id, number, title, heading, text, href, link, icon: Icon }, index) => (
+            <article id={id} key={id} className={`flex min-h-72 flex-col py-7 sm:py-8 lg:px-7 ${index ? "border-t border-[var(--border-default)] lg:border-l lg:border-t-0" : "lg:pl-0"} ${index < audiences.length - 1 ? "lg:border-r" : ""}`}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold tracking-[0.15em] text-[var(--text-muted)]">{number} / {title}</span>
+                <Icon className="h-5 w-5 text-[var(--accent-strong)]" aria-hidden="true" />
+              </div>
+              <h3 className="mt-8 max-w-xs text-2xl font-semibold leading-tight tracking-[-0.03em]">{heading}</h3>
+              <p className="mt-3 max-w-sm text-sm leading-6 text-[var(--text-secondary)]">{text}</p>
+              <Link href={href} className="mt-auto inline-flex items-center gap-2 pt-7 text-sm font-semibold text-[var(--text-primary)] transition hover:text-[var(--accent-strong)]">
+                {link} <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto grid max-w-7xl gap-10 px-4 pb-16 sm:px-6 sm:pb-20 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:px-10">
+        <div className="border-l-4 border-[var(--accent)] py-2 pl-6 sm:pl-8">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent-strong)]">Start where you are</p>
+          <h2 className="mt-4 max-w-lg text-3xl font-semibold leading-tight tracking-[-0.04em] sm:text-5xl">The best next step is a real one.</h2>
+          <p className="mt-4 max-w-md text-sm leading-6 text-[var(--text-secondary)]">Choose a practice session, explore your workspace, or step into the arena.</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[
+            { name: "Practice", href: "/practice", icon: Code2 },
+            { name: "Arena", href: "/battle", icon: Swords },
+            { name: "AI Coach", href: "/coach", icon: BrainCircuit },
+          ].map(({ name, href, icon: Icon }) => (
+            <Link key={name} href={href} className="group flex min-h-28 items-center justify-between border border-[var(--border-default)] bg-[var(--surface-card)] p-4 transition hover:border-[var(--accent-strong)] sm:block sm:min-h-36 sm:p-5">
+              <span className="flex items-center gap-3 text-sm font-semibold sm:block">
+                <Icon className="h-5 w-5 text-[var(--accent-strong)] sm:mb-5" aria-hidden="true" />
+                {name}
               </span>
-              <span className="mt-2 block text-slate-100">Level Up Fast.</span>
-            </h1>
-
-            <p className="mt-6 max-w-xl text-base leading-8 text-slate-300 sm:text-lg">
-              Qubira is an AI-powered learning and skill development platform that helps students master technical skills, prepare for interviews, solve coding problems, compete in real-time challenges, and improve career readiness.
-            </p>
-
-            <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <Link
-                href="/register"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-cyan-500 to-violet-600 px-7 py-3.5 text-base font-bold text-white shadow-[0_18px_40px_rgba(6,182,212,0.35)] transition hover:scale-[1.02] hover:shadow-[0_20px_45px_rgba(6,182,212,0.5)]"
-              >
-                Start Free Journey
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                href="/battle"
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-7 py-3.5 text-base font-semibold text-slate-100 transition hover:border-cyan-400/50 hover:bg-white/10"
-              >
-                Enter Qubira Arena
-                <ChevronRight className="h-4 w-4" />
-              </Link>
-            </div>
-
-            <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-white/10 pt-8">
-              {[
-                "⚡ Live Arena Duels",
-                "🤖 Qubira Mentor",
-                "🎯 Interview Prep",
-                "🗺️ Qubira Paths",
-              ].map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium uppercase tracking-[0.18em] text-slate-200"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="relative">
-            <div className="absolute -inset-5 rounded-[2rem] bg-gradient-to-br from-cyan-500/15 via-violet-500/20 to-fuchsia-500/15 blur-3xl" />
-            <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0a0f1d] p-5 shadow-[0_40px_120px_rgba(15,23,42,0.65)] sm:p-7">
-              <div className="absolute right-0 top-0 h-48 w-48 rounded-full bg-cyan-400/10 blur-3xl" />
-              <div className="relative">
-                <div className="mb-7 flex items-center justify-between border-b border-white/10 pb-5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-400/10">
-                      <Code2 className="h-5 w-5 text-cyan-300" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300">Your skill journey</p>
-                      <h2 className="text-lg font-bold text-white">Learn by doing</h2>
-                    </div>
-                  </div>
-                  <div className="hidden rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-slate-400 sm:block">
-                    Practice · feedback · progress
-                  </div>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {[
-                    { icon: Code2, title: "Practice", label: "Build fluency", tone: "text-cyan-300" },
-                    { icon: Swords, title: "Compete", label: "Test your skills", tone: "text-violet-300" },
-                    { icon: BrainCircuit, title: "Improve", label: "See what to learn", tone: "text-fuchsia-300" },
-                  ].map(({ icon: Icon, title, label, tone }, index) => (
-                    <div
-                      key={title}
-                      className={`rounded-2xl border p-4 ${index === 1 ? "border-cyan-300/25 bg-cyan-400/[0.07] sm:-translate-y-2" : "border-white/[0.08] bg-white/[0.025]"}`}
-                    >
-                      <div className={`mb-7 flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.05] ${tone}`}>
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <p className="text-sm font-bold text-white">{title}</p>
-                      <p className="mt-1 text-xs text-slate-400">{label}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-5 flex items-center justify-between gap-4 rounded-xl border border-white/[0.07] bg-black/20 px-4 py-3">
-                  <p className="text-xs leading-5 text-slate-400">One profile connects learning progress with assessment and hiring workflows.</p>
-                  <ArrowRight className="h-4 w-4 shrink-0 text-cyan-300" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="student" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mb-8 max-w-2xl">
-          <p className="text-sm font-bold uppercase tracking-[0.22em] text-cyan-300">Role-based entry</p>
-          <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">
-            One platform for each stage of the journey.
-          </h2>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-3">
-          {roleCards.map(({ label, icon: Icon, title, text, href, cta }) => (
-            <div
-              key={label}
-              className="group rounded-[1.75rem] border border-white/10 bg-white/5 p-6 shadow-[0_20px_50px_rgba(15,23,42,0.35)] transition hover:-translate-y-1 hover:border-cyan-400/30 hover:bg-slate-900/60"
-            >
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500/20 to-violet-500/20 text-cyan-300 ring-1 ring-cyan-400/20">
-                <Icon className="h-5 w-5" />
-              </div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{label}</p>
-              <h3 className="mt-3 text-xl font-bold text-white">{title}</h3>
-              <p className="mt-3 text-sm leading-7 text-slate-300">{text}</p>
-              <Link
-                href={href}
-                className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-cyan-300 transition hover:text-cyan-200"
-              >
-                {cta}
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section id="features" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mb-8 max-w-2xl">
-          <p className="text-sm font-bold uppercase tracking-[0.22em] text-cyan-300">Real product features</p>
-          <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">
-            Built around how the platform actually works.
-          </h2>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-          {featureCards.map(({ icon: Icon, title, text }) => (
-            <div
-              key={title}
-              className="group rounded-[1.75rem] border border-white/10 bg-white/5 p-6 shadow-[0_20px_50px_rgba(15,23,42,0.35)] transition hover:-translate-y-1 hover:border-cyan-400/30 hover:bg-slate-900/60"
-            >
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500/20 to-violet-500/20 text-cyan-300 ring-1 ring-cyan-400/20">
-                <Icon className="h-5 w-5" />
-              </div>
-              <h3 className="text-xl font-bold text-white">{title}</h3>
-              <p className="mt-3 text-sm leading-7 text-slate-300">{text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section id="battles" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mb-8 max-w-2xl">
-          <p className="text-sm font-bold uppercase tracking-[0.22em] text-cyan-300">Competitive learning</p>
-          <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">
-            Practice skills. Enter a battle. Improve faster.
-          </h2>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-3">
-          {battleSteps.map((step) => (
-            <div key={step.number} className="rounded-[1.5rem] border border-white/10 bg-white/5 p-6">
-              <div className="mb-5 inline-flex rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.2em] text-cyan-200">
-                {step.number}
-              </div>
-              <h3 className="text-xl font-bold text-white">{step.title}</h3>
-              <p className="mt-3 text-sm leading-7 text-slate-300">{step.text}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-          <button
-            type="button"
-            onClick={goToBattle}
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-cyan-500 to-violet-600 px-6 py-3.5 text-base font-bold text-white shadow-[0_18px_40px_rgba(59,130,246,0.35)] transition hover:translate-y-[-1px]"
-          >
-            Explore battles
-            <ArrowRight className="h-4 w-4" />
-          </button>
-          <Link
-            href="/leaderboard"
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3.5 text-base font-semibold text-slate-100 transition hover:border-cyan-400/50 hover:bg-white/10"
-          >
-            View leaderboard
-            <ChevronRight className="h-4 w-4" />
-          </Link>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-4 border-b border-white/10 pb-8 sm:flex-row sm:items-end sm:justify-between">
-          <div className="max-w-2xl">
-            <p className="text-sm font-bold uppercase tracking-[0.22em] text-cyan-300">A deliberate path</p>
-            <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">Make every session move your career forward.</h2>
-          </div>
-          <Link href="/opportunities" className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-300 hover:text-cyan-200">Explore opportunities <ArrowRight size={15} /></Link>
-        </div>
-        <div className="relative mt-8 grid gap-3 md:grid-cols-5">
-          {journey.map(({ icon: Icon, title, text, href }, index) => (
-            <Link key={title} href={href} className="group relative rounded-2xl border border-white/[0.09] bg-white/[0.035] p-5 transition hover:-translate-y-1 hover:border-cyan-400/35 hover:bg-cyan-400/[0.05] motion-reduce:transition-none">
-              <span className="text-[10px] font-bold tracking-[0.2em] text-slate-500">0{index + 1}</span>
-              <Icon className="mt-5 h-5 w-5 text-cyan-300" />
-              <h3 className="mt-4 font-bold text-white">{title}</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
+              <ArrowRight className="h-4 w-4 text-[var(--text-muted)] transition group-hover:translate-x-1 group-hover:text-[var(--accent-strong)]" aria-hidden="true" />
             </Link>
           ))}
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="rounded-[2rem] border border-white/10 bg-gradient-to-br from-slate-900/80 to-[#101827] p-6 sm:p-8 lg:p-10">
-          <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-            <div>
-              <p className="text-sm font-bold uppercase tracking-[0.22em] text-cyan-300">AI assistance</p>
-              <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">
-                Smart support without replacing the human journey.
-              </h2>
-              <p className="mt-4 max-w-xl text-base leading-8 text-slate-300">
-                Qubira uses AI to support learning, coaching, and readiness workflows. It helps students improve and gives colleges and companies clearer insight into candidate preparation without replacing human judgment.
-              </p>
-            </div>
-
-            <div className="rounded-[1.75rem] border border-cyan-400/20 bg-cyan-500/10 p-5">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-violet-600 text-white">
-                  <BrainCircuit className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">AI capabilities</p>
-                  <h3 className="text-xl font-bold text-white">Learning support</h3>
-                </div>
-              </div>
-
-              <ul className="space-y-3 text-sm text-slate-200">
-                <li className="flex items-start gap-2"><span className="mt-1 h-2 w-2 rounded-full bg-cyan-400" />AI guidance for practice and improvement</li>
-                <li className="flex items-start gap-2"><span className="mt-1 h-2 w-2 rounded-full bg-violet-400" />Roadmap and learning recommendations</li>
-                <li className="flex items-start gap-2"><span className="mt-1 h-2 w-2 rounded-full bg-fuchsia-400" />Assessment and candidate readiness support</li>
-              </ul>
-            </div>
-          </div>
+      <footer className="border-t border-[var(--border-default)] bg-[var(--surface-card)]">
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-10">
+          <QubiraLogo variant="full" size="sm" href="/" />
+          <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-[var(--text-secondary)]">
+            <Link href="/about" className="hover:text-[var(--text-primary)]">About</Link>
+            <Link href="/privacy" className="hover:text-[var(--text-primary)]">Privacy</Link>
+            <Link href="/terms" className="hover:text-[var(--text-primary)]">Terms</Link>
+            <Link href="/support" className="hover:text-[var(--text-primary)]">Support</Link>
+          </nav>
+          <p className="text-xs text-[var(--text-muted)]">Learn. Build. Compete.</p>
         </div>
-      </section>
-
-      <section className="mx-auto grid max-w-7xl gap-8 px-4 py-16 sm:px-6 lg:grid-cols-[.8fr_1.2fr] lg:px-8">
-        <div>
-          <p className="text-sm font-bold uppercase tracking-[0.22em] text-cyan-300">Clear expectations</p>
-          <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">Questions, answered honestly.</h2>
-          <p className="mt-4 max-w-md leading-7 text-slate-400">Qubira is designed to make your preparation more deliberate. It helps you develop real skills without guesswork or artificial inflation.</p>
-        </div>
-        <div className="divide-y divide-white/[0.08] rounded-3xl border border-white/[0.09] bg-white/[0.025] px-6">
-          {faqs.map(([question, answer]) => (
-            <details key={question} className="group py-5">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-bold text-white marker:hidden">{question}<ChevronRight className="h-4 w-4 shrink-0 text-cyan-300 transition-transform group-open:rotate-90" /></summary>
-              <p className="pt-3 pr-6 text-sm leading-6 text-slate-400">{answer}</p>
-            </details>
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mb-8 max-w-2xl">
-          <p className="text-sm font-bold uppercase tracking-[0.22em] text-cyan-300">Placement ecosystem</p>
-          <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">
-            From skills to opportunities.
-          </h2>
-        </div>
-
-        <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 sm:p-8">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-            {[
-              "Student",
-              "Skills",
-              "Practice",
-              "Assessment",
-              "Skill profile",
-              "College / Company",
-            ].map((item, index) => (
-              <div
-                key={item}
-                className="flex flex-col items-center justify-center rounded-[1.5rem] border border-white/10 bg-[#09111d] px-4 py-6 text-center"
-              >
-                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-violet-600 text-sm font-black text-white">
-                  {index + 1}
-                </div>
-                <p className="text-sm font-semibold text-slate-200">{item}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 flex justify-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-200">
-              <Flame className="h-4 w-4" />
-              Ready for placement preparation and hiring workflows
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 pb-20 pt-8 sm:px-6 lg:px-8">
-        <div className="rounded-[2rem] border border-cyan-400/20 bg-gradient-to-r from-cyan-500/10 via-violet-500/10 to-fuchsia-500/10 p-6 sm:p-8 lg:p-10">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-sm font-bold uppercase tracking-[0.22em] text-cyan-300">Get started</p>
-              <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">
-                Build your next engineering milestone in Qubira.
-              </h2>
-            </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/register"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-base font-bold text-slate-900 transition hover:scale-[1.01]"
-              >
-                Join now
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                href="/college/register"
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3.5 text-base font-semibold text-slate-100 transition hover:border-cyan-400/50 hover:bg-white/10"
-              >
-                College signup
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <Footer />
+      </footer>
     </main>
   );
 }

@@ -46,6 +46,9 @@ from .battle import BattleConfig, BattleRoom, BattleParticipant, BattleSubmissio
 from .assessment_engine import UnifiedAssessment, AssessmentAttempt, AssessmentQuestionSubmission, StudentSkillProfile
 from .notification import Notification
 from app.modules.audit.model import AuditLog
+from .tournament import Tournament, TournamentParticipant, TournamentMatch
+from .friend import Friendship
+from app.modules.interview.model import Interview
 
 __all__ = [
     "Base",
@@ -111,4 +114,9 @@ __all__ = [
     "BattleParticipant",
     "BattleSubmission",
     "BattleResult",
+    "Tournament",
+    "TournamentParticipant",
+    "TournamentMatch",
+    "Friendship",
+    "Interview",
 ]

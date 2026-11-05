@@ -95,10 +95,10 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#070B14]">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--surface-canvas)]">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent" />
-          <p className="text-gray-400 text-sm">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--accent-strong)] border-t-transparent" />
+          <p className="text-[var(--text-secondary)] text-sm">
             Checking authentication...
           </p>
         </div>
@@ -108,17 +108,17 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   if (status === "unavailable") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#070B14] text-center text-slate-300">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--surface-canvas)] text-center text-[var(--text-secondary)]">
         <div className="space-y-4">
           <p>{authError ?? "Authentication service is temporarily unavailable."}</p>
-          <button type="button" onClick={retryAuthentication} className="rounded-xl bg-cyan-500 px-4 py-2 font-semibold text-slate-950">Try again</button>
+          <button type="button" onClick={retryAuthentication} className="rounded-md bg-[var(--accent)] px-4 py-2 font-semibold text-[var(--text-on-accent)]">Try again</button>
         </div>
       </div>
     );
   }
 
   if (status === "forbidden") {
-    return <div className="flex min-h-screen items-center justify-center bg-[#070B14] text-slate-300">Your account is not permitted to access Qubira.</div>;
+    return <div className="flex min-h-screen items-center justify-center bg-[var(--surface-canvas)] text-[var(--text-secondary)]">Your account is not permitted to access Qubira.</div>;
   }
 
   const organizationSetupRequired = Boolean(user && getPostLoginPath(user) === "/organization-setup");

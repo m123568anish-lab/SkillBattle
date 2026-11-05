@@ -8,15 +8,15 @@ export default function DesktopNavbar() {
   const pathname = usePathname();
 
   return (
-    <nav className="hidden lg:flex items-center gap-8">
+    <nav aria-label="Main navigation" className="hidden lg:flex items-center gap-7">
       {navigation.map((item) => (
         <Link
           key={item.name}
           href={item.href}
           className={`transition-all duration-200 ${
             pathname === item.href
-              ? "text-cyan-400"
-              : "text-slate-300 hover:text-white"
+              ? "border-b-2 border-[var(--accent)] py-2 text-[var(--text-primary)]"
+              : "py-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           }`}
         >
           {item.name}

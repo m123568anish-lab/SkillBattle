@@ -1,0 +1,48 @@
+project:
+  scope_path: "."
+  loc: 139359
+  languages: [Python, JavaScript/TypeScript]
+  git: true
+  structure:
+    frontend: "Active Next.js frontend; requested design transformation scope"
+    backend: "Python backend; explicitly protected from changes"
+    docs: "Project documentation"
+    api-generator: "API generation utilities"
+    sdk: "SDK"
+    src: "Application source"
+    scripts: "Project scripts"
+  notes: "SkillBattle product with a narrowly scoped Qubira visual brand/design transformation in the active frontend."
+
+assessment:
+  change_type: upgrade
+  rationale: |
+    The user requests a frontend brand, design-system, and theme transformation
+    in the existing application while preserving routes, APIs/data contracts,
+    and unrelated working-tree edits. No framework/runtime migration is requested.
+  transformations:
+    - fromStack: "Existing frontend design and theme infrastructure"
+      fromStackVersion: "Existing version to be confirmed by implementation worker"
+      toStack: "Qubira full-product design system"
+      toStackVersion: "Not specified"
+  grouping_needed: false
+  deep_planning: undecided
+
+progress_sync:
+  run_id: ba58419c-90cb-4a1d-8f59-75974aa966db
+  grouping_mode: none
+  execution_mode: saved
+  plan_start_time: 2026-11-05T13:13:12Z
+  plan_completed_time:
+  execution_start_time:
+  execution_completed_time:
+  validation_start_time:
+  validation_completed_time:
+  total_phases:
+  completed_phases: 0
+  total_modules: 10
+  completed_modules: 0
+  total_tasks:
+  completed_tasks: 0
+  total_commits: 0
+  build_verified: false
+  test_verified: false

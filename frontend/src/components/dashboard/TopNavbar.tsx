@@ -96,7 +96,7 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
       className="
         relative z-20
         mb-8 flex min-w-0 flex-row items-center justify-between gap-2 border-b
-        border-white/[0.08] bg-[#090b0f]/90 px-0 py-3
+        border-[var(--border-default)] bg-[var(--surface-canvas)] px-0 py-3
         sm:gap-4 sm:py-4
       "
     >
@@ -107,7 +107,7 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
             onClick={onOpenMobileNav}
             aria-label="Open navigation menu"
             data-mobile-menu-trigger
-            className="flex items-center justify-center rounded-xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:border-cyan-400/40 hover:bg-cyan-400/10 hover:text-cyan-300 lg:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+            className="flex items-center justify-center rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] p-2 text-[var(--text-secondary)] transition hover:border-[var(--accent-strong)] hover:text-[var(--text-primary)] lg:hidden"
           >
             <Menu size={18} />
           </button>
@@ -116,13 +116,13 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
           href={logoHref}
           aria-label="Go to your Qubira dashboard"
           title="Dashboard"
-          className="inline-flex min-w-0 shrink-0 items-center px-1 py-1 text-left transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+          className="inline-flex min-w-0 shrink-0 items-center px-1 py-1 text-left transition hover:opacity-90"
         >
           <QubiraLogo variant="full" size="sm" />
         </Link>
 
-        <div className={`relative min-w-0 flex-1 lg:max-w-md ${mobileSearchOpen ? "max-sm:absolute max-sm:left-0 max-sm:right-0 max-sm:top-[calc(100%+0.5rem)] max-sm:z-50 max-sm:rounded-xl max-sm:border max-sm:border-white/10 max-sm:bg-[#090e19] max-sm:p-2 max-sm:shadow-2xl" : "max-sm:hidden"} sm:block`}>
-          <div className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-[#0F172A]/90 px-3 py-2 transition focus-within:border-cyan-400/70 focus-within:ring-1 focus-within:ring-cyan-400/30 sm:gap-3 sm:px-4 sm:py-2.5">
+        <div className={`relative min-w-0 flex-1 lg:max-w-md ${mobileSearchOpen ? "max-sm:absolute max-sm:left-0 max-sm:right-0 max-sm:top-[calc(100%+0.5rem)] max-sm:z-50 max-sm:rounded-xl max-sm:border max-sm:border-[var(--border-default)] max-sm:bg-[var(--surface-elevated)] max-sm:p-2 max-sm:shadow-2xl" : "max-sm:hidden"} sm:block`}>
+          <div className="flex w-full items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-2 transition focus-within:border-[var(--accent-strong)] focus-within:ring-1 focus-within:ring-[var(--accent-strong)]/30 sm:gap-3 sm:px-4 sm:py-2.5">
             <Search size={18} className="shrink-0 text-slate-400" />
             <input
               ref={searchInputRef}
@@ -164,9 +164,9 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
               aria-activedescendant={searchResults.length ? `global-search-result-${highlightedIndex}` : undefined}
               aria-keyshortcuts="Control+K Meta+K"
               placeholder={`Search ${pageLabel.toLowerCase()}...`}
-              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
+              className="w-full bg-transparent text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
             />
-            <kbd className="hidden shrink-0 rounded border border-white/10 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 sm:inline">⌘K</kbd>
+            <kbd className="hidden shrink-0 rounded border border-[var(--border-default)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-muted)] sm:inline">⌘K</kbd>
           </div>
           {searchOpen && searchQuery.trim().length >= 2 && (
             <>
@@ -183,7 +183,7 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
                 id="global-search-results"
                 role="listbox"
                 aria-label="Search results"
-                className="absolute left-0 top-full z-40 mt-2 max-h-96 w-[min(28rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-white/10 bg-slate-950 shadow-2xl"
+                className="absolute left-0 top-full z-40 mt-2 max-h-96 w-[min(28rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] shadow-2xl"
               >
                 {searching ? (
                   <p className="px-4 py-3 text-sm text-slate-400">Searching…</p>
@@ -205,13 +205,13 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
                         setSearchOpen(false);
                         setMobileSearchOpen(false);
                       }}
-                      className={`flex w-full items-center gap-3 border-b border-white/5 px-4 py-3 text-left last:border-0 hover:bg-white/5 ${highlightedIndex === index ? "bg-cyan-400/10" : ""}`}
+                      className={`flex w-full items-center gap-3 border-b border-[var(--border-subtle)] px-4 py-3 text-left last:border-0 hover:bg-[var(--surface-subtle)] ${highlightedIndex === index ? "bg-[var(--accent)]/10" : ""}`}
                     >
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-white">{result.title}</span>
+                        <span className="block truncate text-sm font-medium text-[var(--text-primary)]">{result.title}</span>
                         <span className="block truncate text-xs text-slate-400">{result.detail}</span>
                       </span>
-                      <span className="flex items-center gap-1 text-[10px] uppercase text-cyan-300">
+                      <span className="flex items-center gap-1 text-[10px] uppercase text-[var(--accent-strong)]">
                         {result.type}
                         <ArrowUpRight className="h-3.5 w-3.5" />
                       </span>
@@ -241,7 +241,7 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
             setSearchOpen(willOpen);
             if (willOpen) window.requestAnimationFrame(() => searchInputRef.current?.focus());
           }}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:border-cyan-400/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 sm:hidden"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-secondary)] transition hover:border-[var(--accent-strong)] hover:text-[var(--text-primary)] sm:hidden"
         >
           <Search className="h-[18px] w-[18px]" />
         </button>

@@ -115,10 +115,9 @@ export default function ProfileMenu() {
         aria-expanded={isMenuOpen}
         aria-haspopup="dialog"
         onClick={() => setIsMenuOpen((open) => !open)}
-        className="flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-1.5 text-left transition hover:border-cyan-500/50 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 sm:h-10 sm:gap-3 sm:rounded-xl sm:px-2.5 md:px-4"
+        className="flex h-9 items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] px-1.5 text-left transition hover:border-[var(--accent-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-strong)] sm:h-10 sm:gap-3 sm:px-2.5 md:px-4"
       >
         <div className="relative">
-          <div className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 opacity-70 blur-sm transition duration-300" />
           {avatarUrl ? (
             <Image
               src={avatarUrl}
@@ -129,20 +128,20 @@ export default function ProfileMenu() {
               className="relative h-7 w-7 rounded-full border border-white/20 object-cover sm:h-8 sm:w-8 md:h-9 md:w-9"
             />
           ) : (
-            <div className="relative grid h-7 w-7 place-items-center rounded-full border border-white/20 bg-slate-800 text-[10px] font-black text-cyan-200 sm:h-8 sm:w-8 sm:text-xs md:h-9 md:w-9">
+            <div className="relative grid h-7 w-7 place-items-center rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] text-[10px] font-black text-[var(--accent-strong)] sm:h-8 sm:w-8 sm:text-xs md:h-9 md:w-9">
               {initials}
             </div>
           )}
         </div>
 
         <div className="hidden text-left md:block">
-          <p className="text-sm font-bold text-white leading-tight">{displayName}</p>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-cyan-400">
+          <p className="text-sm font-bold text-[var(--text-primary)] leading-tight">{displayName}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
             {portal === "student" ? `Level ${user?.level ?? 1}` : portal === "college" ? "College account" : portal === "company" ? "Company account" : "Admin account"}
           </p>
         </div>
 
-        <ChevronDown size={16} className={`hidden text-slate-400 transition md:block ${isMenuOpen ? "rotate-180 text-white" : ""}`} />
+        <ChevronDown size={16} className={`hidden text-[var(--text-muted)] transition md:block ${isMenuOpen ? "rotate-180 text-[var(--text-primary)]" : ""}`} />
       </button>
 
       <HeaderPanel
@@ -151,17 +150,17 @@ export default function ProfileMenu() {
         onClose={() => setIsMenuOpen(false)}
         mobilePresentation="popover"
       >
-          <div className="mb-2 flex items-center gap-3 border-b border-white/5 px-3 py-3">
+          <div className="mb-2 flex items-center gap-3 border-b border-[var(--border-subtle)] px-3 py-3">
             {avatarUrl ? (
               <Image src={avatarUrl} alt={`${displayName} profile photo`} width={44} height={44} unoptimized className="h-11 w-11 rounded-full border border-white/20 object-cover" />
             ) : (
-              <div className="grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-slate-800 text-sm font-black text-cyan-200">
+              <div className="grid h-11 w-11 place-items-center rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] text-sm font-black text-[var(--accent-strong)]">
                 {initials}
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold text-white">{displayName}</p>
-              <p className="truncate text-xs text-slate-400">{email}</p>
+              <p className="truncate text-sm font-bold text-[var(--text-primary)]">{displayName}</p>
+              <p className="truncate text-xs text-[var(--text-secondary)]">{email}</p>
             </div>
           </div>
 
@@ -171,21 +170,21 @@ export default function ProfileMenu() {
                 key={label}
                 type="button"
                 onClick={() => handleNavigate(href)}
-                className="group flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left transition hover:border-cyan-500/20 hover:bg-white/5"
+                className="group flex w-full items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 text-left transition hover:border-[var(--border-default)] hover:bg-[var(--surface-subtle)]"
               >
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-cyan-500/10 text-cyan-300">
+                <span className="grid h-9 w-9 place-items-center rounded-lg bg-[var(--accent)]/15 text-[var(--accent-strong)]">
                   <Icon size={16} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold text-white">{label}</span>
-                  <span className="block text-[11px] text-slate-400">{description}</span>
+                  <span className="block text-sm font-semibold text-[var(--text-primary)]">{label}</span>
+                  <span className="block text-[11px] text-[var(--text-secondary)]">{description}</span>
                 </span>
-                <ChevronRight size={15} className="text-slate-500 transition group-hover:translate-x-0.5 group-hover:text-cyan-300" />
+                <ChevronRight size={15} className="text-[var(--text-muted)] transition group-hover:translate-x-0.5 group-hover:text-[var(--accent-strong)]" />
               </button>
             ))}
           </div>
 
-          <div className="mt-1 border-t border-white/5 px-2 pb-2 pt-2">
+          <div className="mt-1 border-t border-[var(--border-subtle)] px-2 pb-2 pt-2">
             <button
               type="button"
               onClick={handleLogout}

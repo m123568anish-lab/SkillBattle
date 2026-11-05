@@ -3,6 +3,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { Code2, RotateCcw, ZoomIn, ZoomOut, Check, Sparkles } from "lucide-react";
+import { useTheme } from "@/components/common/ThemeProvider";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
@@ -54,7 +55,7 @@ export function AssessmentCodeEditor({
   readOnly = false,
   className = "",
 }: AssessmentCodeEditorProps) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { resolvedTheme } = useTheme();
   const editorRef = useRef<any>(null);
   const [fontSize, setFontSize] = useState(13);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved">("idle");
@@ -93,7 +94,6 @@ export function AssessmentCodeEditor({
     editor.focus();
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleEditorDidMount = (editor: any) => {
     editorRef.current = editor;
   };
@@ -101,9 +101,9 @@ export function AssessmentCodeEditor({
   const monacoLanguage = language === "cpp" ? "cpp" : language === "javascript" ? "javascript" : language;
 
   return (
-    <div className={`flex flex-col h-full bg-[#0B0F17] border border-white/[0.08] rounded-xl overflow-hidden ${className}`}>
+    <div className={`flex flex-col h-full bg-[var(--surface-card)] border border-[var(--border-default)] rounded-xl overflow-hidden ${className}`}>
       {/* Top Editor Toolbar */}
-      <div className="flex h-11 shrink-0 items-center justify-between border-b border-white/[0.08] bg-[#0E1524]/90 px-3">
+      <div className="flex h-11 shrink-0 items-center justify-between border-b border-[var(--border-default)] bg-[var(--surface-elevated)] px-3">
         <div className="flex items-center gap-2">
           <Code2 className="h-4 w-4 text-cyan-400" />
           {onLanguageChange ? (
@@ -111,10 +111,10 @@ export function AssessmentCodeEditor({
               value={language}
               onChange={(e) => onLanguageChange(e.target.value)}
               disabled={readOnly}
-              className="rounded-lg border border-white/10 bg-[#161F30] px-2.5 py-1 text-xs font-semibold text-cyan-300 outline-none transition hover:border-cyan-500/50 focus:border-cyan-500"
+              className="rounded-md border border-[var(--border-default)] bg-[var(--surface-card)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] outline-none transition hover:border-[var(--accent-strong)] focus:border-[var(--accent-strong)]"
             >
               {availableLanguages.map((lang) => (
-                <option key={lang} value={lang} className="bg-[#0B0F17] text-slate-200">
+                <option key={lang} value={lang} className="bg-[var(--surface-card)] text-[var(--text-primary)]">
                   {lang === "cpp" ? "C++" : lang === "javascript" ? "JavaScript" : lang.charAt(0).toUpperCase() + lang.slice(1)}
                 </option>
               ))}
@@ -134,7 +134,7 @@ export function AssessmentCodeEditor({
 
         {/* Font size & Reset buttons */}
         <div className="flex items-center gap-1 sm:gap-2">
-          <div className="hidden sm:flex items-center gap-1 rounded-lg border border-white/10 bg-[#161F30] px-1 py-0.5">
+          <div className="hidden sm:flex items-center gap-1 rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] px-1 py-0.5">
             <button
               type="button"
               onClick={() => setFontSize((s) => Math.max(11, s - 1))}
@@ -159,7 +159,7 @@ export function AssessmentCodeEditor({
               type="button"
               onClick={onReset}
               title="Reset to starter template"
-              className="flex items-center gap-1 rounded-lg border border-white/10 bg-[#161F30] px-2 py-1 text-[11px] font-medium text-slate-300 hover:bg-white/10 hover:text-white transition"
+              className="flex items-center gap-1 rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)] transition"
             >
               <RotateCcw className="h-3 w-3" />
               <span className="hidden sm:inline">Reset</span>
@@ -170,7 +170,7 @@ export function AssessmentCodeEditor({
 
       {/* Mobile Touch Utility Bar */}
       {!readOnly && (
-        <div className="flex items-center gap-1 overflow-x-auto border-b border-white/[0.06] bg-[#0A0D14] px-2 py-1.5 scrollbar-thin scrollbar-thumb-white/10">
+        <div className="flex items-center gap-1 overflow-x-auto border-b border-[var(--border-default)] bg-[var(--surface-elevated)] px-2 py-1.5">
           <span className="text-[10px] font-mono text-slate-500 mr-1 select-none flex items-center gap-0.5 shrink-0">
             <Sparkles className="h-2.5 w-2.5 text-cyan-400" /> Quick
           </span>
@@ -179,7 +179,7 @@ export function AssessmentCodeEditor({
               key={sym.label}
               type="button"
               onClick={() => insertToken(sym.insert)}
-              className="flex min-h-[30px] min-w-[32px] shrink-0 items-center justify-center rounded-md border border-white/[0.08] bg-[#141B2B] px-2 text-xs font-mono font-medium text-cyan-200 transition active:scale-95 active:bg-cyan-500/20 hover:bg-[#1E293B]"
+              className="flex min-h-[30px] min-w-[32px] shrink-0 items-center justify-center rounded-md border border-[var(--border-default)] bg-[var(--surface-card)] px-2 text-xs font-mono font-medium text-[var(--text-secondary)] transition active:scale-95 active:bg-[var(--accent)]/20 hover:bg-[var(--surface-subtle)]"
             >
               {sym.label}
             </button>
@@ -192,7 +192,7 @@ export function AssessmentCodeEditor({
         <MonacoEditor
           height="100%"
           language={monacoLanguage}
-          theme="vs-dark"
+          theme={resolvedTheme === "dark" ? "vs-dark" : "light"}
           value={value}
           onChange={(val) => onChange(val || "")}
           onMount={handleEditorDidMount}

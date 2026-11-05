@@ -189,12 +189,12 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
         transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
         className={`flex flex-col select-none relative ${
           isMobile
-            ? "h-full w-full rounded-r-2xl border-r border-white/10 bg-[#0C1017] text-white"
-            : "hidden lg:flex m-0 rounded-none border-0 border-r border-white/[0.08] bg-[#0A0D14] shadow-none overflow-hidden"
+            ? "h-full w-full rounded-r-2xl border-r border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-primary)]"
+            : "hidden lg:flex m-0 rounded-none border-0 border-r border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-primary)] shadow-none overflow-hidden"
         }`}
       >
         {/* Top Header / Branding */}
-        <div className="relative z-10 flex h-14 shrink-0 items-center justify-between border-b border-white/[0.06] px-3.5">
+        <div className="relative z-10 flex h-14 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] px-3.5">
           <Link
             href={portal === "admin" ? "/admin" : portal === "college" ? "/college/dashboard" : portal === "company" ? "/company/dashboard" : "/dashboard"}
             onClick={onCloseMobile}
@@ -215,7 +215,7 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
               onClick={toggleCollapsed}
               aria-label={effectiveCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
               title={effectiveCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
-              className="rounded-lg border border-white/10 bg-white/[0.04] p-1 text-slate-400 transition hover:border-cyan-400/40 hover:bg-cyan-400/10 hover:text-cyan-300 focus-visible:outline-none"
+              className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] p-1 text-[var(--text-secondary)] transition hover:border-[var(--accent-strong)] hover:text-[var(--text-primary)]"
             >
               {effectiveCollapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
             </button>
@@ -227,7 +227,7 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
               type="button"
               onClick={onCloseMobile}
               aria-label="Close navigation"
-              className="rounded-lg border border-white/10 bg-white/5 p-1.5 text-slate-300 transition hover:text-white"
+              className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] p-1.5 text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
             >
               <X size={16} />
             </button>
@@ -281,14 +281,14 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
                           effectiveCollapsed ? "justify-center" : ""
                         } ${
                           active
-                            ? "bg-cyan-500/15 text-cyan-200 border border-cyan-400/30 font-bold shadow-sm shadow-cyan-500/10"
-                            : "text-slate-400 hover:bg-white/[0.05] hover:text-slate-100 border border-transparent"
+                            ? "bg-[var(--accent)]/15 text-[var(--text-primary)] border border-[var(--accent)]/40 font-bold"
+                              : "text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] border border-transparent"
                         }`}
                       >
                         <Icon
                           size={18}
                           className={`shrink-0 transition-transform group-hover:scale-105 ${
-                            active ? "text-cyan-400" : "text-slate-400 group-hover:text-slate-200"
+                            active ? "text-[var(--accent-strong)]" : "text-[var(--text-muted)] group-hover:text-[var(--text-primary)]"
                           }`}
                         />
 
@@ -299,7 +299,7 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
                         )}
 
                         {active && !effectiveCollapsed && (
-                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400" />
+                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent)]" />
                         )}
                       </Link>
                     );
@@ -311,7 +311,7 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
         </nav>
 
         {/* Footer: User Profile Block with Account Menu */}
-        <div ref={profileRef} className="relative border-t border-white/[0.06] p-2 bg-black/20">
+        <div ref={profileRef} className="relative border-t border-[var(--border-subtle)] p-2 bg-[var(--surface-elevated)]">
           <button
             type="button"
             onClick={() => setProfileOpen((prev) => !prev)}

@@ -14,56 +14,42 @@ export default function OpenGraphImage() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          padding: 80,
-          color: "#ffffff",
-          background: "radial-gradient(circle at 15% 20%, #151F38 0%, #080D1A 60%, #04070F 100%)",
+          padding: 76,
+          color: "#20231d",
+          background: "#f2f0e8",
           fontFamily: "system-ui, sans-serif",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          {/* Geometric Q Icon */}
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 16,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "linear-gradient(135deg, #06B6D4 0%, #6366F1 100%)",
-              color: "#080D1A",
-              fontSize: 32,
-              fontWeight: 900,
-              boxShadow: "0 0 30px rgba(6, 182, 212, 0.4)",
-            }}
-          >
-            Q
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+            <div style={{ width: 54, height: 54, display: "flex", alignItems: "center", justifyContent: "center", background: "#171a14", color: "#c8ef72", fontSize: 33, fontWeight: 800 }}>
+              Q
+            </div>
+            <span style={{ fontSize: 29, fontWeight: 900, letterSpacing: "0.12em" }}>QUBIRA</span>
           </div>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: 36, fontWeight: 900, letterSpacing: "-0.03em", color: "#ffffff" }}>
-              QUBIRA
-            </span>
-            <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.2em", color: "#22D3EE", textTransform: "uppercase" }}>
-              Learn. Build. Compete.
-            </span>
+          <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase" }}>
+            Learn · Build · Compete
+          </span>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+          <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#526f20" }}>
+            Make your next move count
+          </span>
+          <div style={{ fontSize: 77, lineHeight: 1.02, fontWeight: 750, maxWidth: 970, letterSpacing: "-0.045em" }}>
+            Build skills. Show what you can do.
+          </div>
+          <div style={{ fontSize: 25, color: "#4c5046" }}>
+            Practice · Competition · Career readiness
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <div style={{ fontSize: 64, lineHeight: 1.1, fontWeight: 800, maxWidth: 960, letterSpacing: "-0.03em" }}>
-            Master technical skills. Solve code. Compete live.
-          </div>
-          <div style={{ fontSize: 26, color: "#94A3B8" }}>
-            Qubira Learn · Qubira Arena · Qubira Code · Interview Prep · Qubira Mentor
-          </div>
-        </div>
-
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 28 }}>
-          <span style={{ fontSize: 20, color: "#64748B" }}>AI-Powered Skill & Engineering Mastery Platform</span>
-          <span style={{ fontSize: 20, color: "#06B6D4", fontWeight: 700 }}>qubira.io</span>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #d3d1c5", paddingTop: 22 }}>
+          <span style={{ fontSize: 17, color: "#707568" }}>A skill platform for what comes next.</span>
+          <span style={{ fontSize: 18, color: "#526f20", fontWeight: 700 }}>qubira.app</span>
         </div>
       </div>
     ),
-    size
+    size,
   );
 }
