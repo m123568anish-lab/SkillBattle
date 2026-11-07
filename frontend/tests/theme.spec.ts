@@ -35,7 +35,10 @@ test("theme picker supports keyboard navigation and selection", async ({ page })
   await page.goto("/");
 
   const trigger = page.getByRole("button", { name: /theme:/i });
+  await expect(trigger).toHaveCSS("width", "36px");
   await trigger.click();
+  const menu = page.getByRole("menu", { name: "Theme preference" });
+  expect(await menu.evaluate((element) => element.getBoundingClientRect().width)).toBeLessThanOrEqual(256);
 
   const lightOption = page.getByRole("menuitemradio", { name: "Light" });
   const darkOption = page.getByRole("menuitemradio", { name: "Dark" });
@@ -63,6 +66,15 @@ test("theme picker supports keyboard navigation and selection", async ({ page })
   await page.keyboard.press("Escape");
   await expect(page.getByRole("menu", { name: "Theme preference" })).toHaveCount(0);
   await expect(trigger).toBeFocused();
+});
+
+test("Qubira logo is identifiable and visible on the homepage", async ({ page }) => {
+  await page.goto("/");
+
+  const logo = page.getByRole("link", { name: "Qubira — Learn. Build. Compete." }).first();
+  await expect(logo).toBeVisible();
+  await expect(logo.locator("svg")).toHaveAttribute("aria-hidden", "true");
+  await expect(logo.locator("svg")).toHaveAttribute("viewBox", "0 0 64 64");
 });
 
 test("public navigation is keyboard-operable and fits a mobile viewport", async ({ page }) => {

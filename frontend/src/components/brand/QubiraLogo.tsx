@@ -20,12 +20,39 @@ export function QubiraIcon({ size = 32, className = "" }: { size?: number; class
       viewBox="0 0 64 64"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
       className={`shrink-0 transition-transform duration-200 group-hover:scale-105 ${className}`}
     >
-      <rect width="64" height="64" rx="13" fill="var(--surface-elevated)" />
-      <path d="M12 12H52V52H12V12Z" stroke="var(--border-default)" strokeWidth="1.5" />
-      <circle cx="31" cy="31" r="12" stroke="var(--accent)" strokeWidth="4" />
-      <path d="M37 37L49 49" stroke="var(--accent)" strokeWidth="4" strokeLinecap="square" />
+      <rect
+        x="1"
+        y="1"
+        width="62"
+        height="62"
+        rx="19"
+        fill="var(--surface-elevated)"
+        stroke="var(--border-default)"
+        strokeWidth="2"
+      />
+      <path
+        d="M32 13C21.507 13 13 21.507 13 32s8.507 19 19 19c4.087 0 7.87-1.29 10.96-3.483L49 53"
+        stroke="var(--accent-strong)"
+        strokeWidth="5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M32 21a11 11 0 1 0 0 22 11 11 0 0 0 0-22Z"
+        fill="var(--accent)"
+        fillOpacity=".15"
+      />
+      <circle cx="32" cy="32" r="4" fill="var(--accent)" />
+      <path
+        d="m43 43 9 9"
+        stroke="var(--accent)"
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <rect x="48" y="13" width="4" height="4" rx="1" fill="var(--accent)" />
     </svg>
   );
 }
@@ -62,7 +89,7 @@ export function QubiraLogo({
         <div className="flex flex-col leading-none">
           <div className="flex items-center gap-1.5">
             <span
-              className={`font-black tracking-[0.12em] text-[var(--text-primary)] transition-colors group-hover:text-[var(--accent-strong)] ${textStyleMap[size]}`}
+              className={`font-black tracking-[0.16em] text-[var(--text-primary)] transition-colors group-hover:text-[var(--accent-strong)] ${textStyleMap[size]}`}
             >
               QUBIRA
             </span>
@@ -73,7 +100,7 @@ export function QubiraLogo({
             )}
           </div>
           {showTagline && (
-            <span className="text-[10px] font-medium tracking-[0.16em] uppercase text-[var(--text-muted)] mt-0.5">
+            <span className="mt-1 text-[9px] font-semibold tracking-[0.18em] uppercase text-[var(--text-muted)]">
               Learn. Build. Compete.
             </span>
           )}
@@ -84,7 +111,12 @@ export function QubiraLogo({
 
   if (href) {
     return (
-      <Link href={href} title="Qubira — Learn. Build. Compete." className="transition-opacity hover:opacity-95">
+      <Link
+        href={href}
+        aria-label="Qubira — Learn. Build. Compete."
+        title="Qubira — Learn. Build. Compete."
+        className="transition-opacity hover:opacity-95"
+      >
         {content}
       </Link>
     );

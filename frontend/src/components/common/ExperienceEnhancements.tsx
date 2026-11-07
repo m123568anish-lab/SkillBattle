@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import Link from "next/link";
-import { ArrowUp, Check, ChevronDown, ExternalLink, HelpCircle, Laptop, Mail, Moon, Sun, X } from "lucide-react";
+import { ArrowUp, Check, ExternalLink, HelpCircle, Laptop, Mail, Moon, Sun, X } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api from "@/services/api";
 import { useAuthStore } from "@/store/authStore";
@@ -17,8 +17,8 @@ const THEME_OPTIONS: {
   Icon: typeof Sun;
 }[] = [
   { value: "light", label: "Light", description: "A warm, bright canvas for daytime.", Icon: Sun },
-  { value: "dark", label: "Dark", description: "A calm, low-glare look for focused work.", Icon: Moon },
-  { value: "system", label: "System", description: "Follow your device's appearance setting.", Icon: Laptop },
+  { value: "dark", label: "Dark", description: "A low-glare look for focused work.", Icon: Moon },
+  { value: "system", label: "System", description: "Match your device setting.", Icon: Laptop },
 ];
 
 export function ThemeToggle() {
@@ -108,21 +108,15 @@ export function ThemeToggle() {
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((value) => !value)}
-        aria-label={`Theme: ${selectedLabel}. Change theme preference`}
+        aria-label={`Theme: ${selectedLabel}${preference === "system" ? `, currently ${resolvedTheme}` : ""}. Change theme preference`}
+        title={`${selectedLabel}${preference === "system" ? ` (${resolvedTheme})` : ""} theme`}
         aria-haspopup="menu"
         aria-controls={menuId}
         aria-expanded={open}
-        className="group inline-flex h-10 items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] px-2.5 text-sm font-medium text-[var(--text-secondary)] shadow-[0_1px_0_rgba(0,0,0,0.12)] transition hover:border-[var(--accent)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+        className="group inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-secondary)] shadow-[0_1px_0_rgba(0,0,0,0.12)] transition hover:border-[var(--accent)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
       >
-        <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-[var(--surface-elevated)] text-[var(--accent-strong)]">
-          <CurrentIcon size={14} aria-hidden="true" className="transition-transform duration-200 group-hover:rotate-12" />
-        </span>
-        <span className="hidden sm:inline">{preference === "system" ? `${selectedLabel} - ${resolvedTheme}` : selectedLabel}</span>
-        <ChevronDown
-          size={14}
-          aria-hidden="true"
-          className={`opacity-70 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-        />
+        <CurrentIcon size={17} aria-hidden="true" className="transition-transform duration-200 group-hover:rotate-12" />
+        <span className="sr-only">{selectedLabel} theme</span>
       </button>
       {open && (
         <>
@@ -138,13 +132,13 @@ export function ThemeToggle() {
             id={menuId}
             role="menu"
             aria-label="Theme preference"
-            className="absolute right-0 top-full z-40 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-2 shadow-[0_18px_45px_rgba(0,0,0,0.28)]"
+            className="absolute right-0 top-full z-40 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-1.5 shadow-[0_18px_45px_rgba(0,0,0,0.28)]"
           >
             <div className="px-2.5 pb-2 pt-1">
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Appearance</p>
               <p className="mt-1 text-xs text-[var(--text-secondary)]">{activeModeDescription}</p>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {THEME_OPTIONS.map(({ value, label, description, Icon }, index) => {
                 const selected = preference === value;
                 return (
@@ -160,13 +154,13 @@ export function ThemeToggle() {
                     tabIndex={selected ? 0 : -1}
                     onKeyDown={(event) => focusThemeOption(event, index)}
                     onClick={() => void chooseTheme(value)}
-                    className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-2.5 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
+                    className={`flex min-h-11 w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
                       selected
                         ? "bg-[var(--surface-elevated)] text-[var(--text-primary)]"
                         : "text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)]"
                     }`}
                   >
-                    <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                    <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
                       selected
                         ? "bg-[var(--accent)] text-[var(--text-on-accent)]"
                         : "bg-[var(--surface-card)] text-[var(--accent-strong)]"
