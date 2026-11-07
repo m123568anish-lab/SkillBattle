@@ -237,6 +237,12 @@ NEXT_PUBLIC_API_URL=https://skillbattle-api.onrender.com
 
 (Replace with your actual Render backend URL from Step 2.6)
 
+The frontend uses `NEXT_PUBLIC_API_URL` as its single API origin for server-side
+requests, Next.js API rewrites, dashboard cache isolation, and battle sockets.
+Local development defaults to `http://localhost:8000`; production builds require
+this variable to be set explicitly and fail validation if it is missing or malformed.
+Verify that the Vercel value matches the Render service URL before deploying.
+
 ### 3.5 Deploy
 
 1. Click **"Deploy"** at the bottom

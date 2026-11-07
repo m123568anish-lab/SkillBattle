@@ -1,21 +1,13 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
+import { API_ORIGIN } from "@/lib/api-origin.mjs";
 
 // Shared API types — import from here for typed responses
 export type { ApiResponse, ApiValidationError, PaginatedResponse } from "@/types/api";
 
-const normalizeBaseUrl = (value: string | undefined): string => {
-    const defaultUrl =
-        process.env.NODE_ENV === "production"
-            ? "https://skillbattle-backend.onrender.com"
-            : "http://localhost:8000";
-    const base = (value || defaultUrl).trim().replace(/\/+$/, "");
-    return base.replace(/\/api\/v1$/, "");
-};
-
 // Browser requests use Next.js rewrites; server-side requests use the configured API origin.
 const API_BASE_URL =
     typeof window === "undefined"
-        ? normalizeBaseUrl(process.env.NEXT_PUBLIC_API_URL)
+        ? API_ORIGIN
         : "";
 
 const api = axios.create({
@@ -164,6 +156,20 @@ api.interceptors.response.use(
         return Promise.reject(error);
     }
 );
+
+api.interceptors.response.use((response) => {
+    const method = response.config.method?.toLowerCase();
+    const url = response.config.url ?? "";
+    if (
+        typeof window !== "undefined" &&
+        method &&
+        !SAFE_RETRY_METHODS.has(method) &&
+        !/\/auth\/(?:login|register|refresh|logout|me|account)(?:\/|$)/i.test(url)
+    ) {
+        window.dispatchEvent(new Event("skillbattle:dashboard-invalidated"));
+    }
+    return response;
+});
 
 export default api;
 export { api };

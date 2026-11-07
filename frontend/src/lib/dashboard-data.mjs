@@ -1,5 +1,14 @@
 /** @typedef {import("../types/dashboard").DashboardStats} DashboardStats */
-/** @typedef {{ data: import("../types/dashboard").DashboardResponse; timestamp: string; userId: string }} DashboardCachePayload */
+/** @typedef {{ data: import("../types/dashboard").DashboardResponse; timestamp: string; userId: string; apiOrigin: string }} DashboardCachePayload */
+
+export const DASHBOARD_CACHE_KEY_PREFIX = "skillbattle_dashboard_cache";
+
+/**
+ * @param {string} apiOrigin
+ */
+export function getDashboardCacheKey(apiOrigin) {
+  return `${DASHBOARD_CACHE_KEY_PREFIX}:${encodeURIComponent(new URL(apiOrigin).origin)}`;
+}
 
 const REQUIRED_NUMERIC_STATS = [
   "xp",
@@ -41,13 +50,24 @@ export function isDashboardStats(stats) {
 /**
  * @param {unknown} payload
  * @param {string} userId
+ * @param {string} apiOrigin
  * @returns {payload is DashboardCachePayload}
  */
-export function isDashboardCachePayload(payload, userId) {
+export function isDashboardCachePayload(payload, userId, apiOrigin) {
   if (typeof payload !== "object" || payload === null) return false;
 
   const cache = /** @type {Record<string, unknown>} */ (payload);
-  if (cache.userId !== userId || typeof cache.timestamp !== "string") return false;
+  let expectedOrigin;
+  try {
+    expectedOrigin = new URL(apiOrigin).origin;
+  } catch {
+    return false;
+  }
+  if (
+    cache.userId !== userId ||
+    cache.apiOrigin !== expectedOrigin ||
+    typeof cache.timestamp !== "string"
+  ) return false;
   if (typeof cache.data !== "object" || cache.data === null) return false;
 
   const data = /** @type {Record<string, unknown>} */ (cache.data);

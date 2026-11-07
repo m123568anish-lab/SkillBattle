@@ -3,9 +3,11 @@ import test from "node:test";
 
 import {
   formatDashboardNumber,
+  getDashboardCacheKey,
   isDashboardCachePayload,
   isDashboardStats,
 } from "../src/lib/dashboard-data.mjs";
+import { normalizeApiOrigin, resolveApiOrigin } from "../src/lib/api-origin.mjs";
 
 const newAccountStats = {
   xp: 0,
@@ -38,8 +40,9 @@ test("rejects stale dashboard cache entries missing the new XP field", () => {
   assert.equal(isDashboardStats(staleStats), false);
   assert.equal(
     isDashboardCachePayload(
-      { userId: "user-1", timestamp: "2026-01-01T00:00:00Z", data: { user: { id: "user-1" }, stats: staleStats } },
+      { userId: "user-1", timestamp: "2026-01-01T00:00:00Z", apiOrigin: "http://localhost:8000", data: { user: { id: "user-1" }, stats: staleStats } },
       "user-1",
+      "http://localhost:8000",
     ),
     false,
   );
@@ -49,11 +52,40 @@ test("accepts a current cache only for its owning account", () => {
   const payload = {
     userId: "user-1",
     timestamp: "2026-01-01T00:00:00Z",
+    apiOrigin: "http://localhost:8000",
     data: { user: { id: "user-1" }, stats: newAccountStats },
   };
 
-  assert.equal(isDashboardCachePayload(payload, "user-1"), true);
-  assert.equal(isDashboardCachePayload(payload, "user-2"), false);
+  assert.equal(isDashboardCachePayload(payload, "user-1", "http://localhost:8000"), true);
+  assert.equal(isDashboardCachePayload(payload, "user-2", "http://localhost:8000"), false);
+});
+
+test("isolates cache keys and payloads by API origin", () => {
+  const payload = {
+    userId: "user-1",
+    timestamp: "2026-01-01T00:00:00Z",
+    apiOrigin: "https://api.example.test",
+    data: { user: { id: "user-1" }, stats: newAccountStats },
+  };
+  assert.notEqual(
+    getDashboardCacheKey("http://localhost:8000"),
+    getDashboardCacheKey("https://api.example.test/api/v1"),
+  );
+  assert.equal(isDashboardCachePayload(payload, "user-1", "https://api.example.test"), true);
+  assert.equal(isDashboardCachePayload(payload, "user-1", "http://localhost:8000"), false);
+});
+
+test("uses localhost during development and requires an explicit production API origin", () => {
+  assert.equal(resolveApiOrigin({ environment: "development" }), "http://localhost:8000");
+  assert.equal(
+    resolveApiOrigin({
+      environment: "production",
+      configuredUrl: "https://api.example.test/api/v1/",
+    }),
+    "https://api.example.test",
+  );
+  assert.throws(() => resolveApiOrigin({ environment: "production" }), /NEXT_PUBLIC_API_URL is required/);
+  assert.throws(() => normalizeApiOrigin("not-an-origin"), /absolute HTTP\(S\) URL/);
 });
 
 test("rejects null required metrics while allowing optional nullable practice accuracy", () => {
@@ -82,7 +114,15 @@ test("the dashboard service rejects invalid live stats and the cache validates b
     new URL("../src/store/dashboardStore.ts", import.meta.url),
     "utf8",
   );
+  const api = await readFile(new URL("../src/lib/api.ts", import.meta.url), "utf8");
+  const page = await readFile(new URL("../src/app/dashboard/page.tsx", import.meta.url), "utf8");
 
   assert.match(service, /isDashboardStats\(response\.data\?\.stats\)/);
-  assert.match(store, /isDashboardCachePayload\(parsed, parsedUser\.id\)/);
+  assert.match(store, /isDashboardCachePayload\(parsed, userId, API_ORIGIN\)/);
+  assert.match(store, /isStale: Boolean\(initialCache\)/);
+  assert.match(store, /addEventListener\("skillbattle:dashboard-invalidated"/);
+  assert.match(store, /refreshAfterCurrentRequest/);
+  assert.match(store, /current\.userId === invalidatedUserId/);
+  assert.match(api, /dispatchEvent\(new Event\("skillbattle:dashboard-invalidated"\)\)/);
+  assert.match(page, /Cached dashboard data/);
 });

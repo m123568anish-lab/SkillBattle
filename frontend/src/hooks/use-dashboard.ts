@@ -10,6 +10,7 @@ export function useDashboard(resumeId?: string) {
     const loading = useDashboardStore((state) => state.loading);
     const isRefreshing = useDashboardStore((state) => state.isRefreshing);
     const isFromCache = useDashboardStore((state) => state.isFromCache);
+    const isStale = useDashboardStore((state) => state.isStale);
     const lastRefreshedAt = useDashboardStore((state) => state.lastRefreshedAt);
     const error = useDashboardStore((state) => state.error);
     const refresh = useDashboardStore((state) => state.refresh);
@@ -27,6 +28,7 @@ export function useDashboard(resumeId?: string) {
         loading,
         isRefreshing,
         isFromCache,
+        isStale,
         lastRefreshedAt,
         error,
         refresh,

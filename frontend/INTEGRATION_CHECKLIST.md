@@ -198,5 +198,5 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 For production:
 ```
-NEXT_PUBLIC_API_URL=https://api.yourdomain.com
+NEXT_PUBLIC_API_URL=https://skillbattle-api.onrender.com
 ```

@@ -122,5 +122,5 @@ The script performs:
 ## Notes
 
 - For production, set `ENVIRONMENT=production` and use PostgreSQL.
-- `NEXT_PUBLIC_API_URL` must point to your deployed frontend domain.
+- `NEXT_PUBLIC_API_URL` must point to the FastAPI backend origin. Local development defaults to `http://localhost:8000`; production must be configured explicitly and verified against the Render service.
 - If you want HTTPS, add Certbot and reverse proxy cert automation later.

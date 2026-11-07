@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
+import { API_ORIGIN } from "@/lib/api-origin.mjs";
 
 export type BattleSocketEvent =
   | "player_joined"
@@ -35,8 +36,7 @@ export interface UseBattleSocketReturn {
 }
 
 function buildWsUrl(battleId: string, userId?: string): string {
-  const base = process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? window.location.origin : "http://localhost:8000");
-  const wsBase = base.replace(/^http/, "ws");
+  const wsBase = API_ORIGIN.replace(/^http/, "ws");
   const url = new URL(`${wsBase}/api/v1/battle/ws/${battleId}`);
   if (userId) url.searchParams.set("user_id", userId);
   return url.toString();

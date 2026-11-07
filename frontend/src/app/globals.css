@@ -226,6 +226,52 @@ select {
   color: var(--text-primary);
 }
 
+:root[data-theme="dark"] :is(
+  [class~="text-gray-50"],
+  [class*=":text-gray-50"],
+  [class~="text-gray-100"],
+  [class*=":text-gray-100"]
+) {
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="dark"] :is(
+  [class~="text-gray-200"],
+  [class*=":text-gray-200"],
+  [class~="text-gray-300"],
+  [class*=":text-gray-300"]
+) {
+  color: var(--text-secondary) !important;
+}
+
+:root[data-theme="dark"] :is(
+  [class~="text-gray-400"],
+  [class*=":text-gray-400"],
+  [class~="text-gray-500"],
+  [class*=":text-gray-500"],
+  [class~="text-gray-600"],
+  [class*=":text-gray-600"]
+) {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="dark"] :is(
+  [class~="text-gray-700"],
+  [class*=":text-gray-700"],
+  [class~="text-gray-800"],
+  [class*=":text-gray-800"],
+  [class~="text-gray-900"],
+  [class*=":text-gray-900"],
+  [class~="text-gray-950"],
+  [class*=":text-gray-950"]
+) {
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="dark"] [class*="bg-white"][class*="text-gray-900"] {
+  color: #111827 !important;
+}
+
 :root[data-theme="light"] [class*="border-white"] {
   border-color: var(--border-default);
 }

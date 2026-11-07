@@ -20,6 +20,11 @@ This document explains recommended production settings, TLS, secrets, and deploy
   # edit .env.production and set SECRET_KEY, POSTGRES_PASSWORD, NEXT_PUBLIC_API_URL
   ```
 
+  Set `NEXT_PUBLIC_API_URL` to the verified Render backend origin. The repository
+  documents `https://skillbattle-api.onrender.com`; confirm the live service URL
+  before using it. The frontend fails production configuration validation when
+  this value is missing or malformed.
+
 3) Use the production Docker Compose
 
   ```bash

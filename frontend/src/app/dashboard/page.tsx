@@ -41,6 +41,8 @@ export default function DashboardPage() {
     dashboard,
     loading,
     isRefreshing,
+    isFromCache,
+    isStale,
     lastRefreshedAt,
     error,
     refresh,
@@ -51,7 +53,7 @@ export default function DashboardPage() {
   }, []);
 
   const formattedCacheTime = mounted && lastRefreshedAt
-    ? ` from ${new Date(lastRefreshedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+    ? new Date(lastRefreshedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
     : "";
 
   return (
@@ -62,7 +64,7 @@ export default function DashboardPage() {
             <div className="text-rose-300">
               <span className="font-semibold">{dashboard ? "Notice:" : "Error:"}</span>{" "}
               {dashboard
-                ? `Live dashboard data could not be refreshed (${error}). Showing cached metrics${formattedCacheTime}.`
+                ? `Live dashboard data could not be refreshed (${error}). Showing cached metrics${formattedCacheTime ? ` (last updated at ${formattedCacheTime})` : ""}.`
                 : `Live dashboard data could not be loaded (${error}).`}
             </div>
             <button
@@ -72,6 +74,13 @@ export default function DashboardPage() {
             >
               {isRefreshing ? "Refreshing..." : "Retry"}
             </button>
+          </div>
+        )}
+
+        {dashboard && (isFromCache || isStale) && !error && (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
+            Cached dashboard data · last updated{formattedCacheTime ? ` at ${formattedCacheTime}` : " previously"}.
+            {isRefreshing ? " Refreshing from the API..." : " This data is not a live refresh."}
           </div>
         )}
 

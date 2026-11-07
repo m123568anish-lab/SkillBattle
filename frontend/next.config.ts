@@ -1,5 +1,6 @@
 import path from "path";
 import type { NextConfig } from "next";
+import { API_ORIGIN } from "./src/lib/api-origin.mjs";
 
 const nextConfig: NextConfig = {
   compress: true,
@@ -21,22 +22,18 @@ const nextConfig: NextConfig = {
     "192.168.7.2",
   ],
   async rewrites() {
-    const apiOrigin = (process.env.NEXT_PUBLIC_API_URL || "https://skillbattle-backend.onrender.com")
-      .replace(/\/+$/, "")
-      .replace(/\/api\/v1$/, "");
-
     return [
       {
         source: "/api/v1/:path*",
-        destination: `${apiOrigin}/api/v1/:path*`,
+        destination: `${API_ORIGIN}/api/v1/:path*`,
       },
       {
         source: "/api/battle/:path*",
-        destination: `${apiOrigin}/api/battle/:path*`,
+        destination: `${API_ORIGIN}/api/battle/:path*`,
       },
       {
         source: "/api/health",
-        destination: `${apiOrigin}/health`,
+        destination: `${API_ORIGIN}/health`,
       },
     ];
   },

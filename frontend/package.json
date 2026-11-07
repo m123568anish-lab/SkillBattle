@@ -9,7 +9,8 @@
     "dev": "next dev -H 127.0.0.1 -p 3000",
     "build": "next build",
     "start": "next start -H 127.0.0.1 -p 3000",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "node --test --test-reporter=tap tests/api-origin.test.mjs tests/api-proxy.test.mjs tests/dashboard-data.test.mjs"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.15",

@@ -68,6 +68,54 @@ test("theme picker supports keyboard navigation and selection", async ({ page })
   await expect(trigger).toBeFocused();
 });
 
+test("dark theme keeps legacy gray text readable on dark and white surfaces", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto("/");
+
+  const contrast = await page.evaluate(() => {
+    const probes = [
+      { className: "bg-slate-950 text-gray-900", id: "dark-surface" },
+      { className: "bg-slate-950 text-gray-500", id: "muted-dark-surface" },
+      { className: "bg-white text-gray-900", id: "white-surface" },
+    ];
+    const elements = probes.map(({ className, id }) => {
+      const element = document.createElement("span");
+      element.id = id;
+      element.className = className;
+      element.textContent = "Theme contrast";
+      element.style.position = "fixed";
+      document.body.append(element);
+      return element;
+    });
+
+    function luminance(color: string) {
+      const channels = color.match(/[\d.]+/g)?.slice(0, 3).map(Number);
+      if (!channels || channels.length !== 3) throw new Error(`Unexpected computed color: ${color}`);
+      const [red, green, blue] = channels.map((channel) => {
+        const normalized = channel / 255;
+        return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+    }
+
+    function ratio(foreground: string, background: string) {
+      const values = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
+      return (values[0] + 0.05) / (values[1] + 0.05);
+    }
+
+    const results = elements.map((element) => {
+      const style = getComputedStyle(element);
+      return { id: element.id, ratio: ratio(style.color, style.backgroundColor) };
+    });
+    elements.forEach((element) => element.remove());
+    return results;
+  });
+
+  expect(contrast.find(({ id }) => id === "dark-surface")?.ratio).toBeGreaterThanOrEqual(4.5);
+  expect(contrast.find(({ id }) => id === "muted-dark-surface")?.ratio).toBeGreaterThanOrEqual(4.5);
+  expect(contrast.find(({ id }) => id === "white-surface")?.ratio).toBeGreaterThanOrEqual(4.5);
+});
+
 test("Qubira logo is identifiable and visible on the homepage", async ({ page }) => {
   await page.goto("/");
 

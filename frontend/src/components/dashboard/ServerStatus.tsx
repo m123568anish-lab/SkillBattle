@@ -3,11 +3,9 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Activity, CheckCircle, XCircle, Clock, Wifi, RefreshCw, ExternalLink } from "lucide-react";
+import { API_ORIGIN } from "@/lib/api-origin.mjs";
 
-const BACKEND_URL = (process.env.NEXT_PUBLIC_API_URL || "https://skillbattle-backend.onrender.com")
-  .trim()
-  .replace(/\/+$/, "")
-  .replace(/\/api\/v1$/, "");
+const BACKEND_URL = API_ORIGIN;
 
 type ServiceStatus = "online" | "offline" | "checking";
 
@@ -68,7 +66,7 @@ export default function ServerStatus() {
           </div>
           <div>
             <h3 className="font-bold text-white text-base">Server Status</h3>
-            <p className="text-xs text-slate-400">Qubira Cloud API — Render</p>
+            <p className="text-xs text-slate-400">SkillBattle API</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

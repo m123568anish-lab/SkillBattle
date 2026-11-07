@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import { isAxiosError } from "axios";
 
-import { isDashboardCachePayload } from "@/lib/dashboard-data.mjs";
+import { getDashboardCacheKey, isDashboardCachePayload } from "@/lib/dashboard-data.mjs";
+import { API_ORIGIN } from "@/lib/api-origin.mjs";
 import {
     dashboardService,
     DashboardResponse,
@@ -11,34 +12,36 @@ interface DashboardCachePayload {
     data: DashboardResponse;
     timestamp: string;
     userId: string;
+    apiOrigin: string;
 }
 
-const DASHBOARD_CACHE_KEY = "skillbattle_dashboard_cache";
+const DASHBOARD_CACHE_KEY = getDashboardCacheKey(API_ORIGIN);
 
-function getCachedDashboard(): DashboardCachePayload | null {
+function getCachedDashboard(userId?: string): DashboardCachePayload | null {
     if (typeof window === "undefined") return null;
     try {
         const stored = localStorage.getItem(DASHBOARD_CACHE_KEY);
         if (!stored) return null;
         const parsed: unknown = JSON.parse(stored);
-        const userStored = localStorage.getItem("skillbattle_user_cache");
-        if (!userStored) return null;
-        const parsedUser: unknown = JSON.parse(userStored);
-        if (
-            typeof parsedUser !== "object" ||
-            parsedUser === null ||
-            !("id" in parsedUser) ||
-            typeof parsedUser.id !== "string"
-        ) {
-            localStorage.removeItem(DASHBOARD_CACHE_KEY);
-            return null;
+        if (!userId) {
+            const userStored = localStorage.getItem("skillbattle_user_cache");
+            if (!userStored) return null;
+            const parsedUser: unknown = JSON.parse(userStored);
+            if (
+                typeof parsedUser !== "object" ||
+                parsedUser === null ||
+                !("id" in parsedUser) ||
+                typeof parsedUser.id !== "string"
+            ) {
+                return null;
+            }
+            userId = parsedUser.id;
         }
-        if (isDashboardCachePayload(parsed, parsedUser.id)) {
+        if (isDashboardCachePayload(parsed, userId, API_ORIGIN)) {
             return parsed;
         }
-        localStorage.removeItem(DASHBOARD_CACHE_KEY);
     } catch {
-        // Ignore parse error
+        return null;
     }
     return null;
 }
@@ -50,6 +53,7 @@ function saveDashboardToCache(data: DashboardResponse) {
             data,
             timestamp: new Date().toISOString(),
             userId: data.user.id,
+            apiOrigin: API_ORIGIN,
         };
         localStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify(payload));
     } catch {
@@ -63,6 +67,7 @@ interface DashboardState {
     loading: boolean;
     isRefreshing: boolean;
     isFromCache: boolean;
+    isStale: boolean;
     lastRefreshedAt: string | null;
     error: string | null;
     loadDashboard: (userId?: string) => Promise<void>;
@@ -75,6 +80,7 @@ const initialCache = getCachedDashboard();
 let activeDashboardPromise: Promise<void> | null = null;
 let activeDashboardUserId: string | null = null;
 let dashboardRequestVersion = 0;
+let dashboardInvalidationVersion = 0;
 
 export const useDashboardStore = create<DashboardState>((set, get) => ({
     dashboard: initialCache ? initialCache.data : null,
@@ -82,6 +88,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     loading: !initialCache,
     isRefreshing: false,
     isFromCache: Boolean(initialCache),
+    isStale: Boolean(initialCache),
     lastRefreshedAt: initialCache ? initialCache.timestamp : null,
     error: null,
 
@@ -106,13 +113,15 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
 
         if (get().userId !== userId) {
             dashboardRequestVersion += 1;
+            const cached = getCachedDashboard(userId);
             set({
-                dashboard: null,
+                dashboard: cached?.data ?? null,
                 userId,
-                loading: true,
+                loading: !cached,
                 isRefreshing: false,
-                isFromCache: false,
-                lastRefreshedAt: null,
+                isFromCache: Boolean(cached),
+                isStale: Boolean(cached),
+                lastRefreshedAt: cached?.timestamp ?? null,
                 error: null,
             });
         }
@@ -140,6 +149,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
                     loading: false,
                     isRefreshing: false,
                     isFromCache: false,
+                    isStale: false,
                     lastRefreshedAt: new Date().toISOString(),
                     error: null,
                 });
@@ -159,6 +169,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
                     isRefreshing: false,
                     error: message,
                     isFromCache: Boolean(state.dashboard),
+                    isStale: Boolean(state.dashboard),
                 }));
             } finally {
                 if (activeDashboardUserId === userId) {
@@ -192,8 +203,36 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
             loading: false,
             isRefreshing: false,
             isFromCache: false,
+            isStale: false,
             lastRefreshedAt: null,
             error: null,
         });
     },
 }));
+
+if (typeof window !== "undefined") {
+    window.addEventListener("skillbattle:dashboard-invalidated", () => {
+        const state = useDashboardStore.getState();
+        if (!state.dashboard || !state.userId) return;
+        const invalidatedUserId = state.userId;
+        const invalidationVersion = ++dashboardInvalidationVersion;
+        useDashboardStore.setState({ isFromCache: true, isStale: true });
+
+        const refreshAfterCurrentRequest = () => {
+            const current = useDashboardStore.getState();
+            if (
+                invalidationVersion === dashboardInvalidationVersion &&
+                current.userId === invalidatedUserId &&
+                current.dashboard
+            ) {
+                void current.refresh();
+            }
+        };
+
+        if (activeDashboardPromise) {
+            void activeDashboardPromise.then(refreshAfterCurrentRequest);
+        } else {
+            refreshAfterCurrentRequest();
+        }
+    });
+}

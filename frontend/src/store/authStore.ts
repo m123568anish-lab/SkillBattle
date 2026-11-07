@@ -86,7 +86,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         await authService.logout();
         cacheUser(null);
         if (typeof window !== "undefined") {
-            localStorage.removeItem("skillbattle_dashboard_cache");
             try { useDashboardStore.getState().reset(); } catch {} 
         }
         set({ user: null, loading: false, isAuthenticated: false, status: "unauthenticated", authError: null });
@@ -101,7 +100,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             activeLoadUser = null;
             cacheUser(null);
             if (typeof window !== "undefined") {
-            localStorage.removeItem("skillbattle_dashboard_cache");
             try { useDashboardStore.getState().reset(); } catch {} 
         }
             set({
@@ -147,7 +145,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         activeLoadUser = null;
         cacheUser(null);
         if (typeof window !== "undefined") {
-            localStorage.removeItem("skillbattle_dashboard_cache");
             try { useDashboardStore.getState().reset(); } catch {} 
         }
         set({
