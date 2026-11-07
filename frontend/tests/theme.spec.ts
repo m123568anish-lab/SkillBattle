@@ -30,6 +30,41 @@ test("light, dark, and system preferences apply and persist", async ({ page }) =
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 });
 
+test("theme picker supports keyboard navigation and selection", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/");
+
+  const trigger = page.getByRole("button", { name: /theme:/i });
+  await trigger.click();
+
+  const lightOption = page.getByRole("menuitemradio", { name: "Light" });
+  const darkOption = page.getByRole("menuitemradio", { name: "Dark" });
+  const systemOption = page.getByRole("menuitemradio", { name: "System" });
+  await expect(systemOption).toBeFocused();
+
+  await page.keyboard.press("ArrowDown");
+  await expect(lightOption).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(darkOption).toBeFocused();
+  await page.keyboard.press("Home");
+  await expect(lightOption).toBeFocused();
+  await page.keyboard.press("End");
+  await expect(systemOption).toBeFocused();
+  await expect(systemOption).toHaveAttribute("aria-checked", "true");
+
+  await page.keyboard.press("ArrowUp");
+  await expect(darkOption).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("html")).toHaveAttribute("data-theme-preference", "dark");
+  await expect(trigger).toBeFocused();
+  await expect(page.getByRole("menu", { name: "Theme preference" })).toHaveCount(0);
+
+  await trigger.click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu", { name: "Theme preference" })).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+});
+
 test("public navigation is keyboard-operable and fits a mobile viewport", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/");

@@ -16,6 +16,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
+from alembic.config import Config
+from alembic.script import ScriptDirectory
+
 # Base repository root directory
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_DIR = REPO_ROOT / "backend"
@@ -156,6 +159,19 @@ def get_sqlite_ro_uri(path: Optional[Path] = None) -> str:
     """Return strict read-only SQLite URI."""
     target = path or DEFAULT_SQLITE_PATH
     return f"file:{target.resolve().as_posix()}?mode=ro"
+
+
+def get_repo_alembic_head(alembic_dir: Optional[Path] = None) -> str:
+    """Resolve the repository's canonical Alembic head directly from the checked-in graph."""
+    target_dir = alembic_dir or (BACKEND_DIR / "alembic")
+    alembic_ini = target_dir.parent / "alembic.ini"
+    script = ScriptDirectory.from_config(Config(str(alembic_ini)))
+    heads = script.get_heads()
+    if len(heads) != 1:
+        raise RuntimeError(
+            f"Alembic graph does not resolve to a single head. Heads detected: {heads}. Refusing deployment."
+        )
+    return heads[0]
 
 
 class MigrationCheckpoint:

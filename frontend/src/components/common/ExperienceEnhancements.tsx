@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import Link from "next/link";
-import { ArrowUp, Check, ExternalLink, HelpCircle, Laptop, Mail, Moon, Palette, Sun, X } from "lucide-react";
+import { ArrowUp, Check, ChevronDown, ExternalLink, HelpCircle, Laptop, Mail, Moon, Sun, X } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api from "@/services/api";
 import { useAuthStore } from "@/store/authStore";
@@ -10,16 +10,24 @@ import { useTheme, type ThemePreference } from "./ThemeProvider";
 
 const CONSENT_KEY = "skillbattle-cookie-consent";
 
+const THEME_OPTIONS: {
+  value: ThemePreference;
+  label: string;
+  description: string;
+  Icon: typeof Sun;
+}[] = [
+  { value: "light", label: "Light", description: "A warm, bright canvas for daytime.", Icon: Sun },
+  { value: "dark", label: "Dark", description: "A calm, low-glare look for focused work.", Icon: Moon },
+  { value: "system", label: "System", description: "Follow your device's appearance setting.", Icon: Laptop },
+];
+
 export function ThemeToggle() {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const menuId = useId();
   const { preference, resolvedTheme, setPreference } = useTheme();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const options: { value: ThemePreference; label: string; Icon: typeof Sun }[] = [
-    { value: "light", label: "Light", Icon: Sun },
-    { value: "dark", label: "Dark", Icon: Moon },
-    { value: "system", label: "System", Icon: Laptop },
-  ];
 
   const selectedLabel =
     preference === "system"
@@ -37,6 +45,9 @@ export function ThemeToggle() {
 
   useEffect(() => {
     if (!open) return;
+    const selectedIndex = THEME_OPTIONS.findIndex(({ value }) => value === preference);
+    optionRefs.current[selectedIndex]?.focus();
+
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
@@ -45,11 +56,12 @@ export function ThemeToggle() {
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [open]);
+  }, [open, preference]);
 
   async function chooseTheme(next: ThemePreference) {
     setPreference(next);
     setOpen(false);
+    triggerRef.current?.focus();
     if (!isAuthenticated) return;
     try {
       await api.put("/profile/preferences", { theme: next });
@@ -58,7 +70,37 @@ export function ThemeToggle() {
     }
   }
 
+  function focusThemeOption(event: ReactKeyboardEvent<HTMLButtonElement>, index: number) {
+    let nextIndex: number;
+    switch (event.key) {
+      case "ArrowDown":
+        nextIndex = (index + 1) % THEME_OPTIONS.length;
+        break;
+      case "ArrowUp":
+        nextIndex = (index - 1 + THEME_OPTIONS.length) % THEME_OPTIONS.length;
+        break;
+      case "Home":
+        nextIndex = 0;
+        break;
+      case "End":
+        nextIndex = THEME_OPTIONS.length - 1;
+        break;
+      case "Tab":
+        setOpen(false);
+        return;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    optionRefs.current[nextIndex]?.focus();
+  }
+
   const CurrentIcon = selectedIcon;
+  const activeModeDescription =
+    preference === "system"
+      ? `Following your device setting. ${resolvedTheme === "light" ? "Light" : "Dark"} mode is active.`
+      : `${resolvedTheme === "light" ? "Light" : "Dark"} mode is active.`;
 
   return (
     <div className="relative">
@@ -68,43 +110,78 @@ export function ThemeToggle() {
         onClick={() => setOpen((value) => !value)}
         aria-label={`Theme: ${selectedLabel}. Change theme preference`}
         aria-haspopup="menu"
+        aria-controls={menuId}
         aria-expanded={open}
-        className="inline-flex h-10 items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] px-2.5 text-sm font-medium text-[var(--text-secondary)] shadow-[0_1px_0_rgba(0,0,0,0.12)] transition hover:border-[var(--accent)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+        className="group inline-flex h-10 items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] px-2.5 text-sm font-medium text-[var(--text-secondary)] shadow-[0_1px_0_rgba(0,0,0,0.12)] transition hover:border-[var(--accent)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
       >
         <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-[var(--surface-elevated)] text-[var(--accent-strong)]">
-          <CurrentIcon size={14} aria-hidden="true" />
+          <CurrentIcon size={14} aria-hidden="true" className="transition-transform duration-200 group-hover:rotate-12" />
         </span>
-        <span className="hidden sm:inline">{selectedLabel}</span>
-        <Palette size={14} aria-hidden="true" className="opacity-70" />
+        <span className="hidden sm:inline">{preference === "system" ? `${selectedLabel} - ${resolvedTheme}` : selectedLabel}</span>
+        <ChevronDown
+          size={14}
+          aria-hidden="true"
+          className={`opacity-70 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
       </button>
       {open && (
         <>
           <div
             className="fixed inset-0 z-30"
             aria-hidden="true"
-            onClick={() => setOpen(false)}
+            onClick={() => {
+              setOpen(false);
+              triggerRef.current?.focus();
+            }}
           />
           <div
+            id={menuId}
             role="menu"
             aria-label="Theme preference"
-            className="absolute right-0 top-full z-40 mt-2 w-44 rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] p-1.5 shadow-[0_18px_45px_rgba(0,0,0,0.28)]"
+            className="absolute right-0 top-full z-40 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-2 shadow-[0_18px_45px_rgba(0,0,0,0.28)]"
           >
-            {options.map(({ value, label, Icon }) => (
-              <button
-                key={value}
-                type="button"
-                role="menuitemradio"
-                aria-checked={preference === value}
-                onClick={() => void chooseTheme(value)}
-                className="flex min-h-10 w-full items-center gap-2 rounded-lg px-2.5 text-sm text-[var(--text-secondary)] transition hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-              >
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[var(--surface-card)] text-[var(--accent-strong)]">
-                  <Icon size={15} aria-hidden="true" />
-                </span>
-                <span className="flex-1 text-left">{label}</span>
-                {preference === value && <Check size={15} className="text-[var(--accent-strong)]" aria-hidden="true" />}
-              </button>
-            ))}
+            <div className="px-2.5 pb-2 pt-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Appearance</p>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">{activeModeDescription}</p>
+            </div>
+            <div className="space-y-1">
+              {THEME_OPTIONS.map(({ value, label, description, Icon }, index) => {
+                const selected = preference === value;
+                return (
+                  <button
+                    key={value}
+                    ref={(element) => {
+                      optionRefs.current[index] = element;
+                    }}
+                    type="button"
+                    role="menuitemradio"
+                    aria-label={label}
+                    aria-checked={selected}
+                    tabIndex={selected ? 0 : -1}
+                    onKeyDown={(event) => focusThemeOption(event, index)}
+                    onClick={() => void chooseTheme(value)}
+                    className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-2.5 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
+                      selected
+                        ? "bg-[var(--surface-elevated)] text-[var(--text-primary)]"
+                        : "text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                      selected
+                        ? "bg-[var(--accent)] text-[var(--text-on-accent)]"
+                        : "bg-[var(--surface-card)] text-[var(--accent-strong)]"
+                    }`}>
+                      <Icon size={17} aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0 flex-1 text-left">
+                      <span className="block font-medium">{label}</span>
+                      <span className="mt-0.5 block text-xs text-[var(--text-muted)]" aria-hidden="true">{description}</span>
+                    </span>
+                    {selected && <Check size={16} className="shrink-0 text-[var(--accent-strong)]" aria-hidden="true" />}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </>
       )}

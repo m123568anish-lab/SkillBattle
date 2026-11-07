@@ -129,7 +129,7 @@ The following table provides the audited row counts across all 78 tables in `ski
 | `quest_map_levels` | **9** | VARCHAR(100) | `id` | Gamified campaign roadmap nodes |
 | `tournaments` | **7** | VARCHAR(36) | `id` | Scheduled tournament competitions |
 | `tournament_participants` | **5** | VARCHAR(36) | `id` | Registered tournament entrants |
-| `alembic_version` | **1** | VARCHAR(32) | `version_num` | Alembic migration checkpoint (`b8f2d4e6a901`) |
+| `alembic_version` | **1** | VARCHAR(32) | `version_num` | Alembic migration checkpoint (repository-resolved head: `47292a2a50d2`) |
 | `achievements` | **0** | INTEGER | `id` | Badge awards definitions & unlocks |
 | `api_request_logs` | **0** | VARCHAR(36) | `id` | Developer API call telemetry |
 | `assessment_attempts` | **0** | VARCHAR(36) | `id` | Standardized assessment test runs |
@@ -167,7 +167,7 @@ The following table provides the audited row counts across all 78 tables in `ski
 
 ### Authoritative Migration System
 - **Authoritative System:** **Alembic** is confirmed as the official, authoritative schema migration system for the project.
-- **Current Alembic Revision:** `b8f2d4e6a901` (`b8f2d4e6a901_add_opportunity_lifecycle_and_saves.py`).
+- **Current Alembic Revision:** resolved dynamically from the checked-in Alembic graph; current repository head is `47292a2a50d2` (`47292a2a50d2_merge_migration_heads.py`).
 - **Configuration Path:** `backend/alembic.ini` pointing to `backend/alembic/`.
 - **Target Metadata:** Bound to `app.models.Base.metadata` with unified `NAMING_CONVENTION` in `backend/app/database/base.py`.
 

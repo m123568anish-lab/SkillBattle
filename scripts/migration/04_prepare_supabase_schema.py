@@ -17,6 +17,7 @@ from common import (
     BACKEND_DIR,
     REPO_ROOT,
     TOPOLOGICAL_MIGRATION_ORDER,
+    get_repo_alembic_head,
     logger,
 )
 
@@ -37,6 +38,23 @@ def run_schema_preparation(
     logger.info("====================================================")
     logger.info("Dry-Run: %s", dry_run)
     logger.info("Authoritative Migration Tool: Alembic")
+    repo_head = get_repo_alembic_head()
+    logger.info("Repository Alembic head (resolved from checked-in graph): %s", repo_head)
+
+    approved_revision = (
+        os.getenv("APPROVED_ALEMBIC_REVISION")
+        or os.getenv("ALEMBIC_APPROVED_REVISION")
+        or ""
+    ).strip()
+    if approved_revision:
+        logger.info("Approved Alembic revision: %s", approved_revision)
+        if approved_revision != repo_head:
+            raise RuntimeError(
+                f"Approved Alembic revision mismatch. Repository head is {repo_head}; approved revision is {approved_revision}."
+            )
+    else:
+        logger.info("No explicit approved revision configured; only the repository-resolved Alembic head will be enforced.")
+
     logger.info("Total Tables to Prepare: %d", len(TOPOLOGICAL_MIGRATION_ORDER))
 
     is_postgres = bool(db_url and ("postgres" in db_url or "postgresql" in db_url))
