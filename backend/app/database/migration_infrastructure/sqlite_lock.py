@@ -48,6 +48,43 @@ def canonical_database_path(database_path: str | os.PathLike[str]) -> Path:
     return path
 
 
+def _absolute_unresolved_path(database_path: str | os.PathLike[str]) -> Path:
+    raw_path = os.fspath(database_path)
+    if raw_path == ":memory:" or raw_path.startswith("file:"):
+        raise UnsupportedSQLiteLockPlatform(
+            "The coordinated SQLite lock requires a file-backed database path."
+        )
+    path = Path(raw_path).expanduser()
+    if not path.is_absolute():
+        path = Path.cwd() / path
+    return Path(os.path.abspath(path))
+
+
+def assert_database_identity_supported(
+    database_path: str | os.PathLike[str],
+) -> Path:
+    """Reject unresolved path aliases and hard-linked database files."""
+    unresolved_path = _absolute_unresolved_path(database_path)
+    _ensure_supported_local_filesystem(unresolved_path)
+    canonical_path = canonical_database_path(unresolved_path)
+    if canonical_path.exists():
+        if not canonical_path.is_file():
+            raise UnsupportedSQLiteLockPlatform(
+                "The SQLite database path is not a regular file."
+            )
+        try:
+            link_count = canonical_path.stat().st_nlink
+        except OSError as error:
+            raise UnsupportedSQLiteLockPlatform(
+                "The SQLite database file identity could not be verified."
+            ) from error
+        if link_count != 1:
+            raise UnsupportedSQLiteLockPlatform(
+                "Hard-linked SQLite database files are not supported."
+            )
+    return canonical_path
+
+
 def _lock_file_path(database_path: Path) -> Path:
     identity = os.path.normcase(str(database_path)).casefold().encode("utf-8")
     suffix = hashlib.sha256(identity).hexdigest()
@@ -183,9 +220,13 @@ class SQLiteFileLock:
             raise ValueError(f"Unsupported SQLite lock mode: {mode!r}")
         if timeout < 0:
             raise ValueError("Lock timeout must be non-negative.")
-        self.database_path = canonical_database_path(database_path)
-        _ensure_supported_local_filesystem(self.database_path)
+        self.database_path = assert_database_identity_supported(database_path)
         self.lock_path = _lock_file_path(self.database_path)
+        _ensure_supported_local_filesystem(self.lock_path)
+        if self.lock_path.exists() and self.lock_path.stat().st_nlink != 1:
+            raise UnsupportedSQLiteLockPlatform(
+                "Hard-linked SQLite lock files are not supported."
+            )
         self.mode = mode
         self.timeout = timeout
         self._file = None
@@ -206,6 +247,10 @@ class SQLiteFileLock:
 
         self._file = open(self.lock_path, "a+b", buffering=0)
         try:
+            if os.fstat(self._file.fileno()).st_nlink != 1:
+                raise UnsupportedSQLiteLockPlatform(
+                    "Hard-linked SQLite lock files are not supported."
+                )
             lock_file_ex, _ = _windows_lock_api()
             self._overlapped = _Overlapped()
             os_handle = msvcrt.get_osfhandle(self._file.fileno())
@@ -225,6 +270,17 @@ class SQLiteFileLock:
                 )
                 if acquired:
                     self._acquired = True
+                    try:
+                        if (
+                            assert_database_identity_supported(self.database_path)
+                            != self.database_path
+                        ):
+                            raise UnsupportedSQLiteLockPlatform(
+                                "The SQLite database path identity changed during lock acquisition."
+                            )
+                    except BaseException:
+                        self.release()
+                        raise
                     return
 
                 error = ctypes.get_last_error()

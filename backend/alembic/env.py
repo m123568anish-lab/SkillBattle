@@ -15,6 +15,9 @@ from alembic import context
 from app.models import Base
 from app.modules.audit.model import AuditLog
 from app.database.database import engine as application_engine
+from app.database.migration_infrastructure.sqlite_lock import (
+    canonical_database_path,
+)
 
 # ---------------------------------------------------------
 # ---------------------------------------------------------
@@ -68,6 +71,32 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in online mode."""
+
+    if application_engine.dialect.name == "sqlite":
+        connection = config.attributes.get("connection")
+        ownership = config.attributes.get("migration_ownership")
+        if (
+            connection is None
+            or ownership is None
+            or connection is not getattr(ownership, "connection", None)
+            or not getattr(ownership, "is_active", False)
+            or canonical_database_path(application_engine.url.database or "")
+            != getattr(ownership, "database_path", None)
+        ):
+            raise RuntimeError(
+                "SQLite Alembic execution requires an active maintenance-window "
+                "migration ownership lease."
+            )
+
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            compare_type=True,
+            render_as_batch=True,
+        )
+        with context.begin_transaction():
+            context.run_migrations()
+        return
 
     connectable = engine_from_config(
         config.get_section(

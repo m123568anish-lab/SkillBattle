@@ -257,6 +257,21 @@ def test_canonical_paths_resolve_dot_segments_and_symlink_aliases(
 
 
 @WINDOWS_ONLY
+def test_hard_linked_database_identity_is_rejected(tmp_path: Path) -> None:
+    database_path = tmp_path / "hardlink-source.db"
+    hard_link_path = tmp_path / "hardlink-alias.db"
+    with sqlite3.connect(database_path) as connection:
+        connection.execute("CREATE TABLE sample (id INTEGER)")
+    try:
+        os.link(database_path, hard_link_path)
+    except OSError as error:
+        pytest.skip(f"Hard-link creation is unavailable: {error}")
+
+    with pytest.raises(UnsupportedSQLiteLockPlatform, match="Hard-linked"):
+        SQLiteFileLock(database_path, "exclusive")
+
+
+@WINDOWS_ONLY
 @pytest.mark.asyncio
 async def test_async_acquisition_does_not_block_event_loop(tmp_path: Path) -> None:
     database_path = tmp_path / "async-lock.db"

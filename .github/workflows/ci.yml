@@ -52,6 +52,8 @@ jobs:
           echo "✅ Frontend dependencies OK"
 
       - name: Build frontend
+        env:
+          NEXT_PUBLIC_API_URL: https://skillbattle-api.onrender.com
         run: |
           cd frontend
           npm run build

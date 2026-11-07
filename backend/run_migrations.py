@@ -16,6 +16,12 @@ from app.database.database import engine
 from app.database.migration_infrastructure.epoch_state import (
     assert_legacy_runner_allowed,
 )
+from app.database.migration_infrastructure.migration_coordinator import (
+    MaintenanceWindowVerifier,
+    MigrationCoordinationError,
+    SQLiteMigrationOwnership,
+    acquire_sqlite_migration_ownership,
+)
 from app.database.migration_preflight import compare_model_schema
 from app.database.migration_state import (
     MigrationStateError,
@@ -35,7 +41,66 @@ logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
-def run_migrations() -> int:
+def _run_migrations_on_connection(
+    connection,
+    config: Config,
+    script: ScriptDirectory,
+    ownership: SQLiteMigrationOwnership,
+) -> int:
+    config.attributes["connection"] = connection
+    config.attributes["migration_ownership"] = ownership
+    assert_legacy_runner_allowed(inspect(connection).get_table_names())
+    state = inspect_migration_state(connection, script)
+    missing_applied_tables = find_missing_applied_tables(script, state)
+    if missing_applied_tables:
+        details = ", ".join(missing_applied_tables[:12])
+        more = len(missing_applied_tables) - min(len(missing_applied_tables), 12)
+        if more:
+            details += f", and {more} more"
+        raise MigrationStateError(
+            "Revision metadata claims migrations whose created tables are missing: "
+            f"{details}"
+        )
+    conflicts = find_pending_table_conflicts(script, state)
+    if conflicts:
+        details = "; ".join(conflicts[:8])
+        more = len(conflicts) - min(len(conflicts), 8)
+        if more:
+            details += f"; and {more} more conflict(s)"
+        raise MigrationStateError(
+            "Pending migrations conflict with the inspected table state: "
+            f"{details}"
+        )
+    if state.current_revision == state.expected_head:
+        differences = compare_model_schema(connection)
+        if differences:
+            raise MigrationStateError(
+                "Database is already at the repository head but differs from "
+                f"the SQLAlchemy model schema ({len(differences)} difference(s)); "
+                "refusing to report migration success."
+            )
+    logger.info(
+        "MIGRATION CURRENT revision=%s tables=%d",
+        state.current_revision or "<empty>",
+        len(state.table_names),
+    )
+
+    connection.commit()
+    command.upgrade(config, state.expected_head)
+    final_state = inspect_migration_state(connection, script)
+    if final_state.current_revision != final_state.expected_head:
+        raise MigrationStateError(
+            "Alembic completed without recording the expected repository head."
+        )
+    connection.commit()
+    logger.info("MIGRATION COMPLETED revision=%s", final_state.expected_head)
+    return 0
+
+
+def run_migrations(
+    maintenance_verifier: MaintenanceWindowVerifier | None = None,
+    backup_path: str | Path | None = None,
+) -> int:
     config = Config(str(Path(__file__).with_name("alembic.ini")))
     script = ScriptDirectory.from_config(config)
     logger.info(
@@ -45,6 +110,19 @@ def run_migrations() -> int:
     )
 
     try:
+        if engine.dialect.name == "sqlite":
+            with acquire_sqlite_migration_ownership(
+                engine,
+                maintenance_verifier,
+                backup_path,
+            ) as ownership:
+                return _run_migrations_on_connection(
+                    ownership.connection,
+                    config,
+                    script,
+                    ownership,
+                )
+
         with engine.connect() as connection:
             assert_legacy_runner_allowed(
                 inspect(connection).get_table_names()
@@ -100,7 +178,11 @@ def run_migrations() -> int:
         logger.error(
             "MIGRATION FAILED error_type=%s detail=%s",
             type(exc).__name__,
-            str(exc) if isinstance(exc, MigrationStateError) else "database operation failed",
+            (
+                str(exc)
+                if isinstance(exc, (MigrationStateError, MigrationCoordinationError))
+                else "database operation failed"
+            ),
         )
         return 1
 
