@@ -14,7 +14,6 @@ from app.core.config import get_settings
 from app.core.middleware import register_middleware
 from app.core.router_registry import register_routers
 from app.database.database import engine
-from app.database.init_db import init_db
 from app.core.exceptions import SkillBattleException
 from app.modules.battle.websocket.router import (
     router as battle_ws_router,
@@ -85,14 +84,6 @@ async def lifespan(app: FastAPI):
             logger.info("📡 Sentry error monitoring initialized")
         except Exception as sentry_err:
             logger.warning(f"⚠️ Could not initialize Sentry: {sentry_err}")
-
-    try:
-        logger.info("📦 Initializing database...")
-        init_db()
-        logger.info("✅ Database initialized successfully")
-    except Exception as e:
-        logger.error(f"❌ Database initialization failed: {e}", exc_info=True)
-        raise
 
     try:
         logger.info("🔐 Ensuring platform admin bootstrap...")

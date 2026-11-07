@@ -116,6 +116,37 @@ test("dark theme keeps legacy gray text readable on dark and white surfaces", as
   expect(contrast.find(({ id }) => id === "white-surface")?.ratio).toBeGreaterThanOrEqual(4.5);
 });
 
+test("dark theme uses near-black surfaces with a readable violet secondary accent", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto("/");
+
+  const palette = await page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    const swatch = document.createElement("span");
+    swatch.className = "text-violet-400";
+    document.body.append(swatch);
+    const secondaryUtilityColor = getComputedStyle(swatch).color;
+    swatch.className = "bg-[#0b1020]";
+    const arbitrarySurfaceColor = getComputedStyle(swatch).backgroundColor;
+    swatch.remove();
+
+    return {
+      canvas: root.getPropertyValue("--surface-canvas").trim(),
+      card: root.getPropertyValue("--surface-card").trim(),
+      secondary: root.getPropertyValue("--accent-secondary").trim(),
+      primary: root.getPropertyValue("--accent").trim(),
+      secondaryUtilityColor,
+      arbitrarySurfaceColor,
+    };
+  });
+
+  expect(palette.canvas).toBe("#030405");
+  expect(palette.card).toBe("#0a0b0d");
+  expect(palette.secondary).not.toBe(palette.primary);
+  expect(palette.secondaryUtilityColor).toBe("rgb(167, 139, 250)");
+  expect(palette.arbitrarySurfaceColor).toBe("rgb(10, 11, 13)");
+});
+
 test("Qubira logo is identifiable and visible on the homepage", async ({ page }) => {
   await page.goto("/");
 

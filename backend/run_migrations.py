@@ -1,12 +1,28 @@
 #!/usr/bin/env python
-"""
-Run database migrations using Alembic.
-This script is called before starting the FastAPI server on Render.
-"""
-import sys
+"""Apply the repository's Alembic migrations without schema bootstrapping."""
+
+from __future__ import annotations
+
 import logging
-import traceback
+import sys
 from pathlib import Path
+
+from alembic import command
+from alembic.config import Config
+from alembic.script import ScriptDirectory
+from sqlalchemy import inspect
+
+from app.database.database import engine
+from app.database.migration_infrastructure.epoch_state import (
+    assert_legacy_runner_allowed,
+)
+from app.database.migration_preflight import compare_model_schema
+from app.database.migration_state import (
+    MigrationStateError,
+    find_missing_applied_tables,
+    find_pending_table_conflicts,
+    inspect_migration_state,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -14,139 +30,80 @@ logging.basicConfig(
     stream=sys.stdout,
     force=True,
 )
-
-from alembic.config import Config
-from alembic import command
-from alembic.script import ScriptDirectory
-from sqlalchemy import inspect, text
-
-from app.database.init_db import init_db
-from app.database.database import engine
-
+engine.echo = False
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
-def repair_duplicate_alembic_version_rows(alembic_cfg: Config) -> None:
-    """Repair stale Alembic metadata when failed runs left multiple active revision rows."""
-    with engine.connect() as connection:
-        version_rows = connection.execute(text("SELECT version_num FROM alembic_version")).scalars().all()
-        if len(version_rows) <= 1:
-            if len(version_rows) == 0:
-                logger.warning("alembic_version is empty while the schema exists; stamping the current Alembic head.")
-            else:
-                return
 
-    script = ScriptDirectory.from_config(alembic_cfg)
-    heads = script.get_heads()
-    if len(heads) != 1:
-        raise RuntimeError(
-            f"Alembic revision graph has multiple heads ({heads}); refusing to auto-repair."
-        )
-
-    target_head = heads[0]
-    logger.warning(
-        "Detected duplicate Alembic version rows %s. Repairing metadata to single head %s.",
-        version_rows,
-        target_head,
+def run_migrations() -> int:
+    config = Config(str(Path(__file__).with_name("alembic.ini")))
+    script = ScriptDirectory.from_config(config)
+    logger.info(
+        "MIGRATION TARGET heads=%s database_dialect=%s",
+        script.get_heads(),
+        engine.dialect.name,
     )
 
-    with engine.begin() as connection:
-        connection.execute(text("DELETE FROM alembic_version"))
-
-    command.stamp(alembic_cfg, target_head)
-
-
-def run_migrations():
-    """Run Alembic migrations."""
-    stage = "configuration"
-    logger.info("MIGRATION STARTED")
     try:
-        alembic_cfg = Config(str(Path(__file__).with_name("alembic.ini")))
-        script = ScriptDirectory.from_config(alembic_cfg)
-        target_heads = script.get_heads()
-        logger.info(
-            "MIGRATION TARGET revisions=%s config=%s database_driver=%s",
-            target_heads,
-            alembic_cfg.config_file_name,
-            engine.url.drivername,
-        )
-
-        stage = "database inspection"
-        existing_tables = set(inspect(engine).get_table_names())
-
-        if "alembic_version" in existing_tables:
-            stage = "revision inspection"
-            with engine.connect() as connection:
-                version_rows = connection.execute(text("SELECT version_num FROM alembic_version")).scalars().all()
-            logger.info("MIGRATION CURRENT revisions=%s", version_rows)
-            if len(version_rows) == 1 and len(target_heads) == 1:
-                pending_revisions = [
-                    revision.revision
-                    for revision in reversed(
-                        list(script.iterate_revisions(target_heads[0], version_rows[0]))
-                    )
-                ]
-                logger.info("MIGRATION PENDING revisions=%s", pending_revisions)
-
-            if len(version_rows) == 0:
-                if len(target_heads) != 1:
-                    raise RuntimeError(
-                        f"Alembic revision graph has multiple heads ({target_heads}); refusing to auto-repair."
-                    )
-                logger.warning(
-                    "Alembic metadata is empty while the schema already exists; stamping metadata to %s.",
-                    target_heads[0],
+        with engine.connect() as connection:
+            assert_legacy_runner_allowed(
+                inspect(connection).get_table_names()
+            )
+            state = inspect_migration_state(connection, script)
+            missing_applied_tables = find_missing_applied_tables(script, state)
+            if missing_applied_tables:
+                details = ", ".join(missing_applied_tables[:12])
+                more = len(missing_applied_tables) - min(len(missing_applied_tables), 12)
+                if more:
+                    details += f", and {more} more"
+                raise MigrationStateError(
+                    "Revision metadata claims migrations whose created tables are missing: "
+                    f"{details}"
                 )
-                stage = "stamping empty revision metadata"
-                command.stamp(alembic_cfg, target_heads[0])
-                stage = "schema initialization"
-                init_db()
-                logger.info("MIGRATION COMPLETED")
-                return 0
+            conflicts = find_pending_table_conflicts(script, state)
+            if conflicts:
+                details = "; ".join(conflicts[:8])
+                more = len(conflicts) - min(len(conflicts), 8)
+                if more:
+                    details += f"; and {more} more conflict(s)"
+                raise MigrationStateError(
+                    "Pending migrations conflict with the inspected table state: "
+                    f"{details}"
+                )
+            if state.current_revision == state.expected_head:
+                differences = compare_model_schema(connection)
+                if differences:
+                    raise MigrationStateError(
+                        "Database is already at the repository head but differs from "
+                        f"the SQLAlchemy model schema ({len(differences)} difference(s)); "
+                        "refusing to report migration success."
+                    )
+            logger.info(
+                "MIGRATION CURRENT revision=%s tables=%d",
+                state.current_revision or "<empty>",
+                len(state.table_names),
+            )
 
-            if len(version_rows) > 1:
-                stage = "repairing duplicate revision metadata"
-                repair_duplicate_alembic_version_rows(alembic_cfg)
-                logger.info("Database schema already exists; repaired stale Alembic metadata without re-running prior migrations.")
-                stage = "schema initialization"
-                init_db()
-                logger.info("MIGRATION COMPLETED")
-                return 0
+        command.upgrade(config, state.expected_head)
 
-            stage = "applying Alembic migrations"
-            logger.info("MIGRATION APPLY current=%s target=%s", version_rows, target_heads)
-            command.upgrade(alembic_cfg, "head")
-            logger.info("MIGRATION APPLY COMPLETED target=%s", target_heads)
-            stage = "schema initialization"
-            init_db()
-        elif "users" in existing_tables:
-            logger.info("MIGRATION CURRENT revisions=[] legacy_schema=true")
-            stage = "legacy schema initialization"
-            logger.info("Repairing legacy schema and applying the current migration")
-            init_db()
-            stage = "stamping legacy revision"
-            command.stamp(alembic_cfg, "4a6e8c2d1f30")
-            stage = "applying Alembic migrations"
-            logger.info("MIGRATION APPLY current=4a6e8c2d1f30 target=%s", target_heads)
-            command.upgrade(alembic_cfg, "head")
-            logger.info("MIGRATION APPLY COMPLETED target=%s", target_heads)
-        else:
-            logger.info("MIGRATION CURRENT revisions=[] new_schema=true")
-            stage = "new schema initialization"
-            logger.info("Creating schema for a new database")
-            init_db()
-            stage = "stamping new schema revision"
-            command.stamp(alembic_cfg, "head")
-
-        logger.info("MIGRATION COMPLETED")
+        with engine.connect() as connection:
+            final_state = inspect_migration_state(connection, script)
+        if final_state.current_revision != final_state.expected_head:
+            raise MigrationStateError(
+                "Alembic completed without recording the expected repository head."
+            )
+        logger.info("MIGRATION COMPLETED revision=%s", final_state.expected_head)
         return 0
-    except Exception:
-        logger.error("MIGRATION FAILED stage=%s", stage)
-        traceback.print_exc(file=sys.stdout)
-        sys.stdout.flush()
-        for handler in logging.getLogger().handlers:
-            handler.flush()
+    except Exception as exc:
+        # Do not log exception strings or tracebacks from database drivers:
+        # they may include connection URLs or server-provided sensitive text.
+        logger.error(
+            "MIGRATION FAILED error_type=%s detail=%s",
+            type(exc).__name__,
+            str(exc) if isinstance(exc, MigrationStateError) else "database operation failed",
+        )
         return 1
 
+
 if __name__ == "__main__":
-    exit_code = run_migrations()
-    sys.exit(exit_code)
+    raise SystemExit(run_migrations())

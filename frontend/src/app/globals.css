@@ -3,21 +3,24 @@
 
 :root {
   color-scheme: dark;
-  --app-bg: #060807;
-  --app-fg: #f3f3eb;
-  --surface-canvas: #060807;
-  --surface-card: #0c100d;
-  --surface-elevated: #121915;
-  --surface-subtle: #1b221d;
-  --border-default: #263129;
-  --border-subtle: #1d251f;
+  --app-bg: #030405;
+  --app-fg: #f4f4f5;
+  --surface-canvas: #030405;
+  --surface-card: #0a0b0d;
+  --surface-elevated: #121316;
+  --surface-subtle: #1b1c20;
+  --border-default: #292a30;
+  --border-subtle: #202126;
   --border-focus: #c8ef72;
-  --text-primary: #f4f5ee;
-  --text-secondary: #ccd2c7;
-  --text-muted: #97a198;
+  --text-primary: #f4f4f5;
+  --text-secondary: #d4d4d8;
+  --text-muted: #a1a1aa;
   --accent: #c8ef72;
   --accent-strong: #ddff9c;
   --text-on-accent: #0d1a08;
+  --accent-secondary: #a78bfa;
+  --accent-secondary-strong: #c4b5fd;
+  --accent-secondary-subtle: color-mix(in srgb, var(--accent-secondary) 14%, transparent);
   --status-success: #71d29d;
   --status-warning: #f0bc58;
   --status-danger: #f08a7a;
@@ -37,7 +40,7 @@
   --battle-cyan: var(--status-info);
   --battle-amber: var(--status-warning);
   --battle-border: var(--border-default);
-  --battle-glow: none;
+  --battle-glow: 0 0 28px color-mix(in srgb, var(--accent-secondary) 16%, transparent);
 }
 
 :root[data-theme="light"] {
@@ -57,6 +60,9 @@
   --accent: #c8ef72;
   --accent-strong: #597c27;
   --text-on-accent: #121c09;
+  --accent-secondary: #6d28d9;
+  --accent-secondary-strong: #5b21b6;
+  --accent-secondary-subtle: color-mix(in srgb, var(--accent-secondary) 10%, transparent);
   --status-success: #2d764d;
   --status-warning: #9d6518;
   --status-danger: #ab4a39;
@@ -97,6 +103,9 @@
     --accent: #c8ef72;
     --accent-strong: #597c27;
     --text-on-accent: #121c09;
+    --accent-secondary: #6d28d9;
+    --accent-secondary-strong: #5b21b6;
+    --accent-secondary-subtle: color-mix(in srgb, var(--accent-secondary) 10%, transparent);
     --status-success: #2d764d;
     --status-warning: #9d6518;
     --status-danger: #ab4a39;
@@ -121,18 +130,18 @@
   --color-cyan-400: var(--accent-strong);
   --color-cyan-500: var(--accent-strong);
   --color-cyan-600: var(--accent-strong);
-  --color-violet-300: var(--accent-strong);
-  --color-violet-400: var(--accent-strong);
-  --color-violet-500: var(--accent-strong);
-  --color-violet-600: var(--accent-strong);
-  --color-indigo-400: var(--accent-strong);
-  --color-indigo-500: var(--accent-strong);
-  --color-indigo-600: var(--accent-strong);
-  --color-blue-300: var(--accent-strong);
-  --color-blue-400: var(--accent-strong);
-  --color-blue-500: var(--accent-strong);
-  --color-fuchsia-400: var(--accent-strong);
-  --color-fuchsia-500: var(--accent-strong);
+  --color-violet-300: var(--accent-secondary-strong);
+  --color-violet-400: var(--accent-secondary);
+  --color-violet-500: var(--accent-secondary);
+  --color-violet-600: var(--accent-secondary-strong);
+  --color-indigo-400: var(--accent-secondary);
+  --color-indigo-500: var(--accent-secondary);
+  --color-indigo-600: var(--accent-secondary-strong);
+  --color-blue-300: var(--accent-secondary-strong);
+  --color-blue-400: var(--accent-secondary);
+  --color-blue-500: var(--accent-secondary);
+  --color-fuchsia-400: var(--accent-secondary);
+  --color-fuchsia-500: var(--accent-secondary);
   --color-emerald-300: var(--status-success);
   --color-emerald-400: var(--status-success);
   --color-emerald-500: var(--status-success);
@@ -176,6 +185,10 @@
 }
 
 [class*="bg-slate-50"] {
+  background-color: var(--surface-card) !important;
+}
+
+:root[data-theme="dark"] [class*="bg-[#"] {
   background-color: var(--surface-card) !important;
 }
 
