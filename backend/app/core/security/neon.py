@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import time
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 import jwt
@@ -66,9 +67,21 @@ async def verify_neon_token(token: str) -> dict[str, Any]:
         if header.get("alg") != "EdDSA":
             raise NeonAuthenticationError("Neon Auth token uses an unsupported algorithm.")
 
-        issuer = settings.NEON_AUTH_BASE_URL.rstrip("/")
-        if not issuer:
+        auth_base_url = settings.NEON_AUTH_BASE_URL.strip().rstrip("/")
+        if not auth_base_url:
             raise NeonAuthenticationConfigurationError("Neon Auth issuer is not configured.")
+        parsed_auth_base_url = urlsplit(auth_base_url)
+        if (
+            parsed_auth_base_url.scheme not in {"http", "https"}
+            or not parsed_auth_base_url.netloc
+            or parsed_auth_base_url.username
+            or parsed_auth_base_url.password
+            or parsed_auth_base_url.query
+            or parsed_auth_base_url.fragment
+        ):
+            raise NeonAuthenticationConfigurationError("Neon Auth base URL is invalid.")
+        # Neon JWTs use the Auth host as iss; the configured base URL includes the database path.
+        issuer = f"{parsed_auth_base_url.scheme}://{parsed_auth_base_url.netloc}"
 
         jwk_data = None
         for key in await _get_jwks():

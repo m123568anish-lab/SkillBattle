@@ -23,7 +23,8 @@ def _b64url(value: bytes) -> str:
 
 @pytest.mark.asyncio
 async def test_neon_token_verifies_against_configured_jwks(monkeypatch):
-    issuer = "https://auth.example.test/neondb/auth"
+    auth_base_url = "https://auth.example.test/neondb/auth"
+    issuer = "https://auth.example.test"
     private_key = Ed25519PrivateKey.generate()
     public_key = private_key.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
     jwks = [{
@@ -50,8 +51,8 @@ async def test_neon_token_verifies_against_configured_jwks(monkeypatch):
     async def get_jwks():
         return jwks
 
-    monkeypatch.setattr(settings, "NEON_AUTH_BASE_URL", issuer)
-    monkeypatch.setattr(settings, "NEON_AUTH_JWKS_URL", f"{issuer}/.well-known/jwks.json")
+    monkeypatch.setattr(settings, "NEON_AUTH_BASE_URL", auth_base_url)
+    monkeypatch.setattr(settings, "NEON_AUTH_JWKS_URL", f"{auth_base_url}/.well-known/jwks.json")
     monkeypatch.setattr(neon_security, "_get_jwks", get_jwks)
 
     claims = await neon_security.verify_neon_token(token)
@@ -62,7 +63,8 @@ async def test_neon_token_verifies_against_configured_jwks(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_rejected_neon_token_logs_failure_category_without_token(caplog, monkeypatch):
-    issuer = "https://auth.example.test/neondb/auth"
+    auth_base_url = "https://auth.example.test/neondb/auth"
+    issuer = "https://auth.example.test"
     private_key = Ed25519PrivateKey.generate()
     public_key = private_key.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
     token = jwt.encode(
@@ -86,8 +88,8 @@ async def test_rejected_neon_token_logs_failure_category_without_token(caplog, m
             "use": "sig",
         }]
 
-    monkeypatch.setattr(settings, "NEON_AUTH_BASE_URL", issuer)
-    monkeypatch.setattr(settings, "NEON_AUTH_JWKS_URL", f"{issuer}/.well-known/jwks.json")
+    monkeypatch.setattr(settings, "NEON_AUTH_BASE_URL", auth_base_url)
+    monkeypatch.setattr(settings, "NEON_AUTH_JWKS_URL", f"{auth_base_url}/.well-known/jwks.json")
     monkeypatch.setattr(neon_security, "_get_jwks", get_jwks)
 
     with caplog.at_level(logging.WARNING, logger="app.core.security.neon"):
