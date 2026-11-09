@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from sqlalchemy import create_engine, text
+from sqlalchemy import event
 
 from app.database.migration_infrastructure.schema_manifest import (
     build_schema_manifest,
@@ -84,6 +85,25 @@ def test_manifest_captures_schema_objects_and_stable_fingerprint(tmp_path) -> No
         assert first["views"][0]["name"] == "account_entries"
         assert first["triggers"][0]["name"] == "entries_value_insert"
         assert first["engine"]["sqlite"]["foreign_keys"] == 1
+    finally:
+        engine.dispose()
+
+
+def test_manifest_uses_an_already_owned_connection_without_reconnecting(
+    tmp_path,
+) -> None:
+    engine = create_engine(f"sqlite:///{tmp_path / 'owned-connection.db'}")
+    connection_events = []
+    try:
+        with engine.connect() as connection:
+            event.listen(
+                engine,
+                "connect",
+                lambda *_args: connection_events.append("opened"),
+            )
+            manifest = build_schema_manifest(connection)
+            assert manifest["engine"]["dialect"] == "sqlite"
+            assert connection_events == []
     finally:
         engine.dispose()
 

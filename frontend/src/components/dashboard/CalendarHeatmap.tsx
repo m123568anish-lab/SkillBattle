@@ -6,7 +6,8 @@ const weeks = 12;
 const days = 7;
 
 function getDays(activity: Array<{ day: string; xp: number }>) {
-  const values = new Map(activity.map((item) => [item.day, item.xp]));
+  const safe = Array.isArray(activity) ? activity : [];
+  const values = new Map(safe.map((item) => [item.day, item.xp]));
   const end = new Date();
   end.setHours(0, 0, 0, 0);
   const start = new Date(end);
@@ -21,7 +22,7 @@ function getDays(activity: Array<{ day: string; xp: number }>) {
 
 export default function CalendarHeatmap({ activity = [] }: { activity?: Array<{ day: string; xp: number }> }) {
   const calendarDays = getDays(activity);
-  const hasActivity = activity.some((item) => item.xp > 0);
+  const hasActivity = Array.isArray(activity) && activity.some((item) => item.xp > 0);
   return (
     <motion.div
       whileHover={{ y: -4 }}

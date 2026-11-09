@@ -6,11 +6,13 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
 import DashboardHero from "@/components/dashboard/DashboardHero";
 import StatsGrid from "@/components/dashboard/StatsGrid";
+import { SpotlightCard } from "@/components/ui/spotlight";
+import { StaggerContainer, StaggerItem } from "@/components/common/PageTransition";
 
 import { Swords, Code2, Bot, Trophy, ArrowRight, Sparkles } from "lucide-react";
 
 function DashboardPlaceholder({ minHeight }: { minHeight: string }) {
-  return <div aria-hidden="true" className="animate-pulse rounded-2xl bg-white/[0.02]" style={{ minHeight }} />;
+  return <div aria-hidden="true" className="skeleton-shimmer rounded-2xl" style={{ minHeight }} />;
 }
 
 const DailyChallenge = dynamic(() => import("@/components/dashboard/DailyChallenge"), {
@@ -85,8 +87,8 @@ export default function DashboardPage() {
         )}
 
         {!error && isRefreshing && dashboard && (
-          <div className="flex items-center gap-2 text-xs text-slate-400 px-1">
-            <span className="inline-block h-2 w-2 animate-ping rounded-full bg-cyan-400" />
+          <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] px-1">
+            <span className="inline-block h-2 w-2 animate-ping rounded-full bg-[var(--accent)]" />
             <span>Updating live dashboard metrics...</span>
           </div>
         )}
@@ -110,102 +112,117 @@ export default function DashboardPage() {
           <DashboardSectionError title="Live student statistics are unavailable" onRetry={refresh} />
         )}
 
-        {/* Quick Action Arena Launchpad */}
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <button
-            onClick={() => router.push("/battle")}
-            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-[#0a0f1d] to-[#050816] p-5 text-left transition hover:border-cyan-400/50 hover:shadow-lg hover:shadow-cyan-500/10"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-300 ring-1 ring-cyan-400/20">
-                <Swords className="h-5 w-5" />
+        {/* Quick Action Arena Launchpad with Cursor-Responsive Spotlight Cards */}
+        <StaggerContainer className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StaggerItem>
+            <SpotlightCard
+              onClick={() => router.push("/battle")}
+              className="group flex flex-col justify-between p-5 text-left h-full cursor-pointer hover:border-[var(--accent)]/50"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent)]/10 text-[var(--accent-strong)] border border-[var(--accent)]/20">
+                  <Swords className="h-5 w-5" />
+                </div>
+                <span className="flex items-center gap-1 rounded-full bg-[var(--accent)]/15 border border-[var(--accent)]/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--accent-strong)]">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] animate-[live-ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite]" />
+                  Live
+                </span>
               </div>
-              <span className="rounded-full bg-cyan-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cyan-300">Live</span>
-            </div>
-            <div className="mt-4">
-              <h3 className="font-bold text-white text-base group-hover:text-cyan-300 transition-colors">Battle Arena</h3>
-              <p className="mt-1 text-xs text-slate-400 leading-relaxed">Enter real-time 1v1 coding duels to climb the rank ladder.</p>
-            </div>
-            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-cyan-400">
-              Find Match <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-            </div>
-          </button>
-
-          <button
-            onClick={() => router.push("/campaign")}
-            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-[#0a0f1d] to-[#050816] p-5 text-left transition hover:border-amber-400/50 hover:shadow-lg hover:shadow-amber-500/10"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-400/10 text-amber-300 ring-1 ring-amber-400/20">
-                <Trophy className="h-5 w-5" />
+              <div className="mt-4">
+                <h3 className="font-bold text-[var(--text-primary)] text-base group-hover:text-[var(--accent-strong)] transition-colors">
+                  Battle Arena
+                </h3>
+                <p className="mt-1 text-xs text-[var(--text-secondary)] leading-relaxed">
+                  Enter real-time 1v1 coding duels to climb the rank ladder.
+                </p>
               </div>
-              <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">Quest</span>
-            </div>
-            <div className="mt-4">
-              <h3 className="font-bold text-white text-base group-hover:text-amber-300 transition-colors">Skill Quest Map</h3>
-              <p className="mt-1 text-xs text-slate-400 leading-relaxed">Progress through DSA, OS, and DBMS stage challenges.</p>
-            </div>
-            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-amber-400">
-              Continue Quest <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-            </div>
-          </button>
-
-          <button
-            onClick={() => router.push("/tasks")}
-            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 via-[#0a0f1d] to-[#050816] p-5 text-left transition hover:border-violet-400/50 hover:shadow-lg hover:shadow-violet-500/10"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-400/10 text-violet-300 ring-1 ring-violet-400/20">
-                <Code2 className="h-5 w-5" />
+              <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-[var(--accent-strong)]">
+                Find Match <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
               </div>
-              <span className="rounded-full bg-violet-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-violet-300">Catalog</span>
-            </div>
-            <div className="mt-4">
-              <h3 className="font-bold text-white text-base group-hover:text-violet-300 transition-colors">Practice Tasks</h3>
-              <p className="mt-1 text-xs text-slate-400 leading-relaxed">Solve catalog problems across all topics with instant verdict.</p>
-            </div>
-            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-violet-400">
-              Solve Code <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-            </div>
-          </button>
+            </SpotlightCard>
+          </StaggerItem>
 
-          <button
-            onClick={() => router.push("/interview")}
-            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-[#0a0f1d] to-[#050816] p-5 text-left transition hover:border-emerald-400/50 hover:shadow-lg hover:shadow-emerald-500/10"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-400/20">
-                <Bot className="h-5 w-5" />
+          <StaggerItem>
+            <SpotlightCard
+              onClick={() => router.push("/campaign")}
+              className="group flex flex-col justify-between p-5 text-left h-full cursor-pointer hover:border-[var(--accent-secondary)]/50"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-secondary)]/15 text-[var(--accent-secondary-strong)] border border-[var(--accent-secondary)]/25">
+                  <Trophy className="h-5 w-5" />
+                </div>
+                <span className="rounded-full bg-[var(--accent-secondary)]/15 border border-[var(--accent-secondary)]/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--accent-secondary-strong)]">
+                  Quest
+                </span>
               </div>
-              <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300">AI Room</span>
-            </div>
-            <div className="mt-4">
-              <h3 className="font-bold text-white text-base group-hover:text-emerald-300 transition-colors">Mock Interview</h3>
-              <p className="mt-1 text-xs text-slate-400 leading-relaxed">Practice technical & behavioral rounds with AI evaluation.</p>
-            </div>
-            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
-              Start Session <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-            </div>
-          </button>
+              <div className="mt-4">
+                <h3 className="font-bold text-[var(--text-primary)] text-base group-hover:text-[var(--accent-secondary-strong)] transition-colors">
+                  Skill Quest Map
+                </h3>
+                <p className="mt-1 text-xs text-[var(--text-secondary)] leading-relaxed">
+                  Progress through DSA, OS, and DBMS stage challenges.
+                </p>
+              </div>
+              <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-[var(--accent-secondary-strong)]">
+                Continue Quest <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+              </div>
+            </SpotlightCard>
+          </StaggerItem>
 
-          <button
-            onClick={() => router.push("/practice/tasks")}
-            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-orange-500/20 bg-gradient-to-br from-orange-500/10 via-[#0a0f1d] to-[#050816] p-5 text-left transition hover:border-orange-400/50 hover:shadow-lg hover:shadow-orange-500/10"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-400/10 text-orange-300 ring-1 ring-orange-400/20"><Sparkles className="h-5 w-5" /></div>
-            <div className="mt-4"><h3 className="font-bold text-white text-base group-hover:text-orange-300 transition-colors">Daily Challenge</h3><p className="mt-1 text-xs text-slate-400 leading-relaxed">Take today&apos;s focused challenge and keep your learning rhythm going.</p></div>
-            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-orange-400">Open challenge <ArrowRight className="h-3.5 w-3.5" /></div>
-          </button>
+          <StaggerItem>
+            <SpotlightCard
+              onClick={() => router.push("/tasks")}
+              className="group flex flex-col justify-between p-5 text-left h-full cursor-pointer hover:border-[var(--accent)]/50"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--surface-elevated)] text-[var(--text-primary)] border border-[var(--border-default)]">
+                  <Code2 className="h-5 w-5" />
+                </div>
+                <span className="rounded-full bg-[var(--surface-elevated)] border border-[var(--border-default)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                  Catalog
+                </span>
+              </div>
+              <div className="mt-4">
+                <h3 className="font-bold text-[var(--text-primary)] text-base group-hover:text-[var(--accent-strong)] transition-colors">
+                  Practice Tasks
+                </h3>
+                <p className="mt-1 text-xs text-[var(--text-secondary)] leading-relaxed">
+                  Solve catalog problems across all topics with instant verdict.
+                </p>
+              </div>
+              <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent-strong)]">
+                Solve Code <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+              </div>
+            </SpotlightCard>
+          </StaggerItem>
 
-          <button
-            onClick={() => router.push("/coach")}
-            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-[#0a0f1d] to-[#050816] p-5 text-left transition hover:border-cyan-400/50 hover:shadow-lg hover:shadow-cyan-500/10"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-300 ring-1 ring-cyan-400/20"><Bot className="h-5 w-5" /></div>
-            <div className="mt-4"><h3 className="font-bold text-white text-base group-hover:text-cyan-300 transition-colors">AI Coach</h3><p className="mt-1 text-xs text-slate-400 leading-relaxed">Review your next recommendation using your real learning activity.</p></div>
-            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-cyan-400">Meet your coach <ArrowRight className="h-3.5 w-3.5" /></div>
-          </button>
-        </div>
+          <StaggerItem>
+            <SpotlightCard
+              onClick={() => router.push("/interview")}
+              className="group flex flex-col justify-between p-5 text-left h-full cursor-pointer hover:border-[var(--status-info)]/50"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--status-info)]/15 text-[var(--status-info)] border border-[var(--status-info)]/25">
+                  <Bot className="h-5 w-5" />
+                </div>
+                <span className="rounded-full bg-[var(--status-info)]/15 border border-[var(--status-info)]/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--status-info)]">
+                  AI Room
+                </span>
+              </div>
+              <div className="mt-4">
+                <h3 className="font-bold text-[var(--text-primary)] text-base group-hover:text-[var(--status-info)] transition-colors">
+                  Mock Interview
+                </h3>
+                <p className="mt-1 text-xs text-[var(--text-secondary)] leading-relaxed">
+                  Practice technical & behavioral rounds with AI evaluation.
+                </p>
+              </div>
+              <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-[var(--status-info)]">
+                Start Session <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+              </div>
+            </SpotlightCard>
+          </StaggerItem>
+        </StaggerContainer>
 
         <div className="mt-8">
           {loading && !dashboard ? (
@@ -240,7 +257,7 @@ export default function DashboardPage() {
         {/* Daily Challenge */}
         {dashboard?.daily_challenge && (
           <div className="mt-8">
-              <DailyChallenge challenge={dashboard.daily_challenge} activity={dashboard.weekly_activity} />
+            <DailyChallenge challenge={dashboard.daily_challenge} activity={dashboard.weekly_activity} />
           </div>
         )}
 
@@ -260,9 +277,9 @@ export default function DashboardPage() {
 
 function DashboardSectionEmpty({ title, detail }: { title: string; detail: string }) {
   return (
-    <section className="flex min-h-48 flex-col justify-center rounded-3xl border border-white/[0.08] bg-[#0a0f1d] p-6">
-      <h2 className="text-lg font-bold text-white">{title}</h2>
-      <p className="mt-2 max-w-xl text-sm text-slate-400">{detail}</p>
+    <section className="flex min-h-48 flex-col justify-center rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6 shadow-xl">
+      <h2 className="text-lg font-bold text-[var(--text-primary)]">{title}</h2>
+      <p className="mt-2 max-w-xl text-sm text-[var(--text-secondary)]">{detail}</p>
     </section>
   );
 }

@@ -20,9 +20,10 @@ import {
   Users,
 } from "lucide-react";
 import { getPortalCategories, getPortalKind } from "@/data/dashboard";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuthStore } from "@/store/authStore";
 import { QubiraLogo } from "@/components/brand/QubiraLogo";
+import { MOTION_DURATIONS, MOTION_EASINGS } from "@/lib/motion";
 
 interface SidebarProps {
   isMobile?: boolean;
@@ -33,6 +34,7 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const shouldReduceMotion = useReducedMotion();
 
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
@@ -137,13 +139,6 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
     return normalizedPath === targetPath || normalizedPath.startsWith(`${targetPath}/`);
   };
 
-  const BrandIcon = (() => {
-    if (portal === "admin") return Shield;
-    if (portal === "college") return Building2;
-    if (portal === "company") return BriefcaseBusiness;
-    return Trophy;
-  })();
-
   const portalBadge = (() => {
     if (portal === "admin") return "SYSTEM";
     if (portal === "college") return "CAMPUS";
@@ -151,7 +146,6 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
     return "STUDENT";
   })();
 
-  // Handle Logout safely
   const handleLogout = async () => {
     setProfileOpen(false);
     onCloseMobile?.();
@@ -186,7 +180,11 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
         suppressHydrationWarning
         initial={false}
         animate={{ width: isMobile ? "100%" : effectiveCollapsed ? 68 : 232 }}
-        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        transition={
+          shouldReduceMotion
+            ? { duration: 0 }
+            : { duration: 0.22, ease: MOTION_EASINGS.command }
+        }
         className={`flex flex-col select-none relative ${
           isMobile
             ? "h-full w-full rounded-r-2xl border-r border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-primary)]"
@@ -215,7 +213,7 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
               onClick={toggleCollapsed}
               aria-label={effectiveCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
               title={effectiveCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
-              className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] p-1 text-[var(--text-secondary)] transition hover:border-[var(--accent-strong)] hover:text-[var(--text-primary)]"
+              className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] p-1 text-[var(--text-secondary)] transition-all duration-150 hover:border-[var(--accent-strong)] hover:text-[var(--text-primary)] active:scale-95"
             >
               {effectiveCollapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
             </button>
@@ -244,7 +242,7 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
               <div key={category.id} className="space-y-1">
                 {/* Minimal Section Label (Expanded mode only) */}
                 {!effectiveCollapsed && portalCategories.length > 1 && (
-                  <div className="px-2.5 pt-1.5 pb-1 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                  <div className="px-2.5 pt-1.5 pb-1 text-[9px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">
                     {category.label}
                   </div>
                 )}
@@ -281,25 +279,40 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
                           effectiveCollapsed ? "justify-center" : ""
                         } ${
                           active
-                            ? "bg-[var(--accent)]/15 text-[var(--text-primary)] border border-[var(--accent)]/40 font-bold"
-                              : "text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] border border-transparent"
+                            ? "text-[var(--text-primary)] font-bold"
+                            : "text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]"
                         }`}
                       >
+                        {/* Animated Active Route Indicator Pill */}
+                        {active && (
+                          <motion.span
+                            layoutId="sidebar-active-indicator"
+                            className="absolute inset-0 rounded-xl bg-[var(--accent)]/15 border border-[var(--accent)]/40 pointer-events-none"
+                            transition={
+                              shouldReduceMotion
+                                ? { duration: 0 }
+                                : { type: "spring", damping: 28, stiffness: 320 }
+                            }
+                          />
+                        )}
+
                         <Icon
                           size={18}
-                          className={`shrink-0 transition-transform group-hover:scale-105 ${
-                            active ? "text-[var(--accent-strong)]" : "text-[var(--text-muted)] group-hover:text-[var(--text-primary)]"
+                          className={`relative z-10 shrink-0 transition-transform duration-150 group-hover:scale-105 ${
+                            active
+                              ? "text-[var(--accent-strong)]"
+                              : "text-[var(--text-muted)] group-hover:text-[var(--text-primary)]"
                           }`}
                         />
 
                         {!effectiveCollapsed && (
-                          <span className="flex-1 truncate text-xs">
+                          <span className="relative z-10 flex-1 truncate text-xs">
                             {item.title}
                           </span>
                         )}
 
                         {active && !effectiveCollapsed && (
-                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent)]" />
+                          <span className="relative z-10 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />
                         )}
                       </Link>
                     );
@@ -318,22 +331,22 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
             aria-expanded={profileOpen}
             aria-haspopup="menu"
             aria-label="User account menu"
-            className={`flex w-full items-center gap-2.5 rounded-xl p-1.5 transition hover:bg-white/[0.06] focus-visible:outline-none ${
+            className={`group flex w-full items-center gap-2.5 rounded-xl p-1.5 transition hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] ${
               effectiveCollapsed ? "justify-center" : "text-left"
             }`}
           >
-            {/* Avatar */}
-            <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-400/30 text-xs font-bold text-cyan-300">
+            {/* Avatar with subtle lime hover ring */}
+            <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)]/15 border border-[var(--accent)]/30 text-xs font-bold text-[var(--accent-strong)] transition-all duration-200 group-hover:ring-2 group-hover:ring-[var(--accent)]/40 group-hover:shadow-[0_0_12px_rgba(200,239,114,0.3)]">
               {userInitials}
-              <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-[#0A0D14]" />
+              <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-[var(--status-success)] ring-2 ring-[var(--surface-card)]" />
             </div>
 
             {!effectiveCollapsed && (
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-bold text-white leading-tight">
+                <p className="truncate text-xs font-bold text-[var(--text-primary)] leading-tight">
                   {displayName}
                 </p>
-                <p className="truncate text-[10px] text-slate-400">
+                <p className="truncate text-[10px] text-[var(--text-muted)]">
                   {roleDisplay}
                 </p>
               </div>
@@ -342,35 +355,35 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
             {!effectiveCollapsed && (
               <ChevronDown
                 size={13}
-                className={`text-slate-400 transition-transform duration-200 ${
-                  profileOpen ? "rotate-180 text-cyan-400" : ""
+                className={`text-[var(--text-muted)] transition-transform duration-200 ${
+                  profileOpen ? "rotate-180 text-[var(--accent-strong)]" : ""
                 }`}
               />
             )}
           </button>
 
-          {/* Interactive Account Dropdown Popover */}
+          {/* Profile Popover / Dropdown Menu */}
           <AnimatePresence>
             {profileOpen && (
               <motion.div
-                initial={{ opacity: 0, y: 6, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 4, scale: 0.95 }}
-                transition={{ duration: 0.15 }}
+                initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: 6 }}
+                animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: 4 }}
+                transition={{ duration: MOTION_DURATIONS.fast, ease: MOTION_EASINGS.command }}
                 role="menu"
-                aria-label="User options"
-                className={`absolute z-50 rounded-2xl border border-white/10 bg-[#0c1222] p-1.5 shadow-2xl shadow-black/80 backdrop-blur-xl ${
+                aria-label="User navigation"
+                className={`absolute z-50 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-elevated)] p-1.5 shadow-2xl shadow-black/70 backdrop-blur-md ${
                   effectiveCollapsed
-                    ? "left-[calc(100%+8px)] bottom-2 w-52"
-                    : "left-2 right-2 bottom-[calc(100%+8px)]"
+                    ? "bottom-2 left-[76px] w-52"
+                    : "bottom-full left-2 right-2 mb-2"
                 }`}
               >
-                <div className="border-b border-white/[0.08] px-3 py-2">
-                  <p className="truncate text-xs font-bold text-white">{displayName}</p>
-                  <p className="truncate text-[10px] text-slate-400">{user?.email || "Signed in"}</p>
+                <div className="border-b border-[var(--border-subtle)] px-2.5 py-2">
+                  <p className="truncate text-xs font-bold text-[var(--text-primary)]">{displayName}</p>
+                  <p className="truncate text-[10px] text-[var(--text-muted)]">{user?.email || "Signed In"}</p>
                 </div>
 
-                <div className="py-1 space-y-0.5 text-xs">
+                <div className="py-1 text-xs font-medium space-y-0.5">
                   <Link
                     href="/profile"
                     onClick={() => {
@@ -378,9 +391,9 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
                       onCloseMobile?.();
                     }}
                     role="menuitem"
-                    className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-slate-300 hover:bg-white/5 hover:text-white transition"
+                    className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)] transition"
                   >
-                    <User size={13} className="text-cyan-400" />
+                    <User size={13} className="text-[var(--accent-strong)]" />
                     <span>View Profile</span>
                   </Link>
                   <Link
@@ -390,9 +403,9 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
                       onCloseMobile?.();
                     }}
                     role="menuitem"
-                    className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-slate-300 hover:bg-white/5 hover:text-white transition"
+                    className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)] transition"
                   >
-                    <Settings size={13} className="text-violet-400" />
+                    <Settings size={13} className="text-[var(--accent-secondary)]" />
                     <span>Settings</span>
                   </Link>
                   <Link
@@ -402,14 +415,14 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
                       onCloseMobile?.();
                     }}
                     role="menuitem"
-                    className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-slate-300 hover:bg-white/5 hover:text-white transition"
+                    className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)] hover:text-[var(--text-primary)] transition"
                   >
-                    <HelpCircle size={13} className="text-amber-400" />
+                    <HelpCircle size={13} className="text-[var(--status-warning)]" />
                     <span>Help & FAQ</span>
                   </Link>
                 </div>
 
-                <div className="border-t border-white/[0.08] pt-1">
+                <div className="border-t border-[var(--border-subtle)] pt-1">
                   <button
                     type="button"
                     onClick={handleLogout}
@@ -427,15 +440,26 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
       </motion.aside>
 
       {/* Floating Unclipped Tooltip for Collapsed Sidebar */}
-      {effectiveCollapsed && activeTooltip && (
-        <div
-          role="tooltip"
-          className="fixed left-[80px] z-[9999] pointer-events-none -translate-y-1/2 flex items-center gap-2 whitespace-nowrap rounded-lg border border-white/15 bg-slate-900/95 px-2.5 py-1 text-xs font-semibold text-white shadow-2xl shadow-black backdrop-blur-md"
-          style={{ top: `${activeTooltip.top}px` }}
-        >
-          <span>{activeTooltip.title}</span>
-        </div>
-      )}
+      <AnimatePresence>
+        {effectiveCollapsed && activeTooltip && (
+          <motion.div
+            initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -6 }}
+            animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, x: 0 }}
+            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -4 }}
+            transition={{ duration: 0.12 }}
+            role="tooltip"
+            className="fixed left-[76px] z-[9999] pointer-events-none -translate-y-1/2 flex items-center gap-2 whitespace-nowrap rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] shadow-2xl shadow-black/80 backdrop-blur-md"
+            style={{ top: `${activeTooltip.top}px` }}
+          >
+            <span>{activeTooltip.title}</span>
+            {activeTooltip.badge && (
+              <span className="rounded-md bg-[var(--accent)]/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-[var(--accent-strong)]">
+                {activeTooltip.badge}
+              </span>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

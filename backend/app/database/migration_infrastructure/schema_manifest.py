@@ -267,53 +267,65 @@ def _engine_properties(connection: Connection) -> dict[str, Any]:
     return properties
 
 
-def build_schema_manifest(engine: Engine, schema: str | None = None) -> dict[str, Any]:
+def build_schema_manifest(
+    engine: Engine | Connection,
+    schema: str | None = None,
+) -> dict[str, Any]:
     """Inspect schema objects without changing the database."""
+    if isinstance(engine, Connection):
+        return _build_schema_manifest(engine, schema)
     with engine.connect() as connection:
-        if connection.dialect.name == "sqlite" and schema not in (None, "main"):
-            raise ValueError(
-                "SQLite manifest generation supports only the main database schema."
-            )
-        inspector = inspect(connection)
-        table_names = inspector.get_table_names(schema=schema)
-        tables = []
-        for table_name in sorted(table_names):
-            columns = [
-                _column_manifest(column)
-                for column in inspector.get_columns(table_name, schema=schema)
-            ]
-            tables.append(
-                {
-                    "name": table_name,
-                    "columns": columns,
-                    **_constraint_manifest(connection, schema, table_name),
-                }
-            )
+        return _build_schema_manifest(connection, schema)
 
-        dialect = connection.dialect.name
-        views = _view_manifest(connection, schema)
-        materialized_views = _materialized_view_manifest(connection, schema)
-        if dialect == "sqlite":
-            triggers = _sqlite_triggers(connection)
-            sequences: list[dict[str, Any]] = []
-        elif dialect == "postgresql":
-            effective_schema = schema or inspector.default_schema_name
-            if not effective_schema:
-                raise ValueError("PostgreSQL schema inspection requires a schema name.")
-            triggers = _postgres_triggers(connection, effective_schema)
-            sequences = _postgres_sequences(connection, effective_schema)
-        else:
-            raise ValueError(f"Unsupported schema-manifest dialect: {dialect!r}")
 
-        manifest: dict[str, Any] = {
-            "format_version": MANIFEST_FORMAT_VERSION,
-            "engine": _engine_properties(connection),
-            "tables": tables,
-            "views": views,
-            "materialized_views": materialized_views,
-            "triggers": triggers,
-            "sequences": sequences,
-        }
+def _build_schema_manifest(
+    connection: Connection,
+    schema: str | None,
+) -> dict[str, Any]:
+    if connection.dialect.name == "sqlite" and schema not in (None, "main"):
+        raise ValueError(
+            "SQLite manifest generation supports only the main database schema."
+        )
+    inspector = inspect(connection)
+    table_names = inspector.get_table_names(schema=schema)
+    tables = []
+    for table_name in sorted(table_names):
+        columns = [
+            _column_manifest(column)
+            for column in inspector.get_columns(table_name, schema=schema)
+        ]
+        tables.append(
+            {
+                "name": table_name,
+                "columns": columns,
+                **_constraint_manifest(connection, schema, table_name),
+            }
+        )
+
+    dialect = connection.dialect.name
+    views = _view_manifest(connection, schema)
+    materialized_views = _materialized_view_manifest(connection, schema)
+    if dialect == "sqlite":
+        triggers = _sqlite_triggers(connection)
+        sequences: list[dict[str, Any]] = []
+    elif dialect == "postgresql":
+        effective_schema = schema or inspector.default_schema_name
+        if not effective_schema:
+            raise ValueError("PostgreSQL schema inspection requires a schema name.")
+        triggers = _postgres_triggers(connection, effective_schema)
+        sequences = _postgres_sequences(connection, effective_schema)
+    else:
+        raise ValueError(f"Unsupported schema-manifest dialect: {dialect!r}")
+
+    manifest: dict[str, Any] = {
+        "format_version": MANIFEST_FORMAT_VERSION,
+        "engine": _engine_properties(connection),
+        "tables": tables,
+        "views": views,
+        "materialized_views": materialized_views,
+        "triggers": triggers,
+        "sequences": sequences,
+    }
     manifest["sha256"] = manifest_fingerprint(manifest)
     return manifest
 

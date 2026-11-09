@@ -8,6 +8,9 @@ import { getMobileNavigation, getPortalKind } from "@/data/dashboard";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useReducedMotion } from "framer-motion";
+import GridBackground from "@/components/background/GridBackground";
+import PageTransition from "@/components/common/PageTransition";
+import { MOTION_DURATIONS } from "@/lib/motion";
 
 interface Props {
   children: React.ReactNode;
@@ -137,7 +140,10 @@ function DashboardLayoutInner({ children }: Props) {
   ));
 
   return (
-    <main suppressHydrationWarning className="flex min-h-screen bg-[var(--surface-canvas)] text-[var(--text-primary)] lg:h-dvh lg:min-h-0 lg:overflow-hidden">
+    <main suppressHydrationWarning className="relative flex min-h-screen bg-[var(--surface-canvas)] text-[var(--text-primary)] lg:h-dvh lg:min-h-0 lg:overflow-hidden">
+      {/* Ambient Background System */}
+      <GridBackground />
+
       {/* Desktop Persistent Responsive Sidebar */}
       <Sidebar />
 
@@ -153,8 +159,8 @@ function DashboardLayoutInner({ children }: Props) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: reduceMotion ? 0 : 0.2 }}
-              className="absolute inset-0 cursor-default bg-black/75 backdrop-blur-sm"
+              transition={{ duration: reduceMotion ? 0 : MOTION_DURATIONS.fast }}
+              className="absolute inset-0 cursor-default bg-black/80 backdrop-blur-sm"
             />
 
             {/* Drawer Panel */}
@@ -163,12 +169,16 @@ function DashboardLayoutInner({ children }: Props) {
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
-              transition={reduceMotion ? { duration: 0 } : { type: "spring", damping: 26, stiffness: 260 }}
+              transition={
+                reduceMotion
+                  ? { duration: 0 }
+                  : { type: "spring", damping: 28, stiffness: 280 }
+              }
               role="dialog"
               aria-modal="true"
               aria-label="Navigation menu"
               tabIndex={-1}
-              className="relative z-10 h-full w-[min(86vw,22rem)] shadow-2xl"
+              className="relative z-10 h-full w-[min(86vw,22rem)] shadow-2xl shadow-black"
             >
               <Sidebar isMobile onCloseMobile={() => setMobileDrawerOpen(false)} />
             </motion.div>
@@ -177,46 +187,62 @@ function DashboardLayoutInner({ children }: Props) {
       </AnimatePresence>
 
       {/* Main Content Area */}
-      <section id="main-content" tabIndex={-1} className="min-w-0 flex-1 overflow-auto bg-[var(--surface-canvas)] px-3 pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-3 outline-none sm:px-6 sm:pb-[calc(7.5rem+env(safe-area-inset-bottom))] sm:pt-5 lg:h-full lg:min-h-0 lg:px-10 lg:pb-10 lg:pt-7">
+      <section
+        id="main-content"
+        tabIndex={-1}
+        className="relative z-10 min-w-0 flex-1 overflow-auto bg-transparent px-3 pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-3 outline-none sm:px-6 sm:pb-[calc(7.5rem+env(safe-area-inset-bottom))] sm:pt-5 lg:h-full lg:min-h-0 lg:px-10 lg:pb-10 lg:pt-7"
+      >
         <TopNavbar onOpenMobileNav={() => setMobileDrawerOpen(true)} />
-        {children}
+        <PageTransition>{children}</PageTransition>
       </section>
 
       {/* Mobile Bottom Navigation Bar */}
       {!hideDock && (
-        <nav aria-label="Primary mobile navigation" className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 z-30 w-[calc(100%-1.5rem)] max-w-[30rem] -translate-x-1/2 rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] px-2 py-1.5 shadow-xl lg:hidden">
-        <div className="mx-auto flex h-12 items-center justify-around gap-0.5">
-          {mobileNavigation.map((tab) => {
-            const active = isActive(tab.href);
-            if (!tab.available || !tab.href) {
+        <nav
+          aria-label="Primary mobile navigation"
+          className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 z-30 w-[calc(100%-1.5rem)] max-w-[30rem] -translate-x-1/2 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-elevated)]/90 px-2 py-1.5 shadow-2xl backdrop-blur-xl lg:hidden"
+        >
+          <div className="mx-auto flex h-12 items-center justify-around gap-0.5">
+            {mobileNavigation.map((tab) => {
+              const active = isActive(tab.href);
+              if (!tab.available || !tab.href) {
+                return (
+                  <button
+                    key={tab.title}
+                    type="button"
+                    aria-label={tab.title}
+                    onClick={() => setMobileDrawerOpen(true)}
+                    className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg px-0.5 py-1.5 text-[9px] font-semibold leading-none tracking-normal text-[var(--text-muted)] transition hover:text-[var(--text-primary)] motion-reduce:transition-none"
+                  >
+                    <tab.icon size={20} />
+                    <span>{tab.title}</span>
+                  </button>
+                );
+              }
               return (
-                <button
+                <Link
                   key={tab.title}
-                  type="button"
-                  aria-label={tab.title}
-                  onClick={() => setMobileDrawerOpen(true)}
-                  className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg px-0.5 py-1.5 text-[9px] font-semibold leading-none tracking-normal text-[var(--text-muted)] transition hover:text-[var(--text-primary)] motion-reduce:transition-none"
+                  href={tab.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`group relative flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-0.5 py-1.5 text-[9px] font-semibold leading-none tracking-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] motion-reduce:transition-none ${
+                    active
+                      ? "text-[var(--accent-strong)] font-bold"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                  }`}
                 >
-                  <tab.icon size={20} />
-                  <span>{tab.title}</span>
-                </button>
+                  {active && (
+                    <motion.span
+                      layoutId="mobile-dock-active"
+                      className="absolute inset-0 rounded-xl bg-[var(--accent)]/15 border border-[var(--accent)]/30 pointer-events-none"
+                      transition={{ type: "spring", damping: 28, stiffness: 320 }}
+                    />
+                  )}
+                  <tab.icon size={19} strokeWidth={active ? 2.5 : 2} className="relative z-10" />
+                  <span className="relative z-10 max-w-full truncate">{tab.title}</span>
+                </Link>
               );
-            }
-            return (
-              <Link
-                key={tab.title}
-                href={tab.href}
-                aria-current={active ? "page" : undefined}
-                className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-0.5 py-1.5 text-[9px] font-semibold leading-none tracking-normal transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 motion-reduce:transition-none ${
-                  active ? "text-[var(--accent-strong)] font-bold" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-                }`}
-              >
-                <tab.icon size={19} strokeWidth={active ? 2.5 : 2} />
-                <span className="max-w-full truncate">{tab.title}</span>
-              </Link>
-            );
-          })}
-        </div>
+            })}
+          </div>
         </nav>
       )}
     </main>
@@ -225,7 +251,16 @@ function DashboardLayoutInner({ children }: Props) {
 
 export default function DashboardLayout({ children }: Props) {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-[var(--surface-canvas)] text-[var(--text-secondary)]">Loading workspace…</div>}>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-[var(--surface-canvas)] text-[var(--text-secondary)]">
+          <div className="flex items-center gap-3 text-sm">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+            Loading workspace…
+          </div>
+        </div>
+      }
+    >
       <DashboardLayoutInner>{children}</DashboardLayoutInner>
     </Suspense>
   );

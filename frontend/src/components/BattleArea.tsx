@@ -1,7 +1,7 @@
 "use client";
 
 import Editor from "@monaco-editor/react";
-import { Maximize2, Minimize2, Play, RefreshCw, Send } from "lucide-react";
+import { Maximize2, Minimize2, Play, RefreshCw, Send, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import api from "@/lib/api";
 import { useTheme } from "@/components/common/ThemeProvider";
@@ -31,12 +31,16 @@ export default function BattleArea() {
   const [language, setLanguage] = useState<Language>("python");
   const [code, setCode] = useState(boilerplate.python);
   const [result, setResult] = useState<string | null>(null);
+  const [isAccepted, setIsAccepted] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [showTests, setShowTests] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+
   const loadQuestion = useCallback(async () => {
     setLoading(true);
     setResult(null);
+    setIsAccepted(null);
     try {
       const response = await api.get<Question>("/api/battle/next-question", {
         baseURL: "",
@@ -56,8 +60,10 @@ export default function BattleArea() {
 
   const execute = async (submit: boolean) => {
     if (!question) return;
-    setLoading(true);
+    if (submit) setSubmitting(true);
+    else setLoading(true);
     setResult(null);
+    setIsAccepted(null);
     try {
       const response = await api.post<{
         accepted: boolean;
@@ -73,44 +79,122 @@ export default function BattleArea() {
         baseURL: "",
       });
       const payload = response.data;
+      setIsAccepted(payload.accepted);
       setResult(`${payload.accepted ? "Accepted" : "Not accepted"} · ${payload.passed_tests}/${payload.total_tests} tests · ${payload.execution_time_ms}ms`);
     } catch (error) {
+      setIsAccepted(false);
       setResult(error instanceof Error ? error.message : "Execution failed.");
     } finally {
       setLoading(false);
+      setSubmitting(false);
     }
   };
 
   return (
-    <section className={`${fullscreen ? "fixed inset-3 z-50" : ""} min-w-0 overflow-hidden rounded-3xl border border-slate-200 bg-white text-slate-900 shadow-xl transition-all duration-300 dark:border-white/10 dark:bg-[#111827] dark:text-white`}>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4 dark:border-white/10">
+    <section className={`${fullscreen ? "fixed inset-3 z-50 shadow-2xl" : ""} min-w-0 overflow-hidden rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-primary)] shadow-2xl transition-all duration-300`}>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] p-4 bg-[var(--surface-elevated)]">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-600 dark:text-cyan-300">Battle Area</p>
-          <h1 className="text-xl font-black">{question?.title || (loading ? "Loading question..." : "No question available")}</h1>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--accent-strong)]">Battle Practice Editor</p>
+          <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)] mt-0.5">{question?.title || (loading ? "Loading question..." : "No question available")}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <select value={language} onChange={(event) => { const next = event.target.value as Language; setLanguage(next); setCode(boilerplate[next]); }} className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm dark:border-white/10 dark:bg-slate-900" aria-label="Programming language">
-            <option value="python">Python 3</option><option value="cpp">C++</option><option value="java">Java</option><option value="javascript">JavaScript</option>
+          <select
+            value={language}
+            onChange={(event) => {
+              const next = event.target.value as Language;
+              setLanguage(next);
+              setCode(boilerplate[next]);
+            }}
+            className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[var(--accent)]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+            aria-label="Programming language"
+          >
+            <option value="python">Python 3</option>
+            <option value="cpp">C++</option>
+            <option value="java">Java</option>
+            <option value="javascript">JavaScript</option>
           </select>
-          <button type="button" onClick={() => setFullscreen((value) => !value)} className="rounded-lg border border-slate-300 p-2 dark:border-white/10" aria-label="Toggle full screen">{fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}</button>
-          <button type="button" onClick={() => void loadQuestion()} className="rounded-lg border border-slate-300 p-2 dark:border-white/10" aria-label="Refresh question"><RefreshCw size={16} /></button>
+          <button
+            type="button"
+            onClick={() => setFullscreen((value) => !value)}
+            className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-2 text-[var(--text-secondary)] transition hover:border-[var(--accent)]/50 hover:text-[var(--text-primary)] active:scale-95"
+            aria-label="Toggle full screen"
+          >
+            {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </button>
+          <button
+            type="button"
+            onClick={() => void loadQuestion()}
+            className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-2 text-[var(--text-secondary)] transition hover:border-[var(--accent)]/50 hover:text-[var(--text-primary)] active:scale-95"
+            aria-label="Refresh question"
+          >
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+          </button>
         </div>
       </div>
+
       <div className="grid min-h-[620px] min-w-0 lg:grid-cols-2">
-        <article className="min-w-0 overflow-y-auto border-b border-slate-200 p-5 dark:border-white/10 lg:border-b-0 lg:border-r">
-          <div className="prose prose-slate max-w-none dark:prose-invert"><p className="whitespace-pre-wrap">{question?.description || "Select a question to begin."}</p></div>
-          <div className="mt-4 flex flex-wrap gap-2">{[...(question?.topic_tags || []), ...(question?.company_tags || [])].map((tag) => <span key={tag} className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-bold text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-300">{tag}</span>)}</div>
-          {question?.constraints && <div className="mt-6 rounded-xl bg-slate-50 p-4 dark:bg-slate-900"><h2 className="font-bold">Constraints</h2><p className="mt-2 whitespace-pre-wrap text-sm text-slate-600 dark:text-slate-300">{question.constraints}</p></div>}
-          <div className="mt-6 flex gap-2 border-b border-slate-200 pb-2 dark:border-white/10">
-            <button type="button" onClick={() => setShowTests(false)} className={`px-3 py-2 text-sm font-bold ${!showTests ? "border-b-2 border-cyan-500 text-cyan-600" : "text-slate-500"}`}>Examples</button>
-            <button type="button" onClick={() => setShowTests(true)} className={`px-3 py-2 text-sm font-bold ${showTests ? "border-b-2 border-cyan-500 text-cyan-600" : "text-slate-500"}`}>Test Cases</button>
+        <article className="min-w-0 overflow-y-auto border-b border-[var(--border-subtle)] p-5 lg:border-b-0 lg:border-r">
+          <div className="prose max-w-none text-[var(--text-secondary)] leading-relaxed"><p className="whitespace-pre-wrap">{question?.description || "Select a question to begin."}</p></div>
+          <div className="mt-4 flex flex-wrap gap-2">{[...(question?.topic_tags || []), ...(question?.company_tags || [])].map((tag) => <span key={tag} className="rounded-full bg-[var(--surface-elevated)] border border-[var(--border-subtle)] px-3 py-1 text-xs font-semibold text-[var(--accent-strong)]">{tag}</span>)}</div>
+          {question?.constraints && (
+            <div className="mt-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-4">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Constraints</h2>
+              <p className="mt-2 whitespace-pre-wrap text-xs text-[var(--text-secondary)] font-mono">{question.constraints}</p>
+            </div>
+          )}
+          <div className="mt-6 flex gap-2 border-b border-[var(--border-subtle)] pb-2">
+            <button type="button" onClick={() => setShowTests(false)} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${!showTests ? "bg-[var(--accent)]/15 text-[var(--accent-strong)] border border-[var(--accent)]/30" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"}`}>Examples</button>
+            <button type="button" onClick={() => setShowTests(true)} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${showTests ? "bg-[var(--accent)]/15 text-[var(--accent-strong)] border border-[var(--accent)]/30" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"}`}>Test Cases</button>
           </div>
-          <div className="mt-3 space-y-3">{question?.examples?.map((example, index) => <div key={`${example.input}-${index}`} className="rounded-xl border border-slate-200 p-4 dark:border-white/10"><p className="text-xs font-bold uppercase text-slate-500">Example {index + 1}</p><pre className="mt-2 overflow-x-auto text-sm">Input: {example.input}{"\n"}Output: {example.output}</pre></div>)}</div>
-          {showTests && <p className="mt-3 text-xs text-slate-500">Hidden tests are only evaluated after submission.</p>}
+          <div className="mt-3 space-y-3">
+            {question?.examples?.map((example, index) => (
+              <div key={`${example.input}-${index}`} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Example {index + 1}</p>
+                <pre className="mt-2 overflow-x-auto text-xs font-mono text-[var(--text-secondary)]">Input: {example.input}{"\n"}Output: {example.output}</pre>
+              </div>
+            ))}
+          </div>
+          {showTests && <p className="mt-3 text-xs text-[var(--text-muted)]">Hidden test evaluation is verified upon server submission.</p>}
         </article>
-        <div className="flex min-w-0 flex-col bg-[var(--surface-card)]">
-          <Editor height="540px" language={language === "javascript" ? "javascript" : language} theme={resolvedTheme === "dark" ? "vs-dark" : "light"} value={code} onChange={(value) => setCode(value || "")} options={{ minimap: { enabled: false }, automaticLayout: true, fontSize: 14, scrollBeyondLastLine: false }} />
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-default)] p-4"><span className="text-sm text-[var(--text-secondary)]">{result || "Run public tests before submitting."}</span><div className="flex gap-2"><button type="button" disabled={loading} onClick={() => void execute(false)} className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-default)] px-4 py-2 text-sm font-bold transition hover:bg-[var(--surface-subtle)] disabled:opacity-50"><Play size={15} /> Run Tests</button><button type="button" disabled={loading} onClick={() => void execute(true)} className="inline-flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-bold text-[var(--text-on-accent)] transition hover:brightness-95 disabled:opacity-50"><Send size={15} /> Submit Code</button></div></div>
+
+        <div className="flex min-w-0 flex-col bg-[var(--surface-card)] transition-[box-shadow] focus-within:shadow-[inset_0_0_0_1px_var(--accent)]">
+          <Editor
+            height="540px"
+            language={language === "javascript" ? "javascript" : language}
+            theme={resolvedTheme === "dark" ? "vs-dark" : "light"}
+            value={code}
+            onChange={(value) => setCode(value || "")}
+            options={{ minimap: { enabled: false }, automaticLayout: true, fontSize: 14, scrollBeyondLastLine: false }}
+          />
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-default)] p-4 bg-[var(--surface-elevated)]">
+            <div className="flex items-center gap-2">
+              {isAccepted === true && <CheckCircle2 size={16} className="text-emerald-400" />}
+              {isAccepted === false && <XCircle size={16} className="text-rose-400" />}
+              <span className={`text-xs font-mono font-medium ${isAccepted === true ? "text-emerald-300 font-bold" : isAccepted === false ? "text-rose-300" : "text-[var(--text-secondary)]"}`}>
+                {result || "Run public tests before submitting code."}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={loading || submitting}
+                onClick={() => void execute(false)}
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] px-4 py-2 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[var(--accent)]/50 hover:bg-[var(--surface-subtle)] active:scale-95 disabled:opacity-40"
+              >
+                {loading ? <Loader2 size={14} className="animate-spin text-current" /> : <Play size={14} />}
+                Run Tests
+              </button>
+              <button
+                type="button"
+                disabled={loading || submitting}
+                onClick={() => void execute(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-2 text-xs font-bold text-[var(--text-on-accent)] transition hover:bg-[var(--accent-strong)] hover:shadow-[0_0_16px_rgba(200,239,114,0.3)] active:scale-95 disabled:opacity-40"
+              >
+                {submitting ? <Loader2 size={14} className="animate-spin text-current" /> : <Send size={14} />}
+                Submit Code
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </section>

@@ -195,6 +195,34 @@ def downgrade():
         owner.connection.commit()
 
 
+def test_schema_preflight_uses_the_owned_postgresql_connection() -> None:
+    assert _POSTGRESQL_TEST_URL_OBJ is not None
+    with acquire_postgresql_migration_ownership(_POSTGRESQL_TEST_URL_OBJ) as owner:
+        used_connections = []
+
+        def capture_connection(connection, *_args):
+            used_connections.append(connection)
+
+        event.listen(
+            owner.connection.engine,
+            "before_cursor_execute",
+            capture_connection,
+        )
+        try:
+            compare_model_schema(owner.connection)
+        finally:
+            event.remove(
+                owner.connection.engine,
+                "before_cursor_execute",
+                capture_connection,
+            )
+
+        assert used_connections
+        assert all(connection is owner.connection for connection in used_connections)
+        owner.assert_connection(owner.connection)
+        owner.connection.commit()
+
+
 def test_fresh_postgresql_schema_bootstrap_stamps_current_head(
     monkeypatch,
 ) -> None:

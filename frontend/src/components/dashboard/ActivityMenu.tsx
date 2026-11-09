@@ -30,7 +30,7 @@ export default function ActivityMenu() {
       params: { limit: 20 },
       signal: controller.signal,
     }).then((response) => {
-      setEntries(response.data);
+      setEntries(Array.isArray(response.data) ? response.data : []);
       setError(false);
     }).catch(() => {
       if (!controller.signal.aborted) setError(true);

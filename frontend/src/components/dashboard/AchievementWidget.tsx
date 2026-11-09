@@ -24,7 +24,7 @@ export default function AchievementWidget() {
       try {
         const response = await api.get<Achievement[]>("/achievements/user");
         if (active) {
-          setAchievementsList(response.data);
+          setAchievementsList(Array.isArray(response.data) ? response.data : []);
         }
       } catch (err: any) {
         if (active) {

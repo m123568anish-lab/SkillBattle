@@ -2,8 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { battleService, type BattleParticipant, type BattleRecord, type BattleTimerData } from "@/services/battle.service";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import {
+  Trophy,
+  Swords,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Users,
+  Flame,
+} from "lucide-react";
+import {
+  battleService,
+  type BattleParticipant,
+  type BattleRecord,
+  type BattleTimerData,
+} from "@/services/battle.service";
 import BattleDetailClient from "@/components/battle/BattleDetailClient";
+import { SpotlightCard } from "@/components/ui/spotlight";
 
 interface BattleDetailsProps {
   battleId: string;
@@ -11,6 +27,7 @@ interface BattleDetailsProps {
 
 export default function BattleDetails({ battleId }: BattleDetailsProps) {
   const router = useRouter();
+  const shouldReduceMotion = useReducedMotion();
   const [battle, setBattle] = useState<BattleRecord | null>(null);
   const [participants, setParticipants] = useState<BattleParticipant[]>([]);
   const [timer, setTimer] = useState<BattleTimerData | null>(null);
@@ -34,14 +51,19 @@ export default function BattleDetails({ battleId }: BattleDetailsProps) {
           setTimer(timerData);
         }
       } catch (err: any) {
-        if (active) setError(err?.response?.data?.detail || "Unable to load battle details.");
+        if (active)
+          setError(
+            err?.response?.data?.detail || "Unable to load battle details."
+          );
       } finally {
         if (active) setLoading(false);
       }
     };
 
     loadBattle();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [battleId]);
 
   const handleLeave = async () => {
@@ -53,106 +75,230 @@ export default function BattleDetails({ battleId }: BattleDetailsProps) {
     }
   };
 
-  if (loading) return <p className="text-slate-400">Loading battle details...</p>;
-  if (error) return <p className="text-red-400">{error}</p>;
-  if (!battle) return <p className="text-slate-400">Battle not found.</p>;
+  if (loading)
+    return (
+      <div className="flex items-center gap-3 py-12 text-sm text-[var(--text-muted)]">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+        Connecting to battle room…
+      </div>
+    );
+  if (error)
+    return (
+      <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-300">
+        <div className="flex items-center gap-2 font-bold">
+          <AlertCircle size={18} /> Error loading battle
+        </div>
+        <p className="mt-1 text-xs text-rose-200/80">{error}</p>
+        <button
+          onClick={() => router.push("/battle")}
+          className="mt-4 rounded-xl border border-rose-400/30 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-500/20"
+        >
+          Return to Arena Lobby
+        </button>
+      </div>
+    );
+  if (!battle)
+    return (
+      <div className="py-12 text-sm text-[var(--text-muted)]">
+        Battle not found.
+      </div>
+    );
+
+  const remainingSeconds = timer?.remaining_seconds ?? 0;
+  const isUrgentTimer = remainingSeconds <= 10 && remainingSeconds > 0;
+  const isMatchCompleted =
+    battle.status === "completed" ||
+    (battle.status === "in_progress" && remainingSeconds === 0);
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-white/10 bg-white/5 p-6 text-white shadow-2xl shadow-violet-950/20">
+      {/* Match Completion Celebration Banner */}
+      <AnimatePresence>
+        {isMatchCompleted && (
+          <motion.div
+            initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: -8 }}
+            animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: -8 }}
+            className="rounded-3xl border border-[var(--accent)]/40 bg-[var(--surface-card)] p-6 shadow-2xl relative overflow-hidden"
+          >
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 bg-gradient-to-r from-[var(--accent)]/10 via-[var(--accent-strong)]/5 to-transparent pointer-events-none"
+            />
+            <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--accent)]/20 text-[var(--accent-strong)] border border-[var(--accent)]/40 shadow-[0_0_16px_rgba(200,239,114,0.3)]">
+                  <Trophy size={26} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-[var(--text-primary)] tracking-tight">
+                    Match Concluded
+                  </h3>
+                  <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                    Official rankings and verified ratings submitted to the server.
+                  </p>
+                </div>
+              </div>
+              <span className="flex items-center gap-1.5 rounded-full bg-[var(--accent)]/15 border border-[var(--accent)]/40 px-3.5 py-1 text-xs font-bold text-[var(--accent-strong)]">
+                <CheckCircle2 size={14} /> Settlement Verified
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Room Header */}
+      <SpotlightCard className="p-6 sm:p-7 rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)] shadow-2xl">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-sm uppercase tracking-[0.3em] text-violet-300">Battle room</p>
-            <h2 className="text-3xl font-semibold">{battle.title}</h2>
-            <p className="mt-2 text-slate-400">{battle.difficulty} • Problem #{battle.problem_id} • {battle.status}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[var(--accent-strong)]">
+                Live Duel Room
+              </p>
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)] mt-1">
+              {battle.title}
+            </h1>
+            <p className="mt-1.5 text-xs text-[var(--text-secondary)] font-medium">
+              Mode: <span className="text-[var(--text-primary)] font-semibold capitalize">{battle.difficulty}</span> · Problem #{battle.problem_id} · Status:{" "}
+              <span className="font-semibold uppercase tracking-wider text-[var(--accent-strong)]">
+                {battle.status}
+              </span>
+            </p>
           </div>
-          <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-cyan-200">
-            <div className="text-xs uppercase tracking-[0.25em]">Time left</div>
-            <div className="text-2xl font-semibold">{timer?.remaining_seconds ?? 0}s</div>
+
+          {/* Animated Countdown Clock */}
+          <div
+            className={`rounded-2xl border px-5 py-3 transition-colors duration-200 ${
+              isUrgentTimer
+                ? "border-rose-500/50 bg-rose-500/15 text-rose-300 animate-pulse shadow-[0_0_16px_rgba(244,63,94,0.3)]"
+                : "border-[var(--border-default)] bg-[var(--surface-elevated)] text-[var(--text-primary)]"
+            }`}
+          >
+            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">
+              <Clock size={12} /> Time Remaining
+            </div>
+            <div className="text-2xl font-bold font-mono tracking-tight mt-0.5">
+              {remainingSeconds}s
+            </div>
           </div>
         </div>
-      </section>
+      </SpotlightCard>
 
       <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-6">
-          <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-6">
+          <div className="rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6 shadow-xl">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <h3 className="text-xl font-semibold">Challenge overview</h3>
-                <p className="mt-3 text-slate-400">Battle through a real-time coding arena with live opponents, score tracking, and a shared countdown clock.</p>
+                <h3 className="text-lg font-bold text-[var(--text-primary)]">Challenge Overview</h3>
+                <p className="mt-1.5 text-xs text-[var(--text-secondary)] leading-relaxed">
+                  Compete in real time with live contestants, score tracking, and verified automated evaluation.
+                </p>
               </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl bg-white/5 p-4">
-                  <div className="text-sm text-slate-400">Mode</div>
-                  <div className="mt-1 font-semibold">{battle.difficulty}</div>
+              <div className="grid gap-2 sm:grid-cols-3">
+                <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-3">
+                  <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Difficulty</div>
+                  <div className="mt-0.5 text-xs font-bold text-[var(--text-primary)] capitalize">{battle.difficulty}</div>
                 </div>
-                <div className="rounded-2xl bg-white/5 p-4">
-                  <div className="text-sm text-slate-400">Players</div>
-                  <div className="mt-1 font-semibold">{battle.max_players}</div>
+                <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-3">
+                  <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Max Slots</div>
+                  <div className="mt-0.5 text-xs font-bold text-[var(--text-primary)]">{battle.max_players}</div>
                 </div>
-                <div className="rounded-2xl bg-white/5 p-4">
-                  <div className="text-sm text-slate-400">Created</div>
-                  <div className="mt-1 font-semibold">{battle.created_at ? new Date(battle.created_at).toLocaleDateString() : 'N/A'}</div>
+                <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-3">
+                  <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Created</div>
+                  <div className="mt-0.5 text-xs font-bold text-[var(--text-primary)]">
+                    {battle.created_at ? new Date(battle.created_at).toLocaleDateString() : "N/A"}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+          {/* Live Scoreboard */}
+          <div className="rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6 shadow-xl">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-xl font-semibold">Live scoreboard</h3>
-                <p className="mt-2 text-slate-400">Track rankings and participant progress as the battle advances.</p>
+                <h3 className="text-lg font-bold text-[var(--text-primary)]">Live Scoreboard</h3>
+                <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                  Track live player submissions and score updates.
+                </p>
               </div>
-              <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-sm text-emerald-200">{participants.length}/{battle.max_players}</span>
+              <span className="rounded-full bg-[var(--surface-elevated)] border border-[var(--border-default)] px-3 py-1 text-xs font-bold text-[var(--accent-strong)]">
+                {participants.length} / {battle.max_players} Players
+              </span>
             </div>
 
-            <div className="mt-5 space-y-3">
+            <div className="mt-5 space-y-2.5">
               {participants.length === 0 ? (
-                <p className="text-slate-400">No participants have joined yet.</p>
-              ) : participants.map((participant) => (
-                <div key={participant.id} className="grid gap-3 rounded-3xl bg-slate-900/70 p-4 sm:grid-cols-[1fr_auto]">
-                  <div>
-                    <div className="font-semibold text-white">Player {participant.user_id.slice(0, 6)}</div>
-                    <div className="text-sm text-slate-400">Score {participant.score} • Joined {new Date(participant.joined_at).toLocaleTimeString()}</div>
+                <p className="text-xs text-[var(--text-muted)] py-4 text-center">
+                  Waiting for competitors to join the lobby…
+                </p>
+              ) : (
+                participants.map((participant) => (
+                  <div
+                    key={participant.id}
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-4 transition-all duration-150 hover:border-[var(--accent)]/30"
+                  >
+                    <div>
+                      <div className="text-sm font-bold text-[var(--text-primary)]">
+                        Player {participant.user_id.slice(0, 6)}
+                      </div>
+                      <div className="text-xs text-[var(--text-muted)] mt-0.5 font-mono">
+                        Score: <span className="text-[var(--accent-strong)] font-semibold">{participant.score}</span> · Joined{" "}
+                        {new Date(participant.joined_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 rounded-xl bg-[var(--surface-card)] border border-[var(--border-default)] px-3 py-1.5 text-xs font-mono font-bold text-[var(--accent-strong)]">
+                      #{participant.rank}
+                    </div>
                   </div>
-                  <div className="rounded-full bg-slate-800/70 px-4 py-2 text-sm font-semibold text-violet-300">#{participant.rank}</div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
 
+        {/* Feed & Interaction */}
         <div className="space-y-6">
-          <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-6">
-            <h3 className="text-xl font-semibold">Battle feed</h3>
-            <p className="mt-2 text-slate-400">Interact with the lobby, send actions, or submit code to the backend while you compete.</p>
+          <div className="rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-[var(--text-primary)]">Battle Feed & Terminal</h3>
+            <p className="mt-1 text-xs text-[var(--text-secondary)] mb-4">
+              Real-time telemetry and execution output.
+            </p>
             <BattleDetailClient id={battleId} problemId={battle.problem_id} />
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-            <h3 className="text-xl font-semibold">Battle strategy</h3>
-            <ul className="mt-4 space-y-3 text-slate-300">
-              <li className="rounded-2xl bg-slate-950/70 px-4 py-3">Prioritize code correctness before performance.</li>
-              <li className="rounded-2xl bg-slate-950/70 px-4 py-3">Use test submission to verify against the backend quickly.</li>
-              <li className="rounded-2xl bg-slate-950/70 px-4 py-3">Keep the room open and watch the live scoreboard update.</li>
+          <div className="rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-[var(--text-primary)]">Strategic Guidelines</h3>
+            <ul className="mt-3.5 space-y-2 text-xs text-[var(--text-secondary)]">
+              <li className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-3.5 py-2.5">
+                • Prioritize algorithm correctness and boundary conditions before optimizing execution runtime.
+              </li>
+              <li className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-3.5 py-2.5">
+                • Run test submissions to verify sample cases before sending an authoritative final submission.
+              </li>
+              <li className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-3.5 py-2.5">
+                • Keep your connection active; disconnects during a live battle automatically record the current score.
+              </li>
             </ul>
           </div>
         </div>
       </section>
 
-      <div className="flex flex-col gap-3 sm:flex-row">
+      {/* Navigation & Leave Actions */}
+      <div className="flex flex-col gap-3 sm:flex-row pt-2">
         <button
           onClick={() => router.push("/battle")}
-          className="w-full rounded-full border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10 sm:w-auto"
+          className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] px-5 py-2.5 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[var(--accent)]/50 hover:bg-[var(--surface-elevated)]"
         >
-          Back to lobby
+          Back to Battle Arena
         </button>
         <button
           onClick={handleLeave}
-          className="w-full rounded-full bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-500 sm:w-auto"
+          className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-5 py-2.5 text-xs font-semibold text-rose-300 transition hover:bg-rose-500/20 hover:border-rose-400/50"
         >
-          Leave battle
+          Leave Battle
         </button>
       </div>
     </div>
