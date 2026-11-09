@@ -134,9 +134,8 @@ function DashboardLayoutInner({ children }: Props) {
 
   const hideDock = textEntryFocused || (portal === "student" && (
     (pathname === "/tasks" && searchParams.has("problem")) ||
-    pathname === "/battle/solo" ||
     pathname === "/battle/company-speedrun" ||
-    (pathname.startsWith("/battle/") && !["/battle/lobby", "/battle/new", "/battle/queue", "/battle/waiting", "/battle/create"].includes(pathname))
+    (pathname.startsWith("/battle/") && !["/battle/solo", "/battle/lobby", "/battle/new", "/battle/queue", "/battle/waiting", "/battle/create"].includes(pathname))
   ));
 
   return (
@@ -212,7 +211,7 @@ function DashboardLayoutInner({ children }: Props) {
                     type="button"
                     aria-label={tab.title}
                     onClick={() => setMobileDrawerOpen(true)}
-                    className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg px-0.5 py-1.5 text-[9px] font-semibold leading-none tracking-normal text-[var(--text-muted)] transition hover:text-[var(--text-primary)] motion-reduce:transition-none"
+                    className="flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-0.5 py-1.5 text-[9px] font-semibold leading-none tracking-normal text-[var(--text-muted)] transition hover:text-[var(--text-primary)] motion-reduce:transition-none"
                   >
                     <tab.icon size={20} />
                     <span>{tab.title}</span>
@@ -224,7 +223,7 @@ function DashboardLayoutInner({ children }: Props) {
                   key={tab.title}
                   href={tab.href}
                   aria-current={active ? "page" : undefined}
-                  className={`group relative flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-0.5 py-1.5 text-[9px] font-semibold leading-none tracking-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] motion-reduce:transition-none ${
+                  className={`group relative flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1.5 text-[9px] font-semibold leading-none tracking-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] motion-reduce:transition-none ${
                     active
                       ? "text-[var(--accent-strong)] font-bold"
                       : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"

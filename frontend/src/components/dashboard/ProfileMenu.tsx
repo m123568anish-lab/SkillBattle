@@ -120,7 +120,7 @@ export default function ProfileMenu() {
         aria-expanded={isMenuOpen}
         aria-haspopup="dialog"
         onClick={() => setIsMenuOpen((open) => !open)}
-        className="flex h-9 items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] px-1.5 text-left transition hover:border-[var(--accent)] hover:shadow-[0_0_12px_rgba(216,255,62,0.15)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-strong)] sm:h-10 sm:gap-3 sm:px-2.5 md:px-4"
+        className="flex h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] px-1.5 text-left transition hover:border-[var(--accent)] hover:shadow-[0_0_12px_rgba(216,255,62,0.15)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-strong)] max-[359px]:h-9 max-[359px]:w-9 sm:h-10 sm:w-auto sm:gap-3 sm:px-2.5 md:px-4"
       >
         <div className="relative">
           {avatarUrl && !avatarError ? (

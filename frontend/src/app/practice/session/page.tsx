@@ -16,8 +16,17 @@ function PracticeSessionContent() {
     [5, 10, 15, 20].includes(requestedCount) ? requestedCount : 5
   );
   const [difficulty, setDifficulty] = useState(() => {
-    const value = searchParams.get("difficulty") || "";
-    return ["Easy", "Medium", "Hard"].includes(value) ? value : "Any";
+    const value = searchParams.get("difficulty")?.toLowerCase();
+    switch (value) {
+      case "easy":
+        return "Easy";
+      case "medium":
+        return "Medium";
+      case "hard":
+        return "Hard";
+      default:
+        return "Any";
+    }
   });
   const topic = searchParams.get("topic") || "all";
   const [questions, setQuestions] = useState<MCQQuestion[]>([]);

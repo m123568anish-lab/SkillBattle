@@ -157,3 +157,59 @@ async def test_mcq_completion_persists_and_isolated_with_idempotent_xp():
         assert other_streak is None
 
     await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_mcq_list_returns_statement_and_excludes_unvalidated_questions():
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with session_factory() as session:
+        learner = User(
+            username="mcq-content-learner",
+            full_name="MCQ Content Learner",
+            email="mcq-content-learner@example.test",
+            password_hash="test-hash",
+        )
+        verified = Question(
+            title="Imported Algorithms 1234abcd",
+            slug="verified-algorithms",
+            description="Which algorithm has logarithmic search time on sorted data?",
+            difficulty="easy",
+            question_type="mcq",
+            options=["Binary search", "Linear search"],
+            correct_option="A",
+            skill_category="Algorithms",
+            is_active=True,
+            is_validated=True,
+        )
+        unvalidated = Question(
+            title="Unvalidated algorithms item",
+            slug="unvalidated-algorithms",
+            description="An unreviewed multiple-choice question.",
+            difficulty="easy",
+            question_type="mcq",
+            options=["Option A", "Option B"],
+            correct_option="A",
+            skill_category="Algorithms",
+            is_active=True,
+            is_validated=False,
+        )
+        session.add_all([learner, verified, unvalidated])
+        await session.commit()
+
+        result = await list_mcq_questions(
+            count=5,
+            difficulty="easy",
+            topic="Algorithms & Data Structures",
+            db=session,
+            current_user=learner,
+        )
+
+        assert [item["id"] for item in result["questions"]] == [verified.id]
+        assert result["questions"][0]["question"] == verified.description
+        assert result["questions"][0]["question"] != verified.title
+
+    await engine.dispose()

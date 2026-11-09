@@ -28,41 +28,8 @@ interface SavedItem {
   href: string;
 }
 
-const DEFAULT_SAVED: SavedItem[] = [
-  {
-    id: "saved_1",
-    type: "coding",
-    title: "LRU Cache Implementation",
-    topic: "Data Structures",
-    difficulty: "Medium",
-    savedAt: "2 days ago",
-    notes: "Review doubly linked list node removal edge cases before Meta interview.",
-    href: "/practice/coding",
-  },
-  {
-    id: "saved_2",
-    type: "mcq",
-    title: "Database Isolation Levels & Phantom Reads",
-    topic: "DBMS",
-    difficulty: "Hard",
-    savedAt: "4 days ago",
-    notes: "Difference between Snapshot Isolation and Serializable.",
-    href: "/practice/session?topic=DBMS",
-  },
-  {
-    id: "saved_3",
-    type: "coding",
-    title: "Course Schedule II (Topological Sort)",
-    topic: "Graphs",
-    difficulty: "Medium",
-    savedAt: "1 week ago",
-    notes: "Kahn's Algorithm vs DFS cycle detection.",
-    href: "/practice/coding",
-  },
-];
-
 function SavedQuestionsInner() {
-  const [items, setItems] = useState<SavedItem[]>(DEFAULT_SAVED);
+  const [items, setItems] = useState<SavedItem[]>([]);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "coding" | "mcq">("all");
 
@@ -162,8 +129,12 @@ function SavedQuestionsInner() {
         {filtered.length === 0 ? (
           <div className="rounded-2xl border border-white/[0.08] bg-[#0E1524] p-12 text-center text-slate-400">
             <Bookmark className="h-10 w-10 mx-auto text-slate-600 mb-3" />
-            <h3 className="text-base font-semibold text-white">No saved questions match your search</h3>
-            <p className="text-xs text-slate-400 mt-1">Bookmark questions during practice sessions to build your study deck.</p>
+            <h3 className="text-base font-semibold text-white">
+              {query ? "No saved questions match your search" : "No saved questions yet"}
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">
+              Saved questions will appear here when bookmarking is available for your practice account.
+            </p>
           </div>
         ) : (
           <div className="space-y-3">

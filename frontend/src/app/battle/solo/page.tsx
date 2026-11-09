@@ -88,9 +88,7 @@ export default function SoloBattleSelectionPage() {
         {/* Two Large Distinct Mode Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Card 1: MCQ Practice */}
-          <div className="rounded-3xl border border-purple-500/30 bg-gradient-to-br from-purple-950/30 via-slate-900/60 to-slate-950/90 p-6 sm:p-8 space-y-6 backdrop-blur-xl shadow-2xl relative overflow-hidden flex flex-col justify-between">
-            <div className="absolute top-0 right-0 -mt-10 -mr-10 h-48 w-48 rounded-full bg-purple-500/10 blur-3xl pointer-events-none" />
-
+          <div className="relative flex flex-col justify-between space-y-6 overflow-hidden rounded-3xl border border-purple-500/30 bg-[var(--surface-card)] p-6 shadow-2xl sm:p-8">
             <div className="space-y-5">
               <div className="flex items-center justify-between">
                 <div className="rounded-2xl border border-purple-500/40 bg-purple-500/10 p-3 text-purple-300">
@@ -118,7 +116,7 @@ export default function SoloBattleSelectionPage() {
                   <select
                     value={mcqCategory}
                     onChange={(e) => setMcqCategory(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-black/50 px-3.5 py-2.5 text-xs font-semibold text-white focus:border-purple-500 focus:outline-none"
+                    className="min-h-11 w-full rounded-xl border border-white/10 bg-black/50 px-3.5 py-2.5 text-xs font-semibold text-white focus:border-purple-500 focus:outline-none"
                   >
                     <option value="Algorithms & Data Structures">Algorithms & Data Structures</option>
                     <option value="System Design & Caching">System Design & Caching</option>
@@ -139,7 +137,7 @@ export default function SoloBattleSelectionPage() {
                           key={d}
                           type="button"
                           onClick={() => setMcqDifficulty(d)}
-                          className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                          className={`min-h-11 flex-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                             mcqDifficulty === d
                               ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
                               : "border border-white/10 bg-white/[0.04] text-slate-400 hover:text-white"
@@ -158,7 +156,7 @@ export default function SoloBattleSelectionPage() {
                     <select
                       value={mcqQuestionsCount}
                       onChange={(event) => setMcqQuestionsCount(Number(event.target.value))}
-                      className="w-full rounded-lg border border-white/10 bg-black/50 px-3 py-2 text-xs font-bold text-white focus:border-purple-500 focus:outline-none"
+                      className="min-h-11 w-full rounded-lg border border-white/10 bg-black/50 px-3 py-2 text-xs font-bold text-white focus:border-purple-500 focus:outline-none"
                     >
                       {[5, 10, 20].map((count) => (
                         <option key={count} value={count}>{count}</option>
@@ -174,7 +172,7 @@ export default function SoloBattleSelectionPage() {
               <button
                 type="button"
                 onClick={handleStartMcq}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-6 py-4 text-sm font-black text-white shadow-xl shadow-purple-600/30 hover:scale-[1.01] hover:shadow-purple-500/40 transition-all cursor-pointer"
+                className="min-h-12 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-6 py-4 text-sm font-black text-white shadow-xl shadow-purple-600/30 hover:scale-[1.01] hover:shadow-purple-500/40 transition-all cursor-pointer"
               >
                 <Play className="h-4 w-4 fill-current" />
                 <span>Start MCQ Practice ({mcqQuestionsCount} Questions)</span>
@@ -183,9 +181,7 @@ export default function SoloBattleSelectionPage() {
           </div>
 
           {/* Card 2: Coding Solo Battle */}
-          <div className="rounded-3xl border border-cyan-500/30 bg-gradient-to-br from-cyan-950/30 via-slate-900/60 to-slate-950/90 p-6 sm:p-8 space-y-6 backdrop-blur-xl shadow-2xl relative overflow-hidden flex flex-col justify-between">
-            <div className="absolute top-0 right-0 -mt-10 -mr-10 h-48 w-48 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
-
+          <div className="relative flex flex-col justify-between space-y-6 overflow-hidden rounded-3xl border border-cyan-500/30 bg-[var(--surface-card)] p-6 shadow-2xl sm:p-8">
             <div className="space-y-5">
               <div className="flex items-center justify-between">
                 <div className="rounded-2xl border border-cyan-500/40 bg-cyan-500/10 p-3 text-cyan-300">
@@ -210,7 +206,7 @@ export default function SoloBattleSelectionPage() {
                   <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                     Programming Language
                   </label>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {[
                       { id: "python", label: "Python 3" },
                       { id: "javascript", label: "JavaScript" },
@@ -221,7 +217,7 @@ export default function SoloBattleSelectionPage() {
                         key={lang.id}
                         type="button"
                         onClick={() => setCodingLanguage(lang.id)}
-                        className={`rounded-xl py-2 text-xs font-bold transition-all cursor-pointer ${
+                        className={`min-h-11 rounded-xl px-2 text-xs font-bold transition-all cursor-pointer ${
                           codingLanguage === lang.id
                             ? "bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30"
                             : "border border-white/10 bg-white/[0.04] text-slate-300 hover:text-white"
@@ -244,7 +240,7 @@ export default function SoloBattleSelectionPage() {
                         key={d}
                         type="button"
                         onClick={() => setCodingDifficulty(d)}
-                        className={`flex-1 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer ${
+                        className={`min-h-11 flex-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                           codingDifficulty === d
                             ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
                             : "border border-white/10 bg-white/[0.04] text-slate-400 hover:text-white"
@@ -264,7 +260,7 @@ export default function SoloBattleSelectionPage() {
                 type="button"
                 onClick={handleStartCoding}
                 disabled={creatingBattle}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 px-6 py-4 text-sm font-black text-slate-950 shadow-xl shadow-cyan-500/25 hover:scale-[1.01] hover:shadow-cyan-400/40 transition-all cursor-pointer"
+                className="min-h-12 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 px-6 py-4 text-sm font-black text-slate-950 shadow-xl shadow-cyan-500/25 hover:scale-[1.01] hover:shadow-cyan-400/40 transition-all cursor-pointer"
               >
                 <Play className="h-4 w-4 fill-current" />
                 <span>{creatingBattle ? "Creating battle..." : `Launch Coding IDE (${codingDifficulty})`}</span>

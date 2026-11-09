@@ -11,7 +11,9 @@ process.env.NEXT_PUBLIC_API_URL = "http://127.0.0.1:8765";
 
 export default defineConfig({
   testDir: "./tests",
+  testMatch: "**/*.spec.ts",
   timeout: 30_000,
+  workers: 2,
   use: { baseURL: "https://127.0.0.1:3000", ignoreHTTPSErrors: true, trace: "retain-on-failure" },
   webServer: [
     { command: "node tests/fixtures/neon-auth-server.mjs", url: "http://127.0.0.1:8765/health", reuseExistingServer: false, timeout: 30_000 },

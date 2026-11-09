@@ -47,7 +47,7 @@ export default function ActivityMenu() {
         href="/activity"
         aria-label="Open activity page"
         title="Activity"
-        className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:border-cyan-400/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 md:hidden"
+        className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:border-cyan-400/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 max-[359px]:h-9 max-[359px]:w-9 md:hidden"
       >
         <Activity className="h-[18px] w-[18px]" />
       </Link>

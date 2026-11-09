@@ -58,7 +58,7 @@ async function authenticateStudent(page: import("@playwright/test").Page) {
   await page.context().addCookies([
     {
       name: "__Secure-neon-auth.session_token",
-      value: "e2e-session-token",
+      value: "e2e-cookie-session",
       url: "https://127.0.0.1:3000",
       httpOnly: true,
       secure: true,

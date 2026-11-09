@@ -168,6 +168,7 @@ export const sidebarItems: SidebarItem[] = [
   { title: "Achievements", href: "/achievements", icon: Medal, category: "social" },
   { title: "Profile", href: "/profile", icon: User, category: "account" },
   { title: "Settings", href: "/settings", icon: Settings, category: "account" },
+  { title: "Support", href: "/support", icon: HelpCircle, category: "account" },
 ];
 
 export const sidebarCategories: SidebarCategory[] = [

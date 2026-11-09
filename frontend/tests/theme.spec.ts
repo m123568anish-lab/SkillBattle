@@ -68,6 +68,14 @@ test("theme picker supports keyboard navigation and selection", async ({ page })
   await expect(trigger).toBeFocused();
 });
 
+test("theme picker touch target meets the mobile size requirement", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  await expect(page.getByRole("button", { name: /theme:/i })).toHaveCSS("width", "44px");
+  await expect(page.getByRole("button", { name: /theme:/i })).toHaveCSS("height", "44px");
+});
+
 test("dark theme keeps legacy gray text readable on dark and white surfaces", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto("/");

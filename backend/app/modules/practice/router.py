@@ -324,11 +324,17 @@ async def list_mcq_questions(
     filters = [
         Question.is_active.is_(True),
         Question.question_type == "mcq",
+        Question.is_validated.is_(True),
     ]
     if difficulty and difficulty.lower() in {"easy", "medium", "hard"}:
         filters.append(func.lower(Question.difficulty) == difficulty.lower())
     if topic and topic.lower() != "all":
-        filters.append(func.lower(Question.skill_category).contains(topic.lower()))
+        topic_terms = [term.strip().lower() for term in topic.split("&") if term.strip()] or [
+            topic.lower()
+        ]
+        filters.append(
+            or_(*(func.lower(Question.skill_category).contains(term) for term in topic_terms))
+        )
 
     solved = exists(
         select(UserSubmission.id).where(
@@ -354,7 +360,7 @@ async def list_mcq_questions(
         "questions": [
             {
                 "id": question.id,
-                "question": question.title,
+                "question": question.description,
                 "code_snippet": None,
                 "options": [
                     text for option in (question.options or [])

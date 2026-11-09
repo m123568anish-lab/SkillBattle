@@ -120,7 +120,7 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
             onClick={onOpenMobileNav}
             aria-label="Open navigation menu"
             data-mobile-menu-trigger
-            className="flex items-center justify-center rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-2 text-[var(--text-secondary)] transition-all duration-150 hover:border-[var(--accent)]/50 hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] active:scale-95 lg:hidden"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-2 text-[var(--text-secondary)] transition-all duration-150 hover:border-[var(--accent)]/50 hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] active:scale-95 max-[359px]:h-9 max-[359px]:w-9 lg:hidden"
           >
             <Menu size={18} />
           </button>
@@ -131,7 +131,12 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
           title="Dashboard"
           className="inline-flex min-w-0 shrink-0 items-center px-1 py-1 text-left transition hover:opacity-90"
         >
-          <QubiraLogo variant="full" size="sm" />
+          <span className="sm:hidden">
+            <QubiraLogo variant="icon" size="sm" />
+          </span>
+          <span className="hidden sm:inline-flex">
+            <QubiraLogo variant="full" size="sm" />
+          </span>
         </Link>
 
         {/* Global Search Input Bar & Command Palette */}
@@ -288,7 +293,7 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
             setSearchOpen(willOpen);
             if (willOpen) window.requestAnimationFrame(() => searchInputRef.current?.focus());
           }}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-secondary)] transition hover:border-[var(--accent)]/50 hover:text-[var(--text-primary)] active:scale-95 sm:hidden"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-secondary)] transition hover:border-[var(--accent)]/50 hover:text-[var(--text-primary)] active:scale-95 max-[359px]:h-9 max-[359px]:w-9 sm:hidden"
         >
           <Search className="h-[17px] w-[17px]" />
         </button>
