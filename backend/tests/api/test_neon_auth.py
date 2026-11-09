@@ -95,6 +95,8 @@ async def test_rejected_neon_token_logs_failure_category_without_token(caplog, m
             await neon_security.verify_neon_token(token)
 
     assert "InvalidIssuerError" in caplog.text
+    assert issuer in caplog.text
+    assert "https://wrong-issuer.example.test" in caplog.text
     assert token not in caplog.text
 
 

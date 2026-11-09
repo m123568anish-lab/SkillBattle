@@ -85,13 +85,33 @@ async def verify_neon_token(token: str) -> dict[str, Any]:
             raise NeonAuthenticationError("Neon Auth signing key was not found.")
 
         signing_key = jwt.PyJWK.from_dict(jwk_data, algorithm="EdDSA").key
-        claims = jwt.decode(
-            token,
-            signing_key,
-            algorithms=["EdDSA"],
-            issuer=issuer,
-            options={"verify_aud": False},
-        )
+        try:
+            claims = jwt.decode(
+                token,
+                signing_key,
+                algorithms=["EdDSA"],
+                issuer=issuer,
+                options={"verify_aud": False},
+            )
+        except jwt.InvalidIssuerError:
+            try:
+                issuer_diagnostic = jwt.decode(
+                    token,
+                    signing_key,
+                    algorithms=["EdDSA"],
+                    options={"verify_iss": False, "verify_aud": False},
+                )
+            except jwt.InvalidTokenError:
+                pass
+            else:
+                token_issuer = issuer_diagnostic.get("iss")
+                if isinstance(token_issuer, str):
+                    logger.warning(
+                        "Neon Auth issuer mismatch (configured=%r, signed token=%r)",
+                        issuer[:256],
+                        token_issuer[:256],
+                    )
+            raise
     except NeonAuthenticationError:
         raise
     except (httpx.HTTPError, jwt.InvalidTokenError, ValueError) as exc:
