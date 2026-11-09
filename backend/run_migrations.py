@@ -10,7 +10,6 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from alembic.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import Connection, inspect, text
 from sqlalchemy.engine import URL, make_url
@@ -34,7 +33,6 @@ from app.database.migration_infrastructure.migration_coordinator import (
     require_supported_migration_dialect,
 )
 from app.database.migration_preflight import compare_model_schema
-from app.models import Base
 from app.database.migration_state import (
     MigrationStateError,
     find_missing_applied_tables,
@@ -92,18 +90,12 @@ def _run_migrations_on_connection(
     assert_legacy_runner_allowed(table_names)
     diagnostic_context["phase"] = "revision_state_inspection"
     state = inspect_migration_state(connection, script)
-    if (
-        isinstance(ownership, PostgreSQLMigrationOwnership)
-        and state.current_revision is None
-    ):
-        diagnostic_context["phase"] = "fresh_database_bootstrap"
-        _bootstrap_empty_postgresql_database(
-            connection,
-            script,
-            ownership,
-        )
-        state = inspect_migration_state(connection, script)
-    elif isinstance(ownership, PostgreSQLMigrationOwnership):
+    if isinstance(ownership, PostgreSQLMigrationOwnership):
+        if state.current_revision is None:
+            raise MigrationStateError(
+                "PostgreSQL has no supported fresh-install baseline; "
+                "the legacy runner will not create or stamp a schema."
+            )
         connection.commit()
         connection.execute(text("SET TRANSACTION READ ONLY"))
 
@@ -169,35 +161,6 @@ def _run_migrations_on_connection(
         connection.commit()
     logger.info("MIGRATION COMPLETED revision=%s", final_state.expected_head)
     return 0
-
-
-def _bootstrap_empty_postgresql_database(
-    connection: Connection,
-    script: ScriptDirectory,
-    ownership: PostgreSQLMigrationOwnership,
-) -> None:
-    """Create the current ORM schema only in a genuinely empty PostgreSQL database."""
-    tables = set(inspect(connection).get_table_names())
-    if tables - {"alembic_version"}:
-        raise MigrationStateError(
-            "Fresh PostgreSQL bootstrap requires an empty application schema."
-        )
-    if "alembic_version" in tables:
-        raise MigrationStateError(
-            "Cannot bootstrap a database with Alembic metadata but no revision."
-        )
-
-    ownership.assert_connection(connection)
-    connection.commit()
-    with connection.begin():
-        Base.metadata.create_all(bind=connection, checkfirst=False)
-        MigrationContext.configure(connection).stamp(script, script.get_current_head())
-    ownership.assert_connection(connection)
-    logger.info(
-        "MIGRATION BOOTSTRAPPED empty PostgreSQL schema at revision=%s tables=%d",
-        script.get_current_head(),
-        len(Base.metadata.tables),
-    )
 
 
 def run_migrations(

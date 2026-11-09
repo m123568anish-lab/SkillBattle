@@ -10,8 +10,9 @@ services:
     # Build command - install dependencies
     buildCommand: pip install -r requirements.txt
     
-    # Start command - run FastAPI server
+    # Schema migrations are a separate, explicitly authorized operation.
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /ready
     
     # Environment variables (set these in the Render dashboard)
     envVars:

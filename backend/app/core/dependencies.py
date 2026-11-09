@@ -275,7 +275,6 @@ async def get_current_user(
     except Exception:
         try:
             claims = await verify_neon_token(token)
-            user = await _get_or_create_neon_user(db, claims)
         except NeonAuthenticationConfigurationError as exc:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -292,6 +291,15 @@ async def get_current_user(
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid authentication token.",
+                    headers={"WWW-Authenticate": "Bearer"},
+                ) from exc
+        else:
+            try:
+                user = await _get_or_create_neon_user(db, claims)
+            except NeonAuthenticationError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=str(exc),
                     headers={"WWW-Authenticate": "Bearer"},
                 ) from exc
 

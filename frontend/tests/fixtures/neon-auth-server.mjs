@@ -1,10 +1,10 @@
 import { createServer } from "node:http";
 
-const sessionCookie = "__Secure-neon-auth.session_token=e2e-session-token";
+const sessionCookie = "__Secure-neon-auth.session_token=e2e-cookie-session";
 const now = new Date();
 const session = {
   id: "e2e-session",
-  token: "e2e-session-token",
+  token: "e2e-cookie-session",
   userId: "e2e-neon-user",
   expiresAt: new Date("2030-01-01T00:00:00.000Z").toISOString(),
   createdAt: now.toISOString(),
@@ -51,7 +51,7 @@ const server = createServer((request, response) => {
         `${sessionCookie}; Path=/; HttpOnly; Secure; SameSite=Lax`,
       );
       response.end(JSON.stringify({
-        token: "e2e-session-token",
+        token: "e2e-cookie-session",
         user: { ...user, email: payload.email ?? user.email, name: payload.name ?? user.name },
       }));
     });
@@ -67,8 +67,12 @@ const server = createServer((request, response) => {
     return;
   }
 
-  if (request.url === "/get-session") {
+  const requestUrl = new URL(request.url, "http://localhost");
+  if (requestUrl.pathname === "/get-session") {
     const authenticated = request.headers.cookie?.includes(sessionCookie) ?? false;
+    if (authenticated && requestUrl.searchParams.get("disableCookieCache") === "true") {
+      response.setHeader("set-auth-jwt", "e2e.access.signature");
+    }
     response.end(JSON.stringify(
       authenticated ? { session, user } : { session: null, user: null },
     ));
@@ -78,7 +82,7 @@ const server = createServer((request, response) => {
   if (request.url === "/get-access-token") {
     const authenticated = request.headers.cookie?.includes(sessionCookie) ?? false;
     response.end(JSON.stringify(
-      authenticated ? { token: "e2e-access-token" } : { token: null },
+      authenticated ? { token: "e2e.access.signature" } : { token: null },
     ));
     return;
   }
@@ -86,7 +90,7 @@ const server = createServer((request, response) => {
   if (request.url === "/token") {
     const authenticated = request.headers.cookie?.includes(sessionCookie) ?? false;
     response.end(JSON.stringify(
-      authenticated ? { token: "e2e-access-token" } : { token: null },
+      authenticated ? { token: "e2e.access.signature" } : { token: null },
     ));
     return;
   }

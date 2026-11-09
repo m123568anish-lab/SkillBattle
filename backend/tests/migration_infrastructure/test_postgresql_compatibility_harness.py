@@ -16,12 +16,13 @@ from tests.migration_infrastructure.postgresql_compatibility_harness import (
 
 def _manifest() -> dict:
     return {
-        "format_version": 1,
+        "format_version": 2,
         "engine": {
             "dialect": "postgresql",
             "server_version": [18, 6],
             "default_schema": "public",
         },
+        "schema": "public",
         "tables": [
             {
                 "name": "synthetic_accounts",
@@ -35,8 +36,20 @@ def _manifest() -> dict:
         ],
         "views": [],
         "materialized_views": [],
+        "materialized_view_indexes": [],
         "triggers": [],
         "sequences": [],
+        "types": [],
+        "routines": [],
+        "policies": [],
+        "row_security": [],
+        "partitioned_tables": [],
+        "partitions": [],
+        "schema_ownership": [],
+        "object_ownership": [],
+        "privileges": [],
+        "default_privileges": [],
+        "cross_schema_foreign_keys": [],
     }
 
 
@@ -94,6 +107,23 @@ def test_profile_rejects_non_synthetic_data_and_missing_primary_key(tmp_path) ->
     digest = hashlib.sha256(raw).hexdigest()
     with pytest.raises(CompatibilityHarnessError, match="must have a primary key"):
         load_verified_profile(path, expected_profile_sha256=digest)
+
+
+def test_profile_rejects_incomplete_schema_manifest(tmp_path) -> None:
+    path, _ = _write_profile(tmp_path)
+    document = json.loads(path.read_text(encoding="utf-8"))
+    del document["source_manifest"]["policies"]
+    document["source_manifest_sha256"] = manifest_fingerprint(
+        document["source_manifest"]
+    )
+    raw = json.dumps(document, sort_keys=True).encode("utf-8")
+    path.write_bytes(raw)
+
+    with pytest.raises(CompatibilityHarnessError, match="incomplete"):
+        load_verified_profile(
+            path,
+            expected_profile_sha256=hashlib.sha256(raw).hexdigest(),
+        )
 
 
 def test_profile_rejects_unknown_starting_revision(tmp_path) -> None:

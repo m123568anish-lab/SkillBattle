@@ -163,6 +163,41 @@ async def test_neon_identity_requires_verified_email_to_link_existing_user(clien
 
 
 @pytest.mark.asyncio
+async def test_neon_profile_error_does_not_fall_through_to_clerk(client, monkeypatch):
+    unique_id = uuid4().hex[:8]
+    email = f"unverified_{unique_id}@example.com"
+    registration = await client.post("/auth/register", json={
+        "username": f"unverified_{unique_id}",
+        "email": email,
+        "full_name": "Existing User",
+        "password": "StrongPass#123",
+    })
+    assert registration.status_code == 201, registration.text
+
+    async def verify_neon_token(token: str) -> dict:
+        return {
+            "sub": f"neon_user_{unique_id}",
+            "email": email,
+            "email_verified": False,
+        }
+
+    async def reject_clerk_fallback(token: str) -> dict:
+        pytest.fail("A verified Neon token's profile error must not trigger Clerk fallback.")
+
+    monkeypatch.setattr("app.core.dependencies.verify_neon_token", verify_neon_token)
+    monkeypatch.setattr("app.core.dependencies.verify_clerk_token", reject_clerk_fallback)
+    response = await client.get(
+        "/auth/me",
+        headers={"Authorization": "Bearer valid-neon-token"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == (
+        "Verify your Neon Auth email before linking this existing account."
+    )
+
+
+@pytest.mark.asyncio
 async def test_neon_identity_links_existing_user_with_legacy_password(client, monkeypatch):
     unique_id = uuid4().hex[:8]
     email = f"link_{unique_id}@example.com"

@@ -6,10 +6,10 @@
 |---|---|---|
 | Vercel build-time Neon Auth failure | FIXED AND TESTED | A dotenv-free production build succeeds with the two Neon Auth runtime variables absent. |
 | Neon Auth runtime configuration | FIXED AND TESTED | Missing configuration returns HTTP 500; no success fallback is used. A local authenticated fixture returns HTTP 200. |
-| Authenticated opportunity flows | FIXED AND TESTED | 5/5 Playwright tests pass, including unauthenticated redirect and mobile/desktop flows. |
+| Neon signup/login and authenticated opportunity flows | FIXED AND TESTED LOCALLY | Signup skips verification and redirects to login; imported accounts can be linked with the prior Qubira password. Code is not deployed. |
 | API-only startup | FIXED AND TESTED | Uvicorn starts without migrations; health, readiness, auth, dashboard, and invalid-token behavior were checked against disposable SQLite. |
 | PostgreSQL migration activation | BLOCKED | The local gate is closed. No disposable PostgreSQL server was available, so fresh and existing-schema validations remain untested. |
-| Production Vercel/Render deployment | NOT TESTED | No live settings, databases, logs, or deployments were accessed. |
+| Production Vercel/Render app deployment | NOT TESTED | Neon Auth production verification/trusted-origin settings were configured, but app code was not deployed and live login was not tested. |
 | Production dependency audit | BLOCKED | `npm audit --omit=dev` reports 8 vulnerabilities; no blanket or forced upgrades were applied. |
 
 ## Vercel build failure
@@ -100,13 +100,18 @@ invalid login. No live Render settings were read or changed.
 
 The earlier four browser failures were caused by missing authenticated-session setup, not by authorization being disabled. The new browser suite obtains a session from a local test-only auth fixture, mocks only the application API boundary, retains the actual Neon Auth middleware and protected-route behavior, and explicitly tests an unauthenticated redirect.
 
-`npm run test:e2e`: exit code 0, **5 passed**:
+The expanded browser suite also verifies signup without email verification, redirection to `/login`, successful sign-in, and imported-account linking with the previous Qubira password. These flows use a local test fixture; they do not prove a live production sign-up.
 
-- unauthenticated visitor is redirected to sign-in;
-- authenticated student discovers and filters listings, opens details, saves, and applies at 360, 390, and 430 pixel widths;
-- desktop listing layout remains usable.
+Validation results:
 
-Frontend checks: `npm test` **17 passed**, `npx tsc --noEmit` passed, and `npm run lint` passed with five existing `<img>` optimization warnings and zero errors.
+- Backend `tests/api/test_neon_auth.py`: **7 passed**.
+- Frontend `npm test`: **19 passed**; `npx tsc --noEmit` passed; production build passed.
+- `npm run lint`: zero errors and five existing `<img>` optimization warnings.
+- Full Playwright suite with one worker: **8 passed**. An earlier three-worker run had a 30-second timeout at 360px after successful submission; the full serial rerun passed, including that viewport. The signup/login and imported-account-linking tests passed in both runs.
+
+Neon production Auth is configured with email verification disabled, and `https://www.qubira.in` is trusted. The production branch contains one `neondb` database; the separate validation branch also contains a `neondb` clone. Auth data is in the production database's `neon_auth` schema, not a second production database. The validation branch has not been deleted.
+
+The application code changes have not been deployed to Vercel or Render, and no live user signup or login has been performed. Deploy the reviewed code and configure matching Neon Auth runtime variables before attempting live verification.
 
 ## Render migration and startup findings
 

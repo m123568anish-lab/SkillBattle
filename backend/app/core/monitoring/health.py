@@ -50,6 +50,12 @@ async def _database_readiness_response() -> JSONResponse:
     migration_status = (
         "current"
         if connection_ready
+        else "incompatible"
+        if report.get("state_errors")
+        or report.get("missing_applied_tables")
+        or report.get("pending_table_conflicts")
+        or current_revision in (None, "<invalid>")
+        or repository_head is None
         else "pending"
         if current_revision != repository_head
         else "incompatible"

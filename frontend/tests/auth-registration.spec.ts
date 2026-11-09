@@ -3,8 +3,19 @@ import { expect, test } from "@playwright/test";
 test("signup skips email verification, redirects to login, and allows sign-in", async ({ page }) => {
   const email = "new-student@example.com";
   const password = "StrongPass123!";
+  let loginStarted = false;
+  let loginRequestHadToken = false;
+  let linkRequestCount = 0;
   await page.route("**/api/v1/**", (route) => {
-    if (new URL(route.request().url()).pathname.endsWith("/auth/me")) {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/auth/me")) {
+      const authorization = route.request().headers().authorization;
+      if (loginStarted) {
+        loginRequestHadToken ||= authorization === "Bearer e2e.access.signature";
+      }
+      if (authorization !== "Bearer e2e.access.signature") {
+        return route.fulfill({ status: 401, json: { detail: "Not authenticated" } });
+      }
       return route.fulfill({
         json: {
           id: "e2e-app-user",
@@ -15,6 +26,13 @@ test("signup skips email verification, redirects to login, and allows sign-in", 
           is_verified: true,
           onboarding_completed: true,
         },
+      });
+    }
+    if (path.endsWith("/auth/neon/link")) {
+      linkRequestCount += 1;
+      return route.fulfill({
+        status: route.request().headers().authorization === "Bearer e2e.access.signature" ? 200 : 401,
+        json: { message: "Neon identity linked successfully." },
       });
     }
     return route.fulfill({ json: {} });
@@ -34,17 +52,24 @@ test("signup skips email verification, redirects to login, and allows sign-in", 
 
   await page.getByLabel("Email address").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
+  loginStarted = true;
   await page.getByRole("button", { name: "Sign in" }).click();
 
   await expect(page).toHaveURL(/\/dashboard$/);
+  expect(loginRequestHadToken).toBe(true);
+  expect(linkRequestCount).toBe(0);
 });
 
 test("links an imported account with its previous password after Neon sign-in", async ({ page }) => {
   let linked = false;
+  let linkRequestHadToken = false;
   await page.route("**/api/v1/**", async (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/auth/me")) {
       if (!linked) return route.fulfill({ status: 401, json: { detail: "Invalid authentication token." } });
+      if (route.request().headers().authorization !== "Bearer e2e.access.signature") {
+        return route.fulfill({ status: 401, json: { detail: "Not authenticated" } });
+      }
       return route.fulfill({
         json: {
           id: "legacy-app-user",
@@ -58,8 +83,10 @@ test("links an imported account with its previous password after Neon sign-in", 
       });
     }
     if (path.endsWith("/auth/neon/link")) {
-      if (route.request().postDataJSON().password === "OldQubira#123") {
+      const hasToken = route.request().headers().authorization === "Bearer e2e.access.signature";
+      if (hasToken && route.request().postDataJSON().password === "OldQubira#123") {
         linked = true;
+        linkRequestHadToken = true;
         return route.fulfill({ json: { message: "Neon identity linked successfully." } });
       }
       return route.fulfill({
@@ -80,4 +107,5 @@ test("links an imported account with its previous password after Neon sign-in", 
   await page.getByRole("button", { name: "Sign in" }).click();
 
   await expect(page).toHaveURL(/\/dashboard$/);
+  expect(linkRequestHadToken).toBe(true);
 });

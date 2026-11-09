@@ -15,6 +15,7 @@ from app.database.migration_infrastructure.migration_coordinator import (
     PostgreSQLMigrationOwnership,
 )
 from app.database.migration_infrastructure.schema_manifest import (
+    MANIFEST_FORMAT_VERSION,
     build_schema_manifest,
     compare_schema_manifests,
     manifest_fingerprint,
@@ -93,6 +94,10 @@ def load_verified_profile(
         ("source", source_manifest),
         ("target", target_manifest),
     ):
+        if manifest.get("format_version") != MANIFEST_FORMAT_VERSION:
+            raise CompatibilityHarnessError(
+                f"The {label} schema manifest uses an unsupported format."
+            )
         recorded_fingerprint = document.get(f"{label}_manifest_sha256")
         if (
             not isinstance(recorded_fingerprint, str)
@@ -100,6 +105,11 @@ def load_verified_profile(
         ):
             raise CompatibilityHarnessError(
                 f"The {label} schema manifest fingerprint is missing or invalid."
+            )
+        comparison = compare_schema_manifests(manifest, manifest)
+        if not comparison["compatible"]:
+            raise CompatibilityHarnessError(
+                f"The {label} schema manifest is incomplete or contains unsupported sections."
             )
         engine = manifest.get("engine")
         if not isinstance(engine, dict) or engine.get("dialect") != "postgresql":
@@ -161,12 +171,11 @@ def load_verified_profile(
     ):
         engine = manifest["engine"]
         version = engine.get("server_version")
-        default_schema = engine.get("default_schema")
         if (
             not isinstance(version, list)
             or len(version) < 2
             or f"{version[0]}.{version[1]}" != server_version
-            or default_schema != schema_name
+            or manifest.get("schema") != schema_name
         ):
             raise CompatibilityHarnessError(
                 f"The {label} manifest does not match the profile server and schema."

@@ -4,11 +4,18 @@
 
 Alembic revisions live in `backend/alembic/versions`; `backend/alembic/env.py` uses the synchronous SQLAlchemy URL resolved by `app.database.database`. SQLAlchemy model metadata is imported from `app.models`. SQLite uses the synchronous `pysqlite` driver for migrations, while application async sessions use `aiosqlite`; PostgreSQL migration connections use the synchronous Psycopg 3 driver and async application sessions use `asyncpg`.
 
-The Render service's start command is `python -u run_migrations.py && exec uvicorn app.main:app --host 0.0.0.0 --port $PORT`. The migration runner rejects ambiguous revision metadata, missing tables from already-recorded table-creation revisions, pending table-level conflicts, and model/schema drift at the current head before applying Alembic. Application lifespan no longer creates tables outside Alembic. The container entrypoint uses this runner and fails closed on migration errors.
+The Render services and container entrypoints start Uvicorn without running
+migrations. The root Render configuration checks `/health` (liveness-only),
+while the nested frontend Render configuration checks `/ready` (readiness).
+Schema changes are a separate operation and must not be added to API startup.
+The coordinated legacy runner rejects PostgreSQL before acquiring a database
+connection until the new epoch and existing-schema gates are reviewed and
+tested. Direct online or offline Alembic execution remains blocked unless
+invoked through the runner's ownership lease.
 
 ## Revision graph
 
-There are 26 revisions, no branch labels, and one repository head:
+There are 29 legacy revisions, no branch labels, and one repository head:
 
 ```text
 dd495117949b
@@ -25,6 +32,15 @@ dd495117949b
                -> 6e1c2d3f4a5b -> 7a2b1c4d9e8f ───────────────┤
                                                                v
                                                      47292a2a50d2
+                                                          |
+                                                          v
+                                                     a14c6e8d2b37
+                                                          |
+                                                          v
+                                                     c9b0f2d5a713
+                                                          |
+                                                          v
+                                                     d1f5a8e7c2b4 (head)
 ```
 
 `a9e4c1b7d602` merges three parents. `47292a2a50d2` merges `b8f2d4e6a901` and `7a2b1c4d9e8f` and performs no schema operation.
@@ -69,6 +85,9 @@ The individual revisions are authoritative for complete operation details. The a
 | `6e1c2d3f4a5b` (`f1a2b3c4d5e6`) | Conditionally creates `daily_practice_sessions` with user/challenge/problem/submission FKs, unique user/date, and user/date/problem/status indexes. | Conditionally drops the table. |
 | `7a2b1c4d9e8f` (`6e1c2d3f4a5b`) | Unconditionally creates placement companies (unique name and name/category indexes), tracks (company cascade FK, company/role indexes), and rounds (track cascade and assessment `SET NULL` FKs, track index). | Drops the three tables. Existing same-named tables cause failure before migration completion. |
 | `47292a2a50d2` (merge of `7a2b1c4d9e8f`, `b8f2d4e6a901`) | No schema operations. | No schema operations. |
+| `a14c6e8d2b37` (`47292a2a50d2`) | Adds Neon identity columns and indexes to users. | Historical revision; see its source for exact behavior. |
+| `c9b0f2d5a713` (`a14c6e8d2b37`) | Represents the assessment-submission composite index in history. | Historical revision; it does not prove that a live database has the described index. |
+| `d1f5a8e7c2b4` (`c9b0f2d5a713`) | Reconciles battle-room ownership columns and related indexes. | The conditional reconciliation is not an approved baseline or adoption profile. |
 
 ## Fresh installation status and procedure
 
@@ -76,15 +95,28 @@ The individual revisions are authoritative for complete operation details. The a
 
 Until a versioned bootstrap architecture is separately designed and approved, do not claim a fresh database is initialized by `alembic upgrade head`, `create_all()`, or `stamp head`. The safe behavior is to stop with a diagnostic and preserve the database. A complete replacement/bootstrap design must retain a valid one-head graph and explicitly define how databases already on every historical revision converge; no such migration is provided by this phase.
 
-Application startup no longer calls `init_db()`. Once an approved bootstrap path exists, operators should use the repository's migration runner before starting the API:
-
-```powershell
-cd backend
-python -m app.database.migration_preflight
-python run_migrations.py
-```
+Application startup does not call `init_db()` or the migration runner. The
+legacy runner requires explicit `--execute`; SQLite still requires a verified
+maintenance-window lease, while PostgreSQL remains blocked. No fresh-install
+baseline or supported existing-database adoption path is available.
 
 At present, the runner will deliberately refuse a clean database if planned table operations conflict with its inspected state. The preflight command is diagnostic; `eligible_for_migration: false` is a stop condition, not an instruction to stamp or bypass revisions.
+
+`app.database.init_db` is restricted to the isolated test harness
+(`QUBIRA_TEST_MODE=1` and `ENVIRONMENT=test`). Its SQLite target must be a file
+under the system temporary directory; PostgreSQL targets must be loopback
+databases named `qubira_test_*`. Model-based `create_all()` in those tests is
+not migration replay and must never be used to establish application history.
+Readiness rejects any epoch control/version objects through the legacy
+preflight; epoch-specific readiness remains unavailable because the epoch has
+no revisions or validated transition state machine.
+
+The static SQLAlchemy/migration inventory is maintained at
+[`PHASE_3_2K_MODEL_AND_MIGRATION_INVENTORY.json`](../../docs/database/PHASE_3_2K_MODEL_AND_MIGRATION_INVENTORY.json).
+It inventories 77 registered tables and 29 legacy revisions without executing
+migrations. The PostgreSQL catalog manifest covers the documented object
+sections, but is not a complete database dependency or effective-privilege
+model; see the Phase 3.2K report for its exact coverage gaps.
 
 ## Existing database upgrade procedure
 
@@ -95,7 +127,12 @@ At present, the runner will deliberately refuse a clean database if planned tabl
 5. Apply only a reviewed migration plan to a disposable restored copy first. Verify schema, row counts, foreign keys, unique constraints, and application behavior.
 6. Production application requires separate explicit approval, a verified backup/recovery plan, and a maintenance window.
 
-The inspected local database is at `b8f2d4e6a901`, while the repository has one head, `47292a2a50d2`. Read-only preflight found 26 SQLAlchemy metadata differences and seven pending `CREATE TABLE` collisions: `quest_map_levels`, `quest_progress`, `password_reset_tokens`, `xp_ledger`, and the three placement tables. In particular, `company_skill_requirements.company_id` is `VARCHAR(36)` locally but `INTEGER` in the model. The placement migration creates its tables without existence guards. The runner detects these conflicts and does not stamp the missing revision; the local database is not eligible for automatic upgrade. Types, nullability, defaults, indexes, constraints, and foreign keys require explicit reconciliation before any upgrade.
+Prior reports recorded a local database at `b8f2d4e6a901` with schema
+differences and placement-table conflicts. This phase did not inspect that
+database, and those historical observations are not an approved schema profile
+or evidence of its present state. Existing-database support remains blocked
+until an operator-approved, sanitized profile is supplied and replayed on
+disposable PostgreSQL.
 
 ## Migration preflight
 
@@ -113,7 +150,11 @@ Preflight does not create tables, alter schema, stamp revisions, insert or delet
 
 SQLite and PostgreSQL differ in DDL transaction semantics, alter-column support, autoincrement behavior, JSON representation, booleans, and foreign-key enforcement. The migration graph contains a direct `users.full_name` type alteration, batch-style operations in `b8f2d4e6a901`, JSON/Boolean server defaults, and a PostgreSQL-specific cast. SQLite may require Alembic batch table rebuilds for some alterations; those rebuilds must be tested against a disposable copy with representative data.
 
-All SQLite integration tests must point to a newly-created disposable file. Preserve foreign-key checks and use synthetic records only. Never infer that a migration is PostgreSQL-safe from SQLite tests. A disposable PostgreSQL service was not available for this phase, and no Neon connection was made.
+All SQLite integration tests must point to a newly-created disposable file.
+Preserve foreign-key checks and use synthetic records only. Never infer that a
+migration is PostgreSQL-safe from SQLite tests. PostgreSQL 18.6 ownership and
+API-only checks have run on a disposable loopback cluster, but the legacy or
+epoch migration graph has not been replayed against PostgreSQL.
 
 ## Backup, recovery, and rollback
 
@@ -125,7 +166,14 @@ All SQLite integration tests must point to a newly-created disposable file. Pres
 
 ## Production deployment
 
-The current Render start command runs `run_migrations.py` before Uvicorn and must remain fail-closed. No Render, Vercel, Neon, or UptimeRobot settings were inspected or changed in this phase. Do not deploy the migration runner changes until the historical fresh-install issue and the existing placement-table reconciliation have a reviewed, tested resolution.
+Render and both tracked container entrypoints now start the API without
+executing migrations. The root Render service checks liveness at `/health`;
+the nested service checks readiness at `/ready`. This difference is left
+unchanged pending an operator decision about whether the root service should
+be gated on database readiness. No production environment values were read or
+changed, and no deployment was performed. Keep PostgreSQL migration execution
+blocked until the epoch baseline, adoption evidence, ownership, and recovery
+gates pass.
 
 ## Prohibited operations
 

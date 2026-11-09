@@ -41,6 +41,10 @@ from app.database.migration_preflight import (
     _compare_server_default,
     compare_model_schema,
 )
+from app.database.migration_state import MigrationStateError
+from app.database.migration_infrastructure.schema_manifest import (
+    build_schema_manifest,
+)
 import run_migrations
 
 
@@ -76,6 +80,35 @@ def test_postgresql_lock_excludes_competitor_and_releases_after_success() -> Non
 
     with acquire_postgresql_migration_ownership(_POSTGRESQL_TEST_URL_OBJ) as owner:
         assert owner.is_active
+
+
+def test_postgresql_ownership_verifies_database_identity_and_backend_pid() -> None:
+    assert _POSTGRESQL_TEST_URL_OBJ is not None
+    with acquire_postgresql_migration_ownership(_POSTGRESQL_TEST_URL_OBJ) as owner:
+        database_name, user_name, backend_pid = owner.connection.execute(
+            text("SELECT current_database(), current_user, pg_backend_pid()")
+        ).one()
+        assert database_name == owner.database_identity[2]
+        assert user_name == owner.database_identity[3]
+        assert backend_pid == owner.backend_pid
+
+        identity = owner.database_identity
+        owner.database_identity = (
+            identity[0],
+            identity[1],
+            "qubira_test_wrong_identity",
+            identity[3],
+        )
+        with pytest.raises(MigrationCoordinationError, match="different database identity"):
+            owner.assert_connection(owner.connection)
+        owner.database_identity = identity
+
+        pid = owner.backend_pid
+        owner.backend_pid = pid + 1
+        with pytest.raises(MigrationCoordinationError, match="changed its server session"):
+            owner.assert_connection(owner.connection)
+        owner.backend_pid = pid
+        owner.assert_connection(owner.connection)
 
 
 def test_postgresql_lock_releases_after_migration_exception() -> None:
@@ -223,46 +256,60 @@ def test_schema_preflight_uses_the_owned_postgresql_connection() -> None:
         owner.connection.commit()
 
 
-def test_fresh_postgresql_schema_bootstrap_stamps_current_head(
-    monkeypatch,
-) -> None:
+def test_empty_postgresql_legacy_database_refuses_without_bootstrap() -> None:
     assert _POSTGRESQL_TEST_URL_OBJ is not None
-    schema_name = f"qubira_bootstrap_{uuid.uuid4().hex}"
+    schema_name = f"qubira_test_empty_{uuid.uuid4().hex}"
     config = Config(str(BACKEND_ROOT / "alembic.ini"))
     script = ScriptDirectory.from_config(config)
     with acquire_postgresql_migration_ownership(_POSTGRESQL_TEST_URL_OBJ) as owner:
-        monkeypatch.setattr(database_module, "engine", owner.connection.engine)
-        monkeypatch.setattr(run_migrations, "engine", owner.connection.engine)
-        monkeypatch.setattr(settings, "DATABASE_URL", str(_POSTGRESQL_TEST_URL_OBJ))
-        monkeypatch.setattr(
-            settings,
-            "MIGRATION_DATABASE_URL",
-            str(_POSTGRESQL_TEST_URL_OBJ),
-        )
         owner.connection.execute(
             text(f'CREATE SCHEMA "{schema_name}"')
         )
         owner.connection.commit()
         owner.connection.execute(text(f'SET search_path TO "{schema_name}"'))
         owner.connection.commit()
+        statements: list[str] = []
+
+        def capture_sql(
+            _connection,
+            _cursor,
+            statement,
+            _parameters,
+            _context,
+            _executemany,
+        ):
+            statements.append(statement.strip().lower())
+
+        event.listen(owner.connection.engine, "before_cursor_execute", capture_sql)
         try:
-            run_migrations._bootstrap_empty_postgresql_database(
-                owner.connection,
-                script,
-                owner,
-            )
-            revision = owner.connection.execute(
-                text("SELECT version_num FROM alembic_version")
-            ).scalar_one()
-            assert revision == script.get_current_head()
-            assert compare_model_schema(owner.connection) == []
-            owner.connection.commit()
+            with pytest.raises(
+                MigrationStateError,
+                match="no supported fresh-install baseline",
+            ):
+                run_migrations._run_migrations_on_connection(
+                    owner.connection,
+                    config,
+                    script,
+                    owner,
+                    {},
+                )
         finally:
+            event.remove(
+                owner.connection.engine,
+                "before_cursor_execute",
+                capture_sql,
+            )
             if owner.connection.in_transaction():
                 owner.connection.rollback()
             owner.connection.execute(text("SET search_path TO public"))
             owner.connection.execute(text(f'DROP SCHEMA "{schema_name}" CASCADE'))
             owner.connection.commit()
+
+        assert not any(
+            statement.startswith("create table")
+            or statement.startswith("insert into alembic_version")
+            for statement in statements
+        )
 
 
 def test_json_comparison_and_index_adoption_are_non_destructive() -> None:
@@ -363,6 +410,218 @@ def test_json_comparison_and_index_adoption_are_non_destructive() -> None:
         }
         assert "ix_assessment_q_sub_user_created" in index_names_after_downgrade
         connection.rollback()
+
+
+def test_postgresql_manifest_captures_catalog_objects_and_is_stable() -> None:
+    assert _POSTGRESQL_TEST_URL_OBJ is not None
+    schema_name = f"qubira_test_manifest_{uuid.uuid4().hex}"
+    reference_table = f"phase32k_reference_{uuid.uuid4().hex}"
+    with acquire_postgresql_migration_ownership(_POSTGRESQL_TEST_URL_OBJ) as owner:
+        connection = owner.connection
+        connection.execute(text(f'CREATE SCHEMA "{schema_name}"'))
+        connection.execute(
+            text(f'CREATE TABLE public."{reference_table}" (id integer PRIMARY KEY)')
+        )
+        connection.execute(
+            text(f'CREATE TYPE "{schema_name}".mood AS ENUM (\'ready\', \'running\')')
+        )
+        connection.execute(
+            text(
+                f'CREATE DOMAIN "{schema_name}".positive_int AS integer '
+                "CHECK (VALUE > 0)"
+            )
+        )
+        connection.execute(
+            text(
+                f'CREATE TABLE "{schema_name}".catalog_items ('
+                f'id integer PRIMARY KEY, '
+                f'metric "{schema_name}".positive_int NOT NULL, '
+                f'mood "{schema_name}".mood NOT NULL, title text)'
+            )
+        )
+        connection.execute(
+            text(
+                f'CREATE INDEX ix_phase32k_catalog_title ON "{schema_name}".catalog_items '
+                '(lower(title)) WHERE title IS NOT NULL'
+            )
+        )
+        connection.execute(
+            text(
+                f'ALTER TABLE "{schema_name}".catalog_items ENABLE ROW LEVEL SECURITY'
+            )
+        )
+        connection.execute(
+            text(
+                f'CREATE POLICY catalog_positive ON "{schema_name}".catalog_items '
+                'USING (metric > 0) WITH CHECK (metric > 0)'
+            )
+        )
+        connection.execute(
+            text(
+                f'CREATE MATERIALIZED VIEW "{schema_name}".catalog_summary AS '
+                f'SELECT mood, count(*) AS item_count '
+                f'FROM "{schema_name}".catalog_items GROUP BY mood'
+            )
+        )
+        connection.execute(
+            text(
+                f'CREATE UNIQUE INDEX ix_phase32k_catalog_summary '
+                f'ON "{schema_name}".catalog_summary (mood)'
+            )
+        )
+        connection.execute(
+            text(
+                f'CREATE TABLE "{schema_name}".partitioned_items ('
+                'id integer NOT NULL, payload text) PARTITION BY RANGE (id)'
+            )
+        )
+        connection.execute(
+            text(
+                f'CREATE TABLE "{schema_name}".partitioned_items_low '
+                f'PARTITION OF "{schema_name}".partitioned_items '
+                'FOR VALUES FROM (0) TO (100)'
+            )
+        )
+        connection.execute(
+            text(f'CREATE TABLE "{schema_name}".inheritance_parent (id integer)')
+        )
+        connection.execute(
+            text(
+                f'CREATE TABLE "{schema_name}".inheritance_child () '
+                f'INHERITS ("{schema_name}".inheritance_parent)'
+            )
+        )
+        connection.execute(
+            text(
+                f'CREATE TABLE "{schema_name}".external_refs ('
+                f'id integer PRIMARY KEY, external_id integer REFERENCES '
+                f'public."{reference_table}" (id))'
+            )
+        )
+        connection.execute(
+            text(f'CREATE SEQUENCE "{schema_name}".catalog_sequence')
+        )
+        connection.execute(
+            text(
+                f'ALTER SEQUENCE "{schema_name}".catalog_sequence '
+                f'OWNED BY "{schema_name}".catalog_items.id'
+            )
+        )
+        connection.execute(
+            text(
+                f"CREATE FUNCTION \"{schema_name}\".manifest_probe() "
+                "RETURNS integer LANGUAGE sql IMMUTABLE AS 'SELECT 1'"
+            )
+        )
+        connection.execute(
+            text(
+                f"CREATE FUNCTION \"{schema_name}\".manifest_trigger() "
+                "RETURNS trigger LANGUAGE plpgsql AS "
+                "'BEGIN RETURN NEW; END'"
+            )
+        )
+        connection.execute(
+            text(
+                f'CREATE TRIGGER phase32k_catalog_trigger BEFORE UPDATE '
+                f'ON "{schema_name}".catalog_items FOR EACH ROW '
+                f'EXECUTE FUNCTION "{schema_name}".manifest_trigger()'
+            )
+        )
+        connection.execute(
+            text(
+                f'GRANT SELECT ON "{schema_name}".catalog_items TO PUBLIC'
+            )
+        )
+        connection.execute(
+            text(
+                f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" '
+                'GRANT SELECT ON TABLES TO PUBLIC'
+            )
+        )
+        connection.commit()
+
+        try:
+            first = build_schema_manifest(connection, schema=schema_name)
+            second = build_schema_manifest(connection, schema=schema_name)
+
+            assert first["sha256"] == second["sha256"]
+            assert first["schema"] == schema_name
+            assert first["types"]
+            positive_domain = next(
+                item for item in first["types"] if item["name"] == "positive_int"
+            )
+            assert positive_domain["kind"] == "d"
+            assert positive_domain["domain_constraints"]
+            mood = next(item for item in first["types"] if item["name"] == "mood")
+            assert mood["enum_labels"] == ["ready", "running"]
+            assert any("manifest_probe()" in item["name"] for item in first["routines"])
+            assert any(
+                item["name"] == "catalog_items.catalog_positive"
+                for item in first["policies"]
+            )
+            assert {
+                (item["enabled"], item["forced"])
+                for item in first["row_security"]
+                if item["name"] == "catalog_items"
+            } == {(True, False)}
+            assert any(
+                item["table"] == "catalog_items"
+                and item["name"] == "phase32k_catalog_trigger"
+                for item in first["triggers"]
+            )
+            assert any(
+                item["name"] == "catalog_summary.ix_phase32k_catalog_summary"
+                and item["is_unique"]
+                for item in first["materialized_view_indexes"]
+            )
+            assert any(
+                item["name"] == "partitioned_items"
+                for item in first["partitioned_tables"]
+            )
+            assert any(
+                item["name"] == "partitioned_items_low"
+                for item in first["partitions"]
+            )
+            assert not any(
+                item["parent"] == "inheritance_parent"
+                for item in first["partitions"]
+            )
+            assert any(
+                item["owned_by_table"] == "catalog_items"
+                and item["owned_by_column"] == "id"
+                for item in first["sequences"]
+            )
+            assert any(
+                item["grantee"] == "PUBLIC"
+                and item["privilege_type"] == "SELECT"
+                for item in first["privileges"]
+            )
+            assert any(
+                item["schema"] == schema_name
+                and item["object_kind"] == "relation"
+                and item["grantee"] == "PUBLIC"
+                and item["privilege_type"] == "SELECT"
+                for item in first["default_privileges"]
+            )
+            assert any(
+                item["referred_schema"] == "public"
+                for item in first["cross_schema_foreign_keys"]
+            )
+            expression_index = next(
+                item
+                for table in first["tables"]
+                if table["name"] == "catalog_items"
+                for item in table["indexes"]
+                if item["name"] == "ix_phase32k_catalog_title"
+            )
+            assert any("lower" in expression for expression in expression_index["expressions"])
+            assert "postgresql_where" in expression_index["dialect_options"]
+        finally:
+            if connection.in_transaction():
+                connection.rollback()
+            connection.execute(text(f'DROP SCHEMA "{schema_name}" CASCADE'))
+            connection.execute(text(f'DROP TABLE public."{reference_table}"'))
+            connection.commit()
 
 
 def test_postgresql_session_termination_releases_advisory_lock() -> None:

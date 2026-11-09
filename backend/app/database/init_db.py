@@ -16,9 +16,11 @@ definitions are registered.
 
 import logging
 import os
+import tempfile
+from pathlib import Path
 
 from sqlalchemy import inspect, text
-from sqlalchemy.engine import make_url
+from sqlalchemy.engine import URL, make_url
 
 from app.database.base import Base
 from app.database.database import engine
@@ -115,84 +117,109 @@ __all__ = [
 
 def init_db(*, database_url: str) -> None:
     """
-    Create all database tables.
+    Create model tables only for an explicitly isolated test database.
 
     Models are imported above to ensure they're registered
-    with Base.metadata before table creation.
+    with Base.metadata before test-only table creation. This is not a
+    migration or application-database bootstrap path.
     """
     target_url = make_url(database_url)
     if target_url.drivername in {"postgres", "postgresql"}:
         target_url = target_url.set(drivername=engine.url.drivername)
     if target_url != engine.url:
         raise ValueError("init_db requires the explicit URL matching the configured database engine.")
+    _require_disposable_test_database(target_url)
 
     logger.info("Creating database tables from registered models...")
     try:
-        # If using a SQLite file-based DB, remove the existing file so
-        # `create_all` creates a fresh schema matching the models. This
-        # helps tests run against an up-to-date schema during development.
-        try:
-            # Only remove the SQLite DB file when explicitly requested via
-            # the `RESET_DB` setting. This avoids accidental data loss when
-            # the app restarts in development or with auto-reload enabled.
-            from app.core.config import get_settings
+        # Only remove a SQLite file when the isolated test harness explicitly
+        # requests it; failures must not fall through to a partial bootstrap.
+        from app.core.config import get_settings
 
-            settings = get_settings()
-
-            url = engine.url
-            if url.drivername.startswith("sqlite"):
-                db_path = url.database
-                if (
-                    getattr(settings, "RESET_DB", False)
-                    and db_path
-                    and db_path != ":memory:"
-                    and os.path.exists(db_path)
-                ):
-                    logger.info(f"Removing existing SQLite DB at {db_path} (RESET_DB=True)")
-                    os.remove(db_path)
-                else:
-                    logger.info("Skipping SQLite DB removal (RESET_DB is False)")
-        except Exception:
-            # If we can't determine or remove the file, continue and let create_all handle errors
-            pass
-
-        try:
-            inspector = inspect(engine)
-            existing_tables = set(inspector.get_table_names())
-            schema_initialized = "users" in existing_tables and "questions" in existing_tables
-
-            if not schema_initialized:
-                logger.info("Initializing new database schema...")
-                Base.metadata.create_all(bind=engine)
-                _repair_users_table()
-                _repair_achievements_table()
-                _repair_profile_preferences()
-                _repair_dashboard_tables()
-                _repair_college_tables()
-                _repair_company_tables()
-                _repair_battle_tables()
-                _repair_streak_table()
-                logger.info(f"✅ Tables created: {list(Base.metadata.tables.keys())}")
+        settings = get_settings()
+        url = engine.url
+        if url.drivername.startswith("sqlite"):
+            db_path = url.database
+            if (
+                getattr(settings, "RESET_DB", False)
+                and db_path
+                and db_path != ":memory:"
+                and os.path.exists(db_path)
+            ):
+                logger.info("Removing isolated SQLite test DB at %s", db_path)
+                os.remove(db_path)
             else:
-                Base.metadata.create_all(bind=engine)
-                _repair_company_tables()
-                _repair_streak_table()
-                logger.info("⚡ Database schema already initialized (%d tables found); verified all registered model tables exist.", len(existing_tables))
+                logger.info("Skipping SQLite DB removal (RESET_DB is False)")
 
-        except Exception as e:
-            # Some DB backends may raise an OperationalError on concurrent create_all
-            # (e.g., multiple reload processes trying to create the same table).
-            # If the error indicates the table already exists, log a warning and continue.
-            import sqlalchemy
+        inspector = inspect(engine)
+        existing_tables = set(inspector.get_table_names())
+        schema_initialized = "users" in existing_tables and "questions" in existing_tables
 
-            if isinstance(e, sqlalchemy.exc.OperationalError) and "already exists" in str(e):
-                logger.warning(f"Table already exists (ignored): {e}")
-            else:
-                logger.error(f"❌ Failed to create tables: {e}", exc_info=True)
-                raise
+        if not schema_initialized:
+            logger.info("Initializing new database schema...")
+            Base.metadata.create_all(bind=engine)
+            _repair_users_table()
+            _repair_achievements_table()
+            _repair_profile_preferences()
+            _repair_dashboard_tables()
+            _repair_college_tables()
+            _repair_company_tables()
+            _repair_battle_tables()
+            _repair_streak_table()
+            logger.info("Tables created: %s", list(Base.metadata.tables.keys()))
+        else:
+            Base.metadata.create_all(bind=engine)
+            _repair_company_tables()
+            _repair_streak_table()
+            logger.info(
+                "Database schema already initialized (%d tables found); "
+                "verified all registered model tables exist.",
+                len(existing_tables),
+            )
     except Exception as e:
-        logger.error(f"❌ Failed to create tables: {e}", exc_info=True)
+        logger.error("Failed to create test database tables: %s", e, exc_info=True)
         raise
+
+
+def _require_disposable_test_database(database_url: URL) -> None:
+    if (
+        os.environ.get("QUBIRA_TEST_MODE") != "1"
+        or os.environ.get("ENVIRONMENT", "").casefold() != "test"
+    ):
+        raise RuntimeError(
+            "Model-based schema creation is restricted to the isolated test harness."
+        )
+
+    if database_url.get_backend_name() == "sqlite":
+        if not database_url.database or database_url.database == ":memory:":
+            raise RuntimeError("SQLite model setup requires a disposable file database.")
+        database_path = Path(database_url.database)
+        if not database_path.is_absolute():
+            database_path = Path.cwd() / database_path
+        database_path = database_path.resolve()
+        protected_database = Path(__file__).resolve().parents[3] / "skillbattle.db"
+        try:
+            database_path.relative_to(Path(tempfile.gettempdir()).resolve())
+        except ValueError as error:
+            raise RuntimeError(
+                "SQLite model setup is restricted to the system temporary directory."
+            ) from error
+        if database_path == protected_database.resolve():
+            raise RuntimeError("Model setup may not use the protected repository database.")
+        return
+
+    if database_url.get_backend_name() == "postgresql":
+        host = (database_url.host or "").strip("[]").casefold()
+        database_name = (database_url.database or "").casefold()
+        if host not in {"localhost", "127.0.0.1", "::1"} or not database_name.startswith(
+            "qubira_test_"
+        ):
+            raise RuntimeError(
+                "PostgreSQL model setup requires a disposable loopback qubira_test_ database."
+            )
+        return
+
+    raise RuntimeError("Model setup supports only isolated SQLite or PostgreSQL tests.")
 
 
 def _repair_users_table() -> None:

@@ -65,15 +65,16 @@ This document explains recommended production settings, TLS, secrets, and deploy
 
 5) Database migrations
 
-  - The backend image runs `alembic upgrade head` on startup via `entrypoint.sh`. For manual run:
-
-  ```bash
-  docker compose exec backend alembic upgrade head
-  ```
+  - API startup does not run schema creation or migrations. The nested legacy
+    backend in this folder has no coordinated migration runner, so direct
+    `alembic upgrade head` and model-based `init_db()` are disabled. Use only a
+    separately reviewed migration process after the epoch and ownership gates
+    have been implemented; neither fresh PostgreSQL installation nor existing
+    database adoption is currently supported.
 
 6) Health checks and monitoring
 
-  - Ensure `/health` and `/ready` endpoints are reachable by your load balancer.
+  - Use `/ready` for service readiness and `/health` for liveness only.
   - Configure Prometheus scraping (the project includes a Prometheus router at `/metrics`).
 
 7) Security recommendations

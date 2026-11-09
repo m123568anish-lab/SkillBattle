@@ -22,6 +22,10 @@ from app.database.migration_state import (
     find_missing_applied_tables,
     MigrationState,
 )
+from app.database.migration_infrastructure.epoch_state import (
+    EpochControlStateError,
+    assert_legacy_runner_allowed,
+)
 from app.models import Base
 
 logger = logging.getLogger(__name__)
@@ -201,6 +205,10 @@ def build_preflight_report(source_engine: Engine = application_engine) -> dict[s
                 connection.execute(text("SET TRANSACTION READ ONLY"))
             table_names = frozenset(inspect(connection).get_table_names())
             state_errors: list[str] = []
+            try:
+                assert_legacy_runner_allowed(table_names)
+            except EpochControlStateError as exc:
+                state_errors.append(str(exc))
             if len(repository_heads) != 1:
                 state_errors.append(
                     f"Repository has {len(repository_heads)} Alembic heads: {repository_heads}"

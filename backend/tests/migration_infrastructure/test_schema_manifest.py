@@ -64,7 +64,7 @@ def test_manifest_captures_schema_objects_and_stable_fingerprint(tmp_path) -> No
         first = build_schema_manifest(engine)
         second = build_schema_manifest(engine)
 
-        assert first["format_version"] == 1
+        assert first["format_version"] == 2
         assert first["sha256"] == manifest_fingerprint(first)
         assert first["sha256"] == second["sha256"]
         assert canonical_manifest_json(first) == canonical_manifest_json(second)
@@ -85,6 +85,12 @@ def test_manifest_captures_schema_objects_and_stable_fingerprint(tmp_path) -> No
         assert first["views"][0]["name"] == "account_entries"
         assert first["triggers"][0]["name"] == "entries_value_insert"
         assert first["engine"]["sqlite"]["foreign_keys"] == 1
+        assert first["types"] == []
+        assert first["routines"] == []
+        assert first["policies"] == []
+        assert first["row_security"] == []
+        assert first["materialized_view_indexes"] == []
+        assert first["partitions"] == []
     finally:
         engine.dispose()
 
@@ -138,6 +144,18 @@ def test_manifest_comparison_classifies_missing_extra_and_conflicting_objects(
             }
         )
         actual["views"] = []
+        actual["policies"] = [
+            {
+                "schema": "main",
+                "table": "entries",
+                "name": "entries.policy",
+                "permissive": "PERMISSIVE",
+                "roles": ["test"],
+                "command": "SELECT",
+                "using_expression": None,
+                "check_expression": None,
+            }
+        ]
 
         comparison = compare_schema_manifests(expected, actual)
         assert not comparison["compatible"]
@@ -145,5 +163,24 @@ def test_manifest_comparison_classifies_missing_extra_and_conflicting_objects(
             item["classification"] for item in comparison["differences"]
         }
         assert classifications == {"conflict", "extra", "missing"}
+    finally:
+        engine.dispose()
+
+
+def test_manifest_comparison_rejects_missing_or_unknown_sections(tmp_path) -> None:
+    engine = create_engine(f"sqlite:///{tmp_path / 'incomplete.db'}")
+    try:
+        _create_disposable_schema(engine)
+        expected = build_schema_manifest(engine)
+        incomplete = json.loads(canonical_manifest_json(expected))
+        del incomplete["policies"]
+        incomplete["untracked_objects"] = []
+
+        comparison = compare_schema_manifests(expected, incomplete)
+
+        assert not comparison["compatible"]
+        assert {
+            item["path"] for item in comparison["differences"]
+        } >= {"actual.policies", "actual.untracked_objects"}
     finally:
         engine.dispose()

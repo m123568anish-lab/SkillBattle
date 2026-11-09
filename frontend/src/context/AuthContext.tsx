@@ -34,11 +34,22 @@ export function AuthProvider({
 
     useEffect(() => {
         configureNeonTokenProvider(async () => {
-            const result = await authClient.token();
-            if (result.error) {
-                throw new Error(result.error.message);
+            // Bypass the cached session response because it omits Neon Auth's access-token header.
+            const sessionResult = await authClient.getSession({
+                query: { disableCookieCache: true },
+                fetchOptions: { headers: { "X-Force-Fetch": "true" } },
+            });
+            if (sessionResult.error) {
+                throw new Error(sessionResult.error.message);
             }
-            return result.data?.token ?? null;
+            const session = sessionResult.data?.session;
+            if (!session) {
+                return null;
+            }
+            if (typeof session.token !== "string" || session.token.split(".").length !== 3) {
+                throw new Error("Neon Auth session did not provide an API access token.");
+            }
+            return session.token;
         });
 
         return () => configureNeonTokenProvider(null);

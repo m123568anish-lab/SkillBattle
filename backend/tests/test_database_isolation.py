@@ -5,9 +5,11 @@ import subprocess
 import sys
 
 import pytest
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.engine import make_url
 
 from app.core.config import Settings, load_environment_file_values
+import app.database.init_db as database_init
 from app.database.init_db import init_db
 from database_isolation_support import (
     PROTECTED_SQLITE_PATH,
@@ -135,3 +137,52 @@ def test_init_db_requires_an_explicit_url():
 def test_init_db_rejects_a_database_url_that_does_not_match_the_engine():
     with pytest.raises(ValueError, match="explicit URL matching"):
         init_db(database_url="sqlite:///C:/protected/unknown.sqlite3")
+
+
+def test_init_db_requires_the_isolated_test_harness(monkeypatch):
+    monkeypatch.delenv("QUBIRA_TEST_MODE", raising=False)
+
+    with pytest.raises(RuntimeError, match="isolated test harness"):
+        init_db(database_url=TEST_DATABASE_URL)
+
+
+def test_model_bootstrap_rejects_non_loopback_postgresql(monkeypatch):
+    monkeypatch.setenv("QUBIRA_TEST_MODE", "1")
+    monkeypatch.setenv("ENVIRONMENT", "test")
+    remote_test_url = make_url(
+        "postgresql+psycopg://synthetic:synthetic@db.example.invalid/qubira_test_blocked"
+    )
+
+    with pytest.raises(RuntimeError, match="disposable loopback"):
+        database_init._require_disposable_test_database(remote_test_url)
+
+
+def test_model_bootstrap_does_not_ignore_duplicate_table_errors(monkeypatch):
+    monkeypatch.setenv("QUBIRA_TEST_MODE", "1")
+    monkeypatch.setenv("ENVIRONMENT", "test")
+    monkeypatch.setattr(
+        database_init,
+        "inspect",
+        lambda _engine: type(
+            "Inspector",
+            (),
+            {"get_table_names": lambda _self: []},
+        )(),
+    )
+    error = OperationalError(
+        "CREATE TABLE",
+        {},
+        Exception("table already exists"),
+    )
+
+    def fail_create_all(**_kwargs):
+        raise error
+
+    monkeypatch.setattr(
+        database_init.Base.metadata,
+        "create_all",
+        fail_create_all,
+    )
+
+    with pytest.raises(OperationalError, match="table already exists"):
+        init_db(database_url=TEST_DATABASE_URL)

@@ -104,7 +104,18 @@ class PostgreSQLMigrationOwnership:
             raise MigrationCoordinationError(
                 "PostgreSQL migration execution is not using its active ownership connection."
             )
-        backend_pid = connection.execute(text("SELECT pg_backend_pid()")).scalar_one()
+        database_name, user_name, backend_pid = connection.execute(
+            text("SELECT current_database(), current_user, pg_backend_pid()")
+        ).one()
+        expected_database = self.database_identity[2]
+        expected_user = self.database_identity[3]
+        if (
+            (expected_database and database_name != expected_database)
+            or (expected_user and user_name != expected_user)
+        ):
+            raise MigrationCoordinationError(
+                "The PostgreSQL ownership connection targets a different database identity."
+            )
         if backend_pid != self.backend_pid:
             raise MigrationCoordinationError(
                 "The PostgreSQL migration connection changed its server session."
@@ -159,6 +170,18 @@ def acquire_postgresql_migration_ownership(
     cleanup_error: MigrationCoordinationError | None = None
     try:
         connection = dedicated_engine.connect()
+        connected_database, connected_user, _ = connection.execute(
+            text("SELECT current_database(), current_user, pg_backend_pid()")
+        ).one()
+        expected_identity = postgresql_database_identity(url)
+        if (
+            (expected_identity[2] and connected_database != expected_identity[2])
+            or (expected_identity[3] and connected_user != expected_identity[3])
+        ):
+            raise MigrationCoordinationError(
+                "The PostgreSQL connection does not match the configured database identity."
+            )
+        connection.commit()
         deadline = time.monotonic() + timeout
         while True:
             acquired = bool(
@@ -179,13 +202,20 @@ def acquire_postgresql_migration_ownership(
                 )
             time.sleep(min(poll_interval, max(0.0, deadline - time.monotonic())))
 
-        backend_pid = int(
-            connection.execute(text("SELECT pg_backend_pid()")).scalar_one()
-        )
+        actual_database, actual_user, backend_pid = connection.execute(
+            text("SELECT current_database(), current_user, pg_backend_pid()")
+        ).one()
+        if (
+            actual_database != connected_database
+            or actual_user != connected_user
+        ):
+            raise MigrationCoordinationError(
+                "The PostgreSQL connection identity changed after lock acquisition."
+            )
         connection.commit()
         ownership = PostgreSQLMigrationOwnership(
             connection=connection,
-            database_identity=postgresql_database_identity(url),
+            database_identity=expected_identity,
             backend_pid=backend_pid,
         )
         try:

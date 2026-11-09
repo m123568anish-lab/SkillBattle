@@ -13,7 +13,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, JSON, String, func, text
+from sqlalchemy import DateTime, ForeignKey, Index, JSON, String, func, text
 
 from sqlalchemy.orm import (
     Mapped,
@@ -26,6 +26,13 @@ from app.database.base import Base
 class AuditLog(Base):
 
     __tablename__ = "audit_logs"
+    __table_args__ = (
+        Index(
+            "ix_audit_logs_organization_id",
+            "organization_type",
+            "organization_id",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(
         String(36),
@@ -50,7 +57,7 @@ class AuditLog(Base):
 
     organization_type: Mapped[str | None] = mapped_column(String(30), nullable=True)
 
-    organization_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    organization_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     entity_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
 

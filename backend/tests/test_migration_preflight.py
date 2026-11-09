@@ -12,6 +12,7 @@ from app.database.migration_preflight import (
     build_preflight_report,
 )
 from app.models.assessment_engine import AssessmentQuestionSubmission
+from app.modules.audit.model import AuditLog
 
 
 def test_assessment_submission_composite_index_is_in_model_metadata():
@@ -23,6 +24,19 @@ def test_assessment_submission_composite_index_is_in_model_metadata():
 
     assert [column.name for column in index.columns] == ["user_id", "created_at"]
     assert index.unique is False
+
+
+def test_audit_organization_index_matches_migration_definition():
+    index = next(
+        index
+        for index in AuditLog.__table__.indexes
+        if index.name == "ix_audit_logs_organization_id"
+    )
+
+    assert [column.name for column in index.columns] == [
+        "organization_type",
+        "organization_id",
+    ]
 
 
 def test_sqlite_read_only_engine_rejects_writes(tmp_path: Path):
@@ -160,6 +174,52 @@ def test_existing_placement_schema_is_reported_as_conflict_without_changes(tmp_p
             "create_table('placement_companies')" in conflict
             for conflict in report["pending_table_conflicts"]
         )
+        assert report["eligible_for_migration"] is False
+        assert before == after
+    finally:
+        source_engine.dispose()
+
+
+def test_epoch_objects_block_legacy_preflight_without_database_changes(
+    tmp_path: Path,
+):
+    database_path = tmp_path / "preflight-epoch-state.db"
+    source_engine = create_engine(f"sqlite:///{database_path.as_posix()}")
+    try:
+        with source_engine.begin() as connection:
+            connection.execute(
+                text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)")
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO alembic_version (version_num) "
+                    "VALUES ('d1f5a8e7c2b4')"
+                )
+            )
+            connection.execute(
+                text("CREATE TABLE qubira_epoch_control (id INTEGER PRIMARY KEY)")
+            )
+            connection.execute(
+                text("CREATE TABLE qubira_epoch_audit (id INTEGER PRIMARY KEY)")
+            )
+            connection.execute(
+                text(
+                    "CREATE TABLE alembic_version_epoch "
+                    "(version_num VARCHAR(32) NOT NULL)"
+                )
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO alembic_version_epoch (version_num) "
+                    "VALUES ('unverified-epoch-revision')"
+                )
+            )
+
+        before = database_path.read_bytes()
+        report = build_preflight_report(source_engine)
+        after = database_path.read_bytes()
+
+        assert any("epoch transition objects exist" in error for error in report["state_errors"])
         assert report["eligible_for_migration"] is False
         assert before == after
     finally:

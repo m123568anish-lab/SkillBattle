@@ -206,11 +206,10 @@ try {
 
     Write-Output "PostgreSQL 18.6 isolated cluster: verified (loopback only)"
     Write-Output "Disposable database identity: verified before test DDL"
-    Write-Output "Running PostgreSQL advisory-lock tests; migration bootstrap/stamp test is excluded."
+    Write-Output "Running PostgreSQL advisory-lock and migration-refusal tests."
     Set-Location $backendRoot
     & python -m pytest --confcutdir=tests/migration_infrastructure -q `
-        tests/migration_infrastructure/test_postgresql_migration_coordinator.py `
-        -k "not fresh_postgresql_schema_bootstrap_stamps_current_head"
+        tests/migration_infrastructure/test_postgresql_migration_coordinator.py
     if ($LASTEXITCODE -ne 0) {
         throw "PostgreSQL advisory-lock test suite failed."
     }
