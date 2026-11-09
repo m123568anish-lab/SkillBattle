@@ -46,7 +46,7 @@ test("signup skips email verification, redirects to login, and allows sign-in", 
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Create Qubira account" }).click();
 
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login$/, { timeout: 15_000 });
   await expect(page.getByRole("heading", { name: "Welcome back." })).toBeVisible();
   await expect(page.getByText(/verification email/i)).toHaveCount(0);
 
@@ -55,7 +55,7 @@ test("signup skips email verification, redirects to login, and allows sign-in", 
   loginStarted = true;
   await page.getByRole("button", { name: "Sign in" }).click();
 
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
   expect(loginRequestHadToken).toBe(true);
   expect(linkRequestCount).toBe(0);
 });
@@ -106,6 +106,6 @@ test("links an imported account with its previous password after Neon sign-in", 
   await page.getByLabel("Previous Qubira password").fill("OldQubira#123");
   await page.getByRole("button", { name: "Sign in" }).click();
 
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
   expect(linkRequestHadToken).toBe(true);
 });

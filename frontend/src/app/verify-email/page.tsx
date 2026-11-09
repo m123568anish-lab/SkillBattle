@@ -3,7 +3,11 @@ import VerifyEmailCard from "@/components/auth/VerifyEmailCard";
 
 export default function VerifyEmailPage() {
   return (
-    <AuthLayout>
+    <AuthLayout
+      eyebrow="Security Verification"
+      title="Verify your Qubira identity."
+      description="Protect your workspace, rank standing, and competitive match history with cryptographic email verification."
+    >
       <VerifyEmailCard />
     </AuthLayout>
   );
