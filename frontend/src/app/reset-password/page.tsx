@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import AuthLayout from "@/components/auth/AuthLayout";
-import { api } from "@/lib/api";
+import { authClient } from "@/lib/auth/client";
 
 export default function ResetPasswordPage() {
   const [token, setToken] = useState("");
@@ -26,10 +26,13 @@ export default function ResetPasswordPage() {
     }
     setLoading(true);
     try {
-      await api.post("/auth/reset-password", { token, new_password: password });
+      const result = await authClient.resetPassword({ token, newPassword: password });
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
       setMessage("Your password has been reset. You can sign in now.");
-    } catch (requestError: any) {
-      setError(requestError?.response?.data?.detail || "This reset link is invalid or expired.");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "This reset link is invalid or expired.");
     } finally {
       setLoading(false);
     }

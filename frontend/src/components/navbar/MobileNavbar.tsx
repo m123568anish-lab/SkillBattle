@@ -5,7 +5,7 @@ import { Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { navigation } from "@/lib/navigation";
-import ClerkAuthControls from "./ClerkAuthControls";
+import AuthControls from "./AuthControls";
 import { ThemeToggle } from "@/components/common/ExperienceEnhancements";
 
 export default function MobileNavbar() {
@@ -51,7 +51,7 @@ export default function MobileNavbar() {
             </Link>
           ))}
           <div className="mt-2 border-t border-[var(--border-default)] pt-3">
-            <ClerkAuthControls compact />
+            <AuthControls compact />
           </div>
         </nav>
       )}

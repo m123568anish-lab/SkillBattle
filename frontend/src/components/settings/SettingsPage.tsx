@@ -1009,7 +1009,7 @@ export default function SettingsPage() {
                         </div>
                         <div>
                           <p className="text-sm font-bold text-white">Google Account</p>
-                          <p className="text-xs text-slate-400">Single Sign-On through Clerk Auth</p>
+                          <p className="text-xs text-slate-400">Email and password authentication through Neon Auth</p>
                         </div>
                       </div>
                       <span className="rounded-full bg-white/[0.04] border border-white/[0.08] px-2.5 py-0.5 text-xs font-semibold text-slate-400">

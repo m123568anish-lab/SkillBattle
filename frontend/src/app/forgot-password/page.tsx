@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import AuthLayout from "@/components/auth/AuthLayout";
-import { api } from "@/lib/api";
+import { authClient } from "@/lib/auth/client";
+import { toast } from "react-hot-toast";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -14,10 +15,17 @@ export default function ForgotPasswordPage() {
     event.preventDefault();
     setLoading(true);
     try {
-      await api.post("/auth/forgot-password", { email });
-    } finally {
-      // The response is intentionally generic to prevent account enumeration.
+      const result = await authClient.requestPasswordReset({
+        email,
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
       setSent(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to request a password reset.");
+    } finally {
       setLoading(false);
     }
   }

@@ -1,14 +1,14 @@
 import AuthLayout from "@/components/auth/AuthLayout";
-import LoginForm from "@/components/auth/LoginForm";
+import NeonLoginForm from "@/components/auth/NeonLoginForm";
 
 export default function LoginPage() {
   return (
     <AuthLayout
       eyebrow="Returning user"
       title="Login to your Qubira workspace."
-      description="Your settings, learning progress, and role context are restored after secure authentication."
+      description="Sign in securely with your email and password."
     >
-      <LoginForm />
+      <NeonLoginForm />
     </AuthLayout>
   );
 }

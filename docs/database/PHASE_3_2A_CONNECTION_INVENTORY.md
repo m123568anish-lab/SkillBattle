@@ -2,9 +2,9 @@
 
 ## Scope and safety
 
-**Updated for Phase 3.2B.** The original Phase 3.2A observations remain
-historical; current integration status is in the tables below and the Phase
-3.2B report.
+**Updated through Phase 3.2D.** The Phase 3.2A/3.2B observations remain
+historical; the current evidence-based disposition is in the final section and
+the [Phase 3.2D report](./PHASE_3_2D_IMPLEMENTATION_REPORT.md).
 
 This is a static source inventory. The original SQLite database, environment files,
 Neon, Render, and Supabase were not opened. No scripts, migrations, or application
@@ -149,3 +149,34 @@ Docker, `postgres`, `pg_ctl`, `initdb`, and `psql` were not available in the
 environment. The required PostgreSQL major version remains unknown. No PostgreSQL
 test profile or advisory-lock implementation was executed; a disposable
 PostgreSQL environment is a prerequisite for that validation.
+
+## Phase 3.2D current status
+
+The following supersedes the earlier "not integrated" status only where noted.
+The maintenance coordinator is a runner gate; it is not an application-wide
+SQLite lock and does not prevent non-cooperating clients from opening the file.
+
+| Connection path | Current status | Ownership/lifetime and evidence | Remaining bypass or blocker |
+|---|---|---|---|
+| Legacy runner on local SQLite (`backend/run_migrations.py`) | **Partially coordinated; executable only with an injected verifier and fresh backup path.** Normal CLI invocation without a verifier refuses before opening a database connection. | Acquires the exclusive sidecar before backup/preflight, creates and verifies a new SQLite backup, reuses one SQLAlchemy connection for preflight, Alembic, and final head validation, and keeps ownership through the call. A disposable two-process test confirms a waiting legacy path checks state only after acquiring ownership and refuses synthetic epoch control state written by the first process. | There is no trusted host/process-maintenance verifier installed or CLI provider. Actual application quiescence is not established, so a migration cannot be authorized in this repository yet. |
+| Legacy Alembic environment (`backend/alembic/env.py`) | **SQLite direct Alembic access blocked unless an active coordinator lease and the same connection are supplied; PostgreSQL online execution now fails closed.** | The runner passes its leased connection through Alembic; environment verifies active lease and canonical identity. | PostgreSQL advisory lock remains unimplemented and untested; migration execution is unavailable. |
+| Epoch Alembic environment (`backend/alembic_epoch/env.py`) | **Inactive and fails closed.** Requires explicit scaffold opt-in, a revision head, and an active ownership lease. | Direct online invocation without injected ownership is rejected; current scaffold has no revisions, so no migration can execute. | There is no epoch runner, control/audit state machine, transition marker, or automatic-recovery implementation. PostgreSQL epoch execution is explicitly blocked. |
+| Application sync SQLAlchemy engine/session | **Not coordinated.** | No shared lock is held for request/session lifetime. During a maintenance migration, the external verifier must prove every process using this engine stopped and its pool disposed. | No trusted quiescence provider; the application does not itself enforce the maintenance window. |
+| Application async SQLAlchemy engine/session | **Not coordinated.** | No per-session shared lock. Application lifespan explicitly disposes the sync engine only; no awaited async-engine disposal was observed. | Detached background tasks and live requests may retain/reopen database access; process shutdown/drain controller is absent. |
+| Startup admin bootstrap | **Not coordinated; startup-only direct `AsyncSessionLocal` use.** | Awaited in FastAPI lifespan; no independent lock or shutdown task registry. | Async pool lifecycle is not explicitly disposed by the app. |
+| Battle settlement/orchestration | **Not reliably stoppable from current lifecycle code.** | `BattleOrchestrator.start_battle` creates/awaits timer work and opens `AsyncSessionLocal` for settlement. The task is launched with `asyncio.create_task` from battle service without a retained task handle. | No application-wide cancel/join/drain mechanism. Changing settlement cancellation semantics needs a separate design. |
+| WebSocket forfeit tasks | **Partially tracked, not globally drained.** | Manager stores per-player tasks and cancels them on reconnect. No app shutdown method joins/cancels all outstanding tasks. | Maintenance verifier cannot rely on app shutdown to prove task completion. |
+| Raw SQLite scripts, backups, diagnostics, and maintenance utilities | **Not coordinated.** | Direct `sqlite3.connect()` paths remain independent of the sidecar. | Each process must be stopped/disabled by a trusted host controller; no controller exists. |
+| Duplicate `frontend/backend/` tree | **Not coordinated; runtime role unresolved.** | Separate sync/async engines and Alembic environment remain possible database users. | Must determine whether deployed/launched and stop or adapt all entry points. |
+| Test-created engines | **Only new coordinator/lock tests use the exclusive lease.** Existing broad suites may use configured application fixtures. | The infrastructure suite is isolated with `--confcutdir` and uses `tmp_path` databases. | No full persistence suite or broader app suite was run in Phase 3.2D. |
+| PostgreSQL migration runners | **Blocked; runner and direct online Alembic now refuse before connecting.** | No PostgreSQL server tools were available. A no-connection test exercises refusal. | PostgreSQL major version, advisory-lock implementation, exact-connection Alembic handoff, connection-loss behavior, and competing-runner tests remain prerequisites. |
+
+Phase 3.2D added hard-link detection for existing SQLite database/sidecar files.
+The NTFS hard-link test passed. The symlink creation test remains skipped because
+Windows returned `WinError 1314`; actual symlink/junction behavior is unverified.
+
+**Acceptance remains blocked:** no production-grade process orchestrator
+provides quiescence evidence; the app cannot prove async pool/task shutdown; raw
+and duplicate-tree clients remain outside the coordinator; transition audit and
+crash recovery are not implemented; PostgreSQL coordination is not available.
+No connection path in this inventory authorizes epoch activation.

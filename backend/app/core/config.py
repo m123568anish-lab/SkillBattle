@@ -115,6 +115,8 @@ class Settings(BaseSettings):
     CLERK_JWKS_URL: str = ""
     CLERK_AUDIENCE: str = ""
     CLERK_ALLOWED_PARTIES: str = ""
+    NEON_AUTH_BASE_URL: str = ""
+    NEON_AUTH_JWKS_URL: str = ""
 
     # --------------------------------------------------
     # CORS

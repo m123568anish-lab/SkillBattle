@@ -4,9 +4,8 @@ import hashlib
 import json
 import os
 import sqlite3
-from contextlib import closing
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -22,6 +21,14 @@ from app.database.migration_infrastructure.sqlite_lock import (
 
 class MigrationCoordinationError(RuntimeError):
     """Raised when a safe SQLite maintenance window cannot be established."""
+
+
+def require_supported_migration_dialect(dialect_name: str) -> None:
+    if dialect_name != "sqlite":
+        raise MigrationCoordinationError(
+            f"Migration execution is blocked for {dialect_name!r} until its "
+            "ownership mechanism is implemented and validated."
+        )
 
 
 @dataclass(frozen=True)
@@ -73,6 +80,10 @@ def _validate_maintenance_evidence(
     *,
     now: datetime | None = None,
 ) -> None:
+    if not isinstance(evidence, MaintenanceWindowEvidence):
+        raise MigrationCoordinationError(
+            "The maintenance-window verifier returned invalid evidence."
+        )
     if not evidence.evidence_id.strip():
         raise MigrationCoordinationError(
             "Maintenance-window evidence must include a non-empty evidence ID."
@@ -137,6 +148,53 @@ def _sqlite_schema_and_counts(
     return fingerprint, tuple(counts)
 
 
+def _sqlalchemy_schema_and_counts(
+    connection: Connection,
+) -> tuple[str, tuple[tuple[str, int], ...]]:
+    schema = [
+        tuple(row)
+        for row in connection.exec_driver_sql(
+            "SELECT type, name, tbl_name, sql FROM sqlite_master "
+            "WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name, tbl_name"
+        ).all()
+    ]
+    schema_json = json.dumps(schema, ensure_ascii=True, separators=(",", ":"))
+    fingerprint = hashlib.sha256(schema_json.encode("utf-8")).hexdigest()
+
+    tables = connection.exec_driver_sql(
+        "SELECT name FROM sqlite_master "
+        "WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+    ).scalars().all()
+    counts: list[tuple[str, int]] = []
+    for table_name in tables:
+        escaped_name = table_name.replace('"', '""')
+        row_count = connection.exec_driver_sql(
+            f'SELECT COUNT(*) FROM "{escaped_name}"'
+        ).scalar_one()
+        counts.append((table_name, int(row_count)))
+    return fingerprint, tuple(counts)
+
+
+def _verify_live_database_matches_backup(
+    connection: Connection,
+    backup: SQLiteBackupReceipt,
+) -> None:
+    integrity_check = connection.exec_driver_sql("PRAGMA integrity_check").scalar_one()
+    foreign_key_violations = connection.exec_driver_sql(
+        "PRAGMA foreign_key_check"
+    ).all()
+    schema_fingerprint, row_counts = _sqlalchemy_schema_and_counts(connection)
+    if (
+        integrity_check != backup.integrity_check
+        or foreign_key_violations
+        or schema_fingerprint != backup.schema_fingerprint
+        or row_counts != backup.table_row_counts
+    ):
+        raise MigrationCoordinationError(
+            "The live SQLite database differs from its verified pre-migration backup."
+        )
+
+
 def _sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as backup_file:
@@ -168,6 +226,14 @@ def create_verified_sqlite_backup(
         raise FileNotFoundError(
             f"SQLite database directory does not exist: {canonical_database.parent}"
         )
+
+    descriptor = os.open(
+        canonical_backup,
+        os.O_CREAT | os.O_EXCL | os.O_RDWR,
+        0o600,
+    )
+    os.close(descriptor)
+    assert_database_identity_supported(canonical_backup)
 
     if canonical_database.exists():
         source_uri = f"{canonical_database.as_uri()}?mode=ro"
@@ -255,6 +321,18 @@ def acquire_sqlite_migration_ownership(
         backup = create_verified_sqlite_backup(database_path, backup_path)
         engine.dispose()
         connection = engine.connect()
+        try:
+            if assert_database_identity_supported(database_path) != database_path:
+                raise MigrationCoordinationError(
+                    "The SQLite database identity changed after connection acquisition."
+                )
+            _verify_live_database_matches_backup(connection, backup)
+        except BaseException:
+            try:
+                connection.close()
+            finally:
+                engine.dispose()
+            raise
         ownership = SQLiteMigrationOwnership(
             database_path=database_path,
             connection=connection,
@@ -264,5 +342,7 @@ def acquire_sqlite_migration_ownership(
             yield ownership
         finally:
             ownership._active = False
-            connection.close()
-            engine.dispose()
+            try:
+                connection.close()
+            finally:
+                engine.dispose()

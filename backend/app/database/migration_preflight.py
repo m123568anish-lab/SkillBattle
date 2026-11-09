@@ -5,14 +5,16 @@ import logging
 import re
 import sys
 from pathlib import Path
+from typing import Any
 
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
 from alembic.script import ScriptDirectory
-from sqlalchemy import Connection, create_engine, inspect, text
+from sqlalchemy import Connection, JSON, create_engine, inspect, text
 from sqlalchemy.engine import Engine, URL
 from sqlalchemy.pool import NullPool
+from sqlalchemy.types import TypeDecorator
 
 from app.database.database import engine as application_engine
 from app.database.migration_state import (
@@ -24,11 +26,60 @@ from app.models import Base
 
 logger = logging.getLogger(__name__)
 
+_JSON_SERVER_DEFAULT_LITERAL = re.compile(
+    r"""^\s*\(?\s*'((?:''|[^'])*)'\s*\)?\s*(?:::\s*(?:pg_catalog\.)?jsonb?)?\s*$""",
+    re.IGNORECASE,
+)
+
+
+def _column_uses_json_type(column: Any) -> bool:
+    column_type = column.type
+    while isinstance(column_type, TypeDecorator):
+        column_type = column_type.impl
+    return isinstance(column_type, JSON)
+
+
+def _parse_json_server_default(rendered_default: str) -> object:
+    match = _JSON_SERVER_DEFAULT_LITERAL.fullmatch(rendered_default)
+    if match is None:
+        raise ValueError("JSON server default is not a string literal.")
+    return json.loads(match.group(1).replace("''", "'"))
+
+
+def _compare_server_default(
+    context: MigrationContext,
+    inspected_column: Any,
+    metadata_column: Any,
+    rendered_inspected_default: str | None,
+    metadata_default: Any,
+    rendered_metadata_default: str | None,
+) -> bool | None:
+    if context.dialect.name != "postgresql" or not (
+        _column_uses_json_type(inspected_column)
+        or _column_uses_json_type(metadata_column)
+    ):
+        return None
+
+    if rendered_inspected_default == rendered_metadata_default:
+        return False
+    if rendered_inspected_default is None or rendered_metadata_default is None:
+        return True
+
+    try:
+        inspected_value = _parse_json_server_default(rendered_inspected_default)
+        metadata_value = _parse_json_server_default(rendered_metadata_default)
+    except (ValueError, json.JSONDecodeError):
+        return True
+    return inspected_value != metadata_value
+
 
 def compare_model_schema(connection: Connection) -> list[dict[str, object]]:
     migration_context = MigrationContext.configure(
         connection,
-        opts={"compare_type": True, "compare_server_default": True},
+        opts={
+            "compare_type": True,
+            "compare_server_default": _compare_server_default,
+        },
     )
     raw_differences = compare_metadata(migration_context, Base.metadata)
     differences = [

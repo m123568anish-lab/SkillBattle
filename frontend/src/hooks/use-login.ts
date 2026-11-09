@@ -21,9 +21,6 @@ export function useLogin() {
             return {
                 success: true,
                 user,
-                tokens: {
-                    access_token: localStorage.getItem("access_token"),
-                },
             };
         } catch (error: unknown) {
             const detail: unknown = isAxiosError(error) ? error.response?.data?.detail : undefined;

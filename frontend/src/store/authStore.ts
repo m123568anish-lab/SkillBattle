@@ -2,6 +2,7 @@ import axios from "axios";
 import { create } from "zustand";
 import { LoginRequest, User } from "@/types/auth";
 import { authService } from "@/services/auth.service";
+import { authClient } from "@/lib/auth/client";
 import { useDashboardStore } from "@/store/dashboardStore";
 
 export type AuthStatus = "loading" | "authenticated" | "unauthenticated" | "unavailable" | "forbidden";
@@ -57,7 +58,7 @@ function cacheUser(user: User | null) {
 
 export const useAuthStore = create<AuthState>((set, get) => ({
     user: initialCachedUser,
-    // A cached profile is not proof of a live session; Clerk/Backend must resolve it.
+    // A cached profile is not proof of a live Neon Auth session.
     loading: true,
     isAuthenticated: false,
     status: "loading",
@@ -65,14 +66,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     async login(data) {
         authRequestGeneration += 1;
-        activeAuthSessionKey = "legacy";
+        activeAuthSessionKey = null;
         activeLoadUser = null;
         set({ loading: true, status: "loading", authError: null });
         try {
-            const user = await authService.login(data);
-            cacheUser(user);
-            set({ user, loading: false, isAuthenticated: true, status: "authenticated", authError: null });
-            return user;
+            const result = await authClient.signIn.email({
+                email: data.email,
+                password: data.password,
+            });
+            if (result.error) {
+                throw new Error(result.error.message);
+            }
+
+            const sessionResult = await authClient.getSession();
+            if (sessionResult.error) {
+                throw new Error(sessionResult.error.message);
+            }
+            const sessionUser = sessionResult.data?.user;
+            if (!sessionUser) {
+                throw new Error("Sign-in completed without an active session.");
+            }
+
+            await get().loadUser(`neon:${sessionUser.id}`);
+            const state = get();
+            if (!state.isAuthenticated || !state.user) {
+                throw new Error(state.authError ?? "Unable to load your Qubira account.");
+            }
+            return state.user;
         } catch (error) {
             set({ loading: false, isAuthenticated: false, status: "unauthenticated", authError: errorMessage(error) });
             throw error;
@@ -83,8 +103,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         authRequestGeneration += 1;
         activeAuthSessionKey = null;
         activeLoadUser = null;
-        await authService.logout();
+        const result = await authClient.signOut();
+        if (result.error) {
+            throw new Error(result.error.message);
+        }
         cacheUser(null);
+        if (typeof window !== "undefined") {
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("refresh_token");
+        }
         if (typeof window !== "undefined") {
             try { useDashboardStore.getState().reset(); } catch {} 
         }

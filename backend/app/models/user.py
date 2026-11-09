@@ -85,6 +85,14 @@ class User(Base):
         nullable=True,
     )
 
+    neon_user_id: Mapped[str | None] = mapped_column(
+        String(64),
+        unique=True,
+        index=True,
+        default=None,
+        nullable=True,
+    )
+
     password_hash: Mapped[str] = mapped_column(
         String(255),
         nullable=False,

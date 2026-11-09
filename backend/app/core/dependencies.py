@@ -26,10 +26,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import (
     ClerkAuthenticationError,
+    NeonAuthenticationError,
     decode_token,
     get_clerk_user_profile,
     hash_password_async,
     verify_clerk_token,
+    verify_neon_token,
 )
 
 from app.database.session import get_db
@@ -161,6 +163,92 @@ async def _get_or_create_clerk_user(
             return existing
         raise
 
+
+async def _get_or_create_neon_user(
+    db: AsyncSession,
+    claims: dict,
+) -> User:
+    """Link a verified Neon subject to a local application user."""
+    neon_user_id = claims["sub"]
+    user = await user_repository.get_by_neon_user_id(db, neon_user_id)
+    if user is not None:
+        return user
+
+    email = claims.get("email")
+    if not isinstance(email, str) or not email.strip():
+        raise NeonAuthenticationError("A Neon Auth email is required to link this account.")
+    email = email.strip().lower()
+    email_verified = claims.get("email_verified") is True
+    user = await user_repository.get_by_email(db, email)
+    if user is not None:
+        if not email_verified:
+            raise NeonAuthenticationError(
+                "Verify your Neon Auth email before linking this existing account."
+            )
+        if user.neon_user_id and user.neon_user_id != neon_user_id:
+            raise NeonAuthenticationError("The email is linked to another Neon identity.")
+        user.neon_user_id = neon_user_id
+        user.is_verified = True
+        await db.commit()
+        await db.refresh(user)
+        return user
+
+    raw_name = claims.get("name")
+    full_name = raw_name.strip() if isinstance(raw_name, str) else ""
+    full_name = full_name or email.split("@", 1)[0]
+    username_seed = "".join(
+        char for char in email.split("@", 1)[0] if char.isalnum() or char == "_"
+    ) or "player"
+    username = username_seed[:30]
+    if len(username) < 3:
+        username = f"{username}_usr"[:30]
+    if await user_repository.get_by_username(db, username):
+        username = f"{username[:24]}_{secrets.token_hex(3)}"[:30]
+
+    user = User(
+        neon_user_id=neon_user_id,
+        username=username,
+        email=email,
+        full_name=full_name[:120],
+        password_hash=await hash_password_async(secrets.token_urlsafe(32)),
+        role="student",
+        account_type="STUDENT",
+        status="ACTIVE",
+        is_active=True,
+        is_verified=True,
+        onboarding_completed=False,
+    )
+    from app.models.user_stats import UserSettings, UserStats
+    from app.models.xp import XP
+    from app.models.profile import Profile
+    from sqlalchemy.exc import IntegrityError
+
+    try:
+        db.add(user)
+        await db.flush()
+        db.add(UserStats(user_id=user.id, level=1, rating=1000, xp=0))
+        db.add(UserSettings(user_id=user.id, theme="dark", language="python"))
+        db.add(XP(user_id=user.id, total_xp=0, weekly_xp=0, daily_xp=0, level=1, rank=99999))
+        db.add(Profile(user_id=user.id, avatar="", onboarding_preferences={}))
+        await db.commit()
+        await db.refresh(user)
+        return user
+    except IntegrityError:
+        await db.rollback()
+        existing = await user_repository.get_by_neon_user_id(db, neon_user_id)
+        if existing is not None:
+            return existing
+        existing = await user_repository.get_by_email(db, email)
+        if existing is not None and email_verified:
+            if existing.neon_user_id and existing.neon_user_id != neon_user_id:
+                raise NeonAuthenticationError("The email is linked to another Neon identity.")
+            existing.neon_user_id = neon_user_id
+            existing.is_verified = True
+            await db.commit()
+            await db.refresh(existing)
+            return existing
+        raise
+
 async def get_current_user(
 
     token: str = Depends(oauth2_scheme),
@@ -185,17 +273,21 @@ async def get_current_user(
         user = await user_repository.get_by_id(db, user_id)
     except Exception:
         try:
-            claims = await verify_clerk_token(token)
-            user = await _get_or_create_clerk_user(db, claims)
-        except Exception as exc:
-            if not isinstance(exc, ClerkAuthenticationError):
-                # Do not expose profile-linking or provider details to callers.
-                pass
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid authentication token.",
-                headers={"WWW-Authenticate": "Bearer"},
-            ) from exc
+            claims = await verify_neon_token(token)
+            user = await _get_or_create_neon_user(db, claims)
+        except NeonAuthenticationError:
+            try:
+                claims = await verify_clerk_token(token)
+                user = await _get_or_create_clerk_user(db, claims)
+            except Exception as exc:
+                if not isinstance(exc, ClerkAuthenticationError):
+                    # Do not expose provider details to callers.
+                    pass
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid authentication token.",
+                    headers={"WWW-Authenticate": "Bearer"},
+                ) from exc
 
     if user is None:
 

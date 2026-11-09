@@ -130,6 +130,16 @@ class UserRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_by_neon_user_id(
+        self,
+        db: AsyncSession,
+        neon_user_id: str,
+    ) -> User | None:
+        result = await db.execute(
+            select(User).where(User.neon_user_id == neon_user_id)
+        )
+        return result.scalar_one_or_none()
+
     # --------------------------------------------------
 
     async def update_login(

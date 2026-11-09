@@ -3,7 +3,7 @@ import DesktopNavbar from "./DesktopNavbar";
 import MobileNavbar from "./MobileNavbar";
 import NavButton from "./NavButton";
 import NavContainer from "./NavContainer";
-import ClerkAuthControls from "./ClerkAuthControls";
+import AuthControls from "./AuthControls";
 import { ThemeToggle } from "@/components/common/ExperienceEnhancements";
 
 export default function Navbar() {
@@ -17,7 +17,7 @@ export default function Navbar() {
 
           <div className="hidden lg:flex items-center gap-4">
             <ThemeToggle />
-            <ClerkAuthControls />
+            <AuthControls />
             <NavButton title="Start Battle" />
           </div>
 

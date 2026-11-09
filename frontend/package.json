@@ -13,9 +13,9 @@
     "test": "node --test --test-reporter=tap tests/api-origin.test.mjs tests/api-proxy.test.mjs tests/dashboard-data.test.mjs"
   },
   "dependencies": {
-    "@clerk/nextjs": "^7.9.15",
     "@hookform/resolvers": "^5.8.0",
     "@monaco-editor/react": "^4.7.0",
+    "@neon/auth": "^0.8.2",
     "@tanstack/react-query": "^5.101.4",
     "@types/react-countup": "^4.3.0",
     "axios": "^1.18.1",

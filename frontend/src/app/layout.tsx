@@ -1,4 +1,3 @@
-import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
@@ -68,27 +67,24 @@ export default function RootLayout({
         />
         <a href="#main-content" className="skip-link">Skip to main content</a>
         <ThemeProvider>
-          <ClerkProvider>
-            <AuthProvider>
-              <div className="relative">
-                <PageMetadata />
-                <AuthGuard>{children}</AuthGuard>
-                <PageEnhancements />
-              </div>
-            </AuthProvider>
-
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                style: {
-                  background: "var(--surface-elevated)",
-                  color: "var(--text-primary)",
-                  border: "1px solid var(--border-default)",
-                },
-              }}
-            />
-            <CookieConsent />
-          </ClerkProvider>
+          <AuthProvider>
+            <div className="relative">
+              <PageMetadata />
+              <AuthGuard>{children}</AuthGuard>
+              <PageEnhancements />
+            </div>
+          </AuthProvider>
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: "var(--surface-elevated)",
+                color: "var(--text-primary)",
+                border: "1px solid var(--border-default)",
+              },
+            }}
+          />
+          <CookieConsent />
         </ThemeProvider>
       </body>
     </html>

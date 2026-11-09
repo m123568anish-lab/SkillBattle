@@ -9,18 +9,6 @@ interface AuthGuardProps {
   children: React.ReactNode;
 }
 
-const PUBLIC_ROUTES = [
-  "/",
-  "/login",
-  "/register",
-  "/forgot-password",
-  "/verify-email",
-  "/reset-password",
-  "/faq",
-  "/privacy",
-  "/terms",
-];
-
 const PROTECTED_ROUTE_PREFIXES = [
   "/achievements", "/activity", "/admin", "/analytics", "/assessments", "/battle",
   "/calendar", "/campaign", "/career", "/challenge", "/college", "/company",
@@ -42,13 +30,8 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const user = useAuthStore((s) => s.user);
   const status = useAuthStore((s) => s.status);
   const authError = useAuthStore((s) => s.authError);
-  const loadUser = useAuthStore((s) => s.loadUser);
-
   const retryAuthentication = () => {
     window.dispatchEvent(new Event("skillbattle:retry-auth"));
-    if (typeof window !== "undefined" && localStorage.getItem("access_token")) {
-      void loadUser("legacy");
-    }
   };
 
   useEffect(() => {

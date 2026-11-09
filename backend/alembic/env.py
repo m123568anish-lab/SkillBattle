@@ -3,9 +3,6 @@ from __future__ import annotations
 import logging
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
 from alembic import context
 
 # ---------------------------------------------------------
@@ -98,26 +95,11 @@ def run_migrations_online() -> None:
             context.run_migrations()
         return
 
-    connectable = engine_from_config(
-        config.get_section(
-            config.config_ini_section,
-            {},
-        ),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
+    raise RuntimeError(
+        f"Legacy Alembic execution is blocked for "
+        f"{application_engine.dialect.name!r} until a shared migration "
+        "ownership mechanism is implemented and validated."
     )
-
-    with connectable.connect() as connection:
-
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            compare_type=True,
-            render_as_batch=True,
-        )
-
-        with context.begin_transaction():
-            context.run_migrations()
 
 
 # ---------------------------------------------------------
