@@ -26,6 +26,12 @@ const server = createServer((request, response) => {
     return;
   }
 
+  if (request.method === "GET" && request.url === "/api/v1/auth/me") {
+    response.statusCode = 401;
+    response.end(JSON.stringify({ detail: "Not authenticated" }));
+    return;
+  }
+
   if (request.method === "POST" && ["/sign-up/email", "/sign-in/email"].includes(request.url)) {
     let body = "";
     request.setEncoding("utf8");
@@ -70,6 +76,14 @@ const server = createServer((request, response) => {
   }
 
   if (request.url === "/get-access-token") {
+    const authenticated = request.headers.cookie?.includes(sessionCookie) ?? false;
+    response.end(JSON.stringify(
+      authenticated ? { token: "e2e-access-token" } : { token: null },
+    ));
+    return;
+  }
+
+  if (request.url === "/token") {
     const authenticated = request.headers.cookie?.includes(sessionCookie) ?? false;
     response.end(JSON.stringify(
       authenticated ? { token: "e2e-access-token" } : { token: null },

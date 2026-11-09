@@ -12,7 +12,7 @@ test("signup skips email verification, redirects to login, and allows sign-in", 
           username: "new_student",
           full_name: "New Student",
           role: "student",
-          is_verified: false,
+          is_verified: true,
           onboarding_completed: true,
         },
       });

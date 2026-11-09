@@ -16,6 +16,10 @@ export default function proxy(request: NextRequest) {
       "/faq",
       "/privacy",
       "/terms",
+      // These routes are authorized by the FastAPI API using Neon bearer tokens.
+      "/api/v1",
+      "/api/battle",
+      "/api/health",
     ],
   })(request);
 }

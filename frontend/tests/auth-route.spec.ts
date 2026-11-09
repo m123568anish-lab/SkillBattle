@@ -14,3 +14,10 @@ test("Auth route uses the local fixture for anonymous and authenticated sessions
     user: { id: "e2e-neon-user", email: "student@example.com" },
   });
 });
+
+test("backend API auth is handled by the API, not the page login redirect", async ({ request }) => {
+  const response = await request.get("/api/v1/auth/me", { maxRedirects: 0 });
+
+  expect(response.status()).toBe(401);
+  expect(await response.json()).toEqual({ detail: "Not authenticated" });
+});
