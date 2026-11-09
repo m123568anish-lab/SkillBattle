@@ -6,7 +6,7 @@ test("Auth route uses the local fixture for anonymous and authenticated sessions
   expect(await anonymousResponse.json()).toMatchObject({ session: null, user: null });
 
   const authenticatedResponse = await request.get("/api/auth/get-session", {
-    headers: { cookie: "__Secure-neon-auth.session_token=e2e-session-token" },
+    headers: { cookie: "__Secure-neon-auth.session_token=e2e-cookie-session" },
   });
   expect(authenticatedResponse.ok()).toBeTruthy();
   expect(await authenticatedResponse.json()).toMatchObject({

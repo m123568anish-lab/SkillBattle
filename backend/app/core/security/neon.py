@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any
 
@@ -9,6 +10,8 @@ import httpx
 import jwt
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class NeonAuthenticationError(ValueError):
@@ -92,6 +95,7 @@ async def verify_neon_token(token: str) -> dict[str, Any]:
     except NeonAuthenticationError:
         raise
     except (httpx.HTTPError, jwt.InvalidTokenError, ValueError) as exc:
+        logger.warning("Neon Auth token verification failed (%s)", type(exc).__name__)
         raise NeonAuthenticationError("Invalid Neon Auth token.") from exc
 
     if not isinstance(claims.get("sub"), str) or not claims["sub"]:

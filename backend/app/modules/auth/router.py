@@ -357,6 +357,7 @@ async def link_neon_identity(
             detail="Neon Auth verification is not configured on the application API.",
         ) from exc
     except NeonAuthenticationError as exc:
+        logger.warning("Neon identity-link token rejected: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid Neon Auth session.",

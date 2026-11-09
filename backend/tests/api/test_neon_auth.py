@@ -1,4 +1,5 @@
 import base64
+import logging
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -57,6 +58,44 @@ async def test_neon_token_verifies_against_configured_jwks(monkeypatch):
 
     assert claims["sub"] == "neon-user-test"
     assert claims["email_verified"] is True
+
+
+@pytest.mark.asyncio
+async def test_rejected_neon_token_logs_failure_category_without_token(caplog, monkeypatch):
+    issuer = "https://auth.example.test/neondb/auth"
+    private_key = Ed25519PrivateKey.generate()
+    public_key = private_key.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
+    token = jwt.encode(
+        {
+            "iss": "https://wrong-issuer.example.test",
+            "sub": "neon-user-test",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+        },
+        private_key,
+        algorithm="EdDSA",
+        headers={"kid": "test-key"},
+    )
+
+    async def get_jwks():
+        return [{
+            "kty": "OKP",
+            "crv": "Ed25519",
+            "x": _b64url(public_key),
+            "kid": "test-key",
+            "alg": "EdDSA",
+            "use": "sig",
+        }]
+
+    monkeypatch.setattr(settings, "NEON_AUTH_BASE_URL", issuer)
+    monkeypatch.setattr(settings, "NEON_AUTH_JWKS_URL", f"{issuer}/.well-known/jwks.json")
+    monkeypatch.setattr(neon_security, "_get_jwks", get_jwks)
+
+    with caplog.at_level(logging.WARNING, logger="app.core.security.neon"):
+        with pytest.raises(neon_security.NeonAuthenticationError):
+            await neon_security.verify_neon_token(token)
+
+    assert "InvalidIssuerError" in caplog.text
+    assert token not in caplog.text
 
 
 @pytest.mark.asyncio
