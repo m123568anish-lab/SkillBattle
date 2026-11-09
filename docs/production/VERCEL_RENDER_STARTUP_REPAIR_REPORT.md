@@ -74,6 +74,11 @@ environment that needs the variable.
 
 No live Vercel values were read or changed. The operator must set these in Vercel before deploying.
 
+The confirmed production website origin, `https://www.qubira.in`, has been
+added to the Neon Auth trusted domains for the production branch. Other
+origins, including `https://qubira.in`, Vercel preview deployments, and
+localhost, are not implied by this entry and must be added separately if used.
+
 ### Render backend Neon Auth verification
 
 The browser signs in directly with Neon Auth, then sends a Neon JWT to the

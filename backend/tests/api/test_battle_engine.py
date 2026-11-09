@@ -4,7 +4,7 @@ from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_advanced_battle_engine_workflow(client: AsyncClient):
+async def test_advanced_battle_engine_workflow(client: AsyncClient, battle_question_bank):
     unique_id = uuid4().hex[:6].lower()
     email = f"student_{unique_id}@example.com"
     username = f"battle_user_{unique_id}"

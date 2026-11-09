@@ -24,12 +24,18 @@ logger = logging.getLogger(__name__)
 
 def load_environment_file_values() -> None:
     """Load local admin/runtime env values into os.environ without requiring hardcoded secrets."""
-    env_paths = (
-        Path(".env.local"),
-        Path(".env"),
-        Path(".env.admin"),
-        Path(".env.admin.local"),
-    )
+    if os.getenv("QUBIRA_TEST_MODE") == "1":
+        test_env_file = os.getenv("QUBIRA_TEST_ENV_FILE")
+        if not test_env_file:
+            return
+        env_paths = (Path(test_env_file),)
+    else:
+        env_paths = (
+            Path(".env.local"),
+            Path(".env"),
+            Path(".env.admin"),
+            Path(".env.admin.local"),
+        )
 
     for env_path in env_paths:
         if not env_path.exists():
@@ -231,7 +237,11 @@ class Settings(BaseSettings):
         # environment, not loaded from a local placeholder file.
         # The platform admin bootstrap also uses a dedicated .env.admin file
         # so environment-based credentials are available without hardcoding.
-        env_file=(".env.local", ".env", ".env.admin", ".env.admin.local"),
+        env_file=(
+            None
+            if os.getenv("QUBIRA_TEST_MODE") == "1"
+            else (".env.local", ".env", ".env.admin", ".env.admin.local")
+        ),
         case_sensitive=True,
         extra="ignore",
     )
@@ -301,7 +311,27 @@ class Settings(BaseSettings):
                 )
 
         # 3. Development / Testing / SQLite fallback
-        if is_testing or is_placeholder_pg or environment in ("development", "dev", "test") or not os.getenv("DATABASE_URL"):
+        if is_testing or environment == "test":
+            if database_url.startswith("postgresql"):
+                self.DATABASE_TYPE = "postgresql"
+                if not async_database_url or async_database_url.startswith("sqlite"):
+                    self.ASYNC_DATABASE_URL = normalize_async_database_url(database_url)
+                else:
+                    self.ASYNC_DATABASE_URL = normalize_async_database_url(async_database_url)
+                return self
+            if database_url.startswith("sqlite"):
+                if database_url == "sqlite:///./skillbattle.db":
+                    self.DATABASE_URL = self.SQLITE_DATABASE_URL
+                if (
+                    not async_database_url
+                    or async_database_url == "sqlite+aiosqlite:///./skillbattle.db"
+                ):
+                    self.ASYNC_DATABASE_URL = self.SQLITE_ASYNC_DATABASE_URL
+                self.DATABASE_TYPE = "sqlite"
+                return self
+            raise ValueError("Test execution requires an explicit SQLite or PostgreSQL DATABASE_URL.")
+
+        if is_placeholder_pg or environment in ("development", "dev") or not os.getenv("DATABASE_URL"):
             self.DATABASE_TYPE = "sqlite"
             self.DATABASE_URL = self.SQLITE_DATABASE_URL
             self.ASYNC_DATABASE_URL = self.SQLITE_ASYNC_DATABASE_URL

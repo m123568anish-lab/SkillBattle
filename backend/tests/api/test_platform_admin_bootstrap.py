@@ -36,17 +36,22 @@ def test_settings_loads_platform_admin_env_file(tmp_path, monkeypatch):
     )
 
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("QUBIRA_TEST_ENV_FILE", str(env_file))
     monkeypatch.delenv("PLATFORM_ADMIN_EMAIL", raising=False)
     monkeypatch.delenv("PLATFORM_ADMIN_PASSWORD", raising=False)
     monkeypatch.delenv("PLATFORM_ADMIN_USERNAME", raising=False)
 
     from app.core.config import Settings
 
-    Settings()
+    try:
+        Settings()
 
-    assert os.getenv("PLATFORM_ADMIN_EMAIL") == email
-    assert os.getenv("PLATFORM_ADMIN_USERNAME") == username
-    assert os.getenv("PLATFORM_ADMIN_PASSWORD") == password
+        assert os.getenv("PLATFORM_ADMIN_EMAIL") == email
+        assert os.getenv("PLATFORM_ADMIN_USERNAME") == username
+        assert os.getenv("PLATFORM_ADMIN_PASSWORD") == password
+    finally:
+        for key in ("PLATFORM_ADMIN_EMAIL", "PLATFORM_ADMIN_PASSWORD", "PLATFORM_ADMIN_USERNAME"):
+            os.environ.pop(key, None)
 
 
 @pytest.mark.asyncio

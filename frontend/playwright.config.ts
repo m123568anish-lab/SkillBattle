@@ -1,8 +1,12 @@
 import { defineConfig } from "@playwright/test";
 import { randomBytes } from "node:crypto";
 
+if (!Reflect.set(process.env, "NODE_ENV", "test")) {
+  throw new Error("Playwright requires NODE_ENV=test.");
+}
 process.env.NEON_AUTH_BASE_URL = "http://127.0.0.1:8765";
 process.env.NEON_AUTH_COOKIE_SECRET = randomBytes(32).toString("base64");
+process.env.QUBIRA_AUTH_TEST_MODE = "1";
 process.env.NEXT_PUBLIC_API_URL = "http://127.0.0.1:1";
 
 export default defineConfig({

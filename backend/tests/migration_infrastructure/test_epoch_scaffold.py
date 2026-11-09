@@ -13,6 +13,6 @@ def test_epoch_scaffold_is_separate_and_has_no_revisions() -> None:
     epoch_script = ScriptDirectory.from_config(epoch_config)
 
     assert legacy_script.dir != epoch_script.dir
-    assert legacy_script.get_heads() == ["c9b0f2d5a713"]
+    assert legacy_script.get_heads() == ["d1f5a8e7c2b4"]
     assert epoch_script.get_heads() == []
     assert epoch_config.get_main_option("version_table") == "alembic_version_epoch"

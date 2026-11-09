@@ -3,7 +3,7 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_battle_creation_sets_mode_and_server_authoritative_defaults(client):
+async def test_battle_creation_sets_mode_and_server_authoritative_defaults(client, battle_question_bank):
     unique = f"btlc1_{uuid.uuid4().hex[:8]}"
     email = f"{unique}@example.com"
     register = await client.post(
@@ -47,7 +47,7 @@ async def test_battle_creation_sets_mode_and_server_authoritative_defaults(clien
 
 
 @pytest.mark.asyncio
-async def test_server_start_and_round_transition_protects_invalid_state(client):
+async def test_server_start_and_round_transition_protects_invalid_state(client, battle_question_bank):
     unique = f"btlc2_{uuid.uuid4().hex[:8]}"
     email = f"{unique}@example.com"
     register = await client.post(

@@ -18,6 +18,7 @@ import logging
 import os
 
 from sqlalchemy import inspect, text
+from sqlalchemy.engine import make_url
 
 from app.database.base import Base
 from app.database.database import engine
@@ -112,13 +113,19 @@ __all__ = [
 ]
 
 
-def init_db() -> None:
+def init_db(*, database_url: str) -> None:
     """
     Create all database tables.
 
     Models are imported above to ensure they're registered
     with Base.metadata before table creation.
     """
+    target_url = make_url(database_url)
+    if target_url.drivername in {"postgres", "postgresql"}:
+        target_url = target_url.set(drivername=engine.url.drivername)
+    if target_url != engine.url:
+        raise ValueError("init_db requires the explicit URL matching the configured database engine.")
+
     logger.info("Creating database tables from registered models...")
     try:
         # If using a SQLite file-based DB, remove the existing file so
