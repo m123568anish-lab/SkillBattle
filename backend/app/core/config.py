@@ -74,6 +74,34 @@ def normalize_async_database_url(url: str) -> str:
     return urlunsplit(parts._replace(query=urlencode(query)))
 
 
+def _postgres_target(url: str) -> tuple[str | None, int | None, str]:
+    parsed = urlsplit(url)
+    hostname = parsed.hostname
+    if hostname:
+        hostname = hostname.lower().replace("-pooler.", ".")
+    return hostname, parsed.port, parsed.path.lstrip("/")
+
+
+def _production_async_database_url(database_url: str, configured_async_url: str) -> str:
+    canonical_url = normalize_async_database_url(database_url)
+    if canonical_url.startswith("postgresql://"):
+        canonical_url = canonical_url.replace(
+            "postgresql://",
+            "postgresql+asyncpg://",
+            1,
+        )
+    if (
+        configured_async_url
+        and configured_async_url != "sqlite+aiosqlite:///./skillbattle.db"
+        and _postgres_target(configured_async_url) != _postgres_target(database_url)
+    ):
+        logger.warning(
+            "Production ASYNC_DATABASE_URL targets a different database; "
+            "the async engine will use DATABASE_URL."
+        )
+    return canonical_url
+
+
 
 class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -342,6 +370,12 @@ class Settings(BaseSettings):
         # 4. Configure PostgreSQL when valid DATABASE_URL is present
         if is_postgres:
             self.DATABASE_TYPE = "postgresql"
+            if environment == "production" and database_url.startswith("postgresql"):
+                self.ASYNC_DATABASE_URL = _production_async_database_url(
+                    database_url,
+                    self.ASYNC_DATABASE_URL,
+                )
+                return self
             if not async_database_url or async_database_url.startswith("sqlite"):
                 self.ASYNC_DATABASE_URL = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
             self.ASYNC_DATABASE_URL = normalize_async_database_url(self.ASYNC_DATABASE_URL)

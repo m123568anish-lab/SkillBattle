@@ -1,6 +1,6 @@
 import os
 
-from app.core.config import Settings
+from app.core.config import Settings, _production_async_database_url
 import pytest
 
 
@@ -32,3 +32,13 @@ def test_production_rejects_placeholder_database_url(monkeypatch):
 
     with pytest.raises(ValueError, match="real PostgreSQL DATABASE_URL"):
         Settings(_env_file=None)
+
+
+def test_production_async_database_url_uses_canonical_database_target():
+    async_url = _production_async_database_url(
+        "postgresql://ep-production.neon.tech/neondb?sslmode=require",
+        "postgresql+asyncpg://ep-stale.neon.tech/old_db?ssl=require",
+    )
+    assert async_url == (
+        "postgresql+asyncpg://ep-production.neon.tech/neondb?ssl=require"
+    )
