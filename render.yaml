@@ -34,9 +34,9 @@ services:
       - key: CLERK_ALLOWED_PARTIES
         sync: false
       - key: NEON_AUTH_BASE_URL
-        sync: false
+        value: https://ep-cool-heart-axx5eu88.neonauth.c-4.us-east-2.aws.neon.tech/neondb/auth
       - key: NEON_AUTH_JWKS_URL
-        sync: false
+        value: https://ep-cool-heart-axx5eu88.neonauth.c-4.us-east-2.aws.neon.tech/neondb/auth/.well-known/jwks.json
       - key: DATABASE_URL
         sync: false
       - key: MIGRATION_DATABASE_URL
