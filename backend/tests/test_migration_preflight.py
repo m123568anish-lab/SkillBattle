@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.schema import DefaultClause
@@ -10,6 +11,18 @@ from app.database.migration_preflight import (
     _read_only_engine,
     build_preflight_report,
 )
+from app.models.assessment_engine import AssessmentQuestionSubmission
+
+
+def test_assessment_submission_composite_index_is_in_model_metadata():
+    index = next(
+        index
+        for index in AssessmentQuestionSubmission.__table__.indexes
+        if index.name == "ix_assessment_q_sub_user_created"
+    )
+
+    assert [column.name for column in index.columns] == ["user_id", "created_at"]
+    assert index.unique is False
 
 
 def test_sqlite_read_only_engine_rejects_writes(tmp_path: Path):
@@ -96,7 +109,9 @@ def test_preflight_reports_schema_differences_without_modifying_database(tmp_pat
         after = database_path.read_bytes()
 
         assert report["current_revision"] == "47292a2a50d2"
-        assert report["repository_head"] == "47292a2a50d2"
+        assert report["repository_head"] == ScriptDirectory(
+            str(Path(__file__).resolve().parents[1] / "alembic")
+        ).get_heads()[0]
         assert report["schema_difference_count"] > 0
         assert all(
             isinstance(difference, dict) and "operation" in difference

@@ -102,9 +102,14 @@ Tests used only temporary local SQLite data and a loopback Uvicorn process:
 - `/api/v1/auth/me` and `/api/v1/dashboard` were present in OpenAPI.
 - An invalid token sent to `/api/v1/auth/me` returned HTTP 401.
 - The existing authorized-student versioned dashboard test passed, as did the current-user session/auth test.
-- Of the seven selected auth/dashboard tests, five passed and two Neon identity tests failed: one expected a `Profile` row that was not created; the other test's registration request returned 422 instead of its expected 201. These failures are in the newly present Neon-auth worktree and are reported, not changed here.
+- A later disposable-SQLite reproduction traced the two Neon identity test failures to test assumptions, not missing application behavior: the profile test queried `Profile` by its integer primary key instead of `user_id`, and the registration test used the reserved `.test` email domain rejected by `EmailStr`. The tests now query by `user_id` and use `example.com`; the Neon-auth, profile, registration, and auth test set passed (13 passed, 133 warnings). No production diagnosis follows from these local test fixes.
 
-Normal FastAPI lifespan code performs the platform-admin bootstrap when configured; it does not run Alembic. `/health` is lightweight and does not check the database. A successful health response therefore proves process availability, not database migration readiness.
+At the time of the earlier investigation, FastAPI lifespan could perform a
+platform-admin bootstrap when configured; it did not run Alembic. Phase 3.2E
+removes that write from normal startup and provides a separate
+`backend/run_admin_bootstrap.py` command. `/health` remains lightweight and does
+not check the database. A successful health response therefore proves process
+availability, not database migration readiness.
 
 ## Root-cause status
 
@@ -122,3 +127,55 @@ Normal FastAPI lifespan code performs the platform-admin bootstrap when configur
 6. Only after those gates pass should operators deploy the reviewed migration job and then the API service. No deployment command or production change is safe to recommend from the evidence currently available.
 
 No Neon/production connection, production migration, schema stamp, deployment change, or commit/push was performed.
+
+## Phase 3.2E migration ownership and startup gate
+
+The PostgreSQL ownership primitive now uses a session-level advisory lock on a
+dedicated SQLAlchemy connection with `NullPool`. Alembic receives that exact
+connection, and the Alembic environment checks the active lease, database
+identity, pool type, and server backend PID. Cleanup attempts explicit unlock
+and closes the dedicated connection so PostgreSQL also releases the lock on
+session termination. The two-integer advisory-lock key is stable for the
+application's migration namespace.
+
+On an isolated PostgreSQL 18.6 server, all six focused coordinator tests passed.
+They exercised competing lock acquisition, release after successful and
+exceptional exit, rejection of a different connection, an Alembic probe using
+the owned session, JSON/index comparison behavior, and server-session
+termination. These results validate ownership behavior, not the repository's
+complete migration chain.
+
+The migration execution gate remains intentionally closed. A disposable fresh
+PostgreSQL attempt exposed a historical root-revision incompatibility: the
+initial revision assumes pre-existing tables, contains unguarded `drop_table`
+and `drop_index` operations, and alters an assumed `users` table. The runner's
+read-only preflight rejects the fresh schema before DDL; the disposable database
+remained empty. Historical revisions were not changed. No supported-revision
+upgrade at the reported production database state was run, because production
+schema access is prohibited and no reviewed disposable clone/schema was
+available. Do not treat lock validation as authorization to run migrations.
+
+The current worktree requires `python -u run_migrations.py --execute` for any
+runner invocation. Without the flag it exits 2 before opening the database.
+Even with the flag, PostgreSQL currently fails closed at the dialect gate
+before acquiring a migration lock or executing DDL. SQLite additionally
+requires trusted maintenance-window evidence and a verified backup. The
+`render.yaml` command was deliberately not changed and still invokes
+`python -u run_migrations.py` without `--execute`; if the current worktree were
+deployed with that command, it would exit 2 and Uvicorn would not start. The
+production commit and actual Render settings remain unknown.
+
+The API lifespan no longer invokes migrations or administrator bootstrap and
+now disposes both sync and async engines on shutdown. A disposable Uvicorn
+process bound successfully; `/health` returned 200, invalid `/auth/me`
+credentials returned 401, and an unauthenticated dashboard request returned
+401. Four authorized-user/auth/dashboard integration tests passed on an
+isolated SQLite database. This establishes local API-route behavior only.
+
+**Status: migration activation and deployment remain blocked.** First define
+and review a safe fresh-database baseline strategy that preserves historical
+revisions, then pass both fresh-database and supported-revision upgrades on
+disposable PostgreSQL, including schema comparison and postflight checks. Only
+after that should an explicitly authorized one-off migration command be
+considered. The API service should ultimately run Uvicorn without a migration
+chained into startup, but neither Render nor Vercel configuration was changed.

@@ -9,11 +9,11 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.bootstrap.startup import ensure_platform_admin
 from app.core.config import get_settings
 from app.core.middleware import register_middleware
 from app.core.router_registry import register_routers
 from app.database.database import engine
+from app.database.session import engine as async_engine
 from app.core.exceptions import SkillBattleException
 from app.modules.battle.websocket.router import (
     router as battle_ws_router,
@@ -66,7 +66,7 @@ def _safe_traceback_frames(exc: BaseException) -> str:
 async def lifespan(app: FastAPI):
     """
     Manage application lifecycle:
-    - Startup: Initialize database
+    - Startup: Initialize application services without database writes
     - Shutdown: Clean up resources
     """
     # Startup
@@ -85,14 +85,6 @@ async def lifespan(app: FastAPI):
         except Exception as sentry_err:
             logger.warning(f"⚠️ Could not initialize Sentry: {sentry_err}")
 
-    try:
-        logger.info("🔐 Ensuring platform admin bootstrap...")
-        await ensure_platform_admin()
-        logger.info("✅ Platform admin bootstrap checked")
-    except Exception as e:
-        logger.error(f"❌ Platform admin bootstrap failed: {e}", exc_info=True)
-        raise
-
     logger.info("✅ Application startup complete")
 
     yield
@@ -100,11 +92,18 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("🛑 Shutting down application...")
     try:
-        logger.info("🔌 Closing database connection...")
+        logger.info("🔌 Closing synchronous database connections...")
         engine.dispose()
-        logger.info("✅ Database connection closed")
+        logger.info("✅ Synchronous database connections closed")
     except Exception as e:
         logger.error(f"❌ Shutdown error: {e}", exc_info=True)
+
+    try:
+        logger.info("🔌 Closing asynchronous database connections...")
+        await async_engine.dispose()
+        logger.info("✅ Asynchronous database connections closed")
+    except Exception as e:
+        logger.error(f"❌ Async database shutdown error: {e}", exc_info=True)
 
     logger.info("✅ Application shutdown complete")
 

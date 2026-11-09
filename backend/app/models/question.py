@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.types import TypeDecorator
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -64,7 +64,10 @@ class Question(Base):
 
 class UserSubmission(Base):
     __tablename__ = "user_submissions"
-    __table_args__ = (UniqueConstraint("user_id", "question_id", name="uq_user_question_submission"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "question_id", name="uq_user_question_submission"),
+        Index("ix_user_submissions_user_created", "user_id", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)

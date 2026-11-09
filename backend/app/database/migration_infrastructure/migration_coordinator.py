@@ -2,16 +2,20 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import sqlite3
-from collections.abc import Iterator
+import time
+from collections.abc import Generator, Iterator
 from contextlib import closing, contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Protocol
 
-from sqlalchemy import Connection, Engine
+from sqlalchemy import Connection, Engine, create_engine, text
+from sqlalchemy.engine import URL, make_url
+from sqlalchemy.pool import NullPool
 
 from app.database.migration_infrastructure.sqlite_lock import (
     SQLiteFileLock,
@@ -23,11 +27,21 @@ class MigrationCoordinationError(RuntimeError):
     """Raised when a safe SQLite maintenance window cannot be established."""
 
 
+logger = logging.getLogger(__name__)
+
+POSTGRESQL_MIGRATION_LOCK_NAMESPACE = 0x51554249
+POSTGRESQL_MIGRATION_LOCK_KEY = 0x524D4947
+
+
 def require_supported_migration_dialect(dialect_name: str) -> None:
+    if dialect_name == "postgresql":
+        raise MigrationCoordinationError(
+            "Migration execution for 'postgresql' is blocked until fresh and "
+            "existing disposable PostgreSQL scenarios are validated."
+        )
     if dialect_name != "sqlite":
         raise MigrationCoordinationError(
-            f"Migration execution is blocked for {dialect_name!r} until its "
-            "ownership mechanism is implemented and validated."
+            f"Migration execution is not supported for {dialect_name!r}."
         )
 
 
@@ -72,6 +86,161 @@ class SQLiteMigrationOwnership:
     @property
     def is_active(self) -> bool:
         return self._active
+
+
+@dataclass
+class PostgreSQLMigrationOwnership:
+    connection: Connection
+    database_identity: tuple[str, int, str, str]
+    backend_pid: int
+    _active: bool = True
+
+    @property
+    def is_active(self) -> bool:
+        return self._active
+
+    def assert_connection(self, connection: Connection) -> None:
+        if not self._active or connection is not self.connection:
+            raise MigrationCoordinationError(
+                "PostgreSQL migration execution is not using its active ownership connection."
+            )
+        backend_pid = connection.execute(text("SELECT pg_backend_pid()")).scalar_one()
+        if backend_pid != self.backend_pid:
+            raise MigrationCoordinationError(
+                "The PostgreSQL migration connection changed its server session."
+            )
+
+
+def postgresql_database_identity(
+    url: URL,
+) -> tuple[str, int, str, str]:
+    return (
+        (url.host or "").lower(),
+        url.port or 5432,
+        url.database or "",
+        url.username or "",
+    )
+
+
+@contextmanager
+def acquire_postgresql_migration_ownership(
+    database_url: URL | str,
+    *,
+    timeout: float = 0.0,
+    poll_interval: float = 0.25,
+) -> Generator[PostgreSQLMigrationOwnership, None, None]:
+    """Own the Qubira migration advisory lock on a dedicated PostgreSQL session.
+
+    The NullPool ensures closing the SQLAlchemy connection closes its physical
+    DBAPI session instead of returning a lock-bearing session to an application
+    pool. A zero timeout performs one non-blocking lock attempt.
+    """
+    if not database_url:
+        raise MigrationCoordinationError(
+            "PostgreSQL migration ownership requires an explicit database URL."
+        )
+    url = make_url(database_url) if isinstance(database_url, str) else database_url
+    if url.get_backend_name() != "postgresql":
+        raise MigrationCoordinationError(
+            "PostgreSQL migration ownership requires a PostgreSQL database URL."
+        )
+    if timeout < 0 or poll_interval <= 0:
+        raise ValueError("Lock timeout must be non-negative and poll interval positive.")
+
+    dedicated_engine = create_engine(
+        url,
+        poolclass=NullPool,
+        pool_pre_ping=True,
+        connect_args={"connect_timeout": 10},
+    )
+    connection: Connection | None = None
+    acquired = False
+    body_failed = False
+    cleanup_error: MigrationCoordinationError | None = None
+    try:
+        connection = dedicated_engine.connect()
+        deadline = time.monotonic() + timeout
+        while True:
+            acquired = bool(
+                connection.execute(
+                    text("SELECT pg_try_advisory_lock(:namespace, :lock_key)"),
+                    {
+                        "namespace": POSTGRESQL_MIGRATION_LOCK_NAMESPACE,
+                        "lock_key": POSTGRESQL_MIGRATION_LOCK_KEY,
+                    },
+                ).scalar_one()
+            )
+            connection.commit()
+            if acquired:
+                break
+            if time.monotonic() >= deadline:
+                raise MigrationCoordinationError(
+                    "PostgreSQL migration ownership is already held by another process."
+                )
+            time.sleep(min(poll_interval, max(0.0, deadline - time.monotonic())))
+
+        backend_pid = int(
+            connection.execute(text("SELECT pg_backend_pid()")).scalar_one()
+        )
+        connection.commit()
+        ownership = PostgreSQLMigrationOwnership(
+            connection=connection,
+            database_identity=postgresql_database_identity(url),
+            backend_pid=backend_pid,
+        )
+        try:
+            yield ownership
+        except BaseException:
+            body_failed = True
+            raise
+        finally:
+            ownership._active = False
+            if acquired and connection is not None and not connection.invalidated:
+                try:
+                    if connection.in_transaction():
+                        connection.rollback()
+                    released = bool(
+                        connection.execute(
+                            text("SELECT pg_advisory_unlock(:namespace, :lock_key)"),
+                            {
+                                "namespace": POSTGRESQL_MIGRATION_LOCK_NAMESPACE,
+                                "lock_key": POSTGRESQL_MIGRATION_LOCK_KEY,
+                            },
+                        ).scalar_one()
+                    )
+                    connection.commit()
+                    if not released:
+                        cleanup_error = MigrationCoordinationError(
+                            "PostgreSQL migration advisory lock was not held during release."
+                        )
+                except Exception as exc:
+                    cleanup_error = MigrationCoordinationError(
+                        "Could not explicitly release the PostgreSQL migration advisory "
+                        "lock; the dedicated connection will be closed."
+                    )
+                    logger.error(
+                        "PostgreSQL migration lock release failed error_type=%s",
+                        type(exc).__name__,
+                    )
+    except BaseException:
+        body_failed = True
+        raise
+    finally:
+        if connection is not None:
+            try:
+                connection.close()
+            except Exception as exc:
+                if cleanup_error is None:
+                    cleanup_error = MigrationCoordinationError(
+                        "Could not close the dedicated PostgreSQL migration connection."
+                    )
+                logger.error(
+                    "PostgreSQL migration connection close failed error_type=%s",
+                    type(exc).__name__,
+                )
+        dedicated_engine.dispose()
+        if cleanup_error is not None and not body_failed:
+            raise cleanup_error
 
 
 def _validate_maintenance_evidence(

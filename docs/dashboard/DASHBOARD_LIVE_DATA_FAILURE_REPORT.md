@@ -216,9 +216,13 @@ On temporary SQLite data, the current worktree's Uvicorn process started
 independently of the runner, `/health` returned healthy, both versioned routes
 were registered, and an invalid current-user token returned 401. The
 authorized-student versioned dashboard and current-user auth tests passed.
-Two selected Neon-auth identity tests failed (missing expected profile
-creation and a registration test request returning 422); these failures are
-not attributed to the migration issue and were not changed here.
+Subsequent disposable-SQLite reproduction traced two Neon identity test
+failures to test assumptions: one queried a `Profile` by its integer primary
+key rather than `user_id`, and another supplied the reserved `.test` domain
+that `EmailStr` rejects. The tests now use the relationship key and a valid
+`example.com` registration address; the combined Neon-auth, profile,
+registration, and auth suite passed (13 passed, 133 warnings). These test-only
+corrections do not establish or diagnose production behavior.
 
 No production request, database query, migration, restart, or deployment was
 performed. The exact production exception and the causal link between startup
@@ -229,3 +233,43 @@ Vercel/Render request logs. See
 for the detailed analysis and deployment gates. A narrow JSON server-default
 comparison correction is present in the worktree and passed disposable tests;
 it has not been deployed and is not claimed as a verified production fix.
+
+## Phase 3.2E startup separation update
+
+The current worktree now requires an explicit `--execute` flag before
+`run_migrations.py` will call the migration runner. A regression test verifies
+that invoking the command without the flag exits with status 2 and does not
+create the configured disposable database. SQLite execution still refuses
+without maintenance-window evidence and a verified backup. PostgreSQL execution
+also remains fail-closed pending successful full-graph migration tests.
+
+The API lifespan no longer bootstraps the platform administrator or runs
+migrations; it disposes both synchronous and asynchronous SQLAlchemy engines at
+shutdown. Administrator provisioning is available separately through
+`backend/run_admin_bootstrap.py`. This command was not run against any shared or
+protected database.
+
+On an isolated Windows SQLite path, four auth/dashboard integration tests passed:
+the versioned student dashboard returned successfully for an authorized
+student, current-user authentication worked for a valid session, invalid-token
+requests remained rejected, and an unauthenticated dashboard request was
+rejected. A separate disposable Uvicorn process bound to a loopback port;
+`/health` returned 200, invalid `/auth/me` credentials returned 401, and the
+unauthenticated dashboard returned 401. The database file was not created by
+API startup or these unauthenticated probes, confirming no implicit migration
+or startup database write on that path.
+
+`render.yaml` was not changed. Its current command still chains
+`python -u run_migrations.py` before Uvicorn, without `--execute`. If that exact
+configuration runs this worktree, the migration process exits 2 and Uvicorn
+will not start. Whether production is running this worktree or command remains
+unknown. Do not deploy the current chained command or claim the production 503
+is fixed: the deployment must be split into an explicitly authorized migration
+job and an API-only Uvicorn command, after the migration compatibility gate
+passes.
+
+Keep migration execution and deployment blocked until a supported-revision
+disposable PostgreSQL upgrade and a fresh-database migration strategy both
+pass. Keep API startup read-only and use the operator evidence steps above to
+correlate production 503s with a deployed commit and matching Render/Vercel
+request logs.

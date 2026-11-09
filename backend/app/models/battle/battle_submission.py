@@ -23,6 +23,7 @@ from sqlalchemy import (
     ForeignKey,
     Text,
     JSON,
+    Index,
 )
 
 from sqlalchemy.orm import (
@@ -37,6 +38,9 @@ from app.database.base import Base
 class BattleSubmission(Base):
 
     __tablename__ = "battle_submissions"
+    __table_args__ = (
+        Index("ix_battle_submissions_user_submitted", "user_id", "submitted_at"),
+    )
 
     # Primary Key
     id: Mapped[str] = mapped_column(

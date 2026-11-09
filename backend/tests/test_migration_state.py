@@ -43,7 +43,7 @@ def test_empty_database_is_reported_without_stamping(connection, script):
     state = inspect_migration_state(connection, script)
 
     assert state.current_revision is None
-    assert state.expected_head == "47292a2a50d2"
+    assert state.expected_head == script.get_heads()[0]
     assert state.table_names == frozenset()
 
 
@@ -76,7 +76,7 @@ def test_known_revision_on_repository_path_is_accepted(connection, script):
     state = inspect_migration_state(connection, script)
 
     assert state.current_revision == "b8f2d4e6a901"
-    assert state.expected_head == "47292a2a50d2"
+    assert state.expected_head == script.get_heads()[0]
 
 
 def test_missing_table_from_applied_revision_is_detected(connection, script):

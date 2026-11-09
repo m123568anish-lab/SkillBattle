@@ -90,6 +90,10 @@ class Settings(BaseSettings):
     DATABASE_TYPE: str = Field(default="sqlite")  # "sqlite" or "postgresql"
     DATABASE_URL: str = Field(default="sqlite:///./skillbattle.db", description="Primary DB URL")
     ASYNC_DATABASE_URL: str = Field(default="sqlite+aiosqlite:///./skillbattle.db", description="Async DB URL")
+    MIGRATION_DATABASE_URL: str = Field(
+        default="",
+        description="Direct PostgreSQL URL used exclusively for schema migrations",
+    )
 
     # SQLite
     SQLITE_DATABASE_URL: str = "sqlite:///./skillbattle.db"

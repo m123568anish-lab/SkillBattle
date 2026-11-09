@@ -295,7 +295,7 @@ def test_legacy_runner_refuses_sqlite_without_maintenance_verifier(
         }
     )
     result = subprocess.run(
-        [sys.executable, "run_migrations.py"],
+        [sys.executable, "run_migrations.py", "--execute"],
         cwd=BACKEND_ROOT,
         env=environment,
         capture_output=True,
@@ -308,11 +308,43 @@ def test_legacy_runner_refuses_sqlite_without_maintenance_verifier(
     assert not database_path.exists()
 
 
-def test_legacy_runner_refuses_uncoordinated_database_dialect() -> None:
-    with pytest.raises(MigrationCoordinationError, match="blocked for 'postgresql'"):
-        require_supported_migration_dialect("postgresql")
-
+def test_supported_migration_dialects_are_explicit() -> None:
     require_supported_migration_dialect("sqlite")
+    with pytest.raises(
+        MigrationCoordinationError,
+        match="postgresql.*blocked.*disposable PostgreSQL scenarios",
+    ):
+        require_supported_migration_dialect("postgresql")
+    with pytest.raises(MigrationCoordinationError, match="not supported for 'mysql'"):
+        require_supported_migration_dialect("mysql")
+
+
+def test_migration_cli_requires_explicit_execution_flag(tmp_path: Path) -> None:
+    database_path = tmp_path / "not-opened-without-authorization.db"
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "ENVIRONMENT": "test",
+            "SQLITE_DATABASE_URL": f"sqlite:///{database_path.as_posix()}",
+            "SQLITE_ASYNC_DATABASE_URL": (
+                f"sqlite+aiosqlite:///{database_path.as_posix()}"
+            ),
+        }
+    )
+
+    result = subprocess.run(
+        [sys.executable, "run_migrations.py"],
+        cwd=BACKEND_ROOT,
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert result.returncode == 2
+    assert "requires explicit --execute" in result.stderr + result.stdout
+    assert not database_path.exists()
 
 
 @WINDOWS_ONLY

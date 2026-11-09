@@ -13,7 +13,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, JSON, String, func
+from sqlalchemy import DateTime, ForeignKey, JSON, String, func, text
 
 from sqlalchemy.orm import (
     Mapped,
@@ -59,7 +59,7 @@ class AuditLog(Base):
     metadata_json: Mapped[dict] = mapped_column(
         JSON,
         default=dict,
-        server_default="{}",
+        server_default=text("'{}'"),
         nullable=False,
     )
 

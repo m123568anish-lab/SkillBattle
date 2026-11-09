@@ -18,6 +18,7 @@ from sqlalchemy import (
     Float,
     Text,
     ForeignKey,
+    Index,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -294,6 +295,13 @@ class AssessmentAttempt(Base):
 
 class AssessmentQuestionSubmission(Base):
     __tablename__ = "assessment_question_submissions"
+    __table_args__ = (
+        Index(
+            "ix_assessment_q_sub_user_created",
+            "user_id",
+            "created_at",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(
         String(36),

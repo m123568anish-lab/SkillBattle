@@ -9,6 +9,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    Index,
 )
 
 from sqlalchemy.orm import (
@@ -30,6 +31,9 @@ class Roadmap(Base):
     """
 
     __tablename__ = "roadmaps"
+    __table_args__ = (
+        Index("ix_roadmaps_user_status", "user_id", "status"),
+    )
 
     id: Mapped[int] = mapped_column(
         Integer,

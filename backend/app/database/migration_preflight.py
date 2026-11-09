@@ -166,7 +166,17 @@ def _read_only_engine(source: Engine) -> Engine:
             poolclass=NullPool,
         )
 
-    return create_engine(source.url, poolclass=NullPool, pool_pre_ping=True)
+    connect_args = (
+        {"connect_timeout": 10}
+        if source.dialect.name == "postgresql"
+        else {}
+    )
+    return create_engine(
+        source.url,
+        poolclass=NullPool,
+        pool_pre_ping=True,
+        connect_args=connect_args,
+    )
 
 
 def _database_identity(engine: Engine) -> str:

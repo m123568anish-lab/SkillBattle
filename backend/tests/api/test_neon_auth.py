@@ -6,6 +6,7 @@ import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+from sqlalchemy import select
 
 from app.core.config import settings
 from app.core.dependencies import _get_or_create_neon_user
@@ -78,7 +79,10 @@ async def test_neon_identity_creates_and_reuses_local_user(client):
         assert user.email == email
         assert user.is_verified is True
 
-        profile = await db.get(Profile, user.id)
+        profile_result = await db.execute(
+            select(Profile).where(Profile.user_id == user.id)
+        )
+        profile = profile_result.scalar_one_or_none()
         assert profile is not None
         assert profile.onboarding_preferences == {}
 
@@ -97,7 +101,7 @@ async def test_neon_identity_creates_and_reuses_local_user(client):
 @pytest.mark.asyncio
 async def test_neon_identity_requires_verified_email_to_link_existing_user(client):
     unique_id = uuid4().hex[:8]
-    email = f"existing_{unique_id}@example.test"
+    email = f"existing_{unique_id}@example.com"
     response = await client.post("/auth/register", json={
         "username": f"existing_{unique_id}",
         "email": email,
@@ -120,4 +124,3 @@ async def test_neon_identity_requires_verified_email_to_link_existing_user(clien
             )
         assert user is not None
         assert user.neon_user_id is None
-
