@@ -51,7 +51,45 @@ Configure these independently in **Production**, **Preview**, and **Development*
 | `NEON_AUTH_COOKIE_SECRET` | Cryptographically random secret of at least 32 characters. Generate a distinct value per environment, for example with `openssl rand -base64 32`. Never commit or log it. |
 | `NEXT_PUBLIC_API_URL` | Explicit backend origin for the corresponding environment; production has no silent default. |
 
+To configure `NEON_AUTH_COOKIE_SECRET` in Vercel, add it as an environment
+variable for the intended environment (Production, Preview, or Development).
+Generate a separate value for each environment in PowerShell:
+
+```powershell
+$bytes = New-Object byte[] 32
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+try {
+    $rng.GetBytes($bytes)
+    $secret = [Convert]::ToBase64String($bytes)
+    $secret
+}
+finally {
+    $rng.Dispose()
+}
+```
+
+Paste the generated value directly into Vercel's value field. Do not put it in
+source control, this report, chat, or logs. Repeat with a new value for each
+environment that needs the variable.
+
 No live Vercel values were read or changed. The operator must set these in Vercel before deploying.
+
+### Render backend Neon Auth verification
+
+The browser signs in directly with Neon Auth, then sends a Neon JWT to the
+backend to load or create the Qubira profile. Render must therefore also have
+these variables set for the same Neon Auth branch:
+
+| Variable | Requirement |
+|---|---|
+| `NEON_AUTH_BASE_URL` | The same Neon Auth base URL used by the Vercel frontend. |
+| `NEON_AUTH_JWKS_URL` | The JWKS URL for that same Auth instance. Use the value already provided by Neon, not the database connection URL. |
+
+Both variables are declared in the root `render.yaml` as dashboard-managed
+values. Set them in the Render service's Environment settings and redeploy the
+backend. Without them, the API cannot verify a valid Neon session; it now
+returns an explicit service-configuration error instead of treating it as an
+invalid login. No live Render settings were read or changed.
 
 ## Opportunity authentication tests
 

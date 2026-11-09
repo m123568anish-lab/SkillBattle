@@ -43,6 +43,8 @@ function classify(error: unknown): AuthStatus {
 function errorMessage(error: unknown): string {
     if (axios.isAxiosError(error)) {
         if (error.response?.status === 429) return "Authentication service is busy. Please try again.";
+        const detail = error.response?.data?.detail;
+        if (typeof detail === "string" && detail.trim()) return detail;
         if ((error.response?.status ?? 0) >= 500 || !error.response) return "Authentication service is temporarily unavailable.";
     }
     return error instanceof Error ? error.message : "Unable to resolve your account.";

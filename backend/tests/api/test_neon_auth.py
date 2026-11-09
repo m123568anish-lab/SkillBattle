@@ -60,6 +60,41 @@ async def test_neon_token_verifies_against_configured_jwks(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_neon_token_reports_missing_api_configuration(monkeypatch):
+    token = jwt.encode(
+        {"sub": "neon-user-test"},
+        Ed25519PrivateKey.generate(),
+        algorithm="EdDSA",
+    )
+    monkeypatch.setattr(settings, "NEON_AUTH_BASE_URL", "")
+    monkeypatch.setattr(settings, "NEON_AUTH_JWKS_URL", "")
+
+    with pytest.raises(neon_security.NeonAuthenticationConfigurationError):
+        await neon_security.verify_neon_token(token)
+
+
+@pytest.mark.asyncio
+async def test_unconfigured_neon_token_returns_service_error(client, monkeypatch):
+    token = jwt.encode(
+        {"sub": "neon-user-test"},
+        Ed25519PrivateKey.generate(),
+        algorithm="EdDSA",
+    )
+    monkeypatch.setattr(settings, "NEON_AUTH_BASE_URL", "")
+    monkeypatch.setattr(settings, "NEON_AUTH_JWKS_URL", "")
+
+    response = await client.get(
+        "/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == (
+        "Neon Auth verification is not configured on the application API."
+    )
+
+
+@pytest.mark.asyncio
 async def test_neon_identity_creates_and_reuses_local_user(client):
     unique_id = uuid4().hex[:8]
     neon_user_id = f"neon_user_{unique_id}"

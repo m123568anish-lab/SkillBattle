@@ -150,6 +150,12 @@ def downgrade():
     config.set_main_option("script_location", str(script_dir).replace("%", "%%"))
     with acquire_postgresql_migration_ownership(_POSTGRESQL_TEST_URL_OBJ) as owner:
         monkeypatch.setattr(database_module, "engine", owner.connection.engine)
+        monkeypatch.setattr(settings, "DATABASE_URL", str(_POSTGRESQL_TEST_URL_OBJ))
+        monkeypatch.setattr(
+            settings,
+            "MIGRATION_DATABASE_URL",
+            str(_POSTGRESQL_TEST_URL_OBJ),
+        )
         config.attributes["connection"] = owner.connection
         config.attributes["migration_ownership"] = owner
         migration_connections = []

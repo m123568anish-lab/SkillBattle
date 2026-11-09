@@ -11,7 +11,11 @@ Security Package
 from .password import hash_password, password_manager, verify_password, hash_password_async, verify_password_async
 from .jwt import JWTManager, jwt_manager
 from .clerk import ClerkAuthenticationError, get_clerk_user_profile, verify_clerk_token
-from .neon import NeonAuthenticationError, verify_neon_token
+from .neon import (
+    NeonAuthenticationConfigurationError,
+    NeonAuthenticationError,
+    verify_neon_token,
+)
 
 # Token helpers
 create_access_token = jwt_manager.create_access_token
@@ -45,5 +49,6 @@ __all__ = [
     "get_clerk_user_profile",
     "verify_clerk_token",
     "NeonAuthenticationError",
+    "NeonAuthenticationConfigurationError",
     "verify_neon_token",
 ]

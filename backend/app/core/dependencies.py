@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import (
     ClerkAuthenticationError,
+    NeonAuthenticationConfigurationError,
     NeonAuthenticationError,
     decode_token,
     get_clerk_user_profile,
@@ -275,6 +276,11 @@ async def get_current_user(
         try:
             claims = await verify_neon_token(token)
             user = await _get_or_create_neon_user(db, claims)
+        except NeonAuthenticationConfigurationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Neon Auth verification is not configured on the application API.",
+            ) from exc
         except NeonAuthenticationError:
             try:
                 claims = await verify_clerk_token(token)

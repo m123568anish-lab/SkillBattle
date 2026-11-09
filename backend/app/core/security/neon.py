@@ -15,6 +15,10 @@ class NeonAuthenticationError(ValueError):
     """Raised when a Neon Auth token cannot be verified."""
 
 
+class NeonAuthenticationConfigurationError(NeonAuthenticationError):
+    """Raised when the API lacks the configuration required to verify Neon tokens."""
+
+
 _jwks_cache: dict[str, Any] = {"expires_at": 0.0, "keys": []}
 _shared_client: httpx.AsyncClient | None = None
 
@@ -36,7 +40,7 @@ async def _get_jwks() -> list[dict[str, Any]]:
 
     jwks_url = settings.NEON_AUTH_JWKS_URL.strip()
     if not jwks_url:
-        raise NeonAuthenticationError("Neon Auth JWKS URL is not configured.")
+        raise NeonAuthenticationConfigurationError("Neon Auth JWKS URL is not configured.")
 
     try:
         response = await _get_http_client().get(jwks_url)
@@ -54,14 +58,14 @@ async def _get_jwks() -> list[dict[str, Any]]:
 
 async def verify_neon_token(token: str) -> dict[str, Any]:
     """Verify a Managed Better Auth EdDSA token against Neon Auth's JWKS."""
-    issuer = settings.NEON_AUTH_BASE_URL.rstrip("/")
-    if not issuer:
-        raise NeonAuthenticationError("Neon Auth issuer is not configured.")
-
     try:
         header = jwt.get_unverified_header(token)
         if header.get("alg") != "EdDSA":
             raise NeonAuthenticationError("Neon Auth token uses an unsupported algorithm.")
+
+        issuer = settings.NEON_AUTH_BASE_URL.rstrip("/")
+        if not issuer:
+            raise NeonAuthenticationConfigurationError("Neon Auth issuer is not configured.")
 
         jwk_data = None
         for key in await _get_jwks():
