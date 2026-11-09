@@ -69,7 +69,13 @@ export function AuthProvider({
         }
 
         if (session?.user) {
-            void loadUser(`neon:${session.user.id}`);
+            void loadUser(`neon:${session.user.id}`).then(() => {
+                const currentUser = useAuthStore.getState().user;
+                const oauthImage = (session?.user as any)?.image;
+                if (oauthImage && currentUser && !currentUser.avatar_url) {
+                    useAuthStore.getState().updateUserPartial({ avatar_url: oauthImage });
+                }
+            });
         } else {
             useAuthStore.getState().clearSession();
         }
@@ -83,7 +89,13 @@ export function AuthProvider({
                         "Authentication could not be initialized. Check your connection and try again.",
                     );
                 } else if (data?.user) {
-                    void loadUser(`neon:${data.user.id}`);
+                    void loadUser(`neon:${data.user.id}`).then(() => {
+                        const currentUser = useAuthStore.getState().user;
+                        const oauthImage = (data?.user as any)?.image;
+                        if (oauthImage && currentUser && !currentUser.avatar_url) {
+                            useAuthStore.getState().updateUserPartial({ avatar_url: oauthImage });
+                        }
+                    });
                 } else {
                     useAuthStore.getState().clearSession(
                         "Your session has expired. Please sign in again.",

@@ -170,9 +170,21 @@ async def _get_or_create_neon_user(
     claims: dict,
 ) -> User:
     """Link a verified Neon subject to a local application user."""
+    from sqlalchemy import select
+    from app.models.profile import Profile
+
+    avatar = claims.get("picture") or claims.get("image") or claims.get("avatar_url")
     neon_user_id = claims["sub"]
     user = await user_repository.get_by_neon_user_id(db, neon_user_id)
     if user is not None:
+        if avatar and not user.avatar_url:
+            user.avatar_url = avatar
+            res = await db.execute(select(Profile).where(Profile.user_id == user.id))
+            prof = res.scalars().first()
+            if prof and not prof.avatar:
+                prof.avatar = avatar
+            await db.commit()
+            await db.refresh(user)
         return user
 
     email = claims.get("email")
@@ -215,6 +227,7 @@ async def _get_or_create_neon_user(
         role="student",
         account_type="STUDENT",
         status="ACTIVE",
+        avatar_url=avatar,
         is_active=True,
         is_verified=True,
         onboarding_completed=False,
@@ -230,7 +243,7 @@ async def _get_or_create_neon_user(
         db.add(UserStats(user_id=user.id, level=1, rating=1000, xp=0))
         db.add(UserSettings(user_id=user.id, theme="dark", language="python"))
         db.add(XP(user_id=user.id, total_xp=0, weekly_xp=0, daily_xp=0, level=1, rank=99999))
-        db.add(Profile(user_id=user.id, avatar="", onboarding_preferences={}))
+        db.add(Profile(user_id=user.id, avatar=avatar or "", onboarding_preferences={}))
         await db.commit()
         await db.refresh(user)
         return user

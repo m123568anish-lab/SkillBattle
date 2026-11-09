@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Flame, Shield, Sparkles } from "lucide-react";
@@ -16,6 +17,7 @@ interface DashboardHeroProps {
 
 export default function DashboardHero({ user, stats }: DashboardHeroProps) {
   const { ref, onPointerMove, onPointerLeave } = useCursorSpotlight<HTMLElement>();
+  const [avatarError, setAvatarError] = useState(false);
   const name = user.full_name?.trim().split(/\s+/)[0] || user.username || "there";
   const level = Math.max(1, stats.level);
   const progress = Math.min(100, Math.max(0, stats.level_progress_percent));
@@ -26,6 +28,7 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
 
+  const avatarUrl = user.avatar_url || (user as any).avatar || null;
   const isStreakMilestone = stats.streak >= 3;
 
   return (
@@ -61,14 +64,15 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
 
       <div className="relative z-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-4">
-          {user.avatar_url ? (
+          {avatarUrl && !avatarError ? (
             <Image
-              src={user.avatar_url}
+              src={avatarUrl}
               alt=""
               width={56}
               height={56}
               unoptimized
-              className="h-14 w-14 rounded-2xl object-cover ring-2 ring-[var(--border-default)] transition-transform duration-200 group-hover:ring-[var(--accent)]/40"
+              onError={() => setAvatarError(true)}
+              className="h-14 w-14 rounded-2xl object-cover ring-2 ring-[var(--accent)]/30 transition-transform duration-200 group-hover:ring-[var(--accent)]/60"
             />
           ) : (
             <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-[var(--border-default)] bg-[var(--surface-elevated)] text-lg font-black text-[var(--accent-strong)] transition-all duration-200 group-hover:border-[var(--accent)]/40 group-hover:shadow-[0_0_16px_rgba(200,239,114,0.2)]">

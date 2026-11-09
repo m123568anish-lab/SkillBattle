@@ -25,13 +25,16 @@ import {
   Laptop,
   Building,
   Target,
+  Camera,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { authService } from "@/services/auth.service";
+import ProfilePhotoChooser from "@/components/profile/ProfilePhotoChooser";
 import { toast } from "react-hot-toast";
 import { useTheme, type ThemePreference } from "@/components/common/ThemeProvider";
 
 type SettingTab =
+  | "profile"
   | "appearance"
   | "notifications"
   | "privacy"
@@ -48,6 +51,7 @@ interface TabConfig {
 }
 
 const TABS: TabConfig[] = [
+  { id: "profile", label: "Profile Photo & Avatar", icon: Camera, description: "Avatar, photo upload, and OAuth sync" },
   { id: "appearance", label: "Appearance", icon: Palette, description: "Color theme and visual system" },
   { id: "notifications", label: "Notifications", icon: Bell, description: "Match, streak, and alert preferences" },
   { id: "privacy", label: "Privacy & Access", icon: Shield, description: "Recruiter discovery & data sharing" },
@@ -447,7 +451,7 @@ export default function SettingsPage() {
         {/* Settings Sidebar Tabs */}
         <aside className="rounded-3xl border border-white/[0.08] bg-[#0a0f1d] p-3 shadow-2xl shadow-black/50 self-start">
           <div className="p-3 mb-2 border-b border-white/[0.06]">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-400">Settings Center</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent,#D8FF3E)]">Settings Center</p>
             <h2 className="text-lg font-black text-white">Preferences</h2>
           </div>
           <nav className="space-y-1">
@@ -460,15 +464,15 @@ export default function SettingsPage() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`w-full flex items-center gap-3 rounded-2xl px-3.5 py-3 text-left transition-all duration-150 ${
                     active
-                      ? "bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-bold shadow-md shadow-cyan-500/5"
+                      ? "bg-[var(--accent,#D8FF3E)]/10 border border-[var(--accent,#D8FF3E)]/30 text-[var(--accent,#D8FF3E)] font-bold shadow-md shadow-[var(--accent,#D8FF3E)]/5"
                       : "text-slate-400 border border-transparent hover:bg-white/[0.04] hover:text-slate-200"
                   }`}
                 >
-                  <Icon className={`h-4 w-4 shrink-0 ${active ? "text-cyan-400" : "text-slate-500"}`} />
+                  <Icon className={`h-4 w-4 shrink-0 ${active ? "text-[var(--accent,#D8FF3E)]" : "text-slate-500"}`} />
                   <div className="min-w-0 flex-1">
                     <span className="block text-xs font-semibold tracking-wide truncate">{tab.label}</span>
                   </div>
-                  {active && <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />}
+                  {active && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent,#D8FF3E)]" />}
                 </button>
               );
             })}
@@ -478,6 +482,32 @@ export default function SettingsPage() {
         {/* Tab Content Panel */}
         <main className="min-w-0">
           <AnimatePresence mode="wait">
+                        {/* 0. Profile Photo & Avatar Tab */}
+            {activeTab === "profile" && (
+              <motion.section
+                key="profile"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.15 }}
+                className="space-y-6"
+              >
+                <div className="rounded-3xl border border-[var(--border-default,#202022)] bg-[var(--surface-card,#0D0D0D)] p-6 sm:p-8 text-[var(--text-primary,#F5F5F5)] shadow-2xl space-y-6">
+                  <div className="border-b border-white/[0.06] pb-5">
+                    <h3 className="text-xl font-bold text-white">Profile Photo & Identity</h3>
+                    <p className="text-xs text-[var(--text-secondary,#999999)] mt-1">
+                      Set a customized picture for your account. You can upload an image from your device, sync your Google or GitHub profile photo, or select from curated technical avatars.
+                    </p>
+                  </div>
+
+                  <ProfilePhotoChooser
+                    currentAvatar={user?.avatar_url || (user as any)?.avatar || ""}
+                    fullName={user?.full_name || user?.username || "Competitor"}
+                  />
+                </div>
+              </motion.section>
+            )}
+
             {/* Appearance Tab */}
             {activeTab === "appearance" && (
               <motion.section
@@ -609,7 +639,7 @@ export default function SettingsPage() {
                     </div>
                   )}
 
-                  {notifSaving && <p className="text-xs text-cyan-400">Saving notification preference...</p>}
+                  {notifSaving && <p className="text-xs text-[var(--accent,#D8FF3E)]">Saving notification preference...</p>}
                 </div>
               </motion.section>
             )}
@@ -685,7 +715,7 @@ export default function SettingsPage() {
                   )}
 
                   {sharingSaving && (
-                    <p className="text-xs text-cyan-400">Saving privacy settings...</p>
+                    <p className="text-xs text-[var(--accent,#D8FF3E)]">Saving privacy settings...</p>
                   )}
                 </div>
               </motion.section>
@@ -761,7 +791,7 @@ export default function SettingsPage() {
                       type="button"
                       onClick={handlePasswordChange}
                       disabled={passwordLoading || !currentPassword || !newPassword}
-                      className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 px-5 py-2.5 text-xs font-bold text-slate-950 transition disabled:opacity-40"
+                      className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 hover:bg-[var(--accent,#D8FF3E)] px-5 py-2.5 text-xs font-bold text-slate-950 transition disabled:opacity-40"
                     >
                       <Lock size={14} />
                       <span>{passwordLoading ? "Updating..." : "Update Password"}</span>
@@ -870,7 +900,7 @@ export default function SettingsPage() {
                           type="button"
                           onClick={verifyTwoFactor}
                           disabled={twoFactorLoading || twoFactorCode.length !== 6}
-                          className="rounded-xl bg-cyan-500 hover:bg-cyan-400 px-4 py-2 text-xs font-bold text-slate-950 transition disabled:opacity-40"
+                          className="rounded-xl bg-cyan-500 hover:bg-[var(--accent,#D8FF3E)] px-4 py-2 text-xs font-bold text-slate-950 transition disabled:opacity-40"
                         >
                           {twoFactorLoading ? "Verifying..." : "Confirm & Activate"}
                         </button>
@@ -988,7 +1018,7 @@ export default function SettingsPage() {
                     {/* Primary Email */}
                     <div className="flex items-center justify-between p-4 rounded-2xl border border-white/[0.06] bg-[#060913]/60">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold">
+                        <div className="h-10 w-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-[var(--accent,#D8FF3E)] font-bold">
                           @
                         </div>
                         <div>

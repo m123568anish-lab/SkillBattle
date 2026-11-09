@@ -142,17 +142,24 @@ export default function ProfileForm() {
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("") || "SB";
+    .join("") || "QB";
 
   return (
     <div className="space-y-6">
-      <section aria-label="Your profile" className="overflow-hidden rounded-[1.75rem] border border-white/[0.09] bg-[#0a0d14] text-white shadow-xl shadow-black/20 lg:hidden">
-        <div className="relative h-36 overflow-hidden bg-gradient-to-br from-cyan-300 via-teal-400 to-cyan-600">
-          <div aria-hidden="true" className="absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/20 bg-white/10 blur-[1px]" />
-          <div aria-hidden="true" className="absolute -bottom-24 -left-10 h-44 w-72 rounded-full bg-cyan-200/20 blur-2xl" />
+      <section aria-label="Your profile" className="overflow-hidden rounded-[1.75rem] border border-[var(--border-default,#202022)] bg-[var(--surface-elevated,#0D0D0D)] text-white shadow-xl shadow-black/40 lg:hidden">
+        <div className="relative h-28 overflow-hidden bg-[var(--surface-input,#141414)] border-b border-[var(--border-default,#202022)]">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 opacity-[0.04] [background-image:linear-gradient(rgba(255,255,255,0.4)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.4)_1px,transparent_1px)] [background-size:24px_24px]"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full blur-2xl opacity-20"
+            style={{ background: "radial-gradient(circle, var(--accent,#D8FF3E) 0%, transparent 70%)" }}
+          />
         </div>
         <div className="relative -mt-14 px-4 pb-5">
-          <div className="mx-auto grid h-28 w-28 place-items-center overflow-hidden rounded-full border-4 border-[#0a0d14] bg-gradient-to-br from-cyan-400 to-violet-600 text-2xl font-black text-white shadow-lg shadow-black/40">
+          <div className="mx-auto grid h-28 w-28 place-items-center overflow-hidden rounded-full border-4 border-[var(--surface-canvas,#050505)] bg-[var(--surface-input,#141414)] text-2xl font-black text-[var(--accent-strong,#D8FF3E)] shadow-xl">
             {profile.avatar ? (
               <Image src={profile.avatar} alt={`Profile photo for ${profile.full_name || "your account"}`} width={112} height={112} unoptimized className="h-full w-full object-cover" />
             ) : initials}
@@ -168,7 +175,7 @@ export default function ProfileForm() {
             )}
             {!error && hasProfileStats && (
               <div className="mt-3 flex items-center justify-center gap-2">
-                <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-300">
+                <span className="rounded-full border border-[var(--accent,#D8FF3E)]/30 bg-[var(--accent,#D8FF3E)]/10 px-3 py-1 text-xs font-semibold text-[var(--accent-strong,#D8FF3E)]">
                   Level {profile.level}
                 </span>
                 <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-xs font-semibold text-slate-300">
@@ -185,15 +192,18 @@ export default function ProfileForm() {
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="hidden rounded-3xl border border-white/[0.08] bg-[#0a0f1d] p-6 text-white shadow-2xl shadow-black/50 relative overflow-hidden lg:block lg:p-8"
+        className="hidden rounded-3xl border border-[var(--border-default,#202022)] bg-[var(--surface-elevated,#0D0D0D)] p-6 text-white shadow-2xl shadow-black/50 relative overflow-hidden lg:block lg:p-8"
       >
-        <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-cyan-500/5 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-violet-500/5 blur-3xl" />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full blur-3xl opacity-15"
+          style={{ background: "radial-gradient(circle, var(--accent,#D8FF3E) 0%, transparent 70%)" }}
+        />
 
         <div className="relative z-10 flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
           {/* Avatar Section */}
           <div className="relative group flex-shrink-0">
-            <div className="relative h-28 w-28 rounded-2xl border-2 border-white/10 bg-[#060913] overflow-hidden shadow-xl">
+            <div className="relative h-28 w-28 rounded-2xl border-2 border-[var(--border-focus,#444444)] bg-[var(--surface-input,#141414)] overflow-hidden shadow-xl group-hover:border-[var(--accent,#D8FF3E)]/50 transition-colors">
               {profile.avatar ? (
                 <img
                   src={profile.avatar}
@@ -201,12 +211,12 @@ export default function ProfileForm() {
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-cyan-600 to-violet-700 text-white font-black text-3xl">
+                <div className="h-full w-full flex items-center justify-center bg-[var(--accent,#D8FF3E)]/10 text-[var(--accent-strong,#D8FF3E)] font-black text-3xl">
                   {initials}
                 </div>
               )}
             </div>
-            <span className="absolute -bottom-2 -right-2 rounded-lg bg-cyan-500 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-950 shadow-md">
+            <span className="absolute -bottom-2 -right-2 rounded-lg bg-[var(--accent,#D8FF3E)] px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-black shadow-md">
               LVL {profile.level}
             </span>
           </div>

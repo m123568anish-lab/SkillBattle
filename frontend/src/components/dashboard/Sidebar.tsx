@@ -164,6 +164,13 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
     .map((p) => p[0]?.toUpperCase())
     .join("") || "QB";
 
+  const avatarUrl = user?.avatar_url || (user as any)?.avatar || null;
+  const [avatarError, setAvatarError] = useState(false);
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [avatarUrl]);
+
   const roleDisplay = portal === "admin"
     ? "Platform Admin"
     : portal === "college"
@@ -336,8 +343,17 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
             }`}
           >
             {/* Avatar with subtle lime hover ring */}
-            <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)]/15 border border-[var(--accent)]/30 text-xs font-bold text-[var(--accent-strong)] transition-all duration-200 group-hover:ring-2 group-hover:ring-[var(--accent)]/40 group-hover:shadow-[0_0_12px_rgba(200,239,114,0.3)]">
-              {userInitials}
+            <div className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--accent)]/15 border border-[var(--accent)]/30 text-xs font-bold text-[var(--accent-strong)] transition-all duration-200 group-hover:ring-2 group-hover:ring-[var(--accent)]/40 group-hover:shadow-[0_0_12px_rgba(200,239,114,0.3)]">
+              {avatarUrl && !avatarError ? (
+                <img
+                  src={avatarUrl}
+                  alt={displayName}
+                  onError={() => setAvatarError(true)}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                userInitials
+              )}
               <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-[var(--status-success)] ring-2 ring-[var(--surface-card)]" />
             </div>
 
@@ -378,9 +394,23 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
                     : "bottom-full left-2 right-2 mb-2"
                 }`}
               >
-                <div className="border-b border-[var(--border-subtle)] px-2.5 py-2">
-                  <p className="truncate text-xs font-bold text-[var(--text-primary)]">{displayName}</p>
-                  <p className="truncate text-[10px] text-[var(--text-muted)]">{user?.email || "Signed In"}</p>
+                <div className="flex items-center gap-2.5 border-b border-[var(--border-subtle)] px-2.5 py-2">
+                  <div className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--accent)]/15 border border-[var(--accent)]/30 text-xs font-bold text-[var(--accent-strong)]">
+                    {avatarUrl && !avatarError ? (
+                      <img
+                        src={avatarUrl}
+                        alt=""
+                        onError={() => setAvatarError(true)}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      userInitials
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-bold text-[var(--text-primary)]">{displayName}</p>
+                    <p className="truncate text-[10px] text-[var(--text-muted)]">{user?.email || "Signed In"}</p>
+                  </div>
                 </div>
 
                 <div className="py-1 text-xs font-medium space-y-0.5">
