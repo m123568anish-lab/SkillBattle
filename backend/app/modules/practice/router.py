@@ -4,7 +4,7 @@ import logging
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import case, exists, func, select
+from sqlalchemy import and_, case, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -12,11 +12,13 @@ from app.core.dependencies import get_current_user
 from app.database.session import get_db
 from app.models.compiler import CodeSubmission
 from app.models.problem import Problem
+from app.models.problem_tag import ProblemTag
 from app.models.question import Question, UserSubmission
 from app.models.streak import Streak
 from app.models.user import User
 from app.models.user_skill_stat import UserSkillStat
 from app.modules.practice.service import get_or_start_daily, public_problem, submission_statuses
+from app.modules.problem.quality import problem_can_be_solved_clause
 from app.modules.streak.service import streak_service
 from app.modules.xp.service import xp_service
 
@@ -271,6 +273,7 @@ async def get_practice_recommendations(
                     Problem.is_active.is_(True),
                     Problem.category == category,
                     ~exists(accepted_problem),
+                    problem_can_be_solved_clause(),
                 )
                 .order_by(Problem.id)
                 .limit(1)
@@ -504,7 +507,10 @@ async def list_problems(
     q: str = "",
     difficulty: str | None = None,
     category: str | None = None,
+    topic: str | None = None,
     status: str = Query("all", pattern="^(all|solved|attempted|unsolved)$"),
+    sort_by: str = Query("problem_id", pattern="^(problem_id|difficulty)$"),
+    ready_only: bool = False,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=50),
     db: AsyncSession = Depends(get_db),
@@ -512,11 +518,40 @@ async def list_problems(
 ):
     conditions = [Problem.is_active.is_(True)]
     if q.strip():
-        conditions.append(Problem.title.ilike(f"%{q.strip()}%"))
+        search_term = f"%{q.strip()}%"
+        conditions.append(
+            or_(
+                and_(
+                    problem_can_be_solved_clause(),
+                    Problem.title.ilike(search_term),
+                ),
+                Problem.category.ilike(search_term),
+                exists(
+                    select(1).where(
+                        ProblemTag.problem_id == Problem.id,
+                        ProblemTag.tag.ilike(search_term),
+                    )
+                ),
+            )
+        )
     if difficulty:
         conditions.append(func.lower(Problem.difficulty) == difficulty.lower())
     if category:
         conditions.append(func.lower(Problem.category) == category.lower())
+    if topic:
+        conditions.append(
+            or_(
+                func.lower(Problem.category) == topic.lower(),
+                exists(
+                    select(1).where(
+                        ProblemTag.problem_id == Problem.id,
+                        func.lower(ProblemTag.tag) == topic.lower(),
+                    )
+                ),
+            )
+        )
+    if ready_only:
+        conditions.append(problem_can_be_solved_clause())
 
     user_submissions = select(CodeSubmission.id).where(
         CodeSubmission.user_id == current_user.id,
@@ -528,16 +563,36 @@ async def list_problems(
     elif status == "attempted":
         conditions.extend((exists(user_submissions), ~exists(accepted_submissions)))
     elif status == "unsolved":
-        conditions.append(~exists(user_submissions))
+        conditions.append(~exists(accepted_submissions))
 
     total = await db.scalar(select(func.count(Problem.id)).where(*conditions)) or 0
+    active_total = await db.scalar(
+        select(func.count(Problem.id)).where(Problem.is_active.is_(True))
+    ) or 0
+    available_total = await db.scalar(
+        select(func.count(Problem.id)).where(
+            Problem.is_active.is_(True),
+            problem_can_be_solved_clause(),
+        )
+    ) or 0
+    difficulty_order = case(
+        (func.lower(Problem.difficulty) == "easy", 1),
+        (func.lower(Problem.difficulty) == "medium", 2),
+        (func.lower(Problem.difficulty) == "hard", 3),
+        else_=4,
+    )
+    ordering = (
+        (difficulty_order.asc(), Problem.id.desc())
+        if sort_by == "difficulty"
+        else (Problem.id.desc(),)
+    )
     page_problems = list(
         (
             await db.execute(
                 select(Problem)
                 .options(selectinload(Problem.tags))
                 .where(*conditions)
-                .order_by(Problem.id.desc())
+                .order_by(*ordering)
                 .offset((page - 1) * page_size)
                 .limit(page_size)
             )
@@ -559,7 +614,25 @@ async def list_problems(
             select(Problem.category).where(Problem.is_active.is_(True)).distinct().order_by(Problem.category)
         )
     ).scalars().all()
-    return {"items": items, "total": total, "page": page, "page_size": page_size, "categories": list(categories)}
+    topics = (
+        await db.execute(
+            select(ProblemTag.tag)
+            .join(Problem, ProblemTag.problem_id == Problem.id)
+            .where(Problem.is_active.is_(True))
+            .distinct()
+            .order_by(ProblemTag.tag)
+        )
+    ).scalars().all()
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "categories": list(categories),
+        "topics": list(topics),
+        "available_total": available_total,
+        "needs_repair_total": max(active_total - available_total, 0),
+    }
 
 
 @router.get("/problems/{problem_id}")
@@ -608,7 +681,20 @@ async def get_problem(
 
 @router.get("/summary")
 async def summary(db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)):
-    statuses = await submission_statuses(db, current_user.id)
+    rows = (
+        await db.execute(
+            select(CodeSubmission.problem_id, CodeSubmission.verdict)
+            .join(Problem, Problem.id == CodeSubmission.problem_id)
+            .where(
+                CodeSubmission.user_id == current_user.id,
+                Problem.is_active.is_(True),
+                problem_can_be_solved_clause(),
+            )
+        )
+    ).all()
+    statuses: dict[int, str] = {}
+    for problem_id, verdict in rows:
+        statuses[problem_id] = "solved" if verdict == "Accepted" else statuses.get(problem_id, "attempted")
     solved = sum(value == "solved" for value in statuses.values())
     attempted = len(statuses)
     return {

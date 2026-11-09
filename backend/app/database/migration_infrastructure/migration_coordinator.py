@@ -33,8 +33,14 @@ POSTGRESQL_MIGRATION_LOCK_NAMESPACE = 0x51554249
 POSTGRESQL_MIGRATION_LOCK_KEY = 0x524D4947
 
 
-def require_supported_migration_dialect(dialect_name: str) -> None:
+def require_supported_migration_dialect(
+    dialect_name: str,
+    *,
+    allow_postgresql_for_disposable_test: bool = False,
+) -> None:
     if dialect_name == "postgresql":
+        if allow_postgresql_for_disposable_test:
+            return
         raise MigrationCoordinationError(
             "Migration execution for 'postgresql' is blocked until fresh and "
             "existing disposable PostgreSQL scenarios are validated."

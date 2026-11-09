@@ -4,13 +4,16 @@ export type PracticeStatus = "solved" | "attempted" | "unsolved";
 
 export interface PracticeProblem {
   id: number;
-  title: string;
+  title: string | null;
   slug: string;
   difficulty: string;
   category: string;
   xp_reward: number;
   status: PracticeStatus;
   tags: string[];
+  metadata_status: "ready" | "needs_repair";
+  metadata_warnings: string[];
+  can_solve: boolean;
 }
 
 export interface PracticeProblemDetail extends PracticeProblem {
@@ -105,6 +108,9 @@ export const practiceService = {
         page: number;
         page_size: number;
         categories: string[];
+        topics: string[];
+        available_total: number;
+        needs_repair_total: number;
       }>("/practice/problems", { params, signal })
     ).data,
 

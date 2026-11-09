@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
+from typing import Literal
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from pydantic import Field, field_validator, model_validator
@@ -128,6 +129,7 @@ class Settings(BaseSettings):
         default="",
         description="Direct PostgreSQL URL used exclusively for schema migrations",
     )
+    DATABASE_READINESS_MODE: Literal["legacy", "epoch"] = "legacy"
 
     # SQLite
     SQLITE_DATABASE_URL: str = "sqlite:///./skillbattle.db"

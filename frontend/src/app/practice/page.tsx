@@ -51,6 +51,7 @@ function PracticeHomeContent() {
   });
   const [activeProblems, setActiveProblems] = useState<PracticeProblem[]>([]);
   const [availableProblems, setAvailableProblems] = useState<PracticeProblem[]>([]);
+  const [availableProblemTotal, setAvailableProblemTotal] = useState(0);
 
   // Time-based greeting
   const getGreeting = () => {
@@ -99,7 +100,7 @@ function PracticeHomeContent() {
         const [summary, activeRes, availableRes, dash] = await Promise.all([
           practiceService.summary(),
           practiceService.list({ page: 1, page_size: 3, status: "attempted" }),
-          practiceService.list({ page: 1, page_size: 4, status: "unsolved" }),
+          practiceService.list({ page: 1, page_size: 4, status: "unsolved", ready_only: "true" }),
           dashboardService.getDashboard(),
         ]);
 
@@ -107,6 +108,7 @@ function PracticeHomeContent() {
 
         setActiveProblems(activeRes.items);
         setAvailableProblems(availableRes.items);
+        setAvailableProblemTotal(availableRes.available_total);
         setStats({
           solved: summary.solved,
           attempted: summary.attempted,
@@ -194,7 +196,7 @@ function PracticeHomeContent() {
           />
           <StatCard
             label="Available Problems"
-            value={metricValue(availableProblems.length)}
+            value={metricValue(availableProblemTotal)}
             subtext="Unsolved active problems"
             icon={BookOpen}
             variant="neutral"
@@ -234,7 +236,12 @@ function PracticeHomeContent() {
                       <span className="text-xs font-medium text-slate-400">{prob.category || "Uncategorized"}</span>
                       <DifficultyBadge difficulty={prob.difficulty || "Unknown"} size="sm" />
                     </div>
-                    <h4 className="font-bold text-white text-base line-clamp-1">{prob.title}</h4>
+                    <h4 className={`font-bold text-base line-clamp-1 ${prob.title ? "text-white" : "text-amber-200"}`}>
+                      {prob.title ?? "Metadata repair required"}
+                    </h4>
+                    {!prob.can_solve && (
+                      <p className="text-[11px] text-amber-300">This saved problem is unavailable until its metadata is repaired.</p>
+                    )}
                     <p className="text-xs text-slate-400 line-clamp-2">
                       {prob.tags.length > 0 ? `Tags: ${prob.tags.join(", ")}` : "No problem tags provided."}
                     </p>
@@ -250,7 +257,7 @@ function PracticeHomeContent() {
                       className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-indigo-500 transition-colors cursor-pointer"
                     >
                       <Play className="h-3 w-3 fill-current" />
-                      <span>Continue</span>
+                      <span>{prob.can_solve ? "Continue" : "Review metadata"}</span>
                     </Link>
                   </div>
                 </div>
@@ -340,11 +347,13 @@ function PracticeHomeContent() {
                       <span className="text-xs font-medium text-slate-400">{prob.category || "Uncategorized"}</span>
                       <DifficultyBadge difficulty={prob.difficulty || "Unknown"} size="sm" />
                     </div>
-                    <h4 className="font-bold text-white text-sm sm:text-base line-clamp-1">{prob.title}</h4>
+                    <h4 className="font-bold text-white text-sm sm:text-base line-clamp-1">
+                      {prob.title ?? "Metadata repair required"}
+                    </h4>
                   </div>
 
                   <Link
-                    href={`/tasks?id=${prob.id}`}
+                    href={`/practice/coding?problem=${prob.id}`}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-xs font-semibold text-indigo-300 hover:bg-indigo-500/20 transition-all shrink-0"
                   >
                     <span>Solve</span>

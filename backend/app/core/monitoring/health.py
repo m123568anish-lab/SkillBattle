@@ -12,7 +12,11 @@ from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 
-from app.database.migration_preflight import build_preflight_report
+from app.core.config import settings
+from app.database.migration_preflight import (
+    build_epoch_preflight_report,
+    build_preflight_report,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +35,12 @@ async def health():
 
 async def _database_readiness_response() -> JSONResponse:
     try:
-        report = await run_in_threadpool(build_preflight_report)
+        report_builder = (
+            build_epoch_preflight_report
+            if settings.DATABASE_READINESS_MODE == "epoch"
+            else build_preflight_report
+        )
+        report = await run_in_threadpool(report_builder)
     except Exception as exc:
         logger.error("Database readiness check failed (%s)", type(exc).__name__)
         return JSONResponse(

@@ -37,6 +37,13 @@ from app.database.migration_infrastructure.migration_coordinator import (
     MigrationCoordinationError,
     acquire_postgresql_migration_ownership,
 )
+from app.database.migration_infrastructure.epoch_control import (
+    EpochTransition,
+    EpochTransitionState,
+    create_epoch_control_schema,
+    record_epoch_transition,
+    validate_epoch_audit,
+)
 from app.database.migration_preflight import (
     _compare_server_default,
     compare_model_schema,
@@ -670,3 +677,51 @@ with acquire_postgresql_migration_ownership(os.environ["QUBIRA_TEST_POSTGRESQL_U
             process.stdout.close()
         if process.stderr is not None:
             process.stderr.close()
+
+
+def test_postgresql_epoch_control_ddl_and_durable_state_use_owned_connection() -> None:
+    assert _POSTGRESQL_TEST_URL_OBJ is not None
+    schema_name = f"qubira_epoch_test_{uuid.uuid4().hex}"
+    with acquire_postgresql_migration_ownership(_POSTGRESQL_TEST_URL_OBJ) as owner:
+        owner.assert_connection(owner.connection)
+        owner.connection.execute(text(f'CREATE SCHEMA "{schema_name}"'))
+        owner.connection.execute(text(f'SET search_path TO "{schema_name}"'))
+        owner.connection.commit()
+        try:
+            create_epoch_control_schema(owner.connection)
+            owner.connection.commit()
+            record_epoch_transition(
+                owner.connection,
+                EpochTransitionState.UNCLASSIFIED,
+                EpochTransition(
+                    to_state=EpochTransitionState.FRESH_PREFLIGHT,
+                    idempotency_key="pg-preflight-1",
+                    actor_role="test_operator",
+                ),
+            )
+            owner.connection.commit()
+            record_epoch_transition(
+                owner.connection,
+                EpochTransitionState.FRESH_PREFLIGHT,
+                EpochTransition(
+                    to_state=EpochTransitionState.STARTED,
+                    idempotency_key="pg-start-1",
+                    actor_role="test_operator",
+                    plan_digest="a" * 64,
+                    target_fingerprint_digest="b" * 64,
+                    database_identity_digest="c" * 64,
+                ),
+            )
+            owner.connection.commit()
+            assert validate_epoch_audit(owner.connection) is EpochTransitionState.STARTED
+            assert owner.connection.execute(
+                text("SELECT COUNT(*) FROM qubira_epoch_audit")
+            ).scalar_one() == 2
+            owner.assert_connection(owner.connection)
+            owner.connection.commit()
+        finally:
+            if owner.connection.in_transaction():
+                owner.connection.rollback()
+            owner.connection.execute(text("RESET search_path"))
+            owner.connection.execute(text(f'DROP SCHEMA "{schema_name}" CASCADE'))
+            owner.connection.commit()

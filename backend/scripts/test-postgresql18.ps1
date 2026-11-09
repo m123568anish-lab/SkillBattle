@@ -1,3 +1,7 @@
+param(
+    [switch]$PrepareEpochBaselineOnly
+)
+
 $ErrorActionPreference = "Stop"
 
 $postgresBin = "C:\Program Files\PostgreSQL\18\bin"
@@ -201,11 +205,58 @@ try {
     $env:DATABASE_TYPE = "postgresql"
     $env:ENVIRONMENT = "test"
     $env:QUBIRA_TEST_MODE = "1"
+    $env:QUBIRA_EPOCH_POSTGRESQL_TEST = "1"
     $env:MIGRATION_DATABASE_URL = ""
     $env:RESET_DB = "false"
 
     Write-Output "PostgreSQL 18.6 isolated cluster: verified (loopback only)"
     Write-Output "Disposable database identity: verified before test DDL"
+    if ($PrepareEpochBaselineOnly) {
+        @'
+import os
+from pathlib import Path
+
+from alembic import command
+from alembic.config import Config
+from sqlalchemy.engine import make_url
+
+from app.database.migration_infrastructure.epoch_control import (
+    create_epoch_control_schema,
+)
+from app.database.migration_infrastructure.migration_coordinator import (
+    acquire_postgresql_migration_ownership,
+)
+
+backend = Path.cwd()
+versions = backend / "alembic_epoch" / "versions"
+existing = sorted(versions.glob("*.py"))
+if existing:
+    raise RuntimeError(
+        "Refusing to overwrite an existing epoch migration: "
+        + ", ".join(path.name for path in existing)
+    )
+url = make_url(os.environ["DATABASE_URL"])
+with acquire_postgresql_migration_ownership(url) as ownership:
+    create_epoch_control_schema(ownership.connection)
+    ownership.connection.commit()
+    config = Config(str(backend / "alembic_epoch.ini"))
+    config.set_main_option("sqlalchemy.url", str(url).replace("%", "%%"))
+    config.attributes["connection"] = ownership.connection
+    config.attributes["migration_ownership"] = ownership
+    config.attributes["coordinated_runner"] = True
+    command.revision(
+        config,
+        message="Create PostgreSQL epoch baseline",
+        autogenerate=True,
+    )
+'@ | python -
+        if ($LASTEXITCODE -ne 0) {
+            throw "Could not generate the epoch baseline draft from registered models."
+        }
+        Write-Output "Generated a DDL-only epoch baseline draft; no application migration was executed."
+        return
+    }
+
     Write-Output "Running PostgreSQL advisory-lock and migration-refusal tests."
     Set-Location $backendRoot
     & python -m pytest --confcutdir=tests/migration_infrastructure -q `
@@ -213,6 +264,121 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "PostgreSQL advisory-lock test suite failed."
     }
+
+    $legacyDatabaseUrl = $env:DATABASE_URL
+    $legacyAsyncDatabaseUrl = $env:ASYNC_DATABASE_URL
+    $legacyTestDatabaseUrl = $env:QUBIRA_TEST_POSTGRESQL_URL
+    $epochDatabase = "qubira_test_epoch_" + [Guid]::NewGuid().ToString("N")
+    & $createdb -h 127.0.0.1 -p $port -U $owner $epochDatabase
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not create the isolated epoch-install test database."
+    }
+    $epochIdentity = Invoke-PsqlIdentity -Database $epochDatabase -User $owner -Port $port
+    if (
+        $epochIdentity.Count -ne 7 -or
+        $epochIdentity[0] -ne "18.6" -or
+        $epochIdentity[1] -ne $epochDatabase -or
+        $epochIdentity[2] -ne $owner -or
+        -not (Test-LoopbackAddress $epochIdentity[3])
+    ) {
+        throw "The isolated epoch-install database identity could not be verified."
+    }
+    $env:DATABASE_URL = "postgresql+psycopg://${owner}:${encodedPassword}@127.0.0.1:${port}/${epochDatabase}"
+    $env:ASYNC_DATABASE_URL = "postgresql+asyncpg://${owner}:${encodedPassword}@127.0.0.1:${port}/${epochDatabase}"
+    $env:QUBIRA_TEST_POSTGRESQL_URL = $env:DATABASE_URL
+    Write-Output "Running the coordinated epoch fresh-install test on $epochDatabase."
+    & python -m pytest --confcutdir=tests/migration_infrastructure -q `
+        tests/migration_infrastructure/test_epoch_postgresql_runner.py::test_epoch_fresh_install_is_coordinated_and_readiness_is_read_only
+    if ($LASTEXITCODE -ne 0) {
+        throw "The coordinated epoch fresh-install test failed."
+    }
+
+    $failureDatabase = "qubira_test_epoch_failure_" + [Guid]::NewGuid().ToString("N")
+    & $createdb -h 127.0.0.1 -p $port -U $owner $failureDatabase
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not create the isolated epoch failure-test database."
+    }
+    $failureIdentity = Invoke-PsqlIdentity -Database $failureDatabase -User $owner -Port $port
+    if (
+        $failureIdentity.Count -ne 7 -or
+        $failureIdentity[0] -ne "18.6" -or
+        $failureIdentity[1] -ne $failureDatabase -or
+        $failureIdentity[2] -ne $owner -or
+        -not (Test-LoopbackAddress $failureIdentity[3])
+    ) {
+        throw "The isolated epoch failure-test database identity could not be verified."
+    }
+    $env:DATABASE_URL = "postgresql+psycopg://${owner}:${encodedPassword}@127.0.0.1:${port}/${failureDatabase}"
+    $env:ASYNC_DATABASE_URL = "postgresql+asyncpg://${owner}:${encodedPassword}@127.0.0.1:${port}/${failureDatabase}"
+    $env:QUBIRA_TEST_POSTGRESQL_URL = $env:DATABASE_URL
+    $env:QUBIRA_EPOCH_FAILURE_TEST = "1"
+    Write-Output "Running durable epoch interruption and no-retry tests on $failureDatabase."
+    & python -m pytest --confcutdir=tests/migration_infrastructure -q `
+        tests/migration_infrastructure/test_epoch_postgresql_runner.py::test_interrupted_epoch_attempt_is_not_retried_automatically
+    if ($LASTEXITCODE -ne 0) {
+        throw "The epoch interruption and no-retry test failed."
+    }
+    Remove-Item Env:QUBIRA_EPOCH_FAILURE_TEST -ErrorAction SilentlyContinue
+
+    $terminationDatabase = "qubira_test_epoch_termination_" + [Guid]::NewGuid().ToString("N")
+    & $createdb -h 127.0.0.1 -p $port -U $owner $terminationDatabase
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not create the isolated epoch termination-test database."
+    }
+    $terminationIdentity = Invoke-PsqlIdentity -Database $terminationDatabase -User $owner -Port $port
+    if (
+        $terminationIdentity.Count -ne 7 -or
+        $terminationIdentity[0] -ne "18.6" -or
+        $terminationIdentity[1] -ne $terminationDatabase -or
+        $terminationIdentity[2] -ne $owner -or
+        -not (Test-LoopbackAddress $terminationIdentity[3])
+    ) {
+        throw "The isolated epoch termination-test database identity could not be verified."
+    }
+    $env:DATABASE_URL = "postgresql+psycopg://${owner}:${encodedPassword}@127.0.0.1:${port}/${terminationDatabase}"
+    $env:ASYNC_DATABASE_URL = "postgresql+asyncpg://${owner}:${encodedPassword}@127.0.0.1:${port}/${terminationDatabase}"
+    $env:QUBIRA_TEST_POSTGRESQL_URL = $env:DATABASE_URL
+    $env:QUBIRA_EPOCH_TERMINATION_TEST = "1"
+    $env:QUBIRA_EPOCH_TERMINATION_MARKER = Join-Path $temporaryRoot ("epoch-termination-" + [Guid]::NewGuid().ToString("N") + ".txt")
+    Write-Output "Running process-termination recovery test on $terminationDatabase."
+    & python -m pytest --confcutdir=tests/migration_infrastructure -q `
+        tests/migration_infrastructure/test_epoch_postgresql_runner.py::test_process_termination_leaves_durable_intent_and_requires_recovery
+    if ($LASTEXITCODE -ne 0) {
+        throw "The epoch process-termination recovery test failed."
+    }
+    Remove-Item Env:QUBIRA_EPOCH_TERMINATION_TEST -ErrorAction SilentlyContinue
+    Remove-Item Env:QUBIRA_EPOCH_TERMINATION_MARKER -ErrorAction SilentlyContinue
+
+    $verificationDatabase = "qubira_test_epoch_verify_" + [Guid]::NewGuid().ToString("N")
+    & $createdb -h 127.0.0.1 -p $port -U $owner $verificationDatabase
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not create the isolated epoch verification-test database."
+    }
+    $verificationIdentity = Invoke-PsqlIdentity -Database $verificationDatabase -User $owner -Port $port
+    if (
+        $verificationIdentity.Count -ne 7 -or
+        $verificationIdentity[0] -ne "18.6" -or
+        $verificationIdentity[1] -ne $verificationDatabase -or
+        $verificationIdentity[2] -ne $owner -or
+        -not (Test-LoopbackAddress $verificationIdentity[3])
+    ) {
+        throw "The isolated epoch verification-test database identity could not be verified."
+    }
+    $env:DATABASE_URL = "postgresql+psycopg://${owner}:${encodedPassword}@127.0.0.1:${port}/${verificationDatabase}"
+    $env:ASYNC_DATABASE_URL = "postgresql+asyncpg://${owner}:${encodedPassword}@127.0.0.1:${port}/${verificationDatabase}"
+    $env:QUBIRA_TEST_POSTGRESQL_URL = $env:DATABASE_URL
+    $env:QUBIRA_EPOCH_VERIFY_FAILURE_TEST = "1"
+    Write-Output "Running post-commit verification failure test on $verificationDatabase."
+    & python -m pytest --confcutdir=tests/migration_infrastructure -q `
+        tests/migration_infrastructure/test_epoch_postgresql_runner.py::test_committed_revision_with_failed_verification_requires_recovery
+    if ($LASTEXITCODE -ne 0) {
+        throw "The epoch post-commit verification failure test failed."
+    }
+    Remove-Item Env:QUBIRA_EPOCH_VERIFY_FAILURE_TEST -ErrorAction SilentlyContinue
+
+    $env:DATABASE_URL = $legacyDatabaseUrl
+    $env:ASYNC_DATABASE_URL = $legacyAsyncDatabaseUrl
+    $env:QUBIRA_TEST_POSTGRESQL_URL = $legacyTestDatabaseUrl
 
     Write-Output "Starting API-only Uvicorn smoke test."
     $beforeRelations = (& $psql -X -h 127.0.0.1 -p $port -U $owner -d $database `
@@ -317,6 +483,11 @@ finally {
     Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
     Remove-Item Env:ASYNC_DATABASE_URL -ErrorAction SilentlyContinue
     Remove-Item Env:QUBIRA_TEST_POSTGRESQL_URL -ErrorAction SilentlyContinue
+    Remove-Item Env:QUBIRA_EPOCH_POSTGRESQL_TEST -ErrorAction SilentlyContinue
+    Remove-Item Env:QUBIRA_EPOCH_FAILURE_TEST -ErrorAction SilentlyContinue
+    Remove-Item Env:QUBIRA_EPOCH_TERMINATION_TEST -ErrorAction SilentlyContinue
+    Remove-Item Env:QUBIRA_EPOCH_TERMINATION_MARKER -ErrorAction SilentlyContinue
+    Remove-Item Env:QUBIRA_EPOCH_VERIFY_FAILURE_TEST -ErrorAction SilentlyContinue
 
     if ($serverStarted) {
         & $pgCtl -D $dataDirectory -m fast -w stop

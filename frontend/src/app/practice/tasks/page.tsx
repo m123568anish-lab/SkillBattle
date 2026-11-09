@@ -145,7 +145,7 @@ function PracticeTasksInner() {
                   <button
                     type="button"
                     onClick={startDailyChallenge}
-                    disabled={starting || loading || !daily?.available}
+                    disabled={starting || loading || !daily?.available || Boolean(daily.problem && !daily.problem.can_solve)}
                     className="inline-flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-cyan-500/20 transition hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50 active:scale-95"
                   >
                     <Play className="h-4 w-4 fill-white" />
@@ -176,7 +176,16 @@ function PracticeTasksInner() {
                       : daily?.reason || "No assignment is currently available."}
             </p>
             {daily?.problem && (
-              <p className="mt-3 text-xs text-slate-500">Assigned problem: {daily.problem.title}</p>
+              <div className="mt-3 space-y-1">
+                <p className="text-xs text-slate-500">
+                  Assigned problem: {daily.problem.title ?? `Metadata repair required for problem #${daily.problem.id}`}
+                </p>
+                {!daily.problem.can_solve && (
+                  <p role="status" className="text-xs text-amber-300">
+                    This saved assignment cannot be started until its title and statement are repaired.
+                  </p>
+                )}
+              </div>
             )}
           </div>
         </section>

@@ -30,6 +30,7 @@ from app.modules.battle.events import BattleEvent
 from app.modules.problem.repository import (
     problem_repository,
 )
+from app.modules.problem.quality import problem_can_be_solved
 
 from app.modules.compiler.repository import (
     compiler_repository,
@@ -220,6 +221,11 @@ class CompilerService:
             request.problem_id,
 
         )
+
+        if not problem_can_be_solved(problem):
+            raise ValueError(
+                "Problem metadata needs repair; submission is disabled until a verified title and statement are restored."
+            )
 
         # ------------------------------------------------------
         # Hidden Test Cases

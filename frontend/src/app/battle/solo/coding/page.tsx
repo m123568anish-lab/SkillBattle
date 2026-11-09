@@ -70,7 +70,12 @@ function SoloCodingBattleInner() {
             );
           }
         } else {
-          const catalog = await practiceService.list({ difficulty: "medium", page: 1, page_size: 1 });
+          const catalog = await practiceService.list({
+            difficulty: "medium",
+            page: 1,
+            page_size: 1,
+            ready_only: "true",
+          });
           if (catalog.items && catalog.items.length > 0) {
             const detail = await practiceService.get(catalog.items[0].id);
             setProblem(detail);
@@ -99,7 +104,7 @@ function SoloCodingBattleInner() {
   }, [problemIdParam]);
 
   const handleRunTests = async () => {
-    if (!problem || running || battleFinished) return;
+    if (!problem || !problem.can_solve || running || battleFinished) return;
     setRunning(true);
     setConsoleStatus("running");
     try {
@@ -138,7 +143,7 @@ function SoloCodingBattleInner() {
   };
 
   const handleSubmitSolution = async () => {
-    if (!problem || submitting || battleFinished) return;
+    if (!problem || !problem.can_solve || submitting || battleFinished) return;
     setSubmitting(true);
     try {
       const res = await practiceService.submit({
@@ -212,7 +217,7 @@ function SoloCodingBattleInner() {
             <span>CODING PRACTICE</span>
           </div>
           <span className="text-sm font-bold text-white hidden sm:inline">
-            {problem.title}
+            {problem.title ?? "Metadata repair required"}
           </span>
         </div>
 
@@ -238,9 +243,22 @@ function SoloCodingBattleInner() {
               </span>
             </div>
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-              {problem.title}
+              {problem.title ?? "Metadata repair required"}
             </h2>
           </div>
+
+          {!problem.can_solve && (
+            <div role="alert" className="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-xs text-amber-200">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <div>
+                  <p className="font-semibold">This problem needs metadata repair.</p>
+                  <p className="mt-1 text-amber-100/80">{problem.metadata_warnings.join(" ")}</p>
+                  <p className="mt-1 text-amber-100/80">Run and submit are disabled until its title and statement are restored.</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-6 pt-5">
             <div>
@@ -285,7 +303,7 @@ function SoloCodingBattleInner() {
               language={language}
               onLanguageChange={setLanguage}
               availableLanguages={LANGUAGES}
-              readOnly={battleFinished}
+              readOnly={battleFinished || !problem.can_solve}
             />
           </div>
 
@@ -312,8 +330,8 @@ function SoloCodingBattleInner() {
         isSubmitting={submitting}
         runLabel="Test Cases"
         submitLabel="Submit Final Solution"
-        canRunTests={!battleFinished}
-        canSubmit={!battleFinished}
+        canRunTests={!battleFinished && problem.can_solve}
+        canSubmit={!battleFinished && problem.can_solve}
       />
 
       {/* Persisted submission result */}

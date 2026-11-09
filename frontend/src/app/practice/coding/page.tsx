@@ -18,17 +18,12 @@ import {
   CheckCircle2,
   Play,
   Search,
-  Sparkles,
   AlertCircle,
   ChevronLeft,
   ChevronRight,
-  Flame,
   Layers,
   Check,
   Copy,
-  Code2,
-  BookOpen,
-  Filter,
 } from "lucide-react";
 
 const DEFAULT_STARTER_CODES: Record<string, string> = {
@@ -48,6 +43,9 @@ function CodingPracticeInner() {
   const [items, setItems] = useState<PracticeProblem[]>([]);
   const [total, setTotal] = useState(0);
   const [categories, setCategories] = useState<string[]>([]);
+  const [topics, setTopics] = useState<string[]>([]);
+  const [availableTotal, setAvailableTotal] = useState(0);
+  const [needsRepairTotal, setNeedsRepairTotal] = useState(0);
   const [summary, setSummary] = useState<{
     solved: number;
     attempted: number;
@@ -61,6 +59,8 @@ function CodingPracticeInner() {
   const [query, setQuery] = useState("");
   const [difficulty, setDifficulty] = useState("");
   const [category, setCategory] = useState("");
+  const [topic, setTopic] = useState("");
+  const [sortBy, setSortBy] = useState<"problem_id" | "difficulty">("problem_id");
   const [status, setStatus] = useState<"all" | "solved" | "unsolved">("all");
   const [page, setPage] = useState(1);
   const [loadingList, setLoadingList] = useState(true);
@@ -102,6 +102,8 @@ function CodingPracticeInner() {
             q: query || undefined,
             difficulty: difficulty || undefined,
             category: category || undefined,
+            topic: topic || undefined,
+            sort_by: sortBy,
             status,
             page,
             page_size: 20,
@@ -112,6 +114,9 @@ function CodingPracticeInner() {
           setItems(catalog.items || []);
           setTotal(catalog.total);
           setCategories(catalog.categories || []);
+          setTopics(catalog.topics || []);
+          setAvailableTotal(catalog.available_total || 0);
+          setNeedsRepairTotal(catalog.needs_repair_total || 0);
         })
         .catch(() => {
           if (!controller.signal.aborted) {
@@ -127,7 +132,7 @@ function CodingPracticeInner() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [query, difficulty, category, status, page, catalogRevision]);
+  }, [query, difficulty, category, topic, sortBy, status, page, catalogRevision]);
 
   // Fetch summary metrics
   useEffect(() => {
@@ -229,7 +234,7 @@ function CodingPracticeInner() {
   };
 
   const handleRunTests = async () => {
-    if (!selected || running) return;
+    if (!selected || !selected.can_solve || running) return;
     setRunning(true);
     setConsoleStatus("running");
     setBannerMessage("");
@@ -269,7 +274,7 @@ function CodingPracticeInner() {
   };
 
   const handleSubmitSolution = async () => {
-    if (!selected || submitting) return;
+    if (!selected || !selected.can_solve || submitting) return;
     setSubmitting(true);
     setBannerMessage("");
     try {
@@ -327,12 +332,18 @@ function CodingPracticeInner() {
     setTimeout(() => setCopiedCaseIdx(null), 1500);
   };
 
+  const completionPercent =
+    availableTotal > 0
+      ? Math.min(100, Math.round((summary.solved / availableTotal) * 100))
+      : null;
+  const bannerIsSuccess = bannerMessage.startsWith("Challenge accepted.");
+
   // FULL WORKSPACE MODE
   if (selected) {
     return (
       <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#070A0F] text-slate-100">
         <AssessmentHeader
-          title={selected.title}
+          title={selected.title ?? "Metadata repair required"}
           category={selected.category}
           difficulty={selected.difficulty}
           onBack={closeProblem}
@@ -341,13 +352,13 @@ function CodingPracticeInner() {
         {bannerMessage && (
           <div
             className={`flex items-center justify-between border-y px-4 py-2.5 text-xs font-semibold ${
-              bannerMessage.includes("Solved")
+              bannerIsSuccess
                 ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
                 : "border-rose-500/40 bg-rose-500/15 text-rose-300"
             }`}
           >
             <div className="flex items-center gap-2">
-              {bannerMessage.includes("Solved") ? (
+              {bannerIsSuccess ? (
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
               ) : (
                 <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
@@ -405,9 +416,34 @@ function CodingPracticeInner() {
                 <span className="text-slate-600">•</span>
               </div>
               <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-                {selected.title}
+                {selected.title ?? "Metadata repair required"}
               </h2>
+              <p className="text-xs text-slate-500">Problem ID #{selected.id}</p>
+              {selected.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {selected.tags.map((tag) => (
+                    <span key={tag} className="rounded-full border border-lime-400/20 bg-lime-400/5 px-2 py-0.5 text-[10px] text-lime-300">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
+
+            {selected.metadata_status === "needs_repair" && (
+              <div role="alert" className="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-xs text-amber-200">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div>
+                    <p className="font-semibold">This problem needs metadata repair.</p>
+                    <p className="mt-1 text-amber-100/80">{selected.metadata_warnings.join(" ")}</p>
+                    {!selected.can_solve && (
+                      <p className="mt-1 text-amber-100/80">Run and submit are disabled until a meaningful title and statement are restored.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-6 pt-5">
               <div>
@@ -494,6 +530,7 @@ function CodingPracticeInner() {
                 availableLanguages={LANGUAGES}
                 draftKey={`task_${selected.id}`}
                 onReset={resetCode}
+                readOnly={!selected.can_solve}
               />
             </div>
 
@@ -519,6 +556,8 @@ function CodingPracticeInner() {
           isSubmitting={submitting}
           runLabel="Run Tests"
           submitLabel="Submit Solution"
+          canRunTests={selected.can_solve}
+          canSubmit={selected.can_solve}
         />
       </div>
     );
@@ -537,49 +576,44 @@ function CodingPracticeInner() {
 
         <PracticeNav />
 
-        {/* Hero Banner */}
-        <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#0E1524] via-[#0B0F17] to-[#121927] p-6 sm:p-8">
-          <div className="absolute top-0 right-0 -mr-16 -mt-16 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-300">
-                <Code2 className="h-3.5 w-3.5 text-cyan-400" />
-                <span>Interactive Algorithm Lab</span>
-              </div>
-              <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
-                Coding Practice
-              </h1>
-              <p className="text-sm text-slate-400 max-w-xl">
-                Master data structures and algorithms with interactive execution, instant test-case feedback, and progressive hints.
+        <section className="rounded-2xl border border-white/10 bg-[#0B0D10] p-5 sm:p-6">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-400">Qubira · Practice</p>
+              <h1 className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">Coding Practice</h1>
+              <p className="mt-2 text-sm text-slate-400">
+                Find a verified challenge by title, topic, difficulty, and your saved progress.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3.5 text-center">
-                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Solved</div>
-                <div className="text-xl sm:text-2xl font-black text-white mt-0.5">
-                  {summary.solved}
-                </div>
+            <div className="grid grid-cols-3 gap-2 sm:min-w-[390px]">
+              <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Available</p>
+                <p className="mt-1 text-xl font-bold text-white">{availableTotal}</p>
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3.5 text-center">
-                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Attempted</div>
-                <div className="text-xl sm:text-2xl font-black text-cyan-400 mt-0.5">
-                  {summary.attempted}
-                </div>
+              <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Solved</p>
+                <p className="mt-1 text-xl font-bold text-lime-300">{summary.solved}</p>
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3.5 text-center col-span-2 sm:col-span-1">
-                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Accuracy</div>
-                <div className="text-xl sm:text-2xl font-black text-amber-400 mt-0.5">
-                  {summary.accuracy !== null ? `${Math.round(summary.accuracy)}%` : "—"}
-                </div>
+              <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Completion</p>
+                <p className="mt-1 text-xl font-bold text-white">
+                  {completionPercent === null ? "—" : `${completionPercent}%`}
+                </p>
+                {completionPercent !== null && (
+                  <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10">
+                    <div className="h-full rounded-full bg-lime-400" style={{ width: `${completionPercent}%` }} />
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-[#0E1524] p-3">
-          <div className="relative w-full sm:w-80">
+        <div className="space-y-3 rounded-xl border border-white/10 bg-[#0B0D10] p-3 sm:p-4">
+          <div className="flex flex-col gap-3 lg:flex-row">
+            <div className="relative w-full lg:flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
@@ -588,19 +622,19 @@ function CodingPracticeInner() {
                 setQuery(e.target.value);
                 setPage(1);
               }}
-              placeholder="Search problems, topics, tags..."
-              className="w-full rounded-lg border border-white/10 bg-[#0B0F17] pl-9 pr-3 py-2 text-xs text-slate-200 outline-none focus:border-cyan-500 placeholder:text-slate-500"
+              placeholder="Search problem titles, categories, or topics"
+              className="w-full rounded-lg border border-white/10 bg-[#070809] pl-9 pr-3 py-2.5 text-sm text-slate-200 outline-none focus:border-lime-400/60 placeholder:text-slate-500"
             />
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:w-auto">
             <select
               value={difficulty}
               onChange={(e) => {
                 setDifficulty(e.target.value);
                 setPage(1);
               }}
-              className="rounded-lg border border-white/10 bg-[#0B0F17] px-3 py-2 text-xs font-semibold text-slate-300 outline-none hover:border-cyan-500"
+              className="min-w-0 rounded-lg border border-white/10 bg-[#070809] px-3 py-2.5 text-xs font-semibold text-slate-300 outline-none hover:border-lime-400/50"
             >
               <option value="">All Difficulties</option>
               <option value="easy">Easy</option>
@@ -614,9 +648,9 @@ function CodingPracticeInner() {
                 setCategory(e.target.value);
                 setPage(1);
               }}
-              className="rounded-lg border border-white/10 bg-[#0B0F17] px-3 py-2 text-xs font-semibold text-slate-300 outline-none hover:border-cyan-500"
+              className="min-w-0 rounded-lg border border-white/10 bg-[#070809] px-3 py-2.5 text-xs font-semibold text-slate-300 outline-none hover:border-lime-400/50"
             >
-              <option value="">All Topics</option>
+              <option value="">All Categories</option>
               {categories.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -624,12 +658,42 @@ function CodingPracticeInner() {
               ))}
             </select>
 
-            <div className="flex items-center rounded-lg border border-white/10 bg-[#0B0F17] p-0.5">
+            <select
+              value={topic}
+              onChange={(e) => {
+                setTopic(e.target.value);
+                setPage(1);
+              }}
+              className="min-w-0 rounded-lg border border-white/10 bg-[#070809] px-3 py-2.5 text-xs font-semibold text-slate-300 outline-none hover:border-lime-400/50"
+            >
+              <option value="">All Verified Topics</option>
+              {topics.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value === "difficulty" ? "difficulty" : "problem_id");
+                setPage(1);
+              }}
+              className="min-w-0 rounded-lg border border-white/10 bg-[#070809] px-3 py-2.5 text-xs font-semibold text-slate-300 outline-none hover:border-lime-400/50"
+            >
+              <option value="problem_id">Newest problem ID</option>
+              <option value="difficulty">Sort by difficulty</option>
+            </select>
+          </div>
+          </div>
+
+          <div className="flex w-fit items-center rounded-lg border border-white/10 bg-[#070809] p-0.5">
               <button
                 type="button"
                 onClick={() => setStatus("all")}
                 className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
-                  status === "all" ? "bg-white/15 text-white" : "text-slate-400 hover:text-white"
+                  status === "all" ? "bg-lime-400/15 text-lime-200" : "text-slate-400 hover:text-white"
                 }`}
               >
                 All
@@ -638,7 +702,7 @@ function CodingPracticeInner() {
                 type="button"
                 onClick={() => setStatus("unsolved")}
                 className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
-                  status === "unsolved" ? "bg-white/15 text-white" : "text-slate-400 hover:text-white"
+                  status === "unsolved" ? "bg-lime-400/15 text-lime-200" : "text-slate-400 hover:text-white"
                 }`}
               >
                 Unsolved
@@ -647,14 +711,22 @@ function CodingPracticeInner() {
                 type="button"
                 onClick={() => setStatus("solved")}
                 className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
-                  status === "solved" ? "bg-emerald-500/20 text-emerald-300" : "text-slate-400 hover:text-emerald-400"
+                  status === "solved" ? "bg-lime-400/15 text-lime-200" : "text-slate-400 hover:text-lime-300"
                 }`}
               >
                 Solved
               </button>
-            </div>
           </div>
         </div>
+
+        {needsRepairTotal > 0 && (
+          <div role="status" className="flex items-start gap-2 rounded-xl border border-amber-400/25 bg-amber-400/[0.06] p-3 text-xs text-amber-200">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>
+              {needsRepairTotal} problem records need metadata repair. Their IDs and saved progress are preserved, but records without a meaningful title and statement cannot be solved or submitted.
+            </p>
+          </div>
+        )}
 
         {catalogError && (
           <div className="flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
@@ -663,83 +735,108 @@ function CodingPracticeInner() {
           </div>
         )}
 
-        {/* Problems Grid */}
+        {/* Problem Catalog */}
         {loadingList ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {[1, 2, 3, 4, 5, 6].map((n) => (
-              <div key={n} className="h-32 rounded-xl border border-white/[0.08] bg-[#0E1524] animate-pulse" />
+          <div className="overflow-hidden rounded-xl border border-white/10 bg-[#0B0D10]">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <div key={n} className="h-16 border-b border-white/[0.06] bg-[#0E1012] animate-pulse last:border-0" />
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-white/[0.08] bg-[#0E1524] p-12 text-center">
+          <div className="flex flex-col items-center justify-center rounded-xl border border-white/10 bg-[#0B0D10] p-12 text-center">
             <Layers className="h-10 w-10 text-slate-500 mb-3" />
-            <h3 className="text-base font-semibold text-slate-200">No practice tasks found</h3>
+            <h3 className="text-base font-semibold text-slate-200">No problems match these filters</h3>
             <p className="text-xs text-slate-400 mt-1 max-w-sm">
-              Try adjusting your search query, difficulty, or category filter to discover more challenges.
+              Try another title, topic, difficulty, or progress filter.
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {items.map((prob) => {
-              const diff = (prob.difficulty || "medium").toLowerCase();
-              const diffBadge =
-                diff === "easy"
-                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                  : diff === "hard"
-                  ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                  : "bg-amber-500/10 text-amber-400 border-amber-500/20";
+          <div className="overflow-hidden rounded-xl border border-white/10 bg-[#0B0D10]">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px] border-collapse text-left">
+                <thead className="border-b border-white/10 bg-white/[0.025]">
+                  <tr className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    <th className="px-4 py-3">Problem</th>
+                    <th className="px-4 py-3">Topics</th>
+                    <th className="px-4 py-3">Difficulty</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.06]">
+                  {items.map((prob) => {
+                    const diff = (prob.difficulty || "unknown").toLowerCase();
+                    const diffBadge =
+                      diff === "easy"
+                        ? "border-lime-400/20 bg-lime-400/[0.06] text-lime-300"
+                        : diff === "hard"
+                          ? "border-rose-400/20 bg-rose-400/[0.06] text-rose-300"
+                          : diff === "medium"
+                            ? "border-amber-400/20 bg-amber-400/[0.06] text-amber-300"
+                            : "border-white/10 bg-white/[0.04] text-slate-300";
+                    const statusLabel =
+                      prob.status === "solved" ? "Solved" : prob.status === "attempted" ? "Attempted" : "Unsolved";
 
-              const isSolved = prob.status === "solved";
-
-              return (
-                <div
-                  key={prob.id}
-                  className="group relative flex flex-col justify-between rounded-xl border border-white/[0.08] bg-[#0E1524] p-4 sm:p-5 transition-all hover:border-cyan-500/40 hover:bg-[#121B2F] shadow-lg"
-                >
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${diffBadge}`}>
-                        {prob.difficulty}
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] font-semibold text-amber-400 flex items-center gap-0.5">
-                        </span>
-                        {isSolved && (
-                          <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
-                            <CheckCircle2 className="h-3 w-3" /> Solved
+                    return (
+                      <tr key={prob.id} className="align-middle transition hover:bg-white/[0.025]">
+                        <td className="px-4 py-3.5">
+                          <div className="space-y-1">
+                            <h3 className={`text-sm font-semibold ${prob.title ? "text-white" : "text-amber-200"}`}>
+                              {prob.title ?? "Metadata repair required"}
+                            </h3>
+                            <p className="font-mono text-[10px] text-slate-500">Problem ID #{prob.id}</p>
+                            {prob.metadata_status === "needs_repair" && (
+                              <p className="text-[11px] text-amber-300">{prob.metadata_warnings[0]}</p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <div className="flex max-w-sm flex-wrap gap-1.5">
+                            {prob.tags.length > 0 ? (
+                              prob.tags.map((tag) => (
+                                <span key={tag} className="rounded-full border border-lime-400/15 bg-lime-400/[0.04] px-2 py-0.5 text-[10px] text-lime-200">
+                                  {tag}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-[11px] text-slate-500">No verified topics</span>
+                            )}
+                            {prob.category && (
+                              <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-slate-400">
+                                Category: {prob.category}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase ${diffBadge}`}>
+                            {prob.difficulty || "Unknown"}
                           </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <h3 className="text-sm sm:text-base font-bold text-white group-hover:text-cyan-300 transition-colors">
-                      {prob.title}
-                    </h3>
-
-                    {prob.category && (
-                      <span className="inline-block rounded-md border border-white/5 bg-white/5 px-2 py-0.5 text-[10px] font-mono text-slate-400">
-                        {prob.category}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between">
-                    <span className="text-[11px] text-slate-500 font-mono">
-                      #{prob.id}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() => openProblem(prob.id)}
-                      className="flex items-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-bold text-cyan-300 transition hover:bg-cyan-500 hover:text-slate-950 active:scale-95"
-                    >
-                      <Play className="h-3 w-3 fill-current" />
-                      <span>{isSolved ? "Practice Again" : "Solve Challenge"}</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span className={`inline-flex items-center gap-1.5 text-xs ${
+                            prob.status === "solved" ? "text-lime-300" : prob.status === "attempted" ? "text-slate-300" : "text-slate-500"
+                          }`}>
+                            {prob.status === "solved" && <CheckCircle2 className="h-3.5 w-3.5" />}
+                            {statusLabel}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-right">
+                          <button
+                            type="button"
+                            onClick={() => openProblem(prob.id)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-lime-400/25 bg-lime-400/[0.06] px-3 py-2 text-xs font-semibold text-lime-200 transition hover:bg-lime-400/15"
+                          >
+                            {prob.can_solve ? <Play className="h-3 w-3 fill-current" /> : <AlertCircle className="h-3 w-3" />}
+                            <span>{prob.can_solve ? (prob.status === "solved" ? "Review" : "Solve") : "Review metadata"}</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

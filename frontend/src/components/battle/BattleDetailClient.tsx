@@ -45,10 +45,14 @@ export default function BattleDetailClient({ id, problemId }: BattleDetailClient
   const [testCases, setTestCases] = useState<TestCaseResult[]>([]);
   const [loadedProblemTitle, setLoadedProblemTitle] = useState<string | null>(null);
   const [problemLoadError, setProblemLoadError] = useState<string | null>(null);
+  const [problemMetadataWarning, setProblemMetadataWarning] = useState<string | null>(null);
+  const [problemCanSolve, setProblemCanSolve] = useState(false);
   const [problemLoading, setProblemLoading] = useState(Boolean(problemId));
 
   useEffect(() => {
     setProblemLoadError(null);
+    setProblemMetadataWarning(null);
+    setProblemCanSolve(false);
     setLoadedProblemTitle(null);
     setTestCases([]);
 
@@ -63,6 +67,8 @@ export default function BattleDetailClient({ id, problemId }: BattleDetailClient
     practiceService.get(problemId).then((problem) => {
       if (!active) return;
       setLoadedProblemTitle(problem.title);
+      setProblemCanSolve(problem.can_solve);
+      setProblemMetadataWarning(problem.can_solve ? null : problem.metadata_warnings.join(" "));
       setProblemLoadError(null);
       setTestCases(
         problem.samples.map((sample, index) => ({
@@ -164,6 +170,10 @@ export default function BattleDetailClient({ id, problemId }: BattleDetailClient
       toast.error(problemLoadError || "Battle problem details are still loading or unavailable.");
       return;
     }
+    if (!problemCanSolve) {
+      toast.error(problemMetadataWarning || "Problem metadata needs repair before submission.");
+      return;
+    }
     setSubmitting(true);
     setConsoleStatus("running");
 
@@ -234,6 +244,7 @@ export default function BattleDetailClient({ id, problemId }: BattleDetailClient
       {/* Editor & Execution Panel */}
       {loadedProblemTitle && <h3 className="text-sm font-semibold text-slate-300">{loadedProblemTitle}</h3>}
       {problemLoadError && <p role="alert" className="text-sm text-amber-300">{problemLoadError}</p>}
+      {problemMetadataWarning && <p role="status" className="text-sm text-amber-300">{problemMetadataWarning}</p>}
       <div className="min-h-[380px] h-[440px]">
         <AssessmentCodeEditor
           value={sourceCode}
@@ -276,7 +287,7 @@ export default function BattleDetailClient({ id, problemId }: BattleDetailClient
         <button
           type="button"
           onClick={handleSubmitCode}
-          disabled={submitting || running || problemLoading || Boolean(problemLoadError)}
+          disabled={submitting || running || problemLoading || Boolean(problemLoadError) || !problemCanSolve}
           className="flex h-10 items-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 text-xs font-bold text-white shadow-lg transition hover:from-cyan-400 hover:to-blue-500 active:scale-95 disabled:opacity-50"
         >
           <Send className="h-3.5 w-3.5" />

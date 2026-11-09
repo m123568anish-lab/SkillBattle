@@ -12,11 +12,17 @@ from app.models.daily_practice import DailyPracticeSession
 from app.models.problem import Problem
 from app.models.user import User
 from app.modules.dashboard.repository import dashboard_repository
+from app.modules.problem.quality import (
+    problem_can_be_solved,
+    problem_can_be_solved_clause,
+    problem_metadata,
+)
 
 
 def public_problem(problem: Problem, status: str = "unsolved") -> dict:
+    metadata = problem_metadata(problem)
     return {
-        "id": problem.id, "title": problem.title, "slug": problem.slug,
+        "id": problem.id, **metadata, "slug": problem.slug,
         "difficulty": problem.difficulty, "category": problem.category,
         "xp_reward": problem.xp_reward, "status": status,
         "tags": [tag.tag for tag in getattr(problem, "tags", [])],
@@ -44,7 +50,10 @@ async def submission_statuses(
 
 
 async def choose_daily_problem(db: AsyncSession, user_id: str, challenge: Challenge) -> tuple[Problem | None, bool]:
-    base = select(Problem).options(selectinload(Problem.tags)).where(Problem.is_active.is_(True))
+    base = select(Problem).options(selectinload(Problem.tags)).where(
+        Problem.is_active.is_(True),
+        problem_can_be_solved_clause(),
+    )
     preferred = base.where(
         func.lower(Problem.difficulty) == challenge.difficulty.lower(),
         func.lower(Problem.category) == challenge.category.lower(),
@@ -74,7 +83,14 @@ async def get_or_start_daily(db: AsyncSession, user_id: str, start: bool) -> dic
     )).scalar_one_or_none()
     if existing:
         problem = (await db.execute(select(Problem).options(selectinload(Problem.tags)).where(Problem.id == existing.problem_id))).scalar_one_or_none()
-        return {"available": problem is not None, "session": existing, "problem": public_problem(problem) if problem else None, "is_revision": False}
+        available = problem is not None and problem_can_be_solved(problem)
+        return {
+            "available": available,
+            "reason": None if available else "The assigned problem needs metadata repair before it can be solved.",
+            "session": existing,
+            "problem": public_problem(problem) if problem else None,
+            "is_revision": False,
+        }
 
     challenge = await dashboard_repository.get_daily_challenge(db)
     if not challenge:
