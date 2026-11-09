@@ -7,13 +7,20 @@ import { useDashboardStore } from "@/store/dashboardStore";
 
 export type AuthStatus = "loading" | "authenticated" | "unauthenticated" | "unavailable" | "forbidden";
 
+export class LegacyAccountPasswordRequiredError extends Error {
+    constructor() {
+        super("Enter the password you used for your previous Qubira account to connect it.");
+        this.name = "LegacyAccountPasswordRequiredError";
+    }
+}
+
 interface AuthState {
     user: User | null;
     loading: boolean;
     isAuthenticated: boolean;
     status: AuthStatus;
     authError: string | null;
-    login(data: LoginRequest): Promise<User>;
+    login(data: LoginRequest, legacyPassword?: string): Promise<User>;
     logout(): Promise<void>;
     loadUser(sessionKey?: string): Promise<void>;
     clearSession(message?: string): void;
@@ -66,7 +73,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     status: "loading",
     authError: null,
 
-    async login(data) {
+    async login(data, legacyPassword) {
         authRequestGeneration += 1;
         activeAuthSessionKey = null;
         activeLoadUser = null;
@@ -90,7 +97,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             }
 
             await get().loadUser(`neon:${sessionUser.id}`);
-            const state = get();
+            let state = get();
+            if (!state.isAuthenticated && state.status === "unauthenticated") {
+                const linked = await authService.linkNeonIdentity(legacyPassword ?? data.password);
+                if (linked) {
+                    await get().loadUser(`neon:${sessionUser.id}`);
+                    state = get();
+                } else if (legacyPassword) {
+                    throw new Error("That password did not match your previous Qubira account.");
+                } else {
+                    throw new LegacyAccountPasswordRequiredError();
+                }
+            }
             if (!state.isAuthenticated || !state.user) {
                 throw new Error(state.authError ?? "Unable to load your Qubira account.");
             }

@@ -95,7 +95,7 @@ async def test_unconfigured_neon_token_returns_service_error(client, monkeypatch
 
 
 @pytest.mark.asyncio
-async def test_neon_identity_creates_and_reuses_local_user(client):
+async def test_unverified_new_neon_identity_creates_and_reuses_local_user(client):
     unique_id = uuid4().hex[:8]
     neon_user_id = f"neon_user_{unique_id}"
     email = f"neon_{unique_id}@example.test"
@@ -106,12 +106,13 @@ async def test_neon_identity_creates_and_reuses_local_user(client):
             {
                 "sub": neon_user_id,
                 "email": email,
-                "email_verified": True,
+                "email_verified": False,
                 "name": "Neon Test User",
             },
         )
         assert user.neon_user_id == neon_user_id
         assert user.email == email
+        assert user.is_verified is True
         assert user.is_verified is True
 
         profile_result = await db.execute(
@@ -126,7 +127,7 @@ async def test_neon_identity_creates_and_reuses_local_user(client):
             {
                 "sub": neon_user_id,
                 "email": email,
-                "email_verified": True,
+                "email_verified": False,
                 "name": "Neon Test User",
             },
         )
@@ -159,3 +160,85 @@ async def test_neon_identity_requires_verified_email_to_link_existing_user(clien
             )
         assert user is not None
         assert user.neon_user_id is None
+
+
+@pytest.mark.asyncio
+async def test_neon_identity_links_existing_user_with_legacy_password(client, monkeypatch):
+    unique_id = uuid4().hex[:8]
+    email = f"link_{unique_id}@example.com"
+    password = "StrongPass#123"
+    registration = await client.post("/auth/register", json={
+        "username": f"link_{unique_id}",
+        "email": email,
+        "full_name": "Legacy Account",
+        "password": password,
+    })
+    assert registration.status_code == 201, registration.text
+    user_id = registration.json()["id"]
+    neon_user_id = f"neon_link_{unique_id}"
+
+    async def verify_token(token: str) -> dict:
+        assert token == "valid-neon-token"
+        return {
+            "sub": neon_user_id,
+            "email": email,
+            "email_verified": False,
+        }
+
+    monkeypatch.setattr("app.modules.auth.router.verify_neon_token", verify_token)
+    response = await client.post(
+        "/auth/neon/link",
+        headers={"Authorization": "Bearer valid-neon-token"},
+        json={"password": password},
+    )
+
+    assert response.status_code == 200, response.text
+    async with AsyncSessionLocal() as db:
+        user = await db.get(User, user_id)
+        assert user is not None
+        assert user.neon_user_id == neon_user_id
+
+
+@pytest.mark.asyncio
+async def test_neon_identity_link_rejects_wrong_password_and_two_factor(client, monkeypatch):
+    unique_id = uuid4().hex[:8]
+    email = f"link_guard_{unique_id}@example.com"
+    password = "StrongPass#123"
+    registration = await client.post("/auth/register", json={
+        "username": f"link_guard_{unique_id}",
+        "email": email,
+        "full_name": "Legacy Account",
+        "password": password,
+    })
+    assert registration.status_code == 201, registration.text
+    user_id = registration.json()["id"]
+
+    async def verify_token(token: str) -> dict:
+        return {
+            "sub": f"neon_link_guard_{unique_id}",
+            "email": email,
+            "email_verified": False,
+        }
+
+    monkeypatch.setattr("app.modules.auth.router.verify_neon_token", verify_token)
+    headers = {"Authorization": "Bearer valid-neon-token"}
+
+    wrong_password = await client.post(
+        "/auth/neon/link",
+        headers=headers,
+        json={"password": "OtherPass#123"},
+    )
+    assert wrong_password.status_code == 401
+
+    async with AsyncSessionLocal() as db:
+        user = await db.get(User, user_id)
+        assert user is not None
+        user.two_factor_enabled = True
+        await db.commit()
+
+    two_factor_account = await client.post(
+        "/auth/neon/link",
+        headers=headers,
+        json={"password": password},
+    )
+    assert two_factor_account.status_code == 403

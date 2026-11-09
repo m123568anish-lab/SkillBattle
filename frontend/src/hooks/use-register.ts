@@ -28,17 +28,11 @@ export function useRegister() {
                 throw new Error(sessionResult.error.message);
             }
 
-            const neonUser = sessionResult.data?.user;
-            if (!neonUser) {
-                return { authenticatedUser: null, profilePending: false };
+            if (sessionResult.data?.user) {
+                await useAuthStore.getState().logout();
+            } else {
+                useAuthStore.getState().clearSession();
             }
-
-            await useAuthStore.getState().loadUser(`neon:${neonUser.id}`);
-            const state = useAuthStore.getState();
-            if (!state.isAuthenticated || !state.user) {
-                return { authenticatedUser: null, profilePending: true };
-            }
-            return { authenticatedUser: state.user, profilePending: false };
         } finally {
             setLoading(false);
         }

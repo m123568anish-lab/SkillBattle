@@ -68,7 +68,7 @@ api.interceptors.response.use(
     async (error: AxiosError & { config?: InternalAxiosRequestConfig }) => {
         const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
         const url = originalRequest?.url ?? "";
-        const isAuthRequest = /\/auth\/(login|register|refresh|me|logout|account)/i.test(url);
+        const isAuthRequest = /\/auth\/(login|register|refresh|me|logout|account|neon\/link)/i.test(url);
         const method = (originalRequest?.method || "get").toLowerCase();
 
         if (
@@ -94,7 +94,7 @@ api.interceptors.response.use((response) => {
         typeof window !== "undefined" &&
         method &&
         !SAFE_RETRY_METHODS.has(method) &&
-        !/\/auth\/(?:login|register|refresh|logout|me|account)(?:\/|$)/i.test(url)
+        !/\/auth\/(?:login|register|refresh|logout|me|account|neon\/link)(?:\/|$)/i.test(url)
     ) {
         window.dispatchEvent(new Event("skillbattle:dashboard-invalidated"));
     }

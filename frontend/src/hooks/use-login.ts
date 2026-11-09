@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAuthStore } from "@/store/authStore";
+import { LegacyAccountPasswordRequiredError, useAuthStore } from "@/store/authStore";
 import { LoginRequest } from "@/types/auth";
 import { toast } from "react-hot-toast";
 import { isAxiosError } from "axios";
@@ -12,11 +12,11 @@ export function useLogin() {
 
     const [loading, setLoading] = useState(false);
 
-    async function signIn(data: LoginRequest) {
+    async function signIn(data: LoginRequest, legacyPassword?: string) {
         setLoading(true);
 
         try {
-            const user = await login(data);
+            const user = await login(data, legacyPassword);
 
             return {
                 success: true,
@@ -45,7 +45,9 @@ export function useLogin() {
                 userFacingMsg = msg;
             }
 
-            toast.error(userFacingMsg);
+            if (!(error instanceof LegacyAccountPasswordRequiredError)) {
+                toast.error(userFacingMsg);
+            }
             throw error;
         } finally {
             setLoading(false);

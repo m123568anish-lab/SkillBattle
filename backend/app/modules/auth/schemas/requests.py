@@ -108,6 +108,12 @@ class LoginRequest(BaseModel):
         return v
 
 
+class NeonIdentityLinkRequest(BaseModel):
+    password: str = Field(min_length=1, max_length=128)
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class RefreshTokenRequest(BaseModel):
 
     refresh_token: str = Field(min_length=10, max_length=2048)
@@ -174,4 +180,3 @@ class DeleteAccountRequest(BaseModel):
     password: str | None = Field(default=None, max_length=128)
 
     model_config = ConfigDict(extra="forbid")
-

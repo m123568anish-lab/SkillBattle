@@ -9,12 +9,15 @@ import { toast } from "react-hot-toast";
 
 import { loginSchema, type LoginFormData } from "@/lib/validation";
 import { useLogin } from "@/hooks/use-login";
+import { LegacyAccountPasswordRequiredError } from "@/store/authStore";
 import { getPostLoginPath } from "@/lib/auth-routing";
 
 export default function NeonLoginForm() {
   const router = useRouter();
   const { loading, signIn } = useLogin();
   const [showPassword, setShowPassword] = useState(false);
+  const [needsLegacyPassword, setNeedsLegacyPassword] = useState(false);
+  const [legacyPassword, setLegacyPassword] = useState("");
   const {
     register,
     handleSubmit,
@@ -25,11 +28,14 @@ export default function NeonLoginForm() {
 
   async function onSubmit(data: LoginFormData) {
     try {
-      const result = await signIn(data);
+      const result = await signIn(data, needsLegacyPassword ? legacyPassword : undefined);
       toast.success("Welcome back to Qubira.");
       router.replace(getPostLoginPath(result.user));
-    } catch {
-      // useLogin reports the provider or API error to the user.
+    } catch (error) {
+      if (error instanceof LegacyAccountPasswordRequiredError) {
+        setNeedsLegacyPassword(true);
+        return;
+      }
     }
   }
 
@@ -58,6 +64,26 @@ export default function NeonLoginForm() {
             <Link href="/forgot-password" className="text-slate-400 hover:text-white">Forgot password?</Link>
           </div>
         </div>
+
+        {needsLegacyPassword && (
+          <div>
+            <label htmlFor="legacy-password" className="mb-2 block text-sm font-medium text-slate-300">
+              Previous Qubira password
+            </label>
+            <p className="mb-2 text-xs text-slate-400">
+              Enter the password for your older Qubira account once to connect it. Email verification is not required.
+            </p>
+            <input
+              id="legacy-password"
+              type="password"
+              autoComplete="current-password"
+              value={legacyPassword}
+              onChange={(event) => setLegacyPassword(event.target.value)}
+              className="h-14 w-full rounded-2xl border border-white/10 bg-white/[0.02] px-4 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-500/15"
+              placeholder="Previous account password"
+            />
+          </div>
+        )}
 
         <button type="submit" disabled={loading} className="h-14 w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">
           {loading ? "Signing in..." : "Sign in"}

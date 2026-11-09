@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import axios from "axios";
 
 import {
 
@@ -69,6 +70,23 @@ class AuthService {
 
         return response.data;
 
+    }
+
+    async linkNeonIdentity(password: string): Promise<boolean> {
+        try {
+            await api.post("/auth/neon/link", { password });
+            return true;
+        } catch (error) {
+            if (
+                axios.isAxiosError(error) &&
+                error.response?.status === 401 &&
+                error.response.data?.detail ===
+                    "Unable to link this Neon account with the supplied Qubira credentials."
+            ) {
+                return false;
+            }
+            throw error;
+        }
     }
 
     // =========================

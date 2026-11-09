@@ -20,10 +20,11 @@ from fastapi import HTTPException
 from fastapi import Request
 from fastapi import status
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.redis.rate_limiter import rate_limiter
 from app.database.session import get_db
 
 from app.modules.auth.schemas.requests import (
@@ -36,6 +37,7 @@ from app.modules.auth.schemas.requests import (
     DeleteAccountRequest,
     ForgotPasswordRequest,
     ResetPasswordRequest,
+    NeonIdentityLinkRequest,
 )
 
 from app.modules.auth.schemas.responses import (
@@ -48,7 +50,13 @@ from app.modules.auth.schemas.responses import (
 from app.modules.auth.services.auth_service import auth_service
 from app.modules.auth.repositories.user_repository import user_repository
 
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, oauth2_scheme
+from app.core.security import (
+    NeonAuthenticationConfigurationError,
+    NeonAuthenticationError,
+    verify_neon_token,
+    verify_password_async,
+)
 
 from app.models.user import User
 from app.models.refresh_token import RefreshToken
@@ -329,6 +337,100 @@ async def me(
 ):
 
     return current_user
+
+
+@router.post(
+    "/neon/link",
+    response_model=MessageResponse,
+)
+async def link_neon_identity(
+    request: NeonIdentityLinkRequest,
+    http_request: Request,
+    neon_token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    try:
+        claims = await verify_neon_token(neon_token)
+    except NeonAuthenticationConfigurationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Neon Auth verification is not configured on the application API.",
+        ) from exc
+    except NeonAuthenticationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Neon Auth session.",
+        ) from exc
+
+    email = claims.get("email")
+    neon_user_id = claims.get("sub")
+    if not isinstance(email, str) or not isinstance(neon_user_id, str) or not neon_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Neon Auth session is missing account information.",
+        )
+    normalized_email = email.strip().lower()
+    client_ip = http_request.client.host if http_request.client else "unknown"
+    if not await rate_limiter.allow(f"neon-link-ip:{client_ip}", 30, 900):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many account-link attempts. Please try again later.",
+        )
+    if not await rate_limiter.allow(f"neon-link-account:{normalized_email}", 5, 900):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many account-link attempts. Please try again later.",
+        )
+
+    result = await db.execute(
+        select(User).where(func.lower(User.email) == normalized_email)
+    )
+    existing_user = result.scalar_one_or_none()
+    if existing_user is None or not await verify_password_async(
+        request.password,
+        existing_user.password_hash,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unable to link this Neon account with the supplied Qubira credentials.",
+        )
+
+    if existing_user.two_factor_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This Qubira account requires its existing two-factor sign-in before it can be linked.",
+        )
+    if not existing_user.is_active or (
+        (existing_user.status or "").upper() in {"REJECTED", "SUSPENDED"}
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This Qubira account is not active.",
+        )
+    if existing_user.neon_user_id and existing_user.neon_user_id != neon_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This Qubira account is linked to a different Neon identity.",
+        )
+
+    linked_user = await user_repository.get_by_neon_user_id(db, neon_user_id)
+    if linked_user is not None and linked_user.id != existing_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This Neon identity is linked to a different Qubira account.",
+        )
+
+    existing_user.neon_user_id = neon_user_id
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This Neon identity is already linked to another Qubira account.",
+        ) from exc
+
+    return {"message": "Neon identity linked successfully."}
 
 
 # ==========================================================

@@ -11,13 +11,10 @@ import GradientButton from "@/components/ui/gradient-button";
 import PasswordStrength from "./PasswordStrength";
 import { registerSchema, type RegisterFormData } from "@/lib/validation";
 import { useRegister } from "@/hooks/use-register";
-import { getPostLoginPath } from "@/lib/auth-routing";
 
 export default function NeonRegisterForm() {
   const router = useRouter();
   const { loading, signUp } = useRegister();
-  const [verificationRequired, setVerificationRequired] = useState(false);
-  const [profilePending, setProfilePending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const {
     register,
@@ -31,15 +28,9 @@ export default function NeonRegisterForm() {
 
   async function onSubmit(data: RegisterFormData) {
     try {
-      const result = await signUp(data);
-      if (result.authenticatedUser) {
-        toast.success("Account created successfully.");
-        router.replace(getPostLoginPath(result.authenticatedUser));
-      } else if (result.profilePending) {
-        setProfilePending(true);
-      } else {
-        setVerificationRequired(true);
-      }
+      await signUp(data);
+      toast.success("Account created. You can now sign in.");
+      router.replace("/login");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to create your account.");
     }
@@ -52,17 +43,7 @@ export default function NeonRegisterForm() {
         <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-white">Create your account.</h1>
       </div>
 
-      {profilePending ? (
-        <div className="space-y-4 text-slate-300" role="status">
-          <p>Your Neon account was created, but we could not connect it to your Qubira profile. Please do not sign up again; try again later.</p>
-        </div>
-      ) : verificationRequired ? (
-        <div className="space-y-4 text-slate-300" role="status">
-          <p>Check your inbox for the Neon Auth verification email, then sign in to continue.</p>
-          <Link href="/login" className="font-semibold text-cyan-300 hover:text-cyan-200">Go to sign in</Link>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div>
             <label htmlFor="register-name" className="mb-2 block text-sm font-medium text-slate-300">Full name</label>
             <input id="register-name" autoComplete="name" {...register("name")} placeholder="Your full name" className="h-14 w-full rounded-2xl border border-white/10 bg-white/[0.02] px-4 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-500/15" />
@@ -100,15 +81,12 @@ export default function NeonRegisterForm() {
           <GradientButton loading={loading} fullWidth type="submit">
             {loading ? "Creating account..." : "Create Qubira account"}
           </GradientButton>
-        </form>
-      )}
+      </form>
 
-      {!verificationRequired && !profilePending && (
-        <p className="mt-7 text-center text-sm text-slate-400">
-          Already have an account?
-          <Link href="/login" className="ml-2 font-semibold text-cyan-300 transition hover:text-cyan-200">Sign in</Link>
-        </p>
-      )}
+      <p className="mt-7 text-center text-sm text-slate-400">
+        Already have an account?
+        <Link href="/login" className="ml-2 font-semibold text-cyan-300 transition hover:text-cyan-200">Sign in</Link>
+      </p>
     </div>
   );
 }
