@@ -6,7 +6,7 @@ import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "@/context/AuthContext";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import PageMetadata from "@/components/common/PageMetadata";
-import { CookieConsent, PageEnhancements } from "@/components/common/ExperienceEnhancements";
+import { PageEnhancements } from "@/components/common/ExperienceEnhancements";
 import { ThemeProvider, themeBootstrapScript } from "@/components/common/ThemeProvider";
 
 
@@ -84,7 +84,6 @@ export default function RootLayout({
               },
             }}
           />
-          <CookieConsent />
         </ThemeProvider>
       </body>
     </html>

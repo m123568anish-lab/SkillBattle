@@ -8,8 +8,6 @@ import api from "@/services/api";
 import { useAuthStore } from "@/store/authStore";
 import { useTheme, type ThemePreference } from "./ThemeProvider";
 
-const CONSENT_KEY = "skillbattle-cookie-consent";
-
 const THEME_OPTIONS: {
   value: ThemePreference;
   label: string;
@@ -184,11 +182,7 @@ export function ThemeToggle() {
 }
 
 export function CookieConsent() {
-  const [choice, setChoice] = useState<string | null>(null);
-  useEffect(() => setChoice(localStorage.getItem(CONSENT_KEY)), []);
-  if (choice) return null;
-  const save = (value: "necessary" | "all") => { localStorage.setItem(CONSENT_KEY, value); setChoice(value); };
-  return <section role="dialog" aria-label="Cookie preferences" className="fixed inset-x-3 bottom-3 z-[70] mx-auto max-w-xl rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] p-4 text-[var(--text-primary)] shadow-2xl sm:bottom-5"><p className="text-sm font-semibold">Privacy choices</p><p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">We use essential storage to keep this experience working. Optional analytics remain disabled unless you allow them.</p><div className="mt-3 flex flex-wrap gap-2"><button onClick={() => save("necessary")} className="min-h-10 rounded-lg border border-[var(--border-default)] px-3 text-sm">Essential only</button><button onClick={() => save("all")} className="min-h-10 rounded-lg bg-[var(--accent)] px-3 text-sm font-bold text-[var(--text-on-accent)]">Allow optional</button><Link href="/privacy" className="min-h-10 px-2 py-2 text-sm text-[var(--accent-strong)] underline">Privacy</Link></div></section>;
+  return null;
 }
 
 function SupportControl() {
