@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Search, ArrowUpRight, PanelLeft } from "lucide-react";
+import { Search, ArrowUpRight } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import api from "@/services/api";
 import NotificationMenu from "./NotificationMenu";
@@ -24,10 +24,10 @@ type SearchResult = {
 };
 
 export default function TopNavbar({
-  onOpenMobileNav,
+  onToggleMobileNav,
   mobileNavExpanded = false,
 }: {
-  onOpenMobileNav?: () => void;
+  onToggleMobileNav?: () => void;
   mobileNavExpanded?: boolean;
 } = {}) {
   const router = useRouter();
@@ -120,31 +120,28 @@ export default function TopNavbar({
       />
 
       <div className="flex min-w-0 items-center gap-1.5 sm:gap-3">
-        {onOpenMobileNav && (
+        {onToggleMobileNav ? (
           <button
             type="button"
-            onClick={onOpenMobileNav}
-            aria-label="Open navigation panel"
+            onClick={onToggleMobileNav}
+            aria-label={mobileNavExpanded ? "Close navigation menu" : "Open navigation menu"}
             aria-expanded={mobileNavExpanded}
             aria-controls="mobile-navigation-drawer"
             data-mobile-menu-trigger
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-2 text-[var(--text-secondary)] transition-all duration-150 hover:border-[var(--accent)]/50 hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] active:scale-95 max-[359px]:h-9 max-[359px]:w-9 lg:hidden"
+            className="inline-flex min-h-11 min-w-0 shrink-0 items-center rounded-lg px-1 py-1 text-left transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] sm:hidden"
           >
-            <PanelLeft size={18} />
+            <QubiraLogo variant="full" size="sm" />
           </button>
-        )}
+        ) : null}
         <Link
           href={logoHref}
           aria-label="Go to your Qubira dashboard"
           title="Dashboard"
-          className="inline-flex min-w-0 shrink-0 items-center px-1 py-1 text-left transition hover:opacity-90"
+          className={`min-w-0 shrink-0 items-center px-1 py-1 text-left transition hover:opacity-90 ${
+            onToggleMobileNav ? "hidden sm:inline-flex" : "inline-flex"
+          }`}
         >
-          <span className="sm:hidden">
-            <QubiraLogo variant="full" size="sm" className="drop-shadow-[0_0_20px_rgba(216,255,62,0.08)]" />
-          </span>
-          <span className="hidden sm:inline-flex">
-            <QubiraLogo variant="full" size="sm" className="drop-shadow-[0_0_20px_rgba(216,255,62,0.08)]" />
-          </span>
+          <QubiraLogo variant="full" size="sm" className="drop-shadow-[0_0_20px_rgba(216,255,62,0.08)]" />
         </Link>
 
         {/* Global Search Input Bar & Command Palette */}

@@ -1,325 +1,327 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useDashboardStore } from "@/store/dashboardStore";
-import toast from "react-hot-toast";
 import { useBattleSocket, type BattleSocketMessage } from "@/hooks/useBattleSocket";
 import { AssessmentCodeEditor, AssessmentConsole, type TestCaseResult } from "@/components/assessment";
-import { practiceService } from "@/services/practice.service";
-import {
-  Users,
-  Wifi,
-  WifiOff,
-  Send,
-  Play,
-  Activity,
-} from "lucide-react";
+import type { BattleRecord } from "@/services/battle.service";
+import { Play, Send, Wifi, WifiOff } from "lucide-react";
 
-export interface BattleDetailClientProps {
+interface BattleDetailClientProps {
   id: string;
-  problemId?: number;
+  battle: BattleRecord;
+  onRefresh: () => Promise<void>;
 }
 
-export default function BattleDetailClient({ id, problemId }: BattleDetailClientProps) {
-  const [players, setPlayers] = useState<number | null>(null);
-  const [telemetryEvents, setTelemetryEvents] = useState<
-    Array<{ id: string; time: string; text: string; type: "system" | "join" | "action" }>
-  >([]);
+const STARTER_CODE: Record<string, string> = {
+  python: "import sys\n\ndef solve():\n    data = sys.stdin.read().strip()\n    print(data)\n\nif __name__ == '__main__':\n    solve()\n",
+  javascript: "const fs = require('fs');\nconst input = fs.readFileSync(0, 'utf8').trim();\nconsole.log(input);\n",
+  cpp: "#include <iostream>\n#include <string>\nusing namespace std;\nint main() { string input; getline(cin, input); cout << input << endl; return 0; }\n",
+};
 
-  // Code editor state
-  const [editorLang, setEditorLang] = useState("python");
-  const [sourceCode, setSourceCode] = useState(
-    "def solution():\n    # Implement optimal solution\n    pass\n\nif __name__ == '__main__':\n    solution()\n"
-  );
-  const [customInput, setCustomInput] = useState("");
+function optionData(option: string | { key?: string; text?: string }, index: number) {
+  if (typeof option === "string") {
+    return { key: String.fromCharCode(65 + index), label: option };
+  }
+  return {
+    key: option.key || String.fromCharCode(65 + index),
+    label: option.text || option.key || `Option ${index + 1}`,
+  };
+}
+
+export default function BattleDetailClient({ id, battle, onRefresh }: BattleDetailClientProps) {
+  const [language, setLanguage] = useState("python");
+  const [sourceCode, setSourceCode] = useState(STARTER_CODE.python);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [localSubmittedIds, setLocalSubmittedIds] = useState<number[]>([]);
   const [running, setRunning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  // Console telemetry
-  const [consoleStatus, setConsoleStatus] = useState<string>("idle");
-  const [consoleStdout, setConsoleStdout] = useState<string>("");
-  const [consoleStderr, setConsoleStderr] = useState<string>("");
-  const [consoleRuntime, setConsoleRuntime] = useState<number | null>(null);
-  const [consoleMemory, setConsoleMemory] = useState<number | null>(null);
+  const [finishing, setFinishing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [verdict, setVerdict] = useState<string | null>(null);
+  const [score, setScore] = useState<number | null>(null);
+  const [stdout, setStdout] = useState("");
+  const [stderr, setStderr] = useState("");
+  const [runtime, setRuntime] = useState<number | null>(null);
+  const [memory, setMemory] = useState<number | null>(null);
   const [testCases, setTestCases] = useState<TestCaseResult[]>([]);
-  const [loadedProblemTitle, setLoadedProblemTitle] = useState<string | null>(null);
-  const [problemLoadError, setProblemLoadError] = useState<string | null>(null);
-  const [problemMetadataWarning, setProblemMetadataWarning] = useState<string | null>(null);
-  const [problemCanSolve, setProblemCanSolve] = useState(false);
-  const [problemLoading, setProblemLoading] = useState(Boolean(problemId));
 
-  useEffect(() => {
-    setProblemLoadError(null);
-    setProblemMetadataWarning(null);
-    setProblemCanSolve(false);
-    setLoadedProblemTitle(null);
-    setTestCases([]);
+  const section = battle.questions_data?.[battle.current_section_index ?? 0];
+  const assignedQuestions = section?.questions ?? [];
+  const submittedIds = useMemo(
+    () => new Set([...(battle.submitted_question_ids ?? []), ...localSubmittedIds]),
+    [battle.submitted_question_ids, localSubmittedIds],
+  );
+  const currentQuestion = assignedQuestions.find((question) => !submittedIds.has(question.id));
+  const allQuestionsSubmitted = assignedQuestions.length > 0 && !currentQuestion;
+  const examples = currentQuestion?.examples ?? [];
 
-    if (!problemId) {
-      setProblemLoadError("This battle does not reference a valid coding problem.");
-      setProblemLoading(false);
-      return;
+  const handleSocketMessage = useCallback((message: BattleSocketMessage) => {
+    if (["player_joined", "player_left", "score_updated", "battle_finished"].includes(message.event)) {
+      void onRefresh();
     }
+  }, [onRefresh]);
+  const { connected } = useBattleSocket({ battleId: id, onMessage: handleSocketMessage });
 
-    let active = true;
-    setProblemLoading(true);
-    practiceService.get(problemId).then((problem) => {
-      if (!active) return;
-      setLoadedProblemTitle(problem.title);
-      setProblemCanSolve(problem.can_solve);
-      setProblemMetadataWarning(problem.can_solve ? null : problem.metadata_warnings.join(" "));
-      setProblemLoadError(null);
-      setTestCases(
-        problem.samples.map((sample, index) => ({
-          id: index + 1,
-          input: sample.input,
-          expectedOutput: sample.output,
-        }))
-      );
-    }).catch((error: unknown) => {
-      if (!active) return;
-      console.error("Failed to load battle problem samples:", error);
-      setProblemLoadError("Battle problem details are unavailable.");
-      setTestCases([]);
-    }).finally(() => {
-      if (active) setProblemLoading(false);
-    });
+  const submitAnswer = async () => {
+    if (!section || !currentQuestion || submitting || battle.status !== "running") return;
+    if (section.question_type === "mcq" && !selectedOption) return;
+    if (section.question_type === "coding" && !sourceCode.trim()) return;
 
-    return () => {
-      active = false;
-    };
-  }, [problemId]);
-
-  // Handle incoming WebSocket messages
-  const handleSocketMessage = useCallback((msg: BattleSocketMessage) => {
-    const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-    const { event, data } = msg;
-
-    if (event === "player_joined") {
-      if (typeof data?.players === "number") setPlayers(data.players);
-      setTelemetryEvents((prev) => [
-        { id: Math.random().toString(), time, text: `Player joined the arena`, type: "join" },
-        ...prev.slice(0, 30),
-      ]);
-    } else if (event === "player_left") {
-      if (typeof data?.players === "number") setPlayers(data.players);
-      setTelemetryEvents((prev) => [
-        { id: Math.random().toString(), time, text: `Player disconnected`, type: "system" },
-        ...prev.slice(0, 30),
-      ]);
-    } else if (event === "battle_finished") {
-      void useDashboardStore.getState().refresh();
-      setTelemetryEvents((prev) => [
-        { id: Math.random().toString(), time, text: "Battle concluded! Scores finalized.", type: "system" },
-        ...prev.slice(0, 30),
-      ]);
-    } else if (event === "chat" || event === "system") {
-      setTelemetryEvents((prev) => [
-        { id: Math.random().toString(), time, text: String(data?.text || event), type: "action" },
-        ...prev.slice(0, 30),
-      ]);
-    }
-  }, []);
-
-  const { connected, sendEvent } = useBattleSocket({
-    battleId: id,
-    onMessage: handleSocketMessage,
-  });
-
-  // Run test code
-  const handleRunTests = async () => {
-    if (running || submitting) return;
-    setRunning(true);
-    setConsoleStatus("running");
-    setConsoleStdout("Running sandbox evaluation...");
-    setConsoleStderr("");
-
-    try {
-      const startMs = Date.now();
-      const r = await api.post("/compiler/run", {
-        language: editorLang,
-        source_code: sourceCode,
-        stdin: customInput || "",
-        custom_input: true,
-      });
-      const endMs = Date.now();
-
-      setConsoleRuntime(r.data.execution_time ?? endMs - startMs);
-      setConsoleMemory(r.data.memory_used ?? null);
-
-      if (r.data.stderr) {
-        setConsoleStderr(r.data.stderr);
-        setConsoleStatus("runtime_error");
-      } else {
-        setConsoleStdout(r.data.stdout || "Execution finished with no output.");
-        setConsoleStatus("accepted");
-      }
-    } catch (err: any) {
-      setConsoleStderr(err?.response?.data?.detail || "Execution failed.");
-      setConsoleStatus("runtime_error");
-    } finally {
-      setRunning(false);
-    }
-  };
-
-  // Submit code to authoritative compiler judge
-  const handleSubmitCode = async () => {
-    if (submitting) return;
-    if (!problemId || problemLoading || problemLoadError) {
-      toast.error(problemLoadError || "Battle problem details are still loading or unavailable.");
-      return;
-    }
-    if (!problemCanSolve) {
-      toast.error(problemMetadataWarning || "Problem metadata needs repair before submission.");
-      return;
-    }
     setSubmitting(true);
-    setConsoleStatus("running");
-
+    setError(null);
+    setNotice(null);
     try {
-      const resp = await api.post("/compiler/submit", {
+      const { data } = await api.post<{
+        id: string;
+        verdict: string;
+        score_earned: number;
+        passed_tests: number;
+        total_tests: number;
+      }>("/battle/submit-answer", {
         battle_id: id,
-        problem_id: problemId,
-        language: editorLang,
-        source_code: sourceCode,
+        question_id: currentQuestion.id,
+        section_index: section.section_index,
+        question_type: section.question_type,
+        mcq_option: section.question_type === "mcq" ? selectedOption : undefined,
+        source_code: section.question_type === "coding" ? sourceCode : undefined,
+        language,
       });
-
-      const r = resp.data;
-      setConsoleRuntime(r.execution_time);
-      setConsoleMemory(r.memory_used);
-
-      if (r.verdict === "Accepted") {
-        setConsoleStatus("accepted");
-        toast.success(
-          typeof r.xp_earned === "number"
-            ? `Solution accepted! +${r.xp_earned} verified XP`
-            : "Solution accepted."
-        );
-        void useDashboardStore.getState().refresh();
-      } else {
-        setConsoleStatus("wrong_answer");
-        toast.error(`Verdict: ${r.verdict} (${r.passed_tests}/${r.total_tests})`);
-      }
-
-    } catch (err: any) {
-      const errMsg = err?.response?.data?.detail || "Submission failed";
-      setConsoleStderr(errMsg);
-      setConsoleStatus("runtime_error");
-      toast.error(errMsg);
+      setVerdict(data.verdict);
+      setScore(data.score_earned);
+      setLocalSubmittedIds((previous) => [...new Set([...previous, currentQuestion.id])]);
+      setSelectedOption(null);
+      await onRefresh();
+      void useDashboardStore.getState().refresh();
+    } catch (submitError: unknown) {
+      const detail = apiErrorDetail(submitError);
+      setError(detail || "Submission failed.");
     } finally {
       setSubmitting(false);
     }
   };
 
+  const runSamples = async () => {
+    if (!section || running || submitting || section.question_type !== "coding") return;
+    const cases = examples.length
+      ? examples.filter((example) => example.input !== undefined && example.output !== undefined)
+      : [{ input: "", output: "" }];
+    if (!cases.length) {
+      setError("This question has no complete public sample cases.");
+      return;
+    }
+    setRunning(true);
+    setError(null);
+    setTestCases([]);
+    try {
+      const results: TestCaseResult[] = [];
+      for (const [index, sample] of cases.entries()) {
+        const { data } = await api.post("/compiler/run", {
+          language,
+          source_code: sourceCode,
+          stdin: sample.input || "",
+          custom_input: true,
+        });
+        const actualOutput = String(data.stdout ?? "").trim();
+        const expectedOutput = String(sample.output ?? "").trim();
+        results.push({
+          id: index + 1,
+          input: sample.input || "",
+          expectedOutput,
+          actualOutput,
+          passed: !data.stderr && actualOutput === expectedOutput,
+          runtimeMs: data.execution_time,
+        });
+        setStdout(data.stdout || "");
+        setStderr(data.stderr || "");
+        setRuntime(data.execution_time ?? null);
+        setMemory(data.memory_used ?? null);
+      }
+      setTestCases(results);
+    } catch (runError: unknown) {
+      setError(apiErrorDetail(runError) || "Sample execution failed.");
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const finishBattle = async () => {
+    if (finishing || !allQuestionsSubmitted) return;
+    setFinishing(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await api.post(`/battle/${encodeURIComponent(id)}/finish`);
+      await onRefresh();
+      void useDashboardStore.getState().refresh();
+    } catch (finishError: unknown) {
+      const detail = apiErrorDetail(finishError);
+      setNotice(
+        detail || "Your submissions are saved. Waiting for the other participants to finish.",
+      );
+    } finally {
+      setFinishing(false);
+    }
+  };
+
+  if (battle.status === "completed" || battle.status === "finished" || battle.status === "finalized") {
+    return (
+      <div role="status" className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+        Battle results are saved. View your individual score and reward in <a className="underline" href="/battle/history">battle history</a>.
+      </div>
+    );
+  }
+
+  if (battle.status !== "running") {
+    return (
+      <div role="status" className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] p-4 text-sm text-[var(--text-secondary)]">
+        {battle.status === "ready" ? "The host can start the battle now." : "Gameplay will appear when the host starts the battle."}
+      </div>
+    );
+  }
+
+  if (!section || !assignedQuestions.length) {
+    return <p role="alert" className="text-sm text-rose-300">This battle has no assigned questions for its selected type.</p>;
+  }
+
   return (
-    <div className="flex flex-col gap-3 sm:gap-4">
-      {/* Telemetry & Connection Header */}
-      <div className="flex flex-col items-start justify-between gap-3 rounded-xl border border-[#252525] bg-[#101010] p-3 text-xs sm:flex-row sm:items-center">
-        <div className="flex items-center gap-2">
-          {connected ? (
-            <span className="flex items-center gap-1.5 font-semibold text-[#D8FF3E]">
-              <Wifi className="h-3.5 w-3.5" /> Live Sync
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5 font-semibold text-rose-400">
-              <WifiOff className="h-3.5 w-3.5" /> Reconnecting...
-            </span>
-          )}
-          <span className="text-slate-600">•</span>
-          <span className="text-[#F5F5F5] font-medium flex items-center gap-1">
-            <Users className="h-3.5 w-3.5 text-[#D8FF3E]" /> {players ?? "—"} Active in Arena
-          </span>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => sendEvent("player_action", { type: "ping", time: Date.now() })}
-          className="rounded-lg border border-[#252525] bg-[#101010] px-2.5 py-1 text-[11px] font-semibold text-[#F5F5F5] transition hover:bg-[#151515] hover:text-[#D8FF3E]"
-        >
-          Send Arena Ping
-        </button>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between text-xs text-[var(--text-secondary)]">
+        <span className="font-semibold capitalize">{section.question_type} · {assignedQuestions.length} assigned</span>
+        <span className={connected ? "inline-flex items-center gap-1 text-emerald-300" : "inline-flex items-center gap-1 text-amber-300"}>
+          {connected ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
+          {connected ? "Live sync" : "Refreshing room"}
+        </span>
       </div>
 
-      {/* Editor & Execution Panel */}
-      {loadedProblemTitle && <h3 className="text-sm font-semibold text-[#F5F5F5]">{loadedProblemTitle}</h3>}
-      {problemLoadError && <p role="alert" className="text-sm text-[#F0BC58]">{problemLoadError}</p>}
-      {problemMetadataWarning && <p role="status" className="text-sm text-[#F0BC58]">{problemMetadataWarning}</p>}
-      <div       className="h-[min(58svh,440px)] min-h-[320px] sm:h-[440px] sm:min-h-[380px]">
-        <AssessmentCodeEditor
-          value={sourceCode}
-          onChange={setSourceCode}
-          language={editorLang}
-          onLanguageChange={setEditorLang}
-          availableLanguages={["python", "javascript", "cpp"]}
-          draftKey={`battle_${id}`}
-          onReset={() =>
-            setSourceCode("def solution():\n    pass\n\nif __name__ == '__main__':\n    solution()\n")
-          }
-        />
-      </div>
-
-      {/* Console output */}
-      <AssessmentConsole
-        testCases={testCases}
-        customInput={customInput}
-        onCustomInputChange={setCustomInput}
-        stdout={consoleStdout}
-        stderr={consoleStderr}
-        status={consoleStatus}
-        runtimeMs={consoleRuntime}
-        memoryMb={consoleMemory}
-        defaultExpanded={false}
-      />
-
-      {/* Action Buttons */}
-      <div className="flex flex-col-reverse gap-2.5 pt-1 sm:flex-row sm:items-center sm:justify-end">
-        <button
-          type="button"
-          onClick={handleRunTests}
-          disabled={running || submitting}
-          className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-[#252525] bg-[#101010] px-4 text-xs font-semibold text-[#F5F5F5] transition hover:bg-[#151515] disabled:opacity-50 sm:w-auto"
-        >
-          <Play className="h-3.5 w-3.5 text-[#D8FF3E] fill-[#D8FF3E]" />
-          <span>{running ? "Testing..." : "Test Code"}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={handleSubmitCode}
-          disabled={submitting || running || problemLoading || Boolean(problemLoadError) || !problemCanSolve}
-          className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-[#D8FF3E] px-5 text-xs font-bold text-[#101010] transition hover:bg-[#EAFCCB] active:scale-95 disabled:opacity-50 sm:w-auto sm:shadow-[0_10px_30px_rgba(216,255,62,0.16)]"
-        >
-          <Send className="h-3.5 w-3.5" />
-          <span>{submitting ? "Evaluating..." : "Submit to Battle Judge"}</span>
-        </button>
-      </div>
-
-      {/* Live Arena Activity Log */}
-      {telemetryEvents.length > 0 && (
-        <div className="rounded-xl border border-[#252525] bg-[#0B0B0B] p-3 text-xs">
-          <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[#A1A1AA] text-[10px] mb-2">
-            <Activity className="h-3 w-3 text-[#D8FF3E]" /> Arena Activity Feed
+      {currentQuestion ? (
+        <article className="space-y-4 rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] p-4">
+          <div>
+            <h3 className="font-bold text-[var(--text-primary)]">{currentQuestion.title}</h3>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[var(--text-secondary)]">{currentQuestion.description}</p>
+            {currentQuestion.constraints && (
+              <p className="mt-3 whitespace-pre-wrap text-xs text-[var(--text-muted)]">{currentQuestion.constraints}</p>
+            )}
           </div>
-          <div className="space-y-1.5 max-h-32 overflow-y-auto font-mono text-[11px] scrollbar-thin scrollbar-thumb-[#252525]/80">
-            {telemetryEvents.map((evt) => (
-              <div key={evt.id} className="flex items-center gap-2 text-[#F5F5F5]">
-                <span className="text-[#737373]">{evt.time}</span>
-                <span className="text-[#D8FF3E]">›</span>
-                <span
-                  className={
-                    evt.type === "join"
-                        ? "text-[#D8FF3E]"
-                        : "text-[#F5F5F5]"
-                  }
-                >
-                  {evt.text}
-                </span>
+
+          {section.question_type === "mcq" ? (
+            <fieldset className="space-y-2">
+              <legend className="mb-2 text-xs font-semibold text-[var(--text-secondary)]">Select one answer</legend>
+              {(currentQuestion.options ?? []).map((option, index) => {
+                const normalized = optionData(option, index);
+                return (
+                  <label key={`${currentQuestion.id}-${normalized.key}`} className="flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] p-3 text-sm text-[var(--text-primary)]">
+                    <input
+                      type="radio"
+                      name={`battle-question-${currentQuestion.id}`}
+                      value={normalized.key}
+                      checked={selectedOption === normalized.key}
+                      onChange={() => setSelectedOption(normalized.key)}
+                    />
+                    <span>{normalized.label}</span>
+                  </label>
+                );
+              })}
+            </fieldset>
+          ) : section.question_type === "coding" ? (
+            <>
+              {examples.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Public sample cases</h4>
+                  {examples.map((example, index) => (
+                    <pre key={index} className="overflow-x-auto rounded-lg bg-black/40 p-3 text-xs text-[var(--text-secondary)]">
+                      Input: {example.input ?? ""}{"\n"}Output: {example.output ?? ""}
+                    </pre>
+                  ))}
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {["python", "javascript", "cpp"].map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    aria-pressed={language === item}
+                    onClick={() => {
+                      setLanguage(item);
+                      setSourceCode(STARTER_CODE[item]);
+                    }}
+                    className={`min-h-9 rounded-lg border px-3 text-xs font-semibold capitalize ${language === item ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent-strong)]" : "border-[var(--border-default)] text-[var(--text-secondary)]"}`}
+                  >
+                    {item}
+                  </button>
+                ))}
               </div>
-            ))}
+              <div className="h-[min(50svh,420px)] min-h-[280px]">
+                <AssessmentCodeEditor
+                  value={sourceCode}
+                  onChange={setSourceCode}
+                  language={language}
+                  onLanguageChange={(value) => {
+                    if (STARTER_CODE[value]) {
+                      setLanguage(value);
+                      setSourceCode(STARTER_CODE[value]);
+                    }
+                  }}
+                  availableLanguages={Object.keys(STARTER_CODE)}
+                  draftKey={`battle_${id}_${currentQuestion.id}`}
+                  onReset={() => setSourceCode(STARTER_CODE[language])}
+                />
+              </div>
+              <AssessmentConsole
+                testCases={testCases}
+                customInput=""
+                onCustomInputChange={() => undefined}
+                stdout={stdout}
+                stderr={stderr}
+                status={running ? "running" : verdict ?? "idle"}
+                runtimeMs={runtime}
+                memoryMb={memory}
+              />
+            </>
+          ) : (
+            <p role="alert" className="text-sm text-rose-300">The assigned question type cannot be played in this arena.</p>
+          )}
+
+          {error && <p role="alert" className="text-sm text-rose-300">{error}</p>}
+          <div className="flex flex-wrap gap-2">
+            {section.question_type === "coding" && (
+              <button type="button" onClick={runSamples} disabled={running || submitting} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--border-default)] px-4 text-xs font-semibold text-[var(--text-primary)] disabled:opacity-50">
+                <Play className="h-3.5 w-3.5" /> {running ? "Running samples…" : "Run public samples"}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={submitAnswer}
+              disabled={submitting || running || (section.question_type === "mcq" && !selectedOption)}
+              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[var(--accent)] px-4 text-xs font-bold text-black disabled:opacity-50"
+            >
+              <Send className="h-3.5 w-3.5" /> {submitting ? "Judging…" : "Submit to Battle"}
+            </button>
           </div>
+        </article>
+      ) : (
+        <div className="space-y-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] p-4">
+          <p className="text-sm text-[var(--text-secondary)]">All your assigned questions are submitted.</p>
+          {notice && <p role="status" className="text-xs text-amber-200">{notice}</p>}
+          {error && <p role="alert" className="text-xs text-rose-300">{error}</p>}
+          <button type="button" onClick={finishBattle} disabled={finishing} className="min-h-10 rounded-lg bg-[var(--accent)] px-4 text-xs font-bold text-black disabled:opacity-50">
+            {finishing ? "Finalizing…" : "Finalize Results"}
+          </button>
         </div>
+      )}
+      {verdict && (
+        <p role="status" className="text-sm font-semibold text-[var(--accent-strong)]">
+          Last verdict: {verdict}{score === null ? "" : ` · ${score} points`}
+        </p>
       )}
     </div>
   );
+}
+
+function apiErrorDetail(error: unknown): string | null {
+  if (typeof error !== "object" || error === null || !("response" in error)) return null;
+  const response = (error as { response?: { data?: { detail?: unknown } } }).response;
+  return typeof response?.data?.detail === "string" ? response.data.detail : null;
 }

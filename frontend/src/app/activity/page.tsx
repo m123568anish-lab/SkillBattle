@@ -1,9 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity, RefreshCw, Sparkles } from "lucide-react";
+import {
+  Activity,
+  AlertCircle,
+  CheckCircle2,
+  LoaderCircle,
+  RefreshCw,
+  Sparkles,
+} from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import api from "@/services/api";
+import { useAuthStore } from "@/store/authStore";
+import { useDashboardStore } from "@/store/dashboardStore";
+import { mergeActivityEntries } from "@/lib/dashboard-sync-activity.mjs";
 
 type ActivityEntry = {
   id: string;
@@ -19,10 +29,13 @@ type ActivityEntry = {
 };
 
 export default function ActivityPage() {
+  const userId = useAuthStore((state) => state.user?.id ?? null);
+  const syncEvents = useDashboardStore((state) => state.syncEvents);
   const [entries, setEntries] = useState<ActivityEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const activityEntries = mergeActivityEntries(entries, syncEvents, userId);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -60,7 +73,7 @@ export default function ActivityPage() {
             </div>
           </header>
 
-          {loading ? (
+          {loading && activityEntries.length === 0 ? (
             <div className="space-y-3" role="status">
               {[...Array(4)].map((_, index) => (
                 <div key={index} className="flex items-start gap-3 rounded-2xl border border-white/5 bg-white/[0.02] p-4">
@@ -73,43 +86,67 @@ export default function ActivityPage() {
                 </div>
               ))}
             </div>
-          ) : error ? (
-            <div role="alert" className="flex items-center justify-between gap-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-              <span>{error}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setLoading(true);
-                  setRefreshKey((value) => value + 1);
-                }}
-                className="inline-flex items-center gap-2 rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-1.5 font-semibold text-white"
-              >
-                <RefreshCw className="h-4 w-4" /> Retry
-              </button>
-            </div>
-          ) : entries.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-10 text-center">
-              <p className="text-lg font-semibold text-white">No activity yet</p>
-              <p className="mt-2 text-sm text-slate-400">Your platform activity will appear here once you start learning, competing, or engaging with the community.</p>
-            </div>
           ) : (
-            <ol className="space-y-3">
-              {entries.map((entry) => (
-                <li key={entry.id} className="flex gap-4 rounded-2xl border border-white/5 bg-white/[0.02] p-4">
-                  <span aria-hidden="true" className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-cyan-300" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-white">{entry.action.replaceAll("_", " ")}</p>
-                    <p className="mt-1 text-xs capitalize text-slate-400">
-                      {entry.module}{entry.entity_type ? ` · ${entry.entity_type}` : ""}
-                      {entry.organization_type ? ` · ${entry.organization_type}` : ""}
-                    </p>
-                    <time className="mt-1 block text-[11px] text-slate-500" dateTime={entry.created_at}>
-                      {new Date(entry.created_at).toLocaleString()}
-                    </time>
-                  </div>
-                </li>
-              ))}
-            </ol>
+            <div className="space-y-3">
+              {error && (
+                <div role="alert" className="flex items-center justify-between gap-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+                  <span>{error}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoading(true);
+                      setRefreshKey((value) => value + 1);
+                    }}
+                    className="inline-flex items-center gap-2 rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-1.5 font-semibold text-white"
+                  >
+                    <RefreshCw className="h-4 w-4" /> Retry
+                  </button>
+                </div>
+              )}
+              {activityEntries.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-10 text-center">
+                  <p className="text-lg font-semibold text-white">No activity yet</p>
+                  <p className="mt-2 text-sm text-slate-400">Your platform activity will appear here once you start learning, competing, or engaging with the community.</p>
+                </div>
+              ) : (
+                <ol className="space-y-3">
+                  {activityEntries.map((entry) => {
+                    const isInProgress = entry.status === "in_progress";
+                    const isFailed = entry.status === "failed";
+                    const StatusIcon = isInProgress
+                      ? LoaderCircle
+                      : isFailed
+                        ? AlertCircle
+                        : entry.status === "completed"
+                          ? CheckCircle2
+                          : Activity;
+                    const statusLabel = isInProgress ? "In Progress" : isFailed ? "Failed" : entry.status === "completed" ? "Completed" : null;
+                    return (
+                      <li key={entry.id} className="flex gap-4 rounded-2xl border border-white/5 bg-white/[0.02] p-4">
+                        <StatusIcon
+                          aria-hidden="true"
+                          className={`mt-0.5 h-4 w-4 shrink-0 ${isFailed ? "text-rose-300" : isInProgress ? "animate-spin text-amber-300" : entry.status === "completed" ? "text-emerald-300" : "text-slate-400"}`}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm font-semibold capitalize text-white">{entry.title}</p>
+                            {statusLabel && (
+                              <span className={`text-[10px] font-semibold uppercase tracking-wide ${isFailed ? "text-rose-300" : isInProgress ? "text-amber-300" : "text-emerald-300"}`}>
+                                {statusLabel}
+                              </span>
+                            )}
+                          </div>
+                          {entry.description && <p className="mt-1 text-xs capitalize text-slate-400">{entry.description}</p>}
+                          <time className="mt-1 block text-[11px] text-slate-500" dateTime={entry.created_at}>
+                            {new Date(entry.created_at).toLocaleString()}
+                          </time>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+            </div>
           )}
         </section>
       </main>

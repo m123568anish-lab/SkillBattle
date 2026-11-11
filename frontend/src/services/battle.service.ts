@@ -4,10 +4,36 @@ import { API_ENDPOINTS } from "@/lib/api-constants";
 export interface BattleRecord {
   id: string;
   title?: string;
+  creator_id?: string | null;
+  mode?: string;
+  type?: string;
+  battle_type?: string;
   difficulty?: string;
   problem_id?: number;
   status?: string;
   max_players?: number;
+  current_section_index?: number;
+  sections_config?: Array<Record<string, unknown>>;
+  questions_data?: Array<{
+    section_index: number;
+    question_type: string;
+    title?: string;
+    questions: Array<{
+      id: number;
+      title: string;
+      description: string;
+      question_type: string;
+      difficulty?: string;
+      skill_category?: string;
+      options?: Array<string | { key?: string; text?: string }>;
+      examples?: Array<{ input?: string; output?: string; explanation?: string }>;
+      constraints?: string;
+      buggy_code?: string;
+    }>;
+  }>;
+  submitted_question_ids?: number[];
+  started_at?: string | null;
+  expires_at?: string | null;
   created_at?: string;
 }
 
@@ -80,6 +106,11 @@ class BattleService {
 
   async getBattle(battleId: string) {
     const response = await api.get<BattleRecord>(API_ENDPOINTS.BATTLE.GET(battleId));
+    return response.data;
+  }
+
+  async startBattle(battleId: string) {
+    const response = await api.post<BattleRecord>(`${API_ENDPOINTS.BATTLE.GET(battleId)}/start`);
     return response.data;
   }
 

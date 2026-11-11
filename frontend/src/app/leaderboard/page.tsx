@@ -135,13 +135,13 @@ export default function LeaderboardPage() {
 
         {/* Current User Rank Pinned Banner */}
         {myRank?.rank !== null && myRank && (
-          <div className="rounded-2xl border border-purple-500/30 bg-purple-950/20 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 backdrop-blur-md">
+          <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-[var(--accent)]/25 bg-[var(--accent)]/[0.06] p-4 sm:flex-row sm:p-5">
             <div className="flex items-center gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-300 font-mono font-bold text-sm">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/10 font-mono text-sm font-bold text-[var(--accent-strong)]">
                 #{myRank.rank}
               </div>
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-purple-300">Your Current Standing</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-[var(--accent-strong)]">Your Current Standing</span>
                 <h4 className="text-base font-bold text-white">
                   {currentUser?.full_name || currentUser?.username || "Your account"}
                 </h4>
@@ -162,7 +162,7 @@ export default function LeaderboardPage() {
         )}
 
         {/* Search & Scope Filters Bar */}
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5 space-y-4">
+        <div className="space-y-4 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-4 sm:p-5">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             {/* Search Input */}
             <div className="relative w-full md:w-80">
@@ -172,7 +172,8 @@ export default function LeaderboardPage() {
                 placeholder="Search competitors by name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-black/40 pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:border-purple-500 focus:outline-none"
+                aria-label="Search competitors by name"
+                className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] py-2 pl-10 pr-4 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--border-focus)] focus:outline-none focus:ring-2 focus:ring-[var(--border-focus)]/20"
               />
             </div>
 
@@ -188,8 +189,56 @@ export default function LeaderboardPage() {
             </button>
           </div>
         )}
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)]">
+          <div className="divide-y divide-[var(--border-subtle)] md:hidden">
+            {loading ? (
+              <p className="p-6 text-center text-sm text-[var(--text-muted)]">Loading rankings…</p>
+            ) : error ? (
+              <p className="p-6 text-center text-sm text-[var(--text-muted)]">Leaderboard data is unavailable.</p>
+            ) : filteredBoard.length === 0 ? (
+              <p className="p-6 text-center text-sm text-[var(--text-muted)]">
+                {searchQuery ? `No students found matching "${searchQuery}".` : "No eligible student records are available yet."}
+              </p>
+            ) : (
+              filteredBoard.map((entry) => (
+                <article
+                  key={entry.user_id}
+                  className={`p-4 ${entry.is_current_user ? "bg-[var(--accent)]/[0.06]" : ""}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)]">
+                        {getRankBadge(entry.rank)}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
+                          {entry.full_name || entry.username}
+                          {entry.is_current_user && <span className="ml-2 text-xs font-medium text-[var(--accent-strong)]">You</span>}
+                        </p>
+                        <p className="truncate text-xs text-[var(--text-muted)]">@{entry.username}</p>
+                      </div>
+                    </div>
+                    <span className="shrink-0 font-mono text-sm font-bold text-[var(--accent-strong)]">{entry.rating}</span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 pl-12 text-xs">
+                    <div>
+                      <span className="block text-[var(--text-muted)]">XP</span>
+                      <span className="font-mono font-semibold text-[var(--text-primary)]">{entry.xp.toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[var(--text-muted)]">Record</span>
+                      <span className="font-mono font-semibold text-[var(--text-primary)]">{entry.wins}W / {entry.losses}L</span>
+                    </div>
+                    <div>
+                      <span className="block text-[var(--text-muted)]">Win rate</span>
+                      <span className="font-mono font-semibold text-[var(--status-success)]">{entry.win_rate}%</span>
+                    </div>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-left text-xs">
               <thead className="border-b border-white/[0.08] bg-white/[0.02] text-slate-400 font-bold uppercase tracking-wider">
                 <tr>
@@ -221,7 +270,7 @@ export default function LeaderboardPage() {
                     <tr
                       key={entry.user_id}
                       className={`hover:bg-white/[0.03] transition-colors ${
-                        entry.is_current_user ? "bg-purple-950/20 font-bold" : ""
+                        entry.is_current_user ? "bg-[var(--accent)]/[0.06] font-bold" : ""
                       }`}
                     >
                       <td className="py-3.5 px-4 text-center">
@@ -237,7 +286,7 @@ export default function LeaderboardPage() {
                             <span className="font-bold text-white block">
                               {entry.full_name || entry.username}
                               {entry.is_current_user && (
-                                <span className="ml-2 text-[10px] text-purple-300 font-normal border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 rounded">
+                                <span className="ml-2 rounded border border-[var(--accent)]/25 bg-[var(--accent)]/10 px-1.5 py-0.5 text-[10px] font-normal text-[var(--accent-strong)]">
                                   You
                                 </span>
                               )}
@@ -247,7 +296,7 @@ export default function LeaderboardPage() {
                         </div>
                       </td>
 
-                      <td className="py-3.5 px-4 font-mono font-black text-purple-300">
+                      <td className="py-3.5 px-4 font-mono font-black text-[var(--accent-strong)]">
                         {entry.rating}
                       </td>
 

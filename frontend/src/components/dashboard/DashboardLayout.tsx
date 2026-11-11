@@ -193,7 +193,7 @@ function DashboardLayoutInner({ children }: Props) {
         className="relative z-10 min-w-0 flex-1 overflow-auto bg-transparent px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-3 outline-none sm:px-6 sm:pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:pt-5 lg:h-full lg:min-h-0 lg:px-10 lg:pb-10 lg:pt-7"
       >
         <TopNavbar
-          onOpenMobileNav={() => setMobileDrawerOpen(true)}
+          onToggleMobileNav={() => setMobileDrawerOpen((open) => !open)}
           mobileNavExpanded={mobileDrawerOpen}
         />
         <PageTransition>{children}</PageTransition>

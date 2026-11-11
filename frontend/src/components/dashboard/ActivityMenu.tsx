@@ -2,24 +2,37 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Activity, RefreshCw } from "lucide-react";
+import {
+  Activity,
+  AlertCircle,
+  CheckCircle2,
+  LoaderCircle,
+  RefreshCw,
+} from "lucide-react";
 import api from "@/services/api";
 import HeaderPanel from "./HeaderPanel";
+import { useAuthStore } from "@/store/authStore";
+import { useDashboardStore } from "@/store/dashboardStore";
+import { mergeActivityEntries } from "@/lib/dashboard-sync-activity.mjs";
 
 type ActivityEntry = {
   id: string;
   action: string;
   module: string;
   entity_type: string | null;
+  organization_type?: string | null;
   created_at: string;
 };
 
 export default function ActivityMenu() {
+  const userId = useAuthStore((state) => state.user?.id ?? null);
+  const syncEvents = useDashboardStore((state) => state.syncEvents);
   const [open, setOpen] = useState(false);
   const [entries, setEntries] = useState<ActivityEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const activityEntries = mergeActivityEntries(entries, syncEvents, userId);
 
   useEffect(() => {
     if (!open) return;
@@ -63,36 +76,57 @@ export default function ActivityMenu() {
       </button>
 
       <HeaderPanel open={open} title="Activity" onClose={() => setOpen(false)}>
-              {loading ? (
+              {loading && activityEntries.length === 0 ? (
                 <p role="status" className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">Loading activity…</p>
-              ) : error ? (
-                <div role="alert" className="flex items-center justify-between gap-3 px-4 py-5 text-sm text-[var(--status-danger)]">
-                  <span>Activity could not be loaded.</span>
-                  <button
-                    type="button"
-                    onClick={() => setRefreshKey((value) => value + 1)}
-                    className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-[var(--text-primary)]"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" /> Retry
-                  </button>
-                </div>
-              ) : entries.length === 0 ? (
-                <p className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">No activity yet</p>
               ) : (
-                entries.map((entry) => (
-                  <div key={entry.id} className="flex items-start gap-3 px-4 py-3">
-                    <span aria-hidden="true" className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--accent)]" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold capitalize text-[var(--text-primary)]">{entry.action.replaceAll("_", " ")}</span>
-                      <span className="mt-0.5 block text-xs capitalize text-[var(--text-muted)]">
-                        {entry.module}{entry.entity_type ? ` · ${entry.entity_type}` : ""}
-                      </span>
-                      <time className="mt-1 block text-[11px] text-[var(--text-muted)]" dateTime={entry.created_at}>
-                        {new Date(entry.created_at).toLocaleString()}
-                      </time>
-                    </span>
-                  </div>
-                ))
+                <div>
+                  {error && (
+                    <div role="alert" className="flex items-center justify-between gap-3 px-4 py-4 text-sm text-[var(--status-danger)]">
+                      <span>Activity could not be loaded.</span>
+                      <button
+                        type="button"
+                        onClick={() => setRefreshKey((value) => value + 1)}
+                        className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-[var(--text-primary)]"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" /> Retry
+                      </button>
+                    </div>
+                  )}
+                  {activityEntries.length === 0 ? (
+                    <p className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">No activity yet</p>
+                  ) : (
+                    activityEntries.map((entry) => {
+                      const isInProgress = entry.status === "in_progress";
+                      const isFailed = entry.status === "failed";
+                      const StatusIcon = isInProgress
+                        ? LoaderCircle
+                        : isFailed
+                          ? AlertCircle
+                          : entry.status === "completed"
+                            ? CheckCircle2
+                            : Activity;
+                      const statusLabel = isInProgress ? "In Progress" : isFailed ? "Failed" : entry.status === "completed" ? "Completed" : null;
+                      return (
+                        <div key={entry.id} className="flex items-start gap-3 px-4 py-3">
+                          <StatusIcon
+                            aria-hidden="true"
+                            className={`mt-0.5 h-4 w-4 shrink-0 ${isFailed ? "text-rose-400" : isInProgress ? "animate-spin text-amber-400" : entry.status === "completed" ? "text-emerald-400" : "text-[var(--text-muted)]"}`}
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="block text-sm font-semibold capitalize text-[var(--text-primary)]">{entry.title}</span>
+                              {statusLabel && <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{statusLabel}</span>}
+                            </span>
+                            {entry.description && <span className="mt-0.5 block text-xs capitalize text-[var(--text-muted)]">{entry.description}</span>}
+                            <time className="mt-1 block text-[11px] text-[var(--text-muted)]" dateTime={entry.created_at}>
+                              {new Date(entry.created_at).toLocaleString()}
+                            </time>
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               )}
       </HeaderPanel>
     </div>

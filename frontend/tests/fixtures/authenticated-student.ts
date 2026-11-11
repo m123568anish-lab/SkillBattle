@@ -40,7 +40,7 @@ export async function authenticateStudent(page: Page) {
   await page.context().addCookies([{
     name: "__Secure-neon-auth.session_token",
     value: "e2e-cookie-session",
-    url: "https://127.0.0.1:3000",
+    url: "https://127.0.0.1:3001",
     httpOnly: true,
     secure: true,
     sameSite: "Lax",

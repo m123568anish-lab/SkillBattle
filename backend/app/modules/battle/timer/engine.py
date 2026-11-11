@@ -32,6 +32,17 @@ class BattleTimerEngine:
     def __init__(self):
 
         self.running: dict[str, int] = {}
+        self._tasks: dict[str, asyncio.Task] = {}
+
+    def schedule(self, battle_id: str, duration: int) -> None:
+        self.stop(battle_id)
+        task = asyncio.create_task(self.start(battle_id, duration))
+        self._tasks[battle_id] = task
+        task.add_done_callback(
+            lambda completed: self._tasks.pop(battle_id, None)
+            if self._tasks.get(battle_id) is completed
+            else None
+        )
 
     # =====================================================
     # Start Timer
@@ -90,11 +101,13 @@ class BattleTimerEngine:
         self,
         battle_id: str,
     ):
-
         self.running.pop(
             battle_id,
             None,
         )
+        task = self._tasks.pop(battle_id, None)
+        if task is not None and not task.done():
+            task.cancel()
 
     # =====================================================
     # Remaining Seconds

@@ -114,7 +114,10 @@ class CreateBattleRequest(BaseModel):
     problem_id: int = Field(default=1)
     config_id: Optional[str] = None
     battle_type: BattleTypeEnum = Field(default=BattleTypeEnum.GENERAL)
-    battle_mode: BattleModeEnum = Field(default=BattleModeEnum.SOLO)
+    battle_mode: Optional[BattleModeEnum] = Field(default=None)
+    question_type: Optional[QuestionTypeEnum] = Field(default=None)
+    skill_category: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    question_count: int = Field(default=1, ge=1, le=20)
     max_players: int = Field(default=2, ge=1, le=16)
 
 
@@ -133,6 +136,7 @@ class LeaveBattleRequest(BaseModel):
 class BattleResponse(BaseModel):
     id: str
     title: str
+    creator_id: Optional[str] = None
     mode: str = "solo"
     type: str = "general"
     difficulty: str

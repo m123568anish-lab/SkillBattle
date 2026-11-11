@@ -29,6 +29,27 @@ async def test_advanced_battle_engine_workflow(client: AsyncClient, battle_quest
     token = login_resp.json()["tokens"]["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
+    second_unique_id = uuid4().hex[:6].lower()
+    second_email = f"student_{second_unique_id}@example.com"
+    second_register = await client.post(
+        "/auth/register",
+        json={
+            "username": f"battle_peer_{second_unique_id}",
+            "email": second_email,
+            "full_name": "Battle Peer",
+            "password": "StrongPass#123",
+        },
+    )
+    assert second_register.status_code == 201, second_register.text
+    second_login = await client.post(
+        "/auth/login",
+        json={"email": second_email, "password": "StrongPass#123"},
+    )
+    assert second_login.status_code == 200, second_login.text
+    second_headers = {
+        "Authorization": f"Bearer {second_login.json()['tokens']['access_token']}"
+    }
+
     # 1. Fetch Battle Types
     types_resp = await client.get("/battle/types")
     assert types_resp.status_code == 200
@@ -97,8 +118,20 @@ async def test_advanced_battle_engine_workflow(client: AsyncClient, battle_quest
     battle_data = battle_resp.json()
     battle_id = battle_data["id"]
 
+    join_resp = await client.post(
+        "/battle/join",
+        headers=second_headers,
+        json={"battle_id": battle_id},
+    )
+    assert join_resp.status_code == 200, join_resp.text
+    assert join_resp.json()["mode"] == "duo"
+
+    start_resp = await client.post(f"/battle/{battle_id}/start", headers=headers)
+    assert start_resp.status_code == 200, start_resp.text
+    assert start_resp.json()["status"] == "running"
+
     # 4. Fetch Battle Details & verify sanitized question payload
-    details_resp = await client.get(f"/battle/{battle_id}")
+    details_resp = await client.get(f"/battle/{battle_id}", headers=headers)
     assert details_resp.status_code == 200
     sections = details_resp.json()["questions_data"]
     assert len(sections) > 0
@@ -120,6 +153,20 @@ async def test_advanced_battle_engine_workflow(client: AsyncClient, battle_quest
     )
     assert mcq_sub_resp.status_code == 200, mcq_sub_resp.text
 
+    peer_mcq_sub_resp = await client.post(
+        "/battle/submit-answer",
+        headers=second_headers,
+        json={
+            "battle_id": battle_id,
+            "question_id": mcq_question_id,
+            "section_index": 0,
+            "question_type": "mcq",
+            "mcq_option": "A",
+            "time_taken_seconds": 10,
+        },
+    )
+    assert peer_mcq_sub_resp.status_code == 200, peer_mcq_sub_resp.text
+
     # 6. Submit Coding Answer
     coding_sub_resp = await client.post(
         "/battle/submit-answer",
@@ -135,6 +182,21 @@ async def test_advanced_battle_engine_workflow(client: AsyncClient, battle_quest
         },
     )
     assert coding_sub_resp.status_code == 200, coding_sub_resp.text
+
+    peer_coding_sub_resp = await client.post(
+        "/battle/submit-answer",
+        headers=second_headers,
+        json={
+            "battle_id": battle_id,
+            "question_id": coding_question_id,
+            "section_index": 1,
+            "question_type": "coding",
+            "source_code": "print(1)",
+            "language": "python",
+            "time_taken_seconds": 120,
+        },
+    )
+    assert peer_coding_sub_resp.status_code == 200, peer_coding_sub_resp.text
 
     # 7. Record Anti-Cheat Event
     anticheat_resp = await client.post(
@@ -158,3 +220,8 @@ async def test_advanced_battle_engine_workflow(client: AsyncClient, battle_quest
     res_payload = result_resp.json()
     assert res_payload["battle_type"] == "placement"
     assert "overall_status" in res_payload["placement_readiness"]
+    peer_result_resp = await client.get(
+        f"/battle/{battle_id}/result",
+        headers=second_headers,
+    )
+    assert peer_result_resp.status_code == 200, peer_result_resp.text

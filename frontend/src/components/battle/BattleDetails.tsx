@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
@@ -20,6 +20,7 @@ import {
 } from "@/services/battle.service";
 import BattleDetailClient from "@/components/battle/BattleDetailClient";
 import { SpotlightCard } from "@/components/ui/spotlight";
+import { api } from "@/lib/api";
 
 interface BattleDetailsProps {
   battleId: string;
@@ -33,38 +34,70 @@ export default function BattleDetails({ battleId }: BattleDetailsProps) {
   const [timer, setTimer] = useState<BattleTimerData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
+
+  const loadBattle = useCallback(async () => {
+    const [battleData, participantsData, timerData] = await Promise.all([
+      battleService.getBattle(battleId),
+      battleService.getParticipants(battleId),
+      battleService.getTimer(battleId),
+    ]);
+    setBattle(battleData);
+    setParticipants(participantsData);
+    setTimer(timerData);
+    setError(null);
+  }, [battleId]);
 
   useEffect(() => {
     let active = true;
-
-    const loadBattle = async () => {
+    const refresh = async () => {
       try {
-        const [battleData, participantsData, timerData] = await Promise.all([
-          battleService.getBattle(battleId),
-          battleService.getParticipants(battleId),
-          battleService.getTimer(battleId),
-        ]);
-
-        if (active) {
-          setBattle(battleData);
-          setParticipants(participantsData);
-          setTimer(timerData);
-        }
+        await loadBattle();
       } catch (err: any) {
-        if (active)
-          setError(
-            err?.response?.data?.detail || "Unable to load battle details."
-          );
+        if (active) {
+          setError(err?.response?.data?.detail || "Unable to load battle details.");
+        }
       } finally {
         if (active) setLoading(false);
       }
     };
 
-    loadBattle();
+    void refresh();
+    const interval = window.setInterval(() => void refresh(), 2000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [battleId, loadBattle]);
+
+  useEffect(() => {
+    let active = true;
+    api.get<{ id: string }>("/auth/me")
+      .then(({ data }) => {
+        if (active) setCurrentUserId(data.id);
+      })
+      .catch(() => {
+        if (active) setCurrentUserId(null);
+      });
     return () => {
       active = false;
     };
-  }, [battleId]);
+  }, []);
+
+  const handleStart = async () => {
+    setStarting(true);
+    setActionError(null);
+    try {
+      await battleService.startBattle(battleId);
+      await loadBattle();
+    } catch (err: any) {
+      setActionError(err?.response?.data?.detail || "Unable to start this battle.");
+    } finally {
+      setStarting(false);
+    }
+  };
 
   const handleLeave = async () => {
     try {
@@ -109,6 +142,10 @@ export default function BattleDetails({ battleId }: BattleDetailsProps) {
   const isMatchCompleted =
     battle.status === "completed" ||
     (battle.status === "in_progress" && remainingSeconds === 0);
+  const isHost = currentUserId !== null && battle.creator_id === currentUserId;
+  const canStart = isHost && participants.length === battle.max_players &&
+    (battle.status === "waiting" || battle.status === "ready");
+  const activeSection = battle.questions_data?.[battle.current_section_index ?? 0];
 
   return (
     <div className="space-y-6">
@@ -161,7 +198,8 @@ export default function BattleDetails({ battleId }: BattleDetailsProps) {
               {battle.title}
             </h1>
             <p className="mt-1.5 break-words text-[11px] font-medium leading-relaxed text-[var(--text-secondary)] sm:text-xs">
-              Mode: <span className="text-[var(--text-primary)] font-semibold capitalize">{battle.difficulty}</span> · Problem #{battle.problem_id} · Status:{" "}
+              Mode: <span className="text-[var(--text-primary)] font-semibold capitalize">{battle.mode ?? "solo"}</span>
+              {" · "}{activeSection?.question_type ?? battle.battle_type ?? "Battle"} · Status:{" "}
               <span className="font-semibold uppercase tracking-wider text-[var(--accent-strong)]">
                 {battle.status}
               </span>
@@ -185,6 +223,25 @@ export default function BattleDetails({ battleId }: BattleDetailsProps) {
           </div>
         </div>
       </SpotlightCard>
+
+      {canStart && (
+        <div className="rounded-2xl border border-[var(--accent)]/30 bg-[var(--surface-card)] p-4">
+          <button
+            type="button"
+            onClick={handleStart}
+            disabled={starting}
+            className="min-h-11 rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-bold text-black disabled:opacity-60"
+          >
+            {starting ? "Starting…" : "Start Battle"}
+          </button>
+        </div>
+      )}
+      {battle.status === "waiting" && (
+        <p role="status" className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-3 text-xs text-[var(--text-secondary)]">
+          Waiting for players ({participants.length}/{battle.max_players}). Share this room ID: <span className="font-mono">{battleId}</span>
+        </p>
+      )}
+      {actionError && <p role="alert" className="text-sm text-rose-300">{actionError}</p>}
 
       <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr] sm:gap-6">
         <div className="space-y-4 sm:space-y-6">
@@ -266,7 +323,7 @@ export default function BattleDetails({ battleId }: BattleDetailsProps) {
             <p className="mt-1 text-xs text-[var(--text-secondary)] mb-4">
               Real-time telemetry and execution output.
             </p>
-            <BattleDetailClient id={battleId} problemId={battle.problem_id} />
+            <BattleDetailClient id={battleId} battle={battle} onRefresh={loadBattle} />
           </div>
 
           <div className="rounded-[24px] border border-[var(--border-default)] bg-[var(--surface-card)] p-4 shadow-lg sm:rounded-3xl sm:p-6 sm:shadow-xl">

@@ -7,6 +7,12 @@ import {
     dashboardService,
     DashboardResponse,
 } from "@/services/dashboard.service";
+import {
+    persistDashboardSyncActivity,
+    readDashboardSyncActivity,
+    upsertDashboardSyncActivity,
+    type DashboardSyncActivity,
+} from "@/lib/dashboard-sync-activity.mjs";
 
 interface DashboardCachePayload {
     data: DashboardResponse;
@@ -46,8 +52,8 @@ function getCachedDashboard(userId?: string): DashboardCachePayload | null {
     return null;
 }
 
-function saveDashboardToCache(data: DashboardResponse) {
-    if (typeof window === "undefined") return;
+function saveDashboardToCache(data: DashboardResponse): boolean {
+    if (typeof window === "undefined") return false;
     try {
         const payload: DashboardCachePayload = {
             data,
@@ -56,8 +62,9 @@ function saveDashboardToCache(data: DashboardResponse) {
             apiOrigin: API_ORIGIN,
         };
         localStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify(payload));
+        return true;
     } catch {
-        // Storage limit or private mode
+        return false;
     }
 }
 
@@ -69,9 +76,11 @@ interface DashboardState {
     isFromCache: boolean;
     isStale: boolean;
     lastRefreshedAt: string | null;
+    syncEvents: DashboardSyncActivity[];
     error: string | null;
     loadDashboard: (userId?: string) => Promise<void>;
     refresh: () => Promise<void>;
+    recordSyncEvent: (event: DashboardSyncActivity) => void;
     reset: () => void;
 }
 
@@ -90,7 +99,14 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     isFromCache: Boolean(initialCache),
     isStale: Boolean(initialCache),
     lastRefreshedAt: initialCache ? initialCache.timestamp : null,
+    syncEvents: readDashboardSyncActivity(),
     error: null,
+
+    recordSyncEvent(event) {
+        const syncEvents = upsertDashboardSyncActivity(get().syncEvents, event);
+        persistDashboardSyncActivity(syncEvents);
+        set({ syncEvents });
+    },
 
     async loadDashboard(requestedUserId) {
         let userId = requestedUserId ?? get().userId;
@@ -130,6 +146,17 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         const hadDashboard = Boolean(currentDashboard);
         const requestVersion = ++dashboardRequestVersion;
         activeDashboardUserId = userId;
+        const syncEventId = `dashboard-sync:${userId}:${requestVersion}`;
+        const syncStartedAt = new Date().toISOString();
+        get().recordSyncEvent({
+            id: syncEventId,
+            user_id: userId,
+            title: "Dashboard synchronization",
+            description: "Dashboard metrics are being updated from the API.",
+            status: "in_progress",
+            created_at: syncStartedAt,
+            updated_at: syncStartedAt,
+        });
 
         set({
             loading: !hadDashboard,
@@ -140,8 +167,52 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         activeDashboardPromise = (async () => {
             try {
                 const data = await dashboardService.getDashboard();
-                if (requestVersion !== dashboardRequestVersion || data.user.id !== userId) return;
-                saveDashboardToCache(data);
+                if (requestVersion !== dashboardRequestVersion) {
+                    const supersededAt = new Date().toISOString();
+                    get().recordSyncEvent({
+                        id: syncEventId,
+                        user_id: userId,
+                        title: "Dashboard synchronization superseded",
+                        description: "This refresh was superseded before it could update the dashboard.",
+                        status: "failed",
+                        created_at: syncStartedAt,
+                        updated_at: supersededAt,
+                    });
+                    return;
+                }
+                if (data.user.id !== userId) {
+                    const failedAt = new Date().toISOString();
+                    get().recordSyncEvent({
+                        id: syncEventId,
+                        user_id: userId,
+                        title: "Dashboard synchronization failed",
+                        description: "The dashboard response did not match the signed-in account and was not applied.",
+                        status: "failed",
+                        created_at: syncStartedAt,
+                        updated_at: failedAt,
+                    });
+                    set((state) => ({
+                        loading: false,
+                        isRefreshing: false,
+                        error: "Dashboard response did not match the signed-in account. Please retry.",
+                        isFromCache: Boolean(state.dashboard),
+                        isStale: Boolean(state.dashboard),
+                    }));
+                    return;
+                }
+                const cacheUpdated = saveDashboardToCache(data);
+                const completedAt = new Date().toISOString();
+                get().recordSyncEvent({
+                    id: syncEventId,
+                    user_id: userId,
+                    title: "Dashboard data refreshed",
+                    description: cacheUpdated
+                        ? "Latest dashboard metrics were synchronized and saved to this browser's cache."
+                        : "Latest dashboard metrics were synchronized. Browser caching was unavailable.",
+                    status: "completed",
+                    created_at: syncStartedAt,
+                    updated_at: completedAt,
+                });
 
                 set({
                     dashboard: data,
@@ -154,7 +225,29 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
                     error: null,
                 });
             } catch (err: unknown) {
-                if (requestVersion !== dashboardRequestVersion) return;
+                if (requestVersion !== dashboardRequestVersion) {
+                    const supersededAt = new Date().toISOString();
+                    get().recordSyncEvent({
+                        id: syncEventId,
+                        user_id: userId,
+                        title: "Dashboard synchronization superseded",
+                        description: "This refresh was superseded before it could update the dashboard.",
+                        status: "failed",
+                        created_at: syncStartedAt,
+                        updated_at: supersededAt,
+                    });
+                    return;
+                }
+                const failedAt = new Date().toISOString();
+                get().recordSyncEvent({
+                    id: syncEventId,
+                    user_id: userId,
+                    title: "Dashboard synchronization failed",
+                    description: "The latest dashboard metrics could not be synchronized. Retry from the dashboard.",
+                    status: "failed",
+                    created_at: syncStartedAt,
+                    updated_at: failedAt,
+                });
                 const responseData = isAxiosError(err) ? err.response?.data : null;
                 const serverMessage = responseData?.detail ?? responseData?.message;
                 const message = typeof serverMessage === "string"

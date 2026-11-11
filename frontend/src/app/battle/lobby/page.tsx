@@ -34,6 +34,7 @@ export default function BattleLobbyPage() {
 
   const [lobbyState, setLobbyState] = useState<LobbyState>({ queue_size: null });
   const [selectedDifficulty, setSelectedDifficulty] = useState<"easy" | "medium" | "hard">("medium");
+  const [selectedQuestionType, setSelectedQuestionType] = useState<"mcq" | "coding">("mcq");
   const [isSearching, setIsSearching] = useState(false);
   const [searchSeconds, setSearchSeconds] = useState(0);
   const [queueLoading, setQueueLoading] = useState(true);
@@ -130,6 +131,8 @@ export default function BattleLobbyPage() {
         battle_type: "general",
         battle_mode: "duo",
         max_players: 2,
+        question_type: selectedQuestionType,
+        question_count: 1,
       });
       if (!data.id) throw new Error("The server did not return a battle ID.");
       setCreatedRoomId(data.id);
@@ -304,6 +307,24 @@ export default function BattleLobbyPage() {
                   <p className="text-xs text-slate-300 mt-1 leading-relaxed">
                     Create a real waiting battle room and share its server-generated ID with another player.
                   </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {(["mcq", "coding"] as const).map((questionType) => (
+                    <button
+                      key={questionType}
+                      type="button"
+                      aria-pressed={selectedQuestionType === questionType}
+                      onClick={() => setSelectedQuestionType(questionType)}
+                      className={`min-h-10 rounded-lg border px-3 text-xs font-bold capitalize ${
+                        selectedQuestionType === questionType
+                          ? "border-cyan-400/50 bg-cyan-400/10 text-cyan-200"
+                          : "border-white/10 bg-black/30 text-slate-400"
+                      }`}
+                    >
+                      {questionType}
+                    </button>
+                  ))}
                 </div>
 
                 {createdRoomId ? (

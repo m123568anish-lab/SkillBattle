@@ -24,35 +24,36 @@ export function QubiraIcon({ size = 32, className = "" }: { size?: number; class
       className={`shrink-0 transition-transform duration-200 group-hover:scale-105 ${className}`}
     >
       <rect
-        x="1"
-        y="1"
-        width="62"
-        height="62"
-        rx="19"
+        x="3"
+        y="3"
+        width="58"
+        height="58"
+        rx="17"
         fill="var(--surface-elevated)"
         stroke="var(--border-default)"
-        strokeWidth="2"
+        strokeWidth="1.5"
       />
       <path
-        d="M32 13C21.507 13 13 21.507 13 32s8.507 19 19 19c4.087 0 7.87-1.29 10.96-3.483L49 53"
+        d="M43.1 45.7A18.5 18.5 0 1 1 49 32"
         stroke="var(--accent-strong)"
-        strokeWidth="5"
+        strokeWidth="5.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d="M32 21a11 11 0 1 0 0 22 11 11 0 0 0 0-22Z"
-        fill="var(--accent)"
-        fillOpacity=".15"
+        d="m25 25-7 7 7 7m14-14 7 7-7 7m-5-16-5 18"
+        stroke="var(--text-primary)"
+        strokeWidth="2.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
-      <circle cx="32" cy="32" r="4" fill="var(--accent)" />
       <path
-        d="m43 43 9 9"
+        d="m43 43 10 10"
         stroke="var(--accent)"
-        strokeWidth="5"
+        strokeWidth="5.5"
         strokeLinecap="round"
       />
-      <rect x="48" y="13" width="4" height="4" rx="1" fill="var(--accent)" />
+      <circle cx="49" cy="15" r="2.5" fill="var(--accent)" />
     </svg>
   );
 }
@@ -89,7 +90,7 @@ export function QubiraLogo({
         <div className="flex flex-col leading-none">
           <div className="flex items-center gap-1.5">
             <span
-              className={`font-black tracking-[0.16em] text-[var(--text-primary)] transition-colors group-hover:text-[var(--accent-strong)] ${textStyleMap[size]}`}
+              className={`font-black tracking-[0.12em] text-[var(--text-primary)] transition-colors group-hover:text-[var(--accent-strong)] ${textStyleMap[size]}`}
             >
               QUBIRA
             </span>

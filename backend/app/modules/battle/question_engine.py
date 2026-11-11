@@ -63,7 +63,7 @@ class QuestionEngine:
                 return False
 
         elif qtype == "coding":
-            test_cases = data.get("hidden_test_cases") or data.get("examples") or []
+            test_cases = data.get("hidden_test_cases") or []
             if not isinstance(test_cases, list) or len(test_cases) < 1:
                 return False
             validcases = []
@@ -108,7 +108,7 @@ class QuestionEngine:
             return bool(description and (expected or solution))
 
         if qtype == "coding":
-            test_cases = getattr(question, "hidden_test_cases", None) or getattr(question, "examples", None) or []
+            test_cases = getattr(question, "hidden_test_cases", None) or []
             if not isinstance(test_cases, list) or not test_cases:
                 return False
             for case in test_cases:

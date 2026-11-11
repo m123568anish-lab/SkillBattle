@@ -58,7 +58,7 @@ function CodingPracticeInner() {
 
   const [query, setQuery] = useState("");
   const [difficulty, setDifficulty] = useState("");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState(() => params.get("category") ?? "");
   const [topic, setTopic] = useState("");
   const [sortBy, setSortBy] = useState<"problem_id" | "difficulty">("problem_id");
   const [status, setStatus] = useState<"all" | "solved" | "unsolved">("all");

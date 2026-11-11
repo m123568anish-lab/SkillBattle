@@ -15,6 +15,7 @@ venv/
 # =========================
 frontend/node_modules/
 frontend/.next/
+frontend/.next-playwright/
 frontend/out/
 frontend/.turbo/
 .next/

@@ -5,13 +5,8 @@ from app.models.battle import (
     BattleSubmission,
 )
 
-from app.modules.compiler.executors.manager import (
-    execution_manager,
-)
-
-from app.modules.compiler.judge import (
-    judge_engine,
-)
+from app.modules.compiler.executors.manager import execution_manager
+from app.modules.compiler.judge import judge_engine
 
 from app.modules.battle.repository import (
     battle_repository,
@@ -35,20 +30,22 @@ class BattleJudgeService:
         self,
         language: str,
         source_code: str,
-        problem_id: int = 1,
+        test_cases: list[dict],
     ) -> dict:
-        result = execution_manager.execute(
+        if not test_cases:
+            raise ValueError("Hidden test cases are required to judge a coding battle submission.")
+
+        result = judge_engine.judge(
             language=language,
             source_code=source_code,
-            stdin="",
+            testcases=test_cases,
         )
-        verdict = "Accepted" if result.return_code == 0 else "Wrong Answer"
         return {
-            "verdict": verdict,
-            "passed_tests": 1 if verdict == "Accepted" else 0,
-            "total_tests": 1,
-            "runtime_ms": float(getattr(result, "execution_time", 10.0)),
-            "memory_mb": float(getattr(result, "memory_used", 5.0)),
+            "verdict": result.verdict,
+            "passed_tests": result.passed_tests,
+            "total_tests": result.total_tests,
+            "runtime_ms": result.runtime_ms,
+            "memory_mb": result.memory_mb,
         }
 
     async def submit(

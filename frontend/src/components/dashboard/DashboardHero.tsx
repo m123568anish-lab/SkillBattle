@@ -3,11 +3,9 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Flame, Shield, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpen, Flame, Swords } from "lucide-react";
 import type { UserSummary, DashboardStats, Achievement } from "@/types/dashboard";
 import { formatDashboardNumber } from "@/lib/dashboard-data.mjs";
-import { useCursorSpotlight } from "@/hooks/use-cursor-spotlight";
-import FloatingParticles from "@/components/ui/floating-particles";
 
 interface DashboardHeroProps {
   user: UserSummary;
@@ -16,7 +14,6 @@ interface DashboardHeroProps {
 }
 
 export default function DashboardHero({ user, stats }: DashboardHeroProps) {
-  const { ref, onPointerMove, onPointerLeave } = useCursorSpotlight<HTMLElement>();
   const [avatarError, setAvatarError] = useState(false);
   const name = user.full_name?.trim().split(/\s+/)[0] || user.username || "there";
   const level = Math.max(1, stats.level);
@@ -34,109 +31,98 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
   return (
     <section
       data-dashboard-hero
-      ref={ref}
-      onPointerMove={onPointerMove}
-      onPointerLeave={onPointerLeave}
-      className="group relative overflow-hidden rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)] p-5 sm:p-7 text-[var(--text-primary)] shadow-2xl transition-[border-color,box-shadow] duration-200 hover:border-[var(--accent)]/30 hover:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.6)]"
+      className="relative overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-4 text-[var(--text-primary)] sm:p-6 lg:p-7"
     >
-      {/* 1. Cursor Spotlight Layer */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-0 transition-opacity duration-300 ease-out motion-reduce:hidden"
-        style={{
-          opacity: "var(--spotlight-opacity, 0)",
-          background:
-            "radial-gradient(circle 380px at var(--mouse-x, 50%) var(--mouse-y, 50%), color-mix(in srgb, var(--accent) 9%, transparent), transparent 75%)",
-        }}
-      />
-
-      {/* 2. Micro Floating Particles in Hero */}
-      <FloatingParticles count={6} />
-
-      {/* 3. Subtle Ambient Hero Glow */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full blur-3xl opacity-20"
-        style={{
-          background: "radial-gradient(circle, var(--accent) 0%, transparent 70%)",
-        }}
-      />
-
-      <div className="relative z-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-center gap-4">
-          {avatarUrl && !avatarError ? (
-            <Image
-              src={avatarUrl}
-              alt=""
-              width={56}
-              height={56}
-              unoptimized
-              onError={() => setAvatarError(true)}
-              className="h-14 w-14 rounded-2xl object-cover ring-2 ring-[var(--accent)]/30 transition-transform duration-200 group-hover:ring-[var(--accent)]/60"
-            />
-          ) : (
-            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-[var(--border-default)] bg-[var(--surface-elevated)] text-lg font-black text-[var(--accent-strong)] transition-all duration-200 group-hover:border-[var(--accent)]/40 group-hover:shadow-[0_0_16px_rgba(200,239,114,0.2)]">
-              {initials || "QB"}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(17rem,0.8fr)] lg:items-stretch">
+        <div className="flex min-w-0 flex-col justify-between gap-6">
+          <div className="flex min-w-0 items-center gap-3.5 sm:gap-4">
+            {avatarUrl && !avatarError ? (
+              <Image
+                src={avatarUrl}
+                alt=""
+                width={60}
+                height={60}
+                unoptimized
+                onError={() => setAvatarError(true)}
+                className="h-12 w-12 shrink-0 rounded-xl border border-[var(--border-default)] object-cover sm:h-15 sm:w-15"
+              />
+            ) : (
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] text-base font-black text-[var(--accent-strong)] sm:h-15 sm:w-15 sm:text-lg">
+                {initials || "QB"}
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+                Your learning space
+              </p>
+              <h1 className="truncate text-xl font-bold tracking-tight text-[var(--text-primary)] sm:text-3xl">
+                Welcome back, {name}
+              </h1>
+              <p className="mt-1 text-xs text-[var(--text-muted)] sm:text-sm">
+                Build momentum with one focused session at a time.
+              </p>
             </div>
-          )}
-          <div className="min-w-0">
-            <p className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
-              <Sparkles size={12} /> Developer Command Center
-            </p>
-            <h1 className="truncate text-2xl font-bold tracking-tight text-[var(--text-primary)] sm:text-3xl">
-              Welcome back, {name}
-            </h1>
-            <div className="mt-1 flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-              <span
-                className={`flex items-center gap-1 font-semibold ${
-                  isStreakMilestone ? "text-amber-400" : "text-[var(--text-muted)]"
-                }`}
-              >
-                <Flame
-                  size={14}
-                  className={isStreakMilestone ? "text-amber-400 animate-[streak-flame_3s_ease-in-out_infinite]" : "text-[var(--text-muted)]"}
-                />
-                {stats.streak} day streak
-              </span>
-              <span className="text-[var(--border-default)]">·</span>
-              <span className="flex items-center gap-1 text-[var(--text-secondary)]">
-                <Shield size={14} className="text-[var(--accent-secondary)]" />
-                Level {level}
-              </span>
-            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`inline-flex min-h-9 items-center gap-2 rounded-lg border px-3 text-xs font-semibold ${
+              isStreakMilestone
+                ? "border-amber-400/20 bg-amber-400/[0.07] text-amber-300"
+                : "border-[var(--border-default)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]"
+            }`}>
+              <Flame size={14} aria-hidden="true" />
+              {stats.streak} day streak
+            </span>
+            <span className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] px-3 text-xs font-semibold text-[var(--text-secondary)]">
+              <span className="font-mono text-[var(--accent-strong)]">LVL {level}</span>
+              <span aria-hidden="true" className="h-3 w-px bg-[var(--border-default)]" />
+              {formatDashboardNumber(stats.xp)} XP
+            </span>
           </div>
         </div>
 
-        <Link
-          href="/battle"
-          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent)] px-5 text-sm font-bold text-[var(--text-on-accent)] transition-all duration-150 hover:bg-[var(--accent-strong)] hover:shadow-[0_0_20px_rgba(200,239,114,0.35)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-canvas)]"
-        >
-          Enter Battle Arena <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
-        </Link>
-      </div>
+        <div className="flex flex-col justify-between gap-5 rounded-xl border border-[var(--border-default)] bg-[#090909] p-4 sm:p-5">
+          <div>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">Level progress</p>
+                <p className="mt-1 text-base font-bold text-[var(--text-primary)]">Level {level}</p>
+              </div>
+              <span className="font-mono text-sm font-bold text-[var(--accent-strong)]">{progress}%</span>
+            </div>
+            <div
+              className="mt-4 h-2 overflow-hidden rounded-full bg-[var(--surface-elevated)]"
+              role="progressbar"
+              aria-label="Progress to next level"
+              aria-valuenow={progress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <div
+                className="h-full rounded-full bg-[var(--accent)] transition-[width] duration-500 ease-out motion-reduce:transition-none"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <p className="mt-2 text-xs text-[var(--text-muted)]">
+              {formatDashboardNumber(stats.xp_to_next_level)} XP to your next level
+            </p>
+          </div>
 
-      {/* Level XP Progress Bar with Smooth Loading Edge */}
-      <div className="relative z-10 mt-6 flex flex-col gap-2 border-t border-[var(--border-subtle)] pt-4 sm:flex-row sm:items-center sm:gap-4">
-        <div className="flex items-center justify-between gap-3 text-xs sm:w-36 sm:shrink-0">
-          <span className="font-semibold text-[var(--text-primary)]">Level {level} progress</span>
-          <span className="font-mono text-[var(--accent-strong)]">{progress}%</span>
+          <div className="grid grid-cols-2 gap-2">
+            <Link
+              href="/battle"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-3 text-xs font-bold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+            >
+              <Swords size={15} aria-hidden="true" /> Arena
+            </Link>
+            <Link
+              href="/practice"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] px-3 text-xs font-semibold text-[var(--text-primary)] transition-colors hover:border-[var(--accent)]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+            >
+              <BookOpen size={15} aria-hidden="true" /> Learn
+            </Link>
+          </div>
         </div>
-        <div
-          className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--surface-elevated)] border border-[var(--border-subtle)]"
-          role="progressbar"
-          aria-label="Progress to next level"
-          aria-valuenow={progress}
-          aria-valuemin={0}
-          aria-valuemax={100}
-        >
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent-strong)] shadow-[0_0_8px_var(--accent)] transition-[width] duration-500 ease-out"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        <p className="text-xs text-[var(--text-muted)] font-mono sm:w-36 sm:shrink-0 sm:text-right">
-          {formatDashboardNumber(stats.xp_to_next_level)} XP remaining
-        </p>
       </div>
     </section>
   );

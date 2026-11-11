@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 import { API_ORIGIN } from "./src/lib/api-origin.mjs";
 
 const nextConfig: NextConfig = {
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   compress: true,
   poweredByHeader: false,
   images: {

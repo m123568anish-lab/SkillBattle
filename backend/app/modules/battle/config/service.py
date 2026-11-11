@@ -16,25 +16,34 @@ class BattleConfigService:
     DEFAULT_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "general": {
             "title": "Standard Competitive Battle",
-            "description": "General 1v1 competitive coding battle focused on algorithmic speed.",
+            "description": "General competitive battle mixing knowledge checks and coding speed.",
             "battle_type": "general",
             "difficulty": "medium",
-            "duration_minutes": 20,
-            "question_count": 1,
+            "duration_minutes": 25,
+            "question_count": 4,
             "negative_marking": False,
             "sections": [
+                {
+                    "title": "Knowledge Check MCQs",
+                    "question_type": "mcq",
+                    "question_count": 3,
+                    "weight": 0.35,
+                    "duration_minutes": 10,
+                    "negative_marking": False,
+                },
                 {
                     "title": "Coding Challenge",
                     "question_type": "coding",
                     "question_count": 1,
-                    "weight": 1.0,
-                    "duration_minutes": 20,
+                    "weight": 0.65,
+                    "duration_minutes": 15,
                     "negative_marking": False,
-                }
+                },
             ],
             "allowed_languages": ["python", "javascript", "cpp", "java"],
             "scoring_rules": {
-                "coding_points": 100,
+                "mcq_points": 10,
+                "coding_points": 70,
                 "negative_penalty": 0,
             },
         },

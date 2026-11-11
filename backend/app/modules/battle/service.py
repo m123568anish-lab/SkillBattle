@@ -42,6 +42,7 @@ from app.modules.battle.result import battle_result_engine
 from app.modules.battle.ranking import rank_players
 from app.modules.battle.websocket import battle_ws
 from app.modules.battle.events import BattleEvent
+from app.modules.battle.timer import battle_timer
 from app.modules.battle.matchmaking import matchmaking_engine
 from app.modules.battle.orchestrator import battle_orchestrator
 from app.modules.xp.service import xp_service
@@ -64,6 +65,22 @@ class BattleService:
             return value
         return "solo"
 
+    @staticmethod
+    def resolve_battle_mode(mode: str | None, max_players: int) -> str:
+        if mode is None:
+            return "solo" if max_players <= 1 else "duo"
+        return BattleService.normalize_mode(mode)
+
+    @staticmethod
+    def validate_battle_shape(mode: str | None, max_players: int) -> None:
+        normalized = BattleService.resolve_battle_mode(mode, max_players)
+        if normalized == "solo" and max_players != 1:
+            raise ValueError("Solo battles must have exactly one player.")
+        if normalized == "duo" and max_players != 2:
+            raise ValueError("Duo battles must have exactly two players.")
+        if normalized == "squad" and max_players < 2:
+            raise ValueError("Squad battles require at least two players.")
+
     async def create_battle(
         self,
         db: AsyncSession,
@@ -75,9 +92,11 @@ class BattleService:
     ) -> BattleRoom:
 
         battle_type_val = request.battle_type.value if hasattr(request.battle_type, "value") else str(request.battle_type)
-        battle_mode_val = self.normalize_mode(
+        battle_mode_input = None if request.battle_mode is None else (
             request.battle_mode.value if hasattr(request.battle_mode, "value") else str(request.battle_mode)
         )
+        battle_mode_val = self.resolve_battle_mode(battle_mode_input, request.max_players)
+        self.validate_battle_shape(battle_mode_input, request.max_players)
 
         # Resolve Configuration Template or Database Config
         sections_config = []
@@ -86,6 +105,12 @@ class BattleService:
         if sections_override:
             sections_config = sections_override
             difficulty = request.difficulty
+            if request.question_type and any(
+                str(section.get("question_type", "")).lower()
+                != request.question_type.value
+                for section in sections_config
+            ):
+                raise ValueError("Question type conflicts with the selected battle sections.")
         elif request.config_id:
             db_config = await battle_config_service.get_config(db, request.config_id)
             if not db_config:
@@ -94,6 +119,12 @@ class BattleService:
             battle_type_val = db_config.battle_type
             sections_config = db_config.sections
             difficulty = db_config.difficulty
+            if request.question_type and any(
+                str(section.get("question_type", "")).lower()
+                != request.question_type.value
+                for section in sections_config
+            ):
+                raise ValueError("Question type conflicts with the selected assessment configuration.")
 
             if db_config.company_id is not None:
                 company = await db.get(Company, db_config.company_id)
@@ -125,6 +156,19 @@ class BattleService:
                 )
                 if student_link_result.scalar_one_or_none() is None:
                     raise ValueError("Join the college before taking its assessment.")
+        elif request.question_type:
+            if battle_type_val in {"company", "college"}:
+                raise ValueError("Organization assessments must use an assigned configuration.")
+            sections_config = [{
+                "title": f"{request.question_type.value.title()} Challenge",
+                "question_type": request.question_type.value,
+                "skill_category": request.skill_category,
+                "question_count": request.question_count,
+                "weight": 1.0,
+                "duration_minutes": 10,
+                "negative_marking": False,
+            }]
+            difficulty = request.difficulty
         else:
             if battle_type_val in {"company", "college"}:
                 raise ValueError("Organization assessments must use an assigned configuration.")
@@ -185,27 +229,37 @@ class BattleService:
         battle_id: str,
         current_user: User,
     ) -> BattleRoom:
-        battle = await battle_repository.get_battle(db, battle_id)
+        battle = (
+            await db.execute(
+                select(BattleRoom)
+                .where(BattleRoom.id == battle_id)
+                .with_for_update()
+            )
+        ).scalar_one_or_none()
         if battle is None:
             raise ValueError("Battle not found.")
 
         participant = await battle_repository.get_participant(db, battle_id, current_user.id)
         if participant is None:
             raise ValueError("You are not a participant in this battle.")
+        if battle.creator_id != current_user.id:
+            raise ValueError("Only the battle creator can start this battle.")
 
         if battle.status in {"finalized", "analysis", "result", "evaluating", "completed"}:
             raise ValueError("Battle is already finalized and cannot be started again.")
 
-        if battle.status in {"ready", "countdown", "knowledge_round", "coding_round", "running"} and battle.started_at is not None:
+        if battle.status == "running" and battle.started_at is not None:
             return battle
 
-        if battle.status in {"created", "waiting"}:
-            battle.status = "ready"
-            if hasattr(battle, "round_status"):
-                battle.round_status = "ready"
-        elif battle.started_at is not None and battle.status not in {"created", "waiting"}:
+        players = await battle_repository.get_participants(db, battle_id)
+        if len(players) != battle.max_players:
+            raise ValueError("The battle cannot start until all player slots are filled.")
+        if battle.status not in {"created", "waiting", "ready"}:
             raise ValueError("Battle has already started.")
 
+        battle.status = "running"
+        if hasattr(battle, "round_status"):
+            battle.round_status = "running"
         if hasattr(battle, "current_round"):
             battle.current_round = 1
         battle.started_at = battle.started_at or datetime.utcnow()
@@ -225,6 +279,7 @@ class BattleService:
             }]
         await battle_repository.update_battle(db, battle)
         await db.commit()
+        battle_timer.schedule(battle.id, duration_minutes * 60)
         return battle
 
     async def advance_battle_round(
@@ -234,7 +289,13 @@ class BattleService:
         current_user: User,
         target_round: str | None = None,
     ) -> BattleRoom:
-        battle = await battle_repository.get_battle(db, battle_id)
+        battle = (
+            await db.execute(
+                select(BattleRoom)
+                .where(BattleRoom.id == battle_id)
+                .with_for_update()
+            )
+        ).scalar_one_or_none()
         if battle is None:
             raise ValueError("Battle not found.")
 
@@ -346,13 +407,21 @@ class BattleService:
         current_user: User,
     ) -> BattleRoom:
 
-        battle = await battle_repository.get_battle(db, battle_id)
+        battle = (
+            await db.execute(
+                select(BattleRoom)
+                .where(BattleRoom.id == battle_id)
+                .with_for_update()
+            )
+        ).scalar_one_or_none()
         if battle is None:
             raise ValueError("Battle not found.")
 
         existing = await battle_repository.get_participant(db, battle_id, current_user.id)
         if existing:
             return battle
+        if battle.status != "waiting":
+            raise ValueError("This battle is no longer accepting players.")
 
         players = await battle_repository.get_participants(db, battle_id)
         if len(players) >= battle.max_players:
@@ -369,8 +438,9 @@ class BattleService:
         players = await battle_repository.get_participants(db, battle.id)
 
         if len(players) >= battle.max_players:
-            battle.status = "running"
-            battle.started_at = datetime.utcnow()
+            battle.status = "ready"
+            if hasattr(battle, "round_status"):
+                battle.round_status = "ready"
             await battle_repository.update_battle(db, battle)
 
         await db.commit()
@@ -441,13 +511,21 @@ class BattleService:
         current_user: User,
         request: SubmitAnswerRequest,
     ) -> BattleSubmission:
-        battle = await battle_repository.get_battle(db, request.battle_id)
+        battle = (
+            await db.execute(
+                select(BattleRoom)
+                .where(BattleRoom.id == request.battle_id)
+                .with_for_update()
+            )
+        ).scalar_one_or_none()
         if battle is None:
             raise ValueError("Battle not found.")
 
         participant = await battle_repository.get_participant(db, request.battle_id, current_user.id)
         if participant is None:
             raise ValueError("Player is not a participant in this battle.")
+        if battle.status != "running":
+            raise ValueError("The battle has not started.")
 
         qtype = request.question_type.value if hasattr(request.question_type, "value") else str(request.question_type)
         if request.question_id is None:
@@ -497,9 +575,29 @@ class BattleService:
             if battle.sections_config and request.section_index < len(battle.sections_config):
                 neg_marking = battle.sections_config[request.section_index].get("negative_marking", False)
 
+            submitted_value = str(request.mcq_option or "").strip().casefold()
+            selected_option = next((
+                option for option in (q_obj.options or [])
+                if submitted_value in (
+                    {
+                        str(option.get("key") or "").strip().casefold(),
+                        str(option.get("text") or "").strip().casefold(),
+                    }
+                    if isinstance(option, dict)
+                    else {str(option).strip().casefold()}
+                )
+            ), None)
+            selected_values = {submitted_value}
+            if isinstance(selected_option, dict):
+                selected_values.update(
+                    str(selected_option.get(key) or "").strip().casefold()
+                    for key in ("key", "text")
+                )
+            elif isinstance(selected_option, str):
+                selected_values.add(selected_option.strip().casefold())
             score_earned = battle_score_manager.calculate_mcq_score(
-                student_option=request.mcq_option,
-                correct_option=correct_opt,
+                student_option="correct" if str(correct_opt).strip().casefold() in selected_values else "incorrect",
+                correct_option="correct",
                 points=10.0,
                 negative_penalty=2.5,
                 negative_marking=neg_marking,
@@ -510,10 +608,22 @@ class BattleService:
 
         elif qtype in ("coding", "debugging"):
             from app.modules.battle.judge import battle_judge
+            test_cases = [
+                {
+                    "input": case.get("input", case.get("stdin")),
+                    "output": case.get("output", case.get("stdout")),
+                }
+                for case in (q_obj.hidden_test_cases or [])
+                if isinstance(case, dict)
+                and (case.get("input") is not None or case.get("stdin") is not None)
+                and (case.get("output") is not None or case.get("stdout") is not None)
+            ]
+            if not test_cases:
+                raise ValueError("This coding question has no valid hidden test cases.")
             judge_res = await battle_judge.evaluate(
                 request.language,
                 request.source_code or "",
-                problem_id=battle.problem_id,
+                test_cases=test_cases,
             )
             verdict = judge_res.get("verdict", "Accepted")
             passed_tests = judge_res.get("passed_tests", 1)
@@ -578,6 +688,7 @@ class BattleService:
         # Broadcast real-time score update over WebSocket
         players = await battle_repository.get_participants(db, battle.id)
         players = rank_players(players)
+        await db.commit()
 
         await battle_ws.broadcast(
             battle.id,
@@ -784,6 +895,30 @@ class BattleService:
         if existing_res is not None:
             return res_data
 
+        if (
+            len(battle.sections_config or []) == 1
+            and len(battle.questions_data or []) == 1
+            and battle.questions_data[0].get("question_type") in {"mcq", "coding"}
+        ):
+            expected_ids = {
+                question.get("id")
+                for question in battle.questions_data[0].get("questions", [])
+                if question.get("id") is not None
+            }
+            submitted_by_user = {
+                participant.user_id: {
+                    submission.question_id
+                    for submission in submissions
+                    if submission.user_id == participant.user_id
+                }
+                for participant in participants
+            }
+            if not expected_ids or any(
+                not expected_ids.issubset(submitted_by_user.get(participant.user_id, set()))
+                for participant in participants
+            ):
+                raise ValueError("Every participant must submit all assigned questions before the battle can finish.")
+
         # Check if daily adaptive battle or quest battle has unanswered questions
         from app.models.quest_map import QuestProgress
         quest_progress = await db.scalar(
@@ -819,6 +954,9 @@ class BattleService:
             duration_sec = int((ended_at - started_at).total_seconds())
 
         # Persist BattleResult Record
+        for participant in rank_players(participants):
+            db.add(participant)
+
         result_record = BattleResult(
             battle_id=battle.id,
             participant_id=res_data.get("participant_id") or (participants[0].user_id if participants else None),
@@ -948,6 +1086,7 @@ class BattleService:
             )
 
         await db.commit()
+        battle_timer.stop(battle_id)
 
         # Broadcast Battle Finished Event
         await battle_ws.broadcast(

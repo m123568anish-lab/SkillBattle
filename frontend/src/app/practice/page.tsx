@@ -20,23 +20,12 @@ import {
   Flame,
   ArrowRight,
   TrendingUp,
-  Cpu,
-  Database,
   Layers,
-  Code2,
   Sparkles,
   Play,
   RotateCcw,
   Clock,
 } from "lucide-react";
-
-interface PracticeCategory {
-  id: string;
-  name: string;
-  description: string;
-  icon: typeof Cpu;
-  accent: string;
-}
 
 function PracticeHomeContent() {
   const user = useAuthStore((state) => state.user);
@@ -52,6 +41,7 @@ function PracticeHomeContent() {
   const [activeProblems, setActiveProblems] = useState<PracticeProblem[]>([]);
   const [availableProblems, setAvailableProblems] = useState<PracticeProblem[]>([]);
   const [availableProblemTotal, setAvailableProblemTotal] = useState(0);
+  const [categories, setCategories] = useState<string[]>([]);
 
   // Time-based greeting
   const getGreeting = () => {
@@ -60,37 +50,6 @@ function PracticeHomeContent() {
     if (hour < 18) return "Good afternoon";
     return "Good evening";
   };
-
-  const categories: PracticeCategory[] = [
-    {
-      id: "algorithms",
-      name: "Algorithmic Thinking",
-      description: "Sorting, two-pointers, sliding window, divide & conquer, and dynamic programming.",
-      icon: Cpu,
-      accent: "from-blue-500/20 to-indigo-500/10 border-blue-500/30 text-blue-400",
-    },
-    {
-      id: "data-structures",
-      name: "Data Structures Mastery",
-      description: "Arrays, linked lists, trees, graphs, heaps, hash maps, and tries.",
-      icon: Layers,
-      accent: "from-indigo-500/20 to-purple-500/10 border-indigo-500/30 text-indigo-400",
-    },
-    {
-      id: "system-design",
-      name: "System Design & Architecture",
-      description: "Distributed systems, caching, microservices, load balancing, and CAP theorem.",
-      icon: Database,
-      accent: "from-emerald-500/20 to-teal-500/10 border-emerald-500/30 text-emerald-400",
-    },
-    {
-      id: "frontend-backend",
-      name: "Full-Stack & Web Core",
-      description: "JavaScript, TypeScript, React internals, Node.js concurrency, and SQL queries.",
-      icon: Code2,
-      accent: "from-amber-500/20 to-orange-500/10 border-amber-500/30 text-amber-400",
-    },
-  ];
 
   useEffect(() => {
     let active = true;
@@ -109,6 +68,7 @@ function PracticeHomeContent() {
         setActiveProblems(activeRes.items);
         setAvailableProblems(availableRes.items);
         setAvailableProblemTotal(availableRes.available_total);
+        setCategories([...new Set(availableRes.categories)]);
         setStats({
           solved: summary.solved,
           attempted: summary.attempted,
@@ -152,19 +112,17 @@ function PracticeHomeContent() {
         )}
 
         {/* Student Welcome */}
-        <div className="relative overflow-hidden rounded-2xl border border-indigo-500/20 bg-gradient-to-r from-indigo-950/40 via-slate-900/60 to-slate-950/80 p-6 sm:p-8 backdrop-blur-md shadow-xl">
-          <div className="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
-
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+        <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-5 sm:p-7">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-300">
-                <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
+              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--accent)]/25 bg-[var(--accent)]/10 px-3 py-1 text-xs font-semibold text-[var(--accent-strong)]">
+                <Sparkles className="h-3.5 w-3.5" />
                 <span>Practice progress</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-white">
+              <h2 className="text-2xl font-bold tracking-tight text-[var(--text-primary)] sm:text-3xl">
                 {getGreeting()}, {firstName}!
               </h2>
-              <p className="text-sm text-slate-400 max-w-xl leading-relaxed">
+              <p className="max-w-xl text-sm leading-relaxed text-[var(--text-secondary)]">
                 Your practice metrics reflect saved submissions and activity recorded for your account.
               </p>
             </div>
@@ -207,15 +165,15 @@ function PracticeHomeContent() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <RotateCcw className="h-4 w-4 text-indigo-400" />
+              <h3 className="flex items-center gap-2 text-lg font-bold text-[var(--text-primary)]">
+                <RotateCcw className="h-4 w-4 text-[var(--accent-strong)]" />
                 <span>Unfinished Problems</span>
               </h3>
-              <p className="text-xs text-slate-400">Problems with a saved attempt and no accepted solution.</p>
+              <p className="text-xs text-[var(--text-muted)]">Problems with a saved attempt and no accepted solution.</p>
             </div>
             <Link
               href="/practice/topics"
-              className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+              className="flex items-center gap-1 text-xs font-semibold text-[var(--accent-strong)] hover:text-[var(--text-primary)]"
             >
               <span>View All Topics</span>
               <ArrowRight className="h-3.5 w-3.5" />
@@ -229,7 +187,7 @@ function PracticeHomeContent() {
               {activeProblems.map((prob) => (
                 <div
                   key={prob.id}
-                  className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-5 space-y-4 hover:border-indigo-500/30 hover:bg-indigo-950/10 transition-all flex flex-col justify-between"
+                  className="flex flex-col justify-between space-y-4 rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-5 transition-colors hover:border-[var(--accent)]/30 hover:bg-[var(--surface-elevated)]"
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -254,7 +212,7 @@ function PracticeHomeContent() {
                     </div>
                     <Link
                       href={`/practice/coding?problem=${prob.id}`}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-indigo-500 transition-colors cursor-pointer"
+                      className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3.5 py-1.5 text-xs font-bold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-strong)]"
                     >
                       <Play className="h-3 w-3 fill-current" />
                       <span>{prob.can_solve ? "Continue" : "Review metadata"}</span>
@@ -277,46 +235,47 @@ function PracticeHomeContent() {
         <div className="space-y-4">
           <div>
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <Layers className="h-4 w-4 text-indigo-400" />
+              <Layers className="h-4 w-4 text-[var(--accent-strong)]" />
               <span>Explore Categories</span>
             </h3>
             <p className="text-xs text-slate-400">Systematic learning modules organized by domain.</p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {categories.map((cat) => {
-              const Icon = cat.icon;
-              return (
+          {loadError ? (
+            <p role="status" className="text-sm text-[var(--text-muted)]">
+              Catalog categories are unavailable right now.
+            </p>
+          ) : loading && categories.length === 0 ? (
+            <LoadingSkeleton count={4} />
+          ) : categories.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {categories.map((category) => (
                 <Link
-                  key={cat.id}
-                  href="/practice/coding"
-                  className={`group relative overflow-hidden rounded-2xl border p-5 transition-all duration-200 bg-gradient-to-br hover:scale-[1.01] ${cat.accent}`}
+                  key={category}
+                  href={`/practice/coding?category=${encodeURIComponent(category)}`}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] px-3.5 py-2 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--accent)]/40 hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="rounded-xl bg-white/[0.08] p-3 text-white group-hover:scale-110 transition-transform">
-                      <Icon className="h-6 w-6" />
-                    </div>
-                    <span className="text-xs font-mono font-semibold text-slate-400">Browse</span>
-                  </div>
-
-                  <h4 className="text-base font-bold text-white mb-1 group-hover:text-indigo-200 transition-colors">
-                    {cat.name}
-                  </h4>
-                  <p className="text-xs text-slate-400 line-clamp-2 mb-4 leading-relaxed">
-                    {cat.description}
-                  </p>
-
+                  <Layers className="h-4 w-4 text-[var(--accent-strong)]" aria-hidden="true" />
+                  {category}
+                  <ArrowRight className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
                 </Link>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              title="No categories available"
+              description="Categories will appear when the problem catalog has active problems."
+              actionLabel="Browse all problems"
+              actionHref="/practice/coding"
+            />
+          )}
         </div>
 
         {/* Recommended for You */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <h3 className="flex items-center gap-2 text-lg font-bold text-[var(--text-primary)]">
                 <Sparkles className="h-4 w-4 text-amber-400" />
                 <span>More Problems</span>
               </h3>
@@ -324,7 +283,7 @@ function PracticeHomeContent() {
             </div>
             <Link
               href="/practice/coding"
-              className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+              className="flex items-center gap-1 text-xs font-semibold text-[var(--accent-strong)] hover:text-[var(--text-primary)]"
             >
               <span>Start Assessment Session</span>
               <ArrowRight className="h-3.5 w-3.5" />
@@ -340,7 +299,7 @@ function PracticeHomeContent() {
               availableProblems.map((prob) => (
                 <div
                   key={prob.id}
-                  className="flex items-center justify-between gap-4 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 hover:border-indigo-500/30 hover:bg-white/[0.04] transition-all"
+                  className="flex items-center justify-between gap-4 rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-4 transition-colors hover:border-[var(--accent)]/30 hover:bg-[var(--surface-elevated)]"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
@@ -354,7 +313,7 @@ function PracticeHomeContent() {
 
                   <Link
                     href={`/practice/coding?problem=${prob.id}`}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-xs font-semibold text-indigo-300 hover:bg-indigo-500/20 transition-all shrink-0"
+                    className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition-colors hover:border-[var(--accent)]/40 hover:text-[var(--accent-strong)]"
                   >
                     <span>Solve</span>
                     <ArrowRight className="h-3 w-3" />

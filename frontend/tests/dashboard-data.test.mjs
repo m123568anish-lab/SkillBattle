@@ -124,5 +124,8 @@ test("the dashboard service rejects invalid live stats and the cache validates b
   assert.match(store, /refreshAfterCurrentRequest/);
   assert.match(store, /current\.userId === invalidatedUserId/);
   assert.match(api, /dispatchEvent\(new Event\("skillbattle:dashboard-invalidated"\)\)/);
-  assert.match(page, /Cached dashboard data/);
+  assert.doesNotMatch(page, /Cached dashboard data|Refreshing from the API|Updating live dashboard metrics/);
+  assert.match(store, /status: "in_progress"/);
+  assert.match(store, /status: "completed"/);
+  assert.match(store, /status: "failed"/);
 });

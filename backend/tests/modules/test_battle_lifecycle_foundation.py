@@ -100,6 +100,127 @@ async def test_battle_mode_persists_for_solo_and_multiplayer_and_aliases(client,
 
 
 @pytest.mark.asyncio
+async def test_battle_mode_and_player_count_are_validated_for_supported_shapes(client, battle_question_bank):
+    unique = f"btlc4_{uuid.uuid4().hex[:8]}"
+    email = f"{unique}@example.com"
+    register = await client.post(
+        "/auth/register",
+        json={
+            "username": unique,
+            "email": email,
+            "full_name": "Mode Validation Tester",
+            "password": "StrongPass#123",
+        },
+    )
+    assert register.status_code == 201, register.text
+
+    login = await client.post(
+        "/auth/login",
+        json={"email": email, "password": "StrongPass#123"},
+    )
+    assert login.status_code == 200, login.text
+    headers = {"Authorization": f"Bearer {login.json()['tokens']['access_token']}"}
+
+    solo_ok = await client.post(
+        "/battle/create",
+        headers=headers,
+        json={
+            "title": "Solo validation ok",
+            "difficulty": "easy",
+            "problem_id": 1,
+            "battle_type": "general",
+            "battle_mode": "solo",
+            "max_players": 1,
+        },
+    )
+    assert solo_ok.status_code == 200, solo_ok.text
+
+    solo_bad = await client.post(
+        "/battle/create",
+        headers=headers,
+        json={
+            "title": "Solo validation bad",
+            "difficulty": "easy",
+            "problem_id": 1,
+            "battle_type": "general",
+            "battle_mode": "solo",
+            "max_players": 2,
+        },
+    )
+    assert solo_bad.status_code == 400, solo_bad.text
+
+    duo_ok = await client.post(
+        "/battle/create",
+        headers=headers,
+        json={
+            "title": "Duo validation ok",
+            "difficulty": "medium",
+            "problem_id": 1,
+            "battle_type": "general",
+            "battle_mode": "duo",
+            "max_players": 2,
+        },
+    )
+    assert duo_ok.status_code == 200, duo_ok.text
+    assert duo_ok.json()["mode"] == "duo"
+
+    duo_bad = await client.post(
+        "/battle/create",
+        headers=headers,
+        json={
+            "title": "Duo validation bad",
+            "difficulty": "medium",
+            "problem_id": 1,
+            "battle_type": "general",
+            "battle_mode": "duo",
+            "max_players": 1,
+        },
+    )
+    assert duo_bad.status_code == 400, duo_bad.text
+
+
+@pytest.mark.asyncio
+async def test_create_battle_keeps_question_types_distinct_per_section(client, battle_question_bank):
+    unique = f"btlc5_{uuid.uuid4().hex[:8]}"
+    email = f"{unique}@example.com"
+    register = await client.post(
+        "/auth/register",
+        json={
+            "username": unique,
+            "email": email,
+            "full_name": "Question Type Tester",
+            "password": "StrongPass#123",
+        },
+    )
+    assert register.status_code == 201, register.text
+
+    login = await client.post(
+        "/auth/login",
+        json={"email": email, "password": "StrongPass#123"},
+    )
+    assert login.status_code == 200, login.text
+    headers = {"Authorization": f"Bearer {login.json()['tokens']['access_token']}"}
+
+    response = await client.post(
+        "/battle/create",
+        headers=headers,
+        json={
+            "title": "Section type check",
+            "difficulty": "medium",
+            "problem_id": 1,
+            "battle_type": "general",
+            "battle_mode": "solo",
+            "max_players": 1,
+        },
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    types = {section["question_type"] for section in payload["questions_data"]}
+    assert "mcq" in types
+    assert "coding" in types
+
+
+@pytest.mark.asyncio
 async def test_server_start_and_round_transition_protects_invalid_state(client, battle_question_bank):
     unique = f"btlc2_{uuid.uuid4().hex[:8]}"
     email = f"{unique}@example.com"
@@ -136,15 +257,12 @@ async def test_server_start_and_round_transition_protects_invalid_state(client, 
     assert created.status_code == 200, created.text
     battle_id = created.json()["id"]
 
-    start_resp = await client.post(f"/battle/{battle_id}/start", headers=headers)
-    assert start_resp.status_code == 200, start_resp.text
-    started = start_resp.json()
-    assert started["status"] == "ready"
-    assert started["started_at"] is not None
-    assert started["expires_at"] is not None
-
     invalid_resp = await client.post(f"/battle/{battle_id}/advance-round", headers=headers, json={"target_round": "knowledge"})
     assert invalid_resp.status_code == 400
+
+    ready_resp = await client.post(f"/battle/{battle_id}/advance-round", headers=headers)
+    assert ready_resp.status_code == 200, ready_resp.text
+    assert ready_resp.json()["status"] == "ready"
 
     countdown_resp = await client.post(f"/battle/{battle_id}/advance-round", headers=headers)
     assert countdown_resp.status_code == 200, countdown_resp.text

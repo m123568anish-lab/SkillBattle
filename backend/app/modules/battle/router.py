@@ -43,9 +43,16 @@ router = APIRouter(
 
 
 def battle_to_response(battle, *, submitted_question_ids: list[int] | None = None) -> BattleResponse:
+    completed = battle.status in {"completed", "finished", "finalized"}
+    questions_data = question_engine.sanitize_sections_for_client(
+        battle.questions_data or [],
+        current_section_index=battle.current_section_index,
+        is_completed=completed,
+    )
     return BattleResponse(
         id=battle.id,
         title=battle.title,
+        creator_id=battle.creator_id,
         mode=getattr(battle, "mode", getattr(battle, "battle_mode", "solo")) or "solo",
         type=getattr(battle, "type", getattr(battle, "battle_type", "general")) or "general",
         difficulty=battle.difficulty,
@@ -58,7 +65,7 @@ def battle_to_response(battle, *, submitted_question_ids: list[int] | None = Non
         battle_type=battle.battle_type,
         current_section_index=battle.current_section_index,
         sections_config=battle.sections_config or [],
-        questions_data=battle.questions_data or [],
+        questions_data=questions_data,
         started_at=battle.started_at,
         expires_at=getattr(battle, "expires_at", None),
         ended_at=battle.ended_at,
@@ -195,7 +202,8 @@ async def join_battle(
     current_user: User = Depends(get_current_user),
 ):
     try:
-        return await battle_service.join_battle(db, request.battle_id, current_user)
+        battle = await battle_service.join_battle(db, request.battle_id, current_user)
+        return battle_to_response(battle)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -214,7 +222,8 @@ async def leave_battle(
 async def waiting_battles(
     db: AsyncSession = Depends(get_db),
 ):
-    return await battle_service.waiting_battles(db)
+    battles = await battle_service.waiting_battles(db)
+    return [battle_to_response(battle) for battle in battles]
 
 
 @router.get("/history")
@@ -246,7 +255,11 @@ async def battle_history(
             "score": part.score,
             "rank": part.rank,
             "is_winner": bool(res and res.winner_id == current_user.id and not res.is_draw),
-            "xp_earned": res.xp_earned if res else 0,
+            "xp_earned": (
+                150 if res and res.winner_id == current_user.id and not res.is_draw
+                else 50 if res
+                else 0
+            ),
             "accuracy": float(res.accuracy_percentage if res else 0.0),
             "created_at": room.created_at.isoformat() if room.created_at else None,
         })
@@ -262,10 +275,13 @@ async def battle_history(
 async def battle_details(
     battle_id: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     battle = await battle_service.get_battle(db, battle_id)
     if battle is None:
         raise HTTPException(status_code=404, detail="Battle not found.")
+    if await battle_repository.get_participant(db, battle_id, current_user.id) is None:
+        raise HTTPException(status_code=403, detail="Only battle participants can view this room.")
 
     # Sanitize payload questions if running
     is_completed = battle.status in ("completed", "finished", "finalized")
@@ -279,6 +295,7 @@ async def battle_details(
     submissions_result = await db.execute(
         select(BattleSubmission.question_id).where(
             BattleSubmission.battle_id == battle.id,
+            BattleSubmission.user_id == current_user.id,
             BattleSubmission.question_id.is_not(None),
         )
     )
@@ -319,7 +336,10 @@ async def advance_round(
 async def participants(
     battle_id: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
+    if await battle_repository.get_participant(db, battle_id, current_user.id) is None:
+        raise HTTPException(status_code=403, detail="Only battle participants can view the leaderboard.")
     return await battle_service.participants(db, battle_id)
 
 
@@ -373,7 +393,10 @@ async def finish_battle(
     if participant is None and not (current_user.is_superuser or current_user.role.lower() == "admin"):
         raise HTTPException(status_code=403, detail="Only battle participants or platform admins can finish this battle.")
 
-    res = await battle_service.finish_battle(db, battle_id)
+    try:
+        res = await battle_service.finish_battle(db, battle_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if res is None:
         raise HTTPException(status_code=404, detail="Battle not found or already finished.")
     return res
@@ -403,7 +426,10 @@ async def get_battle_result(
     res = (await db.execute(stmt)).scalar_one_or_none()
     if not res:
         # Generate result on the fly if needed
-        res_data = await battle_service.finish_battle(db, battle_id)
+        try:
+            res_data = await battle_service.finish_battle(db, battle_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
         if not res_data:
             raise HTTPException(status_code=404, detail="Battle result not found.")
         res = (await db.execute(stmt)).scalar_one_or_none()

@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
-import { practiceService } from "@/services/practice.service";
 
 export default function SoloBattleSelectionPage() {
   const router = useRouter();
@@ -52,24 +51,14 @@ export default function SoloBattleSelectionPage() {
   const handleStartCoding = async () => {
     setCreatingBattle(true);
     try {
-      const catalog = await practiceService.list({
-        difficulty: codingDifficulty.toLowerCase(),
-        page: 1,
-        page_size: 1,
-      });
-      const problem = catalog.items[0];
-      if (!problem) {
-        toast.error(`No ${codingDifficulty.toLowerCase()} coding problems are available right now.`);
-        return;
-      }
-
       const { data } = await api.post<{ id: string }>("/battle/create", {
         title: "Solo coding challenge",
         difficulty: codingDifficulty.toLowerCase(),
-        problem_id: problem.id,
         battle_type: "general",
         battle_mode: "solo",
         max_players: 1,
+        question_type: "coding",
+        question_count: 1,
       });
       if (!data.id) throw new Error("The server did not return a battle ID.");
       router.push(`/battle/${encodeURIComponent(data.id)}?lang=${encodeURIComponent(codingLanguage)}`);
