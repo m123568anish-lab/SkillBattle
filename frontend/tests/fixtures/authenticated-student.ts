@@ -55,6 +55,26 @@ export async function authenticateStudent(page: Page) {
     if (path.endsWith("/dashboard")) {
       return route.fulfill({ json: emptyDashboard });
     }
+    if (path.endsWith("/profile/me")) {
+      return route.fulfill({
+        json: {
+          username: testStudent.username,
+          full_name: testStudent.full_name,
+          email: testStudent.email,
+          total_xp: 840,
+          level: 4,
+          bio: "Building strong foundations through deliberate practice.",
+          college: "Qubira Test University",
+          branch: "Computer Science",
+          graduation_year: 2027,
+          target_company: "Engineering roles",
+          target_package: "",
+          github: "",
+          linkedin: "",
+          avatar: "",
+        },
+      });
+    }
     if (path.endsWith("/practice/problems")) {
       return route.fulfill({
         json: {

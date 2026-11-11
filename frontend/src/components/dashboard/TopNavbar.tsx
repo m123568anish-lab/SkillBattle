@@ -13,7 +13,7 @@ import ProfileMenu from "./ProfileMenu";
 import { useAuthStore } from "@/store/authStore";
 import { getDashboardPath } from "@/lib/auth-routing";
 import { ThemeToggle } from "@/components/common/ExperienceEnhancements";
-import QubiraLogo from "@/components/brand/QubiraLogo";
+import QubiraLogo, { QubiraIcon } from "@/components/brand/QubiraLogo";
 import { MOTION_DURATIONS, MOTION_EASINGS } from "@/lib/motion";
 
 type SearchResult = {
@@ -128,20 +128,34 @@ export default function TopNavbar({
             aria-expanded={mobileNavExpanded}
             aria-controls="mobile-navigation-drawer"
             data-mobile-menu-trigger
-            className="inline-flex min-h-11 min-w-0 shrink-0 items-center rounded-lg px-1 py-1 text-left transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] sm:hidden"
+            title={mobileNavExpanded ? "Close navigation menu" : "Open navigation menu"}
+            className={`group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] sm:hidden ${
+              mobileNavExpanded
+                ? "border-[var(--accent)]/50 bg-[var(--accent)]/10"
+                : "border-[var(--border-default)] bg-[var(--surface-card)] hover:border-[var(--accent)]/50"
+            }`}
           >
-            <QubiraLogo variant="full" size="sm" />
+            <QubiraIcon size={28} />
           </button>
         ) : null}
         <Link
           href={logoHref}
           aria-label="Go to your Qubira dashboard"
           title="Dashboard"
-          className={`min-w-0 shrink-0 items-center px-1 py-1 text-left transition hover:opacity-90 ${
-            onToggleMobileNav ? "hidden sm:inline-flex" : "inline-flex"
-          }`}
+          className="inline-flex min-w-0 shrink-0 items-center px-1 py-1 text-left transition hover:opacity-90"
         >
-          <QubiraLogo variant="full" size="sm" className="drop-shadow-[0_0_20px_rgba(216,255,62,0.08)]" />
+          {onToggleMobileNav ? (
+            <>
+              <span className="inline-flex sm:hidden">
+                <QubiraLogo variant="wordmark" size="sm" />
+              </span>
+              <span className="hidden sm:inline-flex">
+                <QubiraLogo variant="full" size="sm" className="drop-shadow-[0_0_20px_rgba(216,255,62,0.08)]" />
+              </span>
+            </>
+          ) : (
+            <QubiraLogo variant="full" size="sm" className="drop-shadow-[0_0_20px_rgba(216,255,62,0.08)]" />
+          )}
         </Link>
 
         {/* Global Search Input Bar & Command Palette */}

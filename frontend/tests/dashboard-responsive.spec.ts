@@ -23,6 +23,13 @@ test("dashboard shell fits supported viewports and preserves mobile navigation t
   const mobileNavigation = page.getByRole("navigation", { name: "Primary mobile navigation" });
   await expect(mobileNavigation).toBeVisible({ timeout: 15_000 });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.goto("/profile");
+  const brandLink = page.getByRole("link", { name: "Go to your Qubira dashboard" });
+  await expect(brandLink).toBeVisible();
+  await brandLink.click();
+  await page.waitForURL(/\/dashboard$/);
+  await expect(page.getByRole("dialog", { name: "Navigation menu" })).toHaveCount(0);
+  await page.goto("/dashboard");
   for (const label of ["Home", "Learn", "Arena", "Rankings", "Profile"]) {
     await expect(mobileNavigation.getByText(label)).toBeVisible();
   }
@@ -54,7 +61,6 @@ test("dashboard shell fits supported viewports and preserves mobile navigation t
     if (viewport.width >= 360 && viewport.width <= 430) {
       for (const control of [
         page.getByRole("button", { name: "Open navigation menu" }),
-        page.getByRole("button", { name: /^Theme:/ }),
         page.getByRole("button", { name: /^Notifications/ }),
         page.getByRole("button", { name: "Open profile menu" }),
       ]) {
@@ -62,6 +68,7 @@ test("dashboard shell fits supported viewports and preserves mobile navigation t
         expect(box?.width).toBeGreaterThanOrEqual(44);
         expect(box?.height).toBeGreaterThanOrEqual(44);
       }
+      await expect(page.getByRole("button", { name: /^Theme:/ })).toBeHidden();
 
       for (const item of await mobileNavigation.getByRole("link").all()) {
         const box = await item.boundingBox();
@@ -78,6 +85,34 @@ test("dashboard shell fits supported viewports and preserves mobile navigation t
       await page.screenshot({ path: "test-results/qubira-dashboard-mobile.png" });
     }
   }
+});
+
+test("profile keeps its live details readable across mobile and desktop", async ({ page }) => {
+  await authenticateStudent(page);
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/profile");
+
+  await expect(page.getByRole("heading", { name: "Profile", exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("heading", { name: "E2E Student" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Profile overview" }).getByText("Qubira Test University")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Account settings" })).toBeVisible();
+
+  await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+  await page.screenshot({ path: "test-results/qubira-profile-mobile.png" });
+
+  await page.getByRole("button", { name: "Edit profile" }).click();
+  await page.getByRole("button", { name: "Education" }).click();
+  await expect(page.getByRole("textbox", { name: "College / University" })).toHaveValue("Qubira Test University");
+  await expect(page.getByRole("spinbutton", { name: "Graduation Year" })).toHaveValue("2027");
+
+  await page.setViewportSize({ width: 320, height: 720 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1440);
+  await page.getByRole("button", { name: "Close editor" }).click();
+  await page.screenshot({ path: "test-results/qubira-profile-desktop.png" });
 });
 
 test("solo challenges stay readable and usable on mobile and desktop in dark theme", async ({ page }) => {

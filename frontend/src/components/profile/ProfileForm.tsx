@@ -128,11 +128,11 @@ export default function ProfileForm() {
 
   if (loading) {
     return (
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-12 text-center">
+      <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-10 text-center">
         <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity }}>
-          <Award className="h-8 w-8 mx-auto text-cyan-400" />
+          <Award className="mx-auto h-8 w-8 text-[var(--accent-strong)]" />
         </motion.div>
-        <p className="mt-4 text-slate-400">Loading your battle profile...</p>
+        <p className="mt-4 text-sm text-[var(--text-secondary)]">Loading your profile...</p>
       </div>
     );
   }
@@ -143,181 +143,133 @@ export default function ProfileForm() {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("") || "QB";
+  const fieldClassName = "min-h-11 w-full rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] px-4 py-3 text-sm text-[var(--text-primary)] outline-none transition placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]/30";
 
   return (
     <div className="space-y-6">
-      <section aria-label="Your profile" className="overflow-hidden rounded-[1.75rem] border border-[var(--border-default,#202022)] bg-[var(--surface-elevated,#0D0D0D)] text-white shadow-xl shadow-black/40 lg:hidden">
-        <div className="relative h-28 overflow-hidden bg-[var(--surface-input,#141414)] border-b border-[var(--border-default,#202022)]">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 opacity-[0.04] [background-image:linear-gradient(rgba(255,255,255,0.4)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.4)_1px,transparent_1px)] [background-size:24px_24px]"
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full blur-2xl opacity-20"
-            style={{ background: "radial-gradient(circle, var(--accent,#D8FF3E) 0%, transparent 70%)" }}
-          />
-        </div>
-        <div className="relative -mt-14 px-4 pb-5">
-          <div className="mx-auto grid h-28 w-28 place-items-center overflow-hidden rounded-full border-4 border-[var(--surface-canvas,#050505)] bg-[var(--surface-input,#141414)] text-2xl font-black text-[var(--accent-strong,#D8FF3E)] shadow-xl">
+      <motion.section
+        aria-label="Profile overview"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-5 text-[var(--text-primary)] sm:p-7"
+      >
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--accent)]/50 to-transparent" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-6">
+          <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--surface-elevated)] text-2xl font-black text-[var(--accent-strong)] sm:h-24 sm:w-24">
             {profile.avatar ? (
-              <Image src={profile.avatar} alt={`Profile photo for ${profile.full_name || "your account"}`} width={112} height={112} unoptimized className="h-full w-full object-cover" />
+              <Image
+                src={profile.avatar}
+                alt={`Profile photo for ${profile.full_name || "your account"}`}
+                width={96}
+                height={96}
+                unoptimized
+                className="h-full w-full object-cover"
+              />
             ) : initials}
           </div>
-          <div className="mt-3 text-center">
-            <h2 className="text-xl font-bold tracking-tight">{profile.full_name || authUser?.full_name || "Your profile"}</h2>
-            {(profile.username || authUser?.username || profile.email) && (
-              <p className="mt-1 truncate text-sm text-slate-400">
-                {profile.username || authUser?.username
-                  ? `@${profile.username || authUser?.username}`
-                  : profile.email}
-              </p>
-            )}
-            {!error && hasProfileStats && (
-              <div className="mt-3 flex items-center justify-center gap-2">
-                <span className="rounded-full border border-[var(--accent,#D8FF3E)]/30 bg-[var(--accent,#D8FF3E)]/10 px-3 py-1 text-xs font-semibold text-[var(--accent-strong,#D8FF3E)]">
-                  Level {profile.level}
-                </span>
-                <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-xs font-semibold text-slate-300">
-                  {profile.total_xp.toLocaleString()} XP
-                </span>
-              </div>
-            )}
-          </div>
-
-        </div>
-      </section>
-
-      {/* Hero Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="hidden rounded-3xl border border-[var(--border-default,#202022)] bg-[var(--surface-elevated,#0D0D0D)] p-6 text-white shadow-2xl shadow-black/50 relative overflow-hidden lg:block lg:p-8"
-      >
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full blur-3xl opacity-15"
-          style={{ background: "radial-gradient(circle, var(--accent,#D8FF3E) 0%, transparent 70%)" }}
-        />
-
-        <div className="relative z-10 flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
-          {/* Avatar Section */}
-          <div className="relative group flex-shrink-0">
-            <div className="relative h-28 w-28 rounded-2xl border-2 border-[var(--border-focus,#444444)] bg-[var(--surface-input,#141414)] overflow-hidden shadow-xl group-hover:border-[var(--accent,#D8FF3E)]/50 transition-colors">
-              {profile.avatar ? (
-                <img
-                  src={profile.avatar}
-                  alt={`Profile photo for ${profile.full_name || "your account"}`}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="h-full w-full flex items-center justify-center bg-[var(--accent,#D8FF3E)]/10 text-[var(--accent-strong,#D8FF3E)] font-black text-3xl">
-                  {initials}
-                </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+              Learning profile
+            </p>
+            <h2 className="mt-1 truncate text-xl font-bold tracking-tight sm:text-2xl">
+              {profile.full_name || authUser?.full_name || "Your profile"}
+            </h2>
+            <p className="mt-1 truncate text-sm text-[var(--text-secondary)]">
+              {profile.username || authUser?.username
+                ? `@${profile.username || authUser?.username}`
+                : profile.email || authUser?.email}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {!error && hasProfileStats && (
+                <>
+                  <span className="inline-flex min-h-8 items-center rounded-lg border border-[var(--accent)]/25 bg-[var(--accent)]/10 px-3 text-xs font-semibold text-[var(--accent-strong)]">
+                    Level {profile.level}
+                  </span>
+                  <span className="inline-flex min-h-8 items-center rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] px-3 text-xs font-semibold text-[var(--text-secondary)]">
+                    {profile.total_xp.toLocaleString()} XP
+                  </span>
+                </>
               )}
-            </div>
-            <span className="absolute -bottom-2 -right-2 rounded-lg bg-[var(--accent,#D8FF3E)] px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-black shadow-md">
-              LVL {profile.level}
-            </span>
-          </div>
-
-          {/* Profile Info */}
-          <div className="flex-1 text-center sm:text-left space-y-2">
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
-              <h2 className="text-2xl sm:text-3xl font-black text-white">{profile.full_name || "Qubira Engineer"}</h2>
-            </div>
-            <p className="text-sm font-medium text-slate-400">{profile.email}</p>
-
-            <div className="mt-3 flex flex-wrap gap-2 justify-center sm:justify-start pt-1">
               {profile.college && (
-                <span className="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] px-2.5 py-1 text-xs font-semibold text-slate-300">
-                  <Building className="h-3.5 w-3.5 text-violet-400" /> {profile.college}
+                <span className="inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] px-3 text-xs font-semibold text-[var(--text-secondary)]">
+                  <Building className="h-3.5 w-3.5 shrink-0 text-[var(--accent-strong)]" />
+                  <span className="truncate">{profile.college}</span>
                 </span>
               )}
               {profile.target_company && (
-                <span className="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] px-2.5 py-1 text-xs font-semibold text-slate-300">
-                  <Target className="h-3.5 w-3.5 text-cyan-400" /> {profile.target_company}
+                <span className="inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] px-3 text-xs font-semibold text-[var(--text-secondary)]">
+                  <Target className="h-3.5 w-3.5 shrink-0 text-[var(--accent-strong)]" />
+                  <span className="truncate">Target: {profile.target_company}</span>
                 </span>
               )}
               {profile.graduation_year && (
-                <span className="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] px-2.5 py-1 text-xs font-semibold text-slate-300">
-                  <GraduationCap className="h-3.5 w-3.5 text-amber-400" /> Class of {profile.graduation_year}
+                <span className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] px-3 text-xs font-semibold text-[var(--text-secondary)]">
+                  <GraduationCap className="h-3.5 w-3.5 text-[var(--accent-strong)]" />
+                  Class of {profile.graduation_year}
                 </span>
               )}
             </div>
           </div>
         </div>
+      </motion.section>
 
-        {!error && hasProfileStats && (
-          <div className="mt-6 grid grid-cols-2 gap-3 border-t border-white/[0.06] pt-5 sm:max-w-xs">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total XP</p>
-              <p className="mt-1 text-xl font-black text-white">{profile.total_xp.toLocaleString()}</p>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Ranked Level</p>
-              <p className="mt-1 text-xl font-black text-cyan-300">Level {profile.level}</p>
-            </div>
-          </div>
-        )}
-      </motion.div>
-
-      <section aria-label="Profile details" className="rounded-3xl border border-white/[0.08] bg-[#0a0f1d] p-5 text-white shadow-xl shadow-black/20 sm:p-7">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] pb-4">
+      <section aria-label="Profile details" className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-5 text-[var(--text-primary)] sm:p-7">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] pb-4">
           <div>
             <h3 className="text-base font-bold">About you</h3>
-            <p className="mt-1 text-xs text-slate-400">Your education, goals, and professional links</p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">Education, career goals, and professional links</p>
           </div>
           <button
             type="button"
             aria-expanded={editing}
+            aria-controls={editing ? "profile-editor" : undefined}
             onClick={() => setEditing((current) => !current)}
-            className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--accent)]/25 bg-[var(--accent)]/10 px-3 py-2 text-xs font-semibold text-[var(--accent-strong)] transition hover:bg-[var(--accent)]/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
           >
             <Pencil size={15} />
             {editing ? "Close editor" : "Edit profile"}
           </button>
         </div>
-        <dl className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2">
-          {profile.bio && <div className="sm:col-span-2"><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Bio</dt><dd className="mt-1 whitespace-pre-wrap text-sm text-slate-200">{profile.bio}</dd></div>}
-          {profile.college && <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">College</dt><dd className="mt-1 text-sm text-slate-200">{profile.college}</dd></div>}
-          {profile.branch && <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Branch / Major</dt><dd className="mt-1 text-sm text-slate-200">{profile.branch}</dd></div>}
-          {profile.graduation_year && <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Graduation year</dt><dd className="mt-1 text-sm text-slate-200">{profile.graduation_year}</dd></div>}
-          {profile.target_company && <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Target company</dt><dd className="mt-1 text-sm text-slate-200">{profile.target_company}</dd></div>}
-          {profile.target_package && <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Target package</dt><dd className="mt-1 text-sm text-slate-200">{profile.target_package}</dd></div>}
-          {profile.github && <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">GitHub</dt><dd className="mt-1 break-all text-sm text-cyan-200">{profile.github}</dd></div>}
-          {profile.linkedin && <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">LinkedIn</dt><dd className="mt-1 break-all text-sm text-cyan-200">{profile.linkedin}</dd></div>}
+        <dl className="mt-5 grid gap-x-6 gap-y-5 sm:grid-cols-2">
+          {profile.bio && <div className="sm:col-span-2"><dt className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Bio</dt><dd className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-[var(--text-primary)]">{profile.bio}</dd></div>}
+          {profile.college && <div><dt className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">College</dt><dd className="mt-1 text-sm text-[var(--text-primary)]">{profile.college}</dd></div>}
+          {profile.branch && <div><dt className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Branch / Major</dt><dd className="mt-1 text-sm text-[var(--text-primary)]">{profile.branch}</dd></div>}
+          {profile.graduation_year && <div><dt className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Graduation year</dt><dd className="mt-1 text-sm text-[var(--text-primary)]">{profile.graduation_year}</dd></div>}
+          {profile.target_company && <div><dt className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Target company</dt><dd className="mt-1 text-sm text-[var(--text-primary)]">{profile.target_company}</dd></div>}
+          {profile.target_package && <div><dt className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Target package</dt><dd className="mt-1 text-sm text-[var(--text-primary)]">{profile.target_package}</dd></div>}
+          {profile.github && <div><dt className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">GitHub</dt><dd className="mt-1 break-all text-sm text-[var(--accent-strong)]">{profile.github}</dd></div>}
+          {profile.linkedin && <div><dt className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">LinkedIn</dt><dd className="mt-1 break-all text-sm text-[var(--accent-strong)]">{profile.linkedin}</dd></div>}
           {!profile.bio && !profile.college && !profile.branch && !profile.graduation_year && !profile.target_company && !profile.target_package && !profile.github && !profile.linkedin && (
-            <p className="text-sm text-slate-400 sm:col-span-2">Add your education, goals, or professional links to complete your profile.</p>
+            <p className="text-sm text-[var(--text-secondary)] sm:col-span-2">Add your education, goals, or professional links to complete your profile.</p>
           )}
         </dl>
       </section>
 
       {/* Section Tabs */}
       {editing && <>
-      <div id="profile-editor" className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div id="profile-editor" className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
         {SECTIONS.map((section) => (
           <button
             key={section.id}
             type="button"
             onClick={() => setActiveSection(section.id)}
-            className={`relative rounded-2xl border p-4 text-left transition-all ${
+            className={`relative min-h-24 rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] sm:p-4 ${
               activeSection === section.id
-                ? "border-cyan-500/40 bg-cyan-500/10 shadow-lg shadow-cyan-500/5 text-cyan-300"
-                : "border-white/[0.08] bg-[#0a0f1d] hover:border-white/20 text-slate-400"
+                ? "border-[var(--accent)]/45 bg-[var(--accent)]/10 text-[var(--accent-strong)]"
+                : "border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-secondary)] hover:border-[var(--border-focus)]/50"
             }`}
           >
             <div className="flex flex-col items-center sm:items-start gap-1.5">
-              <div className={activeSection === section.id ? "text-cyan-400" : "text-slate-400"}>
+              <div className={activeSection === section.id ? "text-[var(--accent-strong)]" : "text-[var(--text-muted)]"}>
                 {section.icon}
               </div>
-              <div className="text-xs font-bold text-white mt-1">{section.label}</div>
-              <p className="text-[10px] text-slate-400 hidden sm:block leading-tight">{section.description}</p>
+              <div className="mt-1 text-xs font-bold text-[var(--text-primary)]">{section.label}</div>
+              <p className="hidden text-[10px] leading-tight text-[var(--text-muted)] sm:block">{section.description}</p>
             </div>
             {activeSection === section.id && (
               <motion.div
                 layoutId="active-indicator"
-                className="absolute bottom-0 left-0 right-0 h-1 bg-cyan-400 rounded-b-2xl"
+                className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-[var(--accent)]"
               />
             )}
           </button>
@@ -332,7 +284,7 @@ export default function ProfileForm() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.15 }}
-          className="rounded-3xl border border-white/[0.08] bg-[#0a0f1d] p-6 sm:p-8 text-white shadow-2xl shadow-black/50 space-y-6"
+          className="space-y-6 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-5 text-[var(--text-primary)] sm:p-7"
         >
           {activeSection === "personal" && (
             <>
@@ -345,27 +297,29 @@ export default function ProfileForm() {
               </div>
 
               <div>
-                <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                <label className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                   <User className="h-3.5 w-3.5" /> Basic Information
                 </label>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <input
                     type="text"
+                    aria-label="Full name"
                     placeholder="Full Name"
                     value={profile.full_name ?? ""}
                     onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
-                    className="rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 outline-none transition"
+                    className={fieldClassName}
                   />
                   <input
+                    aria-label="Email address"
                     disabled
                     value={profile.email ?? ""}
-                    className="rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-slate-500 cursor-not-allowed"
+                    className={`${fieldClassName} cursor-not-allowed opacity-70`}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                <label className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                   <FileText className="h-3.5 w-3.5" /> Bio / Headline
                 </label>
                 <textarea
@@ -373,7 +327,7 @@ export default function ProfileForm() {
                   placeholder="Tell us about yourself and your goals..."
                   value={profile.bio ?? ""}
                   onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                  className="w-full rounded-2xl border border-white/10 bg-slate-950/80 p-4 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 outline-none transition resize-none"
+                  className={`${fieldClassName} resize-none`}
                 />
               </div>
             </>
@@ -383,36 +337,39 @@ export default function ProfileForm() {
             <>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">College / University</label>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">College / University</label>
                   <input
                     type="text"
+                    aria-label="College / University"
                     placeholder="e.g., IIT Delhi, NIT Trichy"
                     value={profile.college ?? ""}
                     onChange={(e) => setProfile({ ...profile, college: e.target.value })}
-                    className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 outline-none transition"
+                    className={fieldClassName}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Branch / Major</label>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">Branch / Major</label>
                   <input
                     type="text"
+                    aria-label="Branch / Major"
                     placeholder="e.g., Computer Science"
                     value={profile.branch ?? ""}
                     onChange={(e) => setProfile({ ...profile, branch: e.target.value })}
-                    className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 outline-none transition"
+                    className={fieldClassName}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Graduation Year</label>
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">Graduation Year</label>
                 <input
                   type="number"
+                  aria-label="Graduation Year"
                   min={2024}
                   max={2030}
                   value={profile.graduation_year ?? ""}
                   onChange={(e) => setProfile({ ...profile, graduation_year: e.target.value ? parseInt(e.target.value, 10) : undefined })}
-                  className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-sm text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 outline-none transition"
+                  className={fieldClassName}
                 />
               </div>
             </>
@@ -422,25 +379,27 @@ export default function ProfileForm() {
             <>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Target Company</label>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">Target Company</label>
                   <input
                     type="text"
+                    aria-label="Target Company"
                     placeholder="e.g., Google, Microsoft, Razorpay"
                     value={profile.target_company ?? ""}
                     onChange={(e) => setProfile({ ...profile, target_company: e.target.value })}
-                    className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 outline-none transition"
+                    className={fieldClassName}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Target CTC / Package</label>
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">Target CTC / Package</label>
                 <input
                   type="text"
+                  aria-label="Target CTC / Package"
                   placeholder="e.g., 18 LPA, $120k, 25 LPA"
                   value={profile.target_package ?? ""}
                   onChange={(e) => setProfile({ ...profile, target_package: e.target.value })}
-                  className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 outline-none transition"
+                  className={fieldClassName}
                 />
               </div>
             </>
@@ -449,35 +408,37 @@ export default function ProfileForm() {
           {activeSection === "social" && (
             <>
               <div>
-                <label className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                <label className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                   <Link2 className="h-3.5 w-3.5" /> Social & Professional Links
                 </label>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">GitHub Profile URL</label>
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">GitHub Profile URL</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-3.5 text-slate-500 text-sm">github.com/</span>
+                  <span className="absolute left-4 top-3.5 text-sm text-[var(--text-muted)]">github.com/</span>
                   <input
                     type="text"
+                    aria-label="GitHub Profile URL"
                     placeholder="yourusername"
                     value={profile.github ?? ""}
                     onChange={(e) => setProfile({ ...profile, github: e.target.value })}
-                    className="w-full rounded-2xl border border-white/10 bg-slate-950/80 pl-32 pr-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 outline-none transition"
+                    className={`${fieldClassName} pl-32`}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">LinkedIn Profile URL</label>
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">LinkedIn Profile URL</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-3.5 text-slate-500 text-sm">linkedin.com/in/</span>
+                  <span className="absolute left-4 top-3.5 text-sm text-[var(--text-muted)]">linkedin.com/in/</span>
                   <input
                     type="text"
+                    aria-label="LinkedIn Profile URL"
                     placeholder="yourprofile"
                     value={profile.linkedin ?? ""}
                     onChange={(e) => setProfile({ ...profile, linkedin: e.target.value })}
-                    className="w-full rounded-2xl border border-white/10 bg-slate-950/80 pl-40 pr-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 outline-none transition"
+                    className={`${fieldClassName} pl-40`}
                   />
                 </div>
               </div>
@@ -491,7 +452,8 @@ export default function ProfileForm() {
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-red-300 text-sm"
+          role="alert"
+          className="rounded-xl border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 p-4 text-sm text-[var(--status-danger)]"
         >
           {error}
         </motion.div>
@@ -499,11 +461,12 @@ export default function ProfileForm() {
 
       {/* Save Button */}
       <motion.button
+        type="button"
         onClick={handleSave}
         disabled={saving}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        className="w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 px-6 py-4 font-bold text-white shadow-lg shadow-cyan-500/20 hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] px-6 py-3 font-bold text-[var(--text-on-accent)] transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-canvas)] disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Sparkles className="h-4 w-4" />
         {saving ? "Saving Profile..." : "Save & Update Profile"}

@@ -1,1 +1,3 @@
-[]
+[
+  "requestfailed: GET https://127.0.0.1:3001/battle/92fecd72-420f-4c35-919b-ba881729a217?_rsc=-ceHZT4Ck_JyYy1K (net::ERR_ABORTED)"
+]
