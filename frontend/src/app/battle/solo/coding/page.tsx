@@ -39,6 +39,7 @@ function SoloCodingBattleInner() {
   const [customInput, setCustomInput] = useState("");
   const [running, setRunning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [activeMobilePanel, setActiveMobilePanel] = useState<"problem" | "code" | "results">("problem");
 
   const [battleFinished, setBattleFinished] = useState(false);
   const [xpAwarded, setXpAwarded] = useState<number | null>(null);
@@ -105,6 +106,7 @@ function SoloCodingBattleInner() {
 
   const handleRunTests = async () => {
     if (!problem || !problem.can_solve || running || battleFinished) return;
+    setActiveMobilePanel("results");
     setRunning(true);
     setConsoleStatus("running");
     try {
@@ -144,6 +146,7 @@ function SoloCodingBattleInner() {
 
   const handleSubmitSolution = async () => {
     if (!problem || !problem.can_solve || submitting || battleFinished) return;
+    setActiveMobilePanel("results");
     setSubmitting(true);
     try {
       const res = await practiceService.submit({
@@ -185,8 +188,8 @@ function SoloCodingBattleInner() {
 
   if (loading) {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-[#070A0F] text-slate-300">
-        <Swords className="h-10 w-10 text-rose-500 animate-pulse mb-3" />
+      <div className="flex min-h-[100svh] flex-col items-center justify-center bg-[#050505] px-4 text-center text-[#A1A1AA]">
+        <Swords className="mb-3 h-10 w-10 animate-pulse text-[#D8FF3E]" />
         <p className="text-sm font-semibold">Initializing Solo Coding Battle Arena...</p>
       </div>
     );
@@ -194,12 +197,12 @@ function SoloCodingBattleInner() {
 
   if (error || !problem) {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-[#070A0F] text-slate-300 gap-4">
+      <div className="flex min-h-[100svh] flex-col items-center justify-center gap-4 bg-[#050505] px-4 text-center text-[#A1A1AA]">
         <AlertTriangle className="h-10 w-10 text-amber-500" />
         <p className="text-sm font-semibold">{error || "Challenge not found."}</p>
         <Link
           href="/battle/solo"
-          className="rounded-xl bg-white/10 px-4 py-2 text-xs font-bold text-white hover:bg-white/20 transition"
+          className="inline-flex min-h-11 items-center rounded-xl bg-[#D8FF3E] px-4 py-2 text-xs font-bold text-[#101010] transition hover:bg-[#EAFCCB]"
         >
           Return to Arena
         </Link>
@@ -208,33 +211,68 @@ function SoloCodingBattleInner() {
   }
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#070A0F] text-slate-100">
+    <div className="flex h-[100svh] min-h-0 w-full flex-col overflow-hidden bg-[#050505] text-[#F5F5F5]">
       {/* Competitive Header */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-rose-500/20 bg-[#0B0F17] px-4">
+      <header className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-[#252525] bg-[#090909] px-3 sm:px-4">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 rounded-lg bg-rose-500/15 border border-rose-500/30 px-2.5 py-1 text-xs font-bold text-rose-400">
-            <Swords className="h-4 w-4" />
-            <span>CODING PRACTICE</span>
+          <div className="flex shrink-0 items-center gap-2 rounded-lg border border-[#D8FF3E]/25 bg-[#D8FF3E]/10 px-2.5 py-1.5 text-[10px] font-bold tracking-wide text-[#D8FF3E] sm:text-xs">
+            <Swords className="h-4 w-4" aria-hidden="true" />
+            <span>QUBIRA CODE</span>
           </div>
           <span className="text-sm font-bold text-white hidden sm:inline">
             {problem.title ?? "Metadata repair required"}
           </span>
         </div>
 
-        <div className="flex items-center gap-4">
-          <Link href="/battle/solo" className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:bg-white/10">
-            Exit practice
+        <div className="flex shrink-0 items-center gap-2">
+          <Link href="/battle/solo" className="inline-flex min-h-10 items-center rounded-lg border border-[#252525] bg-[#101010] px-3 py-1.5 text-[11px] font-bold text-[#F5F5F5] transition hover:border-[#D8FF3E]/30 sm:text-xs">
+            Exit
           </Link>
         </div>
       </header>
 
+      <nav
+        role="tablist"
+        aria-label="Coding workspace panels"
+        className="grid shrink-0 grid-cols-3 gap-1 border-b border-[#252525] bg-[#090909] p-1.5 lg:hidden"
+      >
+        {([
+          ["problem", "Problem"],
+          ["code", "Code"],
+          ["results", "Test Results"],
+        ] as const).map(([panel, label]) => (
+          <button
+            key={panel}
+            id={`mobile-coding-tab-${panel}`}
+            type="button"
+            role="tab"
+            aria-selected={activeMobilePanel === panel}
+            aria-controls={`mobile-coding-panel-${panel}`}
+            onClick={() => setActiveMobilePanel(panel)}
+            className={`min-h-11 rounded-lg px-2 text-xs font-semibold transition-colors ${
+              activeMobilePanel === panel
+                ? "bg-[#D8FF3E]/10 text-[#D8FF3E]"
+                : "text-[#A1A1AA] hover:bg-[#151515] hover:text-[#F5F5F5]"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+
       {/* Main Split Body */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex min-h-0 flex-1 overflow-hidden lg:flex-row">
         {/* Left: Problem Details Panel */}
-        <aside className="w-full lg:w-[45%] lg:min-w-[380px] lg:max-w-xl flex-col border-r border-white/[0.08] bg-[#0A0E18] overflow-y-auto p-4 sm:p-6 scrollbar-thin scrollbar-thumb-white/10 flex">
+        <aside
+          id="mobile-coding-panel-problem"
+          role="tabpanel"
+          aria-labelledby="mobile-coding-tab-problem"
+          tabIndex={0}
+          className={`${activeMobilePanel === "problem" ? "flex" : "hidden"} min-w-0 w-full flex-col overflow-y-auto bg-[#090909] p-4 scrollbar-thin scrollbar-thumb-[#252525] sm:p-6 lg:flex lg:w-[45%] lg:min-w-[380px] lg:max-w-xl lg:border-r lg:border-[#252525]`}
+        >
           <div className="space-y-3 pb-5 border-b border-white/[0.08]">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-rose-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#D8FF3E]">
                 {problem.category}
               </span>
               <span className="text-slate-600">•</span>
@@ -271,7 +309,7 @@ function SoloCodingBattleInner() {
             {problem.constraints && (
               <div className="rounded-xl border border-white/[0.08] bg-[#0E1524] p-3.5">
                 <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Constraints</div>
-                <pre className="text-xs font-mono text-cyan-200 whitespace-pre-wrap">{problem.constraints}</pre>
+                <pre className="break-words whitespace-pre-wrap font-mono text-xs text-[#D8FF3E]">{problem.constraints}</pre>
               </div>
             )}
 
@@ -281,10 +319,10 @@ function SoloCodingBattleInner() {
                 {problem.samples.map((ex, idx) => (
                   <div key={idx} className="rounded-xl border border-white/[0.08] bg-[#0E1524] p-3 space-y-1.5 font-mono text-xs">
                     <div className="text-slate-400">Example {idx + 1}</div>
-                    <div className="rounded bg-[#070A0F] p-2 text-slate-300">
+                    <div className="break-words rounded bg-[#050505] p-2 text-[#F5F5F5]">
                       <span className="text-slate-500">Input: </span>{ex.input}
                     </div>
-                    <div className="rounded bg-[#070A0F] p-2 text-emerald-300">
+                    <div className="break-words rounded bg-[#050505] p-2 text-[#D8FF3E]">
                       <span className="text-slate-500">Output: </span>{ex.output}
                     </div>
                   </div>
@@ -295,8 +333,14 @@ function SoloCodingBattleInner() {
         </aside>
 
         {/* Right: Code Editor & Console */}
-        <main className="flex flex-1 flex-col overflow-hidden bg-[#070A0F] p-2 sm:p-4 gap-3">
-          <div className="flex-1 min-h-[300px]">
+        <main className={`${activeMobilePanel === "problem" ? "hidden" : "flex"} min-w-0 flex-1 flex-col gap-3 overflow-hidden bg-[#050505] p-2 sm:p-4 lg:flex`}>
+          <div
+            id="mobile-coding-panel-code"
+            role="tabpanel"
+            aria-labelledby="mobile-coding-tab-code"
+            tabIndex={0}
+            className={`${activeMobilePanel === "code" ? "flex" : "hidden"} min-h-0 flex-1 flex-col lg:flex`}
+          >
             <AssessmentCodeEditor
               value={code}
               onChange={setCode}
@@ -307,7 +351,13 @@ function SoloCodingBattleInner() {
             />
           </div>
 
-          <div className="shrink-0">
+          <div
+            id="mobile-coding-panel-results"
+            role="tabpanel"
+            aria-labelledby="mobile-coding-tab-results"
+            tabIndex={0}
+            className={`${activeMobilePanel === "results" ? "flex" : "hidden"} min-h-0 flex-1 flex-col overflow-y-auto lg:block`}
+          >
             <AssessmentConsole
               testCases={testCaseResults}
               customInput={customInput}
