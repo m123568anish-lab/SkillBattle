@@ -19,6 +19,36 @@ import type {
     CompanyRegistrationRequest,
 } from "@/types/organization";
 
+function clearStoredAuthTokens() {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+}
+
+function extractErrorDetail(error: unknown): string | null {
+    if (!axios.isAxiosError(error)) return null;
+
+    const detail = error.response?.data?.detail;
+    if (typeof detail === "string") return detail;
+    if (Array.isArray(detail)) {
+        const message = detail
+            .map((item) => {
+                if (typeof item === "string") return item;
+                if (item && typeof item === "object" && "msg" in item && typeof item.msg === "string") {
+                    return item.msg;
+                }
+                return "";
+            })
+            .filter(Boolean)
+            .join(", ");
+        return message || null;
+    }
+    if (detail && typeof detail === "object" && "msg" in detail && typeof detail.msg === "string") {
+        return detail.msg;
+    }
+    return null;
+}
+
 class AuthService {
 
     // =========================
@@ -77,11 +107,12 @@ class AuthService {
             await api.post("/auth/neon/link", { password });
             return true;
         } catch (error) {
+            const detail = extractErrorDetail(error);
             if (
                 axios.isAxiosError(error) &&
                 error.response?.status === 401 &&
-                error.response.data?.detail ===
-                    "Unable to link this Neon account with the supplied Qubira credentials."
+                detail &&
+                detail.includes("Unable to link this Neon account with the supplied Qubira credentials.")
             ) {
                 return false;
             }
@@ -173,17 +204,7 @@ class AuthService {
 
         }
 
-        localStorage.removeItem(
-
-            "access_token",
-
-        );
-
-        localStorage.removeItem(
-
-            "refresh_token",
-
-        );
+        clearStoredAuthTokens();
 
     }
 
@@ -191,8 +212,7 @@ class AuthService {
         const response = await api.delete<{ message: string }>("/auth/account", {
             data: { confirmation, password },
         });
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("refresh_token");
+        clearStoredAuthTokens();
         return response.data;
     }
 

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Search, ArrowUpRight, Menu } from "lucide-react";
+import { Search, ArrowUpRight, PanelLeft } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import api from "@/services/api";
 import NotificationMenu from "./NotificationMenu";
@@ -23,7 +23,13 @@ type SearchResult = {
   href: string;
 };
 
-export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () => void } = {}) {
+export default function TopNavbar({
+  onOpenMobileNav,
+  mobileNavExpanded = false,
+}: {
+  onOpenMobileNav?: () => void;
+  mobileNavExpanded?: boolean;
+} = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
@@ -100,11 +106,11 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: MOTION_DURATIONS.fast * 1.5, ease: MOTION_EASINGS.command }}
       className="
-        relative z-20
-        mb-8 flex min-w-0 flex-row items-center justify-between gap-2 border-b
-        border-[var(--border-default)] bg-[var(--surface-canvas)] px-0 py-3
+        sticky top-0 z-20
+        -mx-4 mb-5 flex min-h-14 min-w-0 flex-row items-center justify-between gap-1.5 border-b
+        border-[#252525] bg-[#050505] px-4 py-2.5
         transition-colors duration-200
-        sm:gap-4 sm:py-4
+        sm:mx-0 sm:mb-8 sm:min-h-16 sm:gap-4 sm:px-0 sm:py-4
       "
     >
       {/* Subtle Bottom Border Accent Line */}
@@ -118,11 +124,13 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
           <button
             type="button"
             onClick={onOpenMobileNav}
-            aria-label="Open navigation menu"
+            aria-label="Open navigation panel"
+            aria-expanded={mobileNavExpanded}
+            aria-controls="mobile-navigation-drawer"
             data-mobile-menu-trigger
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-2 text-[var(--text-secondary)] transition-all duration-150 hover:border-[var(--accent)]/50 hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] active:scale-95 max-[359px]:h-9 max-[359px]:w-9 lg:hidden"
           >
-            <Menu size={18} />
+            <PanelLeft size={18} />
           </button>
         )}
         <Link
@@ -132,10 +140,10 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
           className="inline-flex min-w-0 shrink-0 items-center px-1 py-1 text-left transition hover:opacity-90"
         >
           <span className="sm:hidden">
-            <QubiraLogo variant="icon" size="sm" />
+            <QubiraLogo variant="full" size="sm" className="drop-shadow-[0_0_20px_rgba(216,255,62,0.08)]" />
           </span>
           <span className="hidden sm:inline-flex">
-            <QubiraLogo variant="full" size="sm" />
+            <QubiraLogo variant="full" size="sm" className="drop-shadow-[0_0_20px_rgba(216,255,62,0.08)]" />
           </span>
         </Link>
 
@@ -298,8 +306,8 @@ export default function TopNavbar({ onOpenMobileNav }: { onOpenMobileNav?: () =>
           <Search className="h-[17px] w-[17px]" />
         </button>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-          <ThemeToggle />
-          <ActivityMenu />
+          <span className="hidden sm:block"><ThemeToggle /></span>
+          <span className="hidden sm:block"><ActivityMenu /></span>
           <NotificationMenu />
           <ProfileMenu />
         </div>

@@ -49,10 +49,10 @@ export function BattleNav() {
   ];
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-rose-500/20 pb-3 gap-3">
+    <div className="flex flex-col gap-3 border-b border-[#252525] pb-3 sm:flex-row sm:items-center sm:justify-between">
       <nav
         aria-label="Qubira Arena Tabs"
-        className="flex items-center space-x-1 sm:space-x-1.5 overflow-x-auto scrollbar-none py-1 min-w-max"
+        className="flex min-w-max items-center gap-1.5 overflow-x-auto py-1 sm:gap-2"
       >
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -62,15 +62,15 @@ export function BattleNav() {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
+              className={`flex items-center gap-2 whitespace-nowrap rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all duration-200 sm:text-sm ${
                 active
-                  ? "bg-rose-500/20 text-rose-300 font-bold border border-rose-500/35 shadow-sm shadow-rose-500/15"
-                  : "text-slate-400 hover:text-slate-100 hover:bg-white/[0.06] border border-transparent"
+                  ? "border-[#D8FF3E]/35 bg-[#D8FF3E]/10 text-[#F5F5F5] shadow-[0_0_0_1px_rgba(216,255,62,0.12)]"
+                  : "border-transparent text-[#A1A1AA] hover:border-[#252525] hover:bg-[#101010] hover:text-[#F5F5F5]"
               }`}
             >
               <Icon
                 className={`h-4 w-4 shrink-0 transition-transform ${
-                  active ? "text-rose-400 scale-105" : "text-slate-400"
+                  active ? "scale-105 text-[#D8FF3E]" : "text-[#A1A1AA]"
                 }`}
               />
               <span>{tab.label}</span>
@@ -79,18 +79,17 @@ export function BattleNav() {
         })}
       </nav>
 
-      {/* Global Leaderboard Shortcut */}
-      <div className="hidden lg:flex items-center gap-1.5 shrink-0 pl-2">
+      <div className="hidden items-center gap-1.5 pl-2 lg:flex">
         <Link
           href="/leaderboard"
           title="Qubira Rankings"
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+          className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
             pathname.startsWith("/leaderboard")
-              ? "bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30"
-              : "text-slate-400 hover:text-amber-300 hover:bg-white/5"
+              ? "border-[#D8FF3E]/35 bg-[#D8FF3E]/10 text-[#F5F5F5]"
+              : "border-transparent text-[#A1A1AA] hover:border-[#252525] hover:bg-[#101010] hover:text-[#F5F5F5]"
           }`}
         >
-          <BarChart3 className="h-3.5 w-3.5 text-amber-400" />
+          <BarChart3 className="h-3.5 w-3.5 text-[#D8FF3E]" />
           <span>Qubira Rankings</span>
         </Link>
       </div>

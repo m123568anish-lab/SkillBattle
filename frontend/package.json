@@ -10,7 +10,7 @@
     "build": "next build",
     "start": "next start -H 127.0.0.1 -p 3000",
     "lint": "eslint .",
-    "test": "node --test --test-reporter=tap tests/api-origin.test.mjs tests/api-proxy.test.mjs tests/dashboard-data.test.mjs tests/auth-config.test.mjs",
+    "test": "node --test --test-reporter=tap tests/api-origin.test.mjs tests/api-proxy.test.mjs tests/dashboard-data.test.mjs tests/auth-config.test.mjs tests/auth-service.test.mjs",
     "test:e2e": "playwright test tests/opportunities.spec.ts tests/auth-route.spec.ts tests/auth-registration.spec.ts"
   },
   "dependencies": {

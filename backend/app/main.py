@@ -71,7 +71,15 @@ async def lifespan(app: FastAPI):
     """
     # Startup
     logger.info("🚀 Qubira API starting up...")
-    
+    try:
+        from app.database.init_db import ensure_database_compatibility
+
+        ensure_database_compatibility()
+        logger.info("✅ Database compatibility checks completed before serving requests.")
+    except Exception:
+        logger.exception("❌ Database compatibility repair failed during startup.")
+        raise
+
     # Initialize Sentry error tracking if configured
     if settings.SENTRY_DSN and not settings.SENTRY_DSN.startswith("https://placeholder"):
         try:

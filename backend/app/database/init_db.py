@@ -222,6 +222,71 @@ def _require_disposable_test_database(database_url: URL) -> None:
     raise RuntimeError("Model setup supports only isolated SQLite or PostgreSQL tests.")
 
 
+def ensure_database_compatibility() -> None:
+    """Repair scoped SQLite installs and only preflight PostgreSQL at startup."""
+    try:
+        from app.core.config import get_settings
+
+        settings = get_settings()
+
+        if engine.dialect.name == "postgresql":
+            from app.database.migration_preflight import (
+                build_epoch_preflight_report,
+                build_preflight_report,
+            )
+
+            if settings.DATABASE_READINESS_MODE == "epoch":
+                report = build_epoch_preflight_report(engine)
+            else:
+                report = build_preflight_report(engine)
+
+            if report.get("eligible_for_migration") is not True:
+                raise RuntimeError(
+                    "PostgreSQL schema preflight failed "
+                    f"(revision={report.get('current_revision')!r}, "
+                    f"schema_differences={report.get('schema_difference_count', 0)}, "
+                    f"state_errors={report.get('state_errors', [])}). "
+                    "Automatic schema creation and repair are disabled; "
+                    "use the authorized migration coordinator."
+                )
+            logger.info("PostgreSQL schema preflight completed without writes.")
+            return
+
+        if engine.dialect.name != "sqlite":
+            raise RuntimeError(
+                f"Startup compatibility repair is not supported for {engine.dialect.name!r}."
+            )
+        if settings.ENVIRONMENT.strip().casefold() not in {
+            "dev",
+            "development",
+            "test",
+            "testing",
+        }:
+            raise RuntimeError(
+                "Automatic SQLite compatibility repair is restricted to "
+                "development and test environments."
+            )
+
+        inspector = inspect(engine)
+        existing_tables = set(inspector.get_table_names())
+        if not existing_tables:
+            logger.info("No database tables detected; initializing schema.")
+        Base.metadata.create_all(bind=engine)
+
+        _repair_users_table()
+        _repair_achievements_table()
+        _repair_profile_preferences()
+        _repair_dashboard_tables()
+        _repair_college_tables()
+        _repair_company_tables()
+        _repair_battle_tables()
+        _repair_streak_table()
+        logger.info("Database compatibility check completed without destructive resets.")
+    except Exception:
+        logger.exception("Database compatibility repair failed.")
+        raise
+
+
 def _repair_users_table() -> None:
     """Add columns missing from databases created by older app versions."""
     inspector = inspect(engine)
@@ -232,6 +297,7 @@ def _repair_users_table() -> None:
     missing_columns = {
         "username": "VARCHAR(30) DEFAULT 'player'",
         "clerk_user_id": "VARCHAR(64)",
+        "neon_user_id": "VARCHAR(64)",
         "role": "VARCHAR(50) DEFAULT 'user'",
         "account_type": "VARCHAR(30) DEFAULT 'STUDENT'",
         "requested_role": "VARCHAR(50)",

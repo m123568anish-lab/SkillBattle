@@ -213,12 +213,12 @@ export default function BattleDetailClient({ id, problemId }: BattleDetailClient
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3 sm:gap-4">
       {/* Telemetry & Connection Header */}
-      <div className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-[#0E1524] p-3 text-xs">
+      <div className="flex flex-col items-start justify-between gap-3 rounded-xl border border-[#252525] bg-[#101010] p-3 text-xs sm:flex-row sm:items-center">
         <div className="flex items-center gap-2">
           {connected ? (
-            <span className="flex items-center gap-1.5 font-semibold text-emerald-400">
+            <span className="flex items-center gap-1.5 font-semibold text-[#D8FF3E]">
               <Wifi className="h-3.5 w-3.5" /> Live Sync
             </span>
           ) : (
@@ -227,25 +227,25 @@ export default function BattleDetailClient({ id, problemId }: BattleDetailClient
             </span>
           )}
           <span className="text-slate-600">•</span>
-          <span className="text-slate-300 font-medium flex items-center gap-1">
-            <Users className="h-3.5 w-3.5 text-cyan-400" /> {players ?? "—"} Active in Arena
+          <span className="text-[#F5F5F5] font-medium flex items-center gap-1">
+            <Users className="h-3.5 w-3.5 text-[#D8FF3E]" /> {players ?? "—"} Active in Arena
           </span>
         </div>
 
         <button
           type="button"
           onClick={() => sendEvent("player_action", { type: "ping", time: Date.now() })}
-          className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white"
+          className="rounded-lg border border-[#252525] bg-[#101010] px-2.5 py-1 text-[11px] font-semibold text-[#F5F5F5] transition hover:bg-[#151515] hover:text-[#D8FF3E]"
         >
           Send Arena Ping
         </button>
       </div>
 
       {/* Editor & Execution Panel */}
-      {loadedProblemTitle && <h3 className="text-sm font-semibold text-slate-300">{loadedProblemTitle}</h3>}
-      {problemLoadError && <p role="alert" className="text-sm text-amber-300">{problemLoadError}</p>}
-      {problemMetadataWarning && <p role="status" className="text-sm text-amber-300">{problemMetadataWarning}</p>}
-      <div className="min-h-[380px] h-[440px]">
+      {loadedProblemTitle && <h3 className="text-sm font-semibold text-[#F5F5F5]">{loadedProblemTitle}</h3>}
+      {problemLoadError && <p role="alert" className="text-sm text-[#F0BC58]">{problemLoadError}</p>}
+      {problemMetadataWarning && <p role="status" className="text-sm text-[#F0BC58]">{problemMetadataWarning}</p>}
+      <div       className="h-[min(58svh,440px)] min-h-[320px] sm:h-[440px] sm:min-h-[380px]">
         <AssessmentCodeEditor
           value={sourceCode}
           onChange={setSourceCode}
@@ -273,14 +273,14 @@ export default function BattleDetailClient({ id, problemId }: BattleDetailClient
       />
 
       {/* Action Buttons */}
-      <div className="flex items-center justify-end gap-2.5 pt-1">
+      <div className="flex flex-col-reverse gap-2.5 pt-1 sm:flex-row sm:items-center sm:justify-end">
         <button
           type="button"
           onClick={handleRunTests}
           disabled={running || submitting}
-          className="flex h-10 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 text-xs font-semibold text-slate-200 transition hover:bg-white/10 disabled:opacity-50"
+          className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-[#252525] bg-[#101010] px-4 text-xs font-semibold text-[#F5F5F5] transition hover:bg-[#151515] disabled:opacity-50 sm:w-auto"
         >
-          <Play className="h-3.5 w-3.5 text-cyan-400 fill-cyan-400" />
+          <Play className="h-3.5 w-3.5 text-[#D8FF3E] fill-[#D8FF3E]" />
           <span>{running ? "Testing..." : "Test Code"}</span>
         </button>
 
@@ -288,7 +288,7 @@ export default function BattleDetailClient({ id, problemId }: BattleDetailClient
           type="button"
           onClick={handleSubmitCode}
           disabled={submitting || running || problemLoading || Boolean(problemLoadError) || !problemCanSolve}
-          className="flex h-10 items-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 text-xs font-bold text-white shadow-lg transition hover:from-cyan-400 hover:to-blue-500 active:scale-95 disabled:opacity-50"
+          className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-[#D8FF3E] px-5 text-xs font-bold text-[#101010] transition hover:bg-[#EAFCCB] active:scale-95 disabled:opacity-50 sm:w-auto sm:shadow-[0_10px_30px_rgba(216,255,62,0.16)]"
         >
           <Send className="h-3.5 w-3.5" />
           <span>{submitting ? "Evaluating..." : "Submit to Battle Judge"}</span>
@@ -297,20 +297,20 @@ export default function BattleDetailClient({ id, problemId }: BattleDetailClient
 
       {/* Live Arena Activity Log */}
       {telemetryEvents.length > 0 && (
-        <div className="rounded-xl border border-white/[0.08] bg-[#0A0D14] p-3 text-xs">
-          <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-slate-400 text-[10px] mb-2">
-            <Activity className="h-3 w-3 text-cyan-400" /> Arena Activity Feed
+        <div className="rounded-xl border border-[#252525] bg-[#0B0B0B] p-3 text-xs">
+          <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[#A1A1AA] text-[10px] mb-2">
+            <Activity className="h-3 w-3 text-[#D8FF3E]" /> Arena Activity Feed
           </div>
-          <div className="space-y-1.5 max-h-32 overflow-y-auto font-mono text-[11px] scrollbar-thin scrollbar-thumb-white/10">
+          <div className="space-y-1.5 max-h-32 overflow-y-auto font-mono text-[11px] scrollbar-thin scrollbar-thumb-[#252525]/80">
             {telemetryEvents.map((evt) => (
-              <div key={evt.id} className="flex items-center gap-2 text-slate-300">
-                <span className="text-slate-500">{evt.time}</span>
-                <span className="text-cyan-400">›</span>
+              <div key={evt.id} className="flex items-center gap-2 text-[#F5F5F5]">
+                <span className="text-[#737373]">{evt.time}</span>
+                <span className="text-[#D8FF3E]">›</span>
                 <span
                   className={
                     evt.type === "join"
-                        ? "text-emerald-300"
-                        : "text-slate-300"
+                        ? "text-[#D8FF3E]"
+                        : "text-[#F5F5F5]"
                   }
                 >
                   {evt.text}

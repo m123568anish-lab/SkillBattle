@@ -194,8 +194,8 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
         }
         className={`flex flex-col select-none relative ${
           isMobile
-            ? "h-full w-full rounded-r-2xl border-r border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-primary)]"
-            : "hidden lg:flex m-0 rounded-none border-0 border-r border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-primary)] shadow-none overflow-hidden"
+            ? "h-full w-full rounded-r-2xl border-r border-[#252525] bg-[#090909] pt-[env(safe-area-inset-top)] text-[#F5F5F5]"
+            : "hidden lg:flex m-0 rounded-none border-0 border-r border-[#252525] bg-[#090909] text-[#F5F5F5] shadow-none overflow-hidden"
         }`}
       >
         {/* Top Header / Branding */}
@@ -232,6 +232,7 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
               type="button"
               onClick={onCloseMobile}
               aria-label="Close navigation"
+              data-drawer-close
               className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] p-1.5 text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
             >
               <X size={16} />
@@ -331,7 +332,7 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
         </nav>
 
         {/* Footer: User Profile Block with Account Menu */}
-        <div ref={profileRef} className="relative border-t border-[var(--border-subtle)] p-2 bg-[var(--surface-elevated)]">
+        <div ref={profileRef} className="relative border-t border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
           <button
             type="button"
             onClick={() => setProfileOpen((prev) => !prev)}

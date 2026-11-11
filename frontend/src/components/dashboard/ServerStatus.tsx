@@ -56,17 +56,17 @@ export default function ServerStatus() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 to-[#090D1A]/60 p-6 backdrop-blur-xl"
+      className="rounded-3xl border border-[#252525] bg-[#101010] p-6"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/10 border border-cyan-500/20">
-            <Activity className="h-5 w-5 text-cyan-400" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#D8FF3E]/25 bg-[#D8FF3E]/10">
+            <Activity className="h-5 w-5 text-[#D8FF3E]" />
           </div>
           <div>
-            <h3 className="font-bold text-white text-base">Server Status</h3>
-            <p className="text-xs text-slate-400">SkillBattle API</p>
+            <h3 className="text-base font-bold text-[#F5F5F5]">Server Status</h3>
+            <p className="text-xs text-[#A1A1AA]">SkillBattle API</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -121,14 +121,14 @@ export default function ServerStatus() {
       {/* Stats Row */}
       <div className="grid grid-cols-3 gap-3 mb-5">
         <div className="rounded-2xl bg-white/5 border border-white/5 p-3 text-center">
-          <Wifi className="h-3.5 w-3.5 text-cyan-400 mx-auto mb-1" />
+          <Wifi className="mx-auto mb-1 h-3.5 w-3.5 text-[#D8FF3E]" />
           <p className="text-lg font-black text-white">
             {responseTime != null ? `${responseTime}ms` : "—"}
           </p>
           <p className="text-[10px] uppercase tracking-widest text-slate-500 mt-0.5">Response</p>
         </div>
         <div className="rounded-2xl bg-white/5 border border-white/5 p-3 text-center">
-          <Activity className="h-3.5 w-3.5 text-violet-400 mx-auto mb-1" />
+          <Activity className="mx-auto mb-1 h-3.5 w-3.5 text-[#D8FF3E]" />
           <p className="text-lg font-black text-white">
             {isChecking ? "…" : isOnline ? "Reachable" : "Unavailable"}
           </p>

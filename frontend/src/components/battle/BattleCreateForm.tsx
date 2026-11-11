@@ -34,23 +34,23 @@ export default function BattleCreateForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-3xl border border-white/10 bg-white/5 p-6 text-white shadow-2xl shadow-violet-950/20">
+    <form onSubmit={handleSubmit} className="rounded-[28px] border border-[#252525] bg-[#101010] p-6 text-[#F5F5F5] shadow-[0_18px_50px_rgba(0,0,0,0.22)]">
       <div className="grid gap-4 md:grid-cols-2">
         <label className="block">
-          <span className="mb-2 block text-sm text-slate-400">Battle title</span>
+          <span className="mb-2 block text-sm text-[#A1A1AA]">Battle title</span>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 outline-none ring-0"
+            className="w-full rounded-2xl border border-[#252525] bg-[#050505] px-4 py-3 text-[#F5F5F5] outline-none transition focus:border-[#D8FF3E]/50"
             required
           />
         </label>
         <label className="block">
-          <span className="mb-2 block text-sm text-slate-400">Difficulty</span>
+          <span className="mb-2 block text-sm text-[#A1A1AA]">Difficulty</span>
           <select
             value={difficulty}
             onChange={(e) => setDifficulty(e.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 outline-none ring-0"
+            className="w-full rounded-2xl border border-[#252525] bg-[#050505] px-4 py-3 text-[#F5F5F5] outline-none transition focus:border-[#D8FF3E]/50"
           >
             <option value="Easy">Easy</option>
             <option value="Medium">Medium</option>
@@ -58,21 +58,21 @@ export default function BattleCreateForm() {
           </select>
         </label>
         <label className="block">
-          <span className="mb-2 block text-sm text-slate-400">Problem ID</span>
+          <span className="mb-2 block text-sm text-[#A1A1AA]">Problem ID</span>
           <input
             type="number"
             value={problemId}
             onChange={(e) => setProblemId(e.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 outline-none ring-0"
+            className="w-full rounded-2xl border border-[#252525] bg-[#050505] px-4 py-3 text-[#F5F5F5] outline-none transition focus:border-[#D8FF3E]/50"
             required
           />
         </label>
         <label className="block">
-          <span className="mb-2 block text-sm text-slate-400">Battle Mode</span>
+          <span className="mb-2 block text-sm text-[#A1A1AA]">Battle Mode</span>
           <select
             value={maxPlayers}
             onChange={(e) => setMaxPlayers(e.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 outline-none ring-0"
+            className="w-full rounded-2xl border border-[#252525] bg-[#050505] px-4 py-3 text-[#F5F5F5] outline-none transition focus:border-[#D8FF3E]/50"
           >
             <option value="1">Solo 1v1 (+50 XP Winner Reward)</option>
             <option value="2">Duo 2v2 (+100 XP Winner Reward)</option>
@@ -82,12 +82,12 @@ export default function BattleCreateForm() {
         </label>
       </div>
 
-      {error ? <p className="mt-4 text-sm text-red-400">{error}</p> : null}
+      {error ? <p className="mt-4 text-sm text-[#F08A7A]">{error}</p> : null}
 
       <button
         type="submit"
         disabled={loading}
-        className="mt-6 rounded-full bg-gradient-to-r from-violet-600 to-cyan-500 px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+        className="mt-6 rounded-full bg-[#D8FF3E] px-5 py-3 font-semibold text-[#101010] transition hover:bg-[#EAFCCB] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? "Creating..." : "Create battle"}
       </button>

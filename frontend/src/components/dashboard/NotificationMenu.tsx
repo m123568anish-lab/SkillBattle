@@ -121,7 +121,7 @@ export default function NotificationMenu() {
         aria-expanded={open}
         onClick={() => setOpen((previous) => !previous)}
         aria-haspopup="dialog"
-        className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:border-cyan-400/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 max-[359px]:h-9 max-[359px]:w-9 sm:h-10 sm:w-10"
+        className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-secondary)] transition hover:border-[var(--accent)]/60 hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] max-[359px]:h-9 max-[359px]:w-9 sm:h-10 sm:w-10"
       >
         <Bell className="h-[18px] w-[18px]" />
         {unreadCount > 0 && (
@@ -140,14 +140,14 @@ export default function NotificationMenu() {
           <button
             type="button"
             onClick={markAllRead}
-            className="inline-flex items-center gap-1 text-xs text-slate-400 transition hover:text-white"
+            className="inline-flex items-center gap-1 text-xs text-[var(--text-muted)] transition hover:text-[var(--text-primary)]"
           >
             <CheckCheck className="h-3.5 w-3.5" /> All read
           </button>
         ) : undefined}
       >
             {error && (
-              <div role="alert" className="flex items-center justify-between gap-3 border-b border-rose-400/20 px-4 py-2 text-xs text-rose-200">
+              <div role="alert" className="flex items-center justify-between gap-3 border-b border-[var(--status-danger)]/20 px-4 py-2 text-xs text-[var(--status-danger)]">
                 <span>{error}</span>
                 <button type="button" onClick={() => setRefreshToken((value) => value + 1)} className="shrink-0 underline">
                   Retry
@@ -155,11 +155,11 @@ export default function NotificationMenu() {
               </div>
             )}
 
-            <div className="divide-y divide-white/5">
+            <div className="divide-y divide-[var(--border-subtle)]">
               {loading ? (
-                <p className="px-4 py-8 text-center text-sm text-slate-400">Loading notifications…</p>
+                <p className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">Loading notifications…</p>
               ) : notifs.length === 0 ? (
-                <div className="py-8 text-center text-sm text-slate-400">
+                <div className="py-8 text-center text-sm text-[var(--text-muted)]">
                   <Bell className="mx-auto mb-2 h-8 w-8 opacity-30" />
                   No notifications yet
                 </div>
@@ -171,23 +171,23 @@ export default function NotificationMenu() {
                       key={notification.id}
                       type="button"
                       onClick={() => void openNotification(notification)}
-                      className={`flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-white/5 ${notification.is_read ? "" : "bg-cyan-400/5"}`}
+                      className={`flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-[var(--surface-card)] ${notification.is_read ? "" : "bg-[var(--accent)]/5"}`}
                     >
-                      <span aria-hidden="true" className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/5 text-sm text-cyan-200">
+                      <span aria-hidden="true" className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--surface-card)] text-sm text-[var(--accent-strong)]">
                         {typeIcon(notification.notification_type)}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className={`block text-sm font-semibold ${notification.is_read ? "text-slate-300" : "text-white"}`}>
+                        <span className={`block text-sm font-semibold ${notification.is_read ? "text-[var(--text-secondary)]" : "text-[var(--text-primary)]"}`}>
                           {notification.title}
                         </span>
-                        <span className="mt-0.5 line-clamp-2 block text-xs text-slate-400">
+                        <span className="mt-0.5 line-clamp-2 block text-xs text-[var(--text-muted)]">
                           {notification.message}
                         </span>
-                        <time className="mt-1 block text-[11px] text-slate-500" dateTime={notification.created_at}>
+                        <time className="mt-1 block text-[11px] text-[var(--text-muted)]" dateTime={notification.created_at}>
                           {new Date(notification.created_at).toLocaleString()}
                         </time>
                       </span>
-                      {destination && <ArrowUpRight aria-hidden="true" className="mt-1 h-4 w-4 shrink-0 text-slate-500" />}
+                      {destination && <ArrowUpRight aria-hidden="true" className="mt-1 h-4 w-4 shrink-0 text-[var(--text-muted)]" />}
                     </button>
                   );
                 })

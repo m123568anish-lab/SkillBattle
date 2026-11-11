@@ -176,6 +176,7 @@ function DashboardLayoutInner({ children }: Props) {
               role="dialog"
               aria-modal="true"
               aria-label="Navigation menu"
+              id="mobile-navigation-drawer"
               tabIndex={-1}
               className="relative z-10 h-full w-[min(86vw,22rem)] shadow-2xl shadow-black"
             >
@@ -189,9 +190,12 @@ function DashboardLayoutInner({ children }: Props) {
       <section
         id="main-content"
         tabIndex={-1}
-        className="relative z-10 min-w-0 flex-1 overflow-auto bg-transparent px-3 pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-3 outline-none sm:px-6 sm:pb-[calc(7.5rem+env(safe-area-inset-bottom))] sm:pt-5 lg:h-full lg:min-h-0 lg:px-10 lg:pb-10 lg:pt-7"
+        className="relative z-10 min-w-0 flex-1 overflow-auto bg-transparent px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-3 outline-none sm:px-6 sm:pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:pt-5 lg:h-full lg:min-h-0 lg:px-10 lg:pb-10 lg:pt-7"
       >
-        <TopNavbar onOpenMobileNav={() => setMobileDrawerOpen(true)} />
+        <TopNavbar
+          onOpenMobileNav={() => setMobileDrawerOpen(true)}
+          mobileNavExpanded={mobileDrawerOpen}
+        />
         <PageTransition>{children}</PageTransition>
       </section>
 
@@ -199,9 +203,9 @@ function DashboardLayoutInner({ children }: Props) {
       {!hideDock && (
         <nav
           aria-label="Primary mobile navigation"
-          className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 z-30 w-[calc(100%-1.5rem)] max-w-[30rem] -translate-x-1/2 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-elevated)]/90 px-2 py-1.5 shadow-2xl backdrop-blur-xl lg:hidden"
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border-default)] bg-[var(--surface-card)]/95 px-2 pb-[calc(0.375rem+env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-12px_36px_rgba(0,0,0,0.28)] backdrop-blur-xl lg:hidden"
         >
-          <div className="mx-auto flex h-12 items-center justify-around gap-0.5">
+          <div className="mx-auto flex h-14 max-w-[32rem] items-center justify-around gap-0.5">
             {mobileNavigation.map((tab) => {
               const active = isActive(tab.href);
               if (!tab.available || !tab.href) {
@@ -211,7 +215,7 @@ function DashboardLayoutInner({ children }: Props) {
                     type="button"
                     aria-label={tab.title}
                     onClick={() => setMobileDrawerOpen(true)}
-                    className="flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-0.5 py-1.5 text-[9px] font-semibold leading-none tracking-normal text-[var(--text-muted)] transition hover:text-[var(--text-primary)] motion-reduce:transition-none"
+                    className="flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-0.5 py-1.5 text-[10px] font-semibold leading-none tracking-normal text-[var(--text-muted)] transition hover:text-[var(--text-primary)] motion-reduce:transition-none"
                   >
                     <tab.icon size={20} />
                     <span>{tab.title}</span>
@@ -223,7 +227,7 @@ function DashboardLayoutInner({ children }: Props) {
                   key={tab.title}
                   href={tab.href}
                   aria-current={active ? "page" : undefined}
-                  className={`group relative flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1.5 text-[9px] font-semibold leading-none tracking-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] motion-reduce:transition-none ${
+                  className={`group relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-0.5 py-1.5 text-[10px] font-semibold leading-none tracking-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] motion-reduce:transition-none ${
                     active
                       ? "text-[var(--accent-strong)] font-bold"
                       : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
@@ -233,7 +237,7 @@ function DashboardLayoutInner({ children }: Props) {
                     <motion.span
                       layoutId="mobile-dock-active"
                       className="absolute inset-0 rounded-xl bg-[var(--accent)]/15 border border-[var(--accent)]/30 pointer-events-none"
-                      transition={{ type: "spring", damping: 28, stiffness: 320 }}
+                      transition={reduceMotion ? { duration: 0 } : { type: "spring", damping: 28, stiffness: 320 }}
                     />
                   )}
                   <tab.icon size={19} strokeWidth={active ? 2.5 : 2} className="relative z-10" />

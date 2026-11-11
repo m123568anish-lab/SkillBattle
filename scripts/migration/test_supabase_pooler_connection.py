@@ -9,7 +9,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import quote, unquote, urlsplit
 
-import psycopg2
+try:
+    import psycopg2
+except ModuleNotFoundError:
+    try:
+        import psycopg as psycopg2
+    except ModuleNotFoundError as exc:  # pragma: no cover - exercised only when the driver is absent
+        raise ModuleNotFoundError(
+            "Install psycopg2-binary or psycopg[binary] before running the Supabase pooler diagnostic."
+        ) from exc
+
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from alembic.util.exc import CommandError

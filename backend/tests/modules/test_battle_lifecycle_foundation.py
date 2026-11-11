@@ -47,6 +47,59 @@ async def test_battle_creation_sets_mode_and_server_authoritative_defaults(clien
 
 
 @pytest.mark.asyncio
+async def test_battle_mode_persists_for_solo_and_multiplayer_and_aliases(client, battle_question_bank):
+    unique = f"btlc3_{uuid.uuid4().hex[:8]}"
+    email = f"{unique}@example.com"
+    register = await client.post(
+        "/auth/register",
+        json={
+            "username": unique,
+            "email": email,
+            "full_name": "Mode Persistence Tester",
+            "password": "StrongPass#123",
+        },
+    )
+    assert register.status_code == 201, register.text
+
+    login = await client.post(
+        "/auth/login",
+        json={"email": email, "password": "StrongPass#123"},
+    )
+    assert login.status_code == 200, login.text
+    headers = {"Authorization": f"Bearer {login.json()['tokens']['access_token']}"}
+
+    solo = await client.post(
+        "/battle/create",
+        headers=headers,
+        json={
+            "title": "Solo mode battle",
+            "difficulty": "easy",
+            "problem_id": 1,
+            "battle_type": "general",
+            "battle_mode": "solo",
+            "max_players": 1,
+        },
+    )
+    assert solo.status_code == 200, solo.text
+    assert solo.json()["mode"] == "solo"
+
+    multiplayer = await client.post(
+        "/battle/create",
+        headers=headers,
+        json={
+            "title": "Multiplayer mode battle",
+            "difficulty": "medium",
+            "problem_id": 1,
+            "battle_type": "general",
+            "battle_mode": "multiplayer",
+            "max_players": 2,
+        },
+    )
+    assert multiplayer.status_code == 200, multiplayer.text
+    assert multiplayer.json()["mode"] == "duo"
+
+
+@pytest.mark.asyncio
 async def test_server_start_and_round_transition_protects_invalid_state(client, battle_question_bank):
     unique = f"btlc2_{uuid.uuid4().hex[:8]}"
     email = f"{unique}@example.com"

@@ -119,7 +119,7 @@ export default function BattleDetails({ battleId }: BattleDetailsProps) {
             initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: -8 }}
             animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
             exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: -8 }}
-            className="rounded-3xl border border-[var(--accent)]/40 bg-[var(--surface-card)] p-6 shadow-2xl relative overflow-hidden"
+            className="relative overflow-hidden rounded-[24px] border border-[var(--accent)]/40 bg-[var(--surface-card)] p-4 shadow-xl sm:rounded-3xl sm:p-6"
           >
             <div
               aria-hidden="true"
@@ -148,7 +148,7 @@ export default function BattleDetails({ battleId }: BattleDetailsProps) {
       </AnimatePresence>
 
       {/* Main Room Header */}
-      <SpotlightCard className="p-6 sm:p-7 rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)] shadow-2xl">
+      <SpotlightCard className="rounded-[24px] border border-[var(--border-default)] bg-[var(--surface-card)] p-4 shadow-xl sm:rounded-3xl sm:p-7">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
@@ -157,10 +157,10 @@ export default function BattleDetails({ battleId }: BattleDetailsProps) {
               </p>
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)] mt-1">
+            <h1 className="mt-1 break-words text-xl font-bold tracking-tight text-[var(--text-primary)] sm:text-3xl">
               {battle.title}
             </h1>
-            <p className="mt-1.5 text-xs text-[var(--text-secondary)] font-medium">
+            <p className="mt-1.5 break-words text-[11px] font-medium leading-relaxed text-[var(--text-secondary)] sm:text-xs">
               Mode: <span className="text-[var(--text-primary)] font-semibold capitalize">{battle.difficulty}</span> · Problem #{battle.problem_id} · Status:{" "}
               <span className="font-semibold uppercase tracking-wider text-[var(--accent-strong)]">
                 {battle.status}
@@ -170,7 +170,7 @@ export default function BattleDetails({ battleId }: BattleDetailsProps) {
 
           {/* Animated Countdown Clock */}
           <div
-            className={`rounded-2xl border px-5 py-3 transition-colors duration-200 ${
+            className={`shrink-0 rounded-2xl border px-4 py-2.5 transition-colors duration-200 sm:px-5 sm:py-3 ${
               isUrgentTimer
                 ? "border-rose-500/50 bg-rose-500/15 text-rose-300 animate-pulse shadow-[0_0_16px_rgba(244,63,94,0.3)]"
                 : "border-[var(--border-default)] bg-[var(--surface-elevated)] text-[var(--text-primary)]"
@@ -186,9 +186,9 @@ export default function BattleDetails({ battleId }: BattleDetailsProps) {
         </div>
       </SpotlightCard>
 
-      <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="space-y-6">
-          <div className="rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6 shadow-xl">
+      <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr] sm:gap-6">
+        <div className="space-y-4 sm:space-y-6">
+          <div className="rounded-[24px] border border-[var(--border-default)] bg-[var(--surface-card)] p-4 shadow-lg sm:rounded-3xl sm:p-6 sm:shadow-xl">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <h3 className="text-lg font-bold text-[var(--text-primary)]">Challenge Overview</h3>
@@ -216,8 +216,8 @@ export default function BattleDetails({ battleId }: BattleDetailsProps) {
           </div>
 
           {/* Live Scoreboard */}
-          <div className="rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6 shadow-xl">
-            <div className="flex items-center justify-between gap-3">
+          <div className="rounded-[24px] border border-[var(--border-default)] bg-[var(--surface-card)] p-4 shadow-lg sm:rounded-3xl sm:p-6 sm:shadow-xl">
+            <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center sm:gap-3">
               <div>
                 <h3 className="text-lg font-bold text-[var(--text-primary)]">Live Scoreboard</h3>
                 <p className="mt-1 text-xs text-[var(--text-secondary)]">
@@ -260,8 +260,8 @@ export default function BattleDetails({ battleId }: BattleDetailsProps) {
         </div>
 
         {/* Feed & Interaction */}
-        <div className="space-y-6">
-          <div className="rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6 shadow-xl">
+        <div className="space-y-4 sm:space-y-6">
+          <div className="rounded-[24px] border border-[var(--border-default)] bg-[var(--surface-card)] p-4 shadow-lg sm:rounded-3xl sm:p-6 sm:shadow-xl">
             <h3 className="text-lg font-bold text-[var(--text-primary)]">Battle Feed & Terminal</h3>
             <p className="mt-1 text-xs text-[var(--text-secondary)] mb-4">
               Real-time telemetry and execution output.
@@ -269,7 +269,7 @@ export default function BattleDetails({ battleId }: BattleDetailsProps) {
             <BattleDetailClient id={battleId} problemId={battle.problem_id} />
           </div>
 
-          <div className="rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6 shadow-xl">
+          <div className="rounded-[24px] border border-[var(--border-default)] bg-[var(--surface-card)] p-4 shadow-lg sm:rounded-3xl sm:p-6 sm:shadow-xl">
             <h3 className="text-lg font-bold text-[var(--text-primary)]">Strategic Guidelines</h3>
             <ul className="mt-3.5 space-y-2 text-xs text-[var(--text-secondary)]">
               <li className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-3.5 py-2.5">
@@ -290,13 +290,13 @@ export default function BattleDetails({ battleId }: BattleDetailsProps) {
       <div className="flex flex-col gap-3 sm:flex-row pt-2">
         <button
           onClick={() => router.push("/battle")}
-          className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] px-5 py-2.5 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[var(--accent)]/50 hover:bg-[var(--surface-elevated)]"
+          className="min-h-11 rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] px-5 py-2.5 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[var(--accent)]/50 hover:bg-[var(--surface-elevated)]"
         >
           Back to Battle Arena
         </button>
         <button
           onClick={handleLeave}
-          className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-5 py-2.5 text-xs font-semibold text-rose-300 transition hover:bg-rose-500/20 hover:border-rose-400/50"
+          className="min-h-11 rounded-xl border border-rose-500/30 bg-rose-500/10 px-5 py-2.5 text-xs font-semibold text-rose-300 transition hover:bg-rose-500/20 hover:border-rose-400/50"
         >
           Leave Battle
         </button>

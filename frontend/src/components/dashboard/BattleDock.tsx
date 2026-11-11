@@ -4,12 +4,11 @@ import { useState, useCallback, memo } from "react";
 import { useRouter } from "next/navigation";
 import { Sword, Users, Play, Zap } from "lucide-react";
 import { motion } from "framer-motion";
-import GradientButton from "@/components/ui/gradient-button";
 
 const BATTLE_MODES = [
-  { id: "matchmaking", title: "Find a player", icon: Sword, desc: "Join the server-managed battle queue.", color: "from-rose-500 to-pink-600" },
-  { id: "room", title: "Create or join a room", icon: Users, desc: "Create a persisted room or join with its battle ID.", color: "from-violet-500 to-purple-600" },
-  { id: "practice", title: "Solo practice", icon: Play, desc: "Open the available individual practice workflows.", color: "from-emerald-500 to-teal-600" }
+  { id: "matchmaking", title: "Find a player", icon: Sword, desc: "Join the server-managed battle queue.", color: "from-[#D8FF3E] to-[#EAFCCB]" },
+  { id: "room", title: "Create or join a room", icon: Users, desc: "Create a persisted room or join with its battle ID.", color: "from-[#151515] to-[#252525]" },
+  { id: "practice", title: "Solo practice", icon: Play, desc: "Open the available individual practice workflows.", color: "from-[#D8FF3E]/30 to-[#D8FF3E]/10" }
 ];
 
 const ModeCard = memo(function ModeCard({
@@ -25,45 +24,41 @@ const ModeCard = memo(function ModeCard({
   
   return (
     <motion.button
+      type="button"
+      aria-pressed={isSelected}
       onClick={onSelect}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
-      className={`text-left rounded-2xl border transition-all duration-300 flex flex-col justify-between h-full relative overflow-hidden group ${
+      className={`relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border text-left transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#D8FF3E] ${
         isSelected
-          ? "border-cyan-500 bg-gradient-to-br from-cyan-500/15 to-cyan-600/5 shadow-[0_0_20px_rgba(6,182,212,0.2)]"
-          : "border-white/10 bg-gradient-to-br from-white/5 to-white/0 hover:border-white/20 hover:bg-white/[0.08]"
+          ? "border-[#D8FF3E]/40 bg-[#101010]"
+          : "border-[#252525] bg-[#0B0B0B] hover:border-[#D8FF3E]/25 hover:bg-[#101010]"
       }`}
     >
-      {/* Animated glow on hover */}
-      <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-cyan-400 to-transparent rounded-full opacity-0 group-hover:opacity-20 transition-opacity duration-500 blur-3xl" />
-
-      {/* Card content */}
-      <div className="p-4 relative z-10 space-y-3">
-        <div className="flex justify-between items-start w-full">
-          <div className={`rounded-xl p-2.5 border transition-all ${
+      <div className="relative z-10 space-y-3 p-4">
+        <div className="flex w-full items-start justify-between">
+          <div className={`rounded-xl border p-2.5 transition-colors ${
             isSelected
-              ? `border-cyan-400/50 text-white bg-gradient-to-br ${mode.color}`
-              : "border-white/10 text-slate-400 bg-white/5 group-hover:text-slate-300"
+              ? `border-[#D8FF3E]/40 bg-gradient-to-br ${mode.color} text-[#101010]`
+              : "border-[#252525] bg-[#101010] text-[#A1A1AA]"
           }`}>
             <Icon size={18} />
           </div>
+          {isSelected && (
+            <span className="rounded-full border border-[#D8FF3E]/30 bg-[#D8FF3E]/10 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-[#D8FF3E]">
+              Selected
+            </span>
+          )}
         </div>
 
         <div>
-          <h4 className={`text-sm font-black tracking-tight transition-colors ${
-            isSelected ? "text-white" : "text-slate-200 group-hover:text-white"
-          }`}>
+          <h4 className="text-sm font-black tracking-tight text-[#F5F5F5]">
             {mode.title}
           </h4>
-          <p className={`text-xs leading-snug mt-1 line-clamp-2 transition-colors ${
-            isSelected
-              ? "text-cyan-200/70"
-              : "text-slate-400 group-hover:text-slate-300"
-          }`}>
+          <p className="mt-1 text-xs leading-snug text-[#A1A1AA]">
             {mode.desc}
           </p>
         </div>
-
       </div>
     </motion.button>
   );
@@ -88,37 +83,31 @@ export default memo(function BattleDock() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#0F172A]/40 via-[#070B14]/60 to-[#050816]/80 p-6 sm:p-8 shadow-2xl relative overflow-hidden"
+      className="relative overflow-hidden rounded-[28px] border border-[#252525] bg-[#101010] p-6 shadow-[0_18px_50px_rgba(0,0,0,0.2)] sm:p-8"
     >
-      {/* Gradient overlays */}
-      <div className="absolute bottom-0 left-1/4 h-32 w-64 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
-      <div className="absolute top-0 right-1/4 h-40 w-96 rounded-full bg-violet-500/10 blur-3xl pointer-events-none" />
-
-      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="mb-8 flex items-center gap-3 relative z-10"
+        className="relative z-10 mb-6 flex items-center gap-3 border-b border-[#252525] pb-5"
       >
-        <div className="p-3 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-violet-500/20 border border-cyan-500/30">
-          <Sword size={20} className="text-cyan-400" />
+        <div className="rounded-2xl border border-[#D8FF3E]/25 bg-[#D8FF3E]/10 p-3">
+          <Sword size={20} className="text-[#D8FF3E]" />
         </div>
         <div>
-          <h3 className="text-sm font-black uppercase tracking-wider text-cyan-400 flex items-center gap-2">
-            <Zap size={14} className="animate-pulse" /> Battle Arena Modes
+          <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-[#F5F5F5]">
+            <Zap size={14} className="text-[#D8FF3E]" /> Battle Arena Modes
           </h3>
-          <p className="text-xs text-slate-400 mt-1">Choose a supported battle workflow</p>
+          <p className="mt-1 text-xs text-[#A1A1AA]">Choose a supported battle workflow</p>
         </div>
       </motion.div>
 
-      <div className="grid gap-6 lg:grid-cols-12 items-stretch relative z-10">
-        {/* Mode Selector Grid */}
+      <div className="relative z-10 grid items-stretch gap-4 lg:grid-cols-12">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="lg:col-span-8 grid gap-3 sm:grid-cols-2"
+          className="grid gap-3 sm:grid-cols-2 lg:col-span-8"
         >
           {BATTLE_MODES.map((mode, index) => (
             <motion.div
@@ -136,34 +125,35 @@ export default memo(function BattleDock() {
           ))}
         </motion.div>
 
-        {/* Selected workflow */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3 }}
-          className="lg:col-span-4 rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/60 to-slate-950/40 p-5 sm:p-6 space-y-5 flex flex-col"
+          className="flex flex-col space-y-5 rounded-2xl border border-[#252525] bg-[#0B0B0B] p-5 sm:p-6 lg:col-span-4"
         >
-          {/* Mode info card */}
           {selectedModeData && (
             <motion.div
               key={selectedModeData.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-xl bg-gradient-to-br from-cyan-500/10 to-violet-500/10 border border-cyan-500/30 p-3 text-xs"
+              className="rounded-xl border border-[#252525] bg-[#101010] p-4 text-xs"
             >
-              <p className="text-slate-300">
-                <span className="font-bold text-cyan-300">Selected:</span> {selectedModeData.title}
+              <p className="text-[#A1A1AA]">
+                <span className="font-bold text-[#D8FF3E]">Selected workflow</span>
               </p>
-              <p className="text-slate-400 mt-1">{selectedModeData.desc}</p>
+              <p className="mt-2 text-sm font-bold text-[#F5F5F5]">{selectedModeData.title}</p>
+              <p className="mt-1 leading-relaxed text-[#A1A1AA]">{selectedModeData.desc}</p>
             </motion.div>
           )}
 
-          <GradientButton onClick={handleStartBattle} fullWidth className="mt-auto">
-            <span className="flex items-center justify-center gap-2 font-black text-sm tracking-wide">
-              <Zap size={16} />
-              {selectedMode === "practice" ? "OPEN PRACTICE" : "OPEN BATTLE LOBBY"}
-            </span>
-          </GradientButton>
+          <button
+            type="button"
+            onClick={handleStartBattle}
+            className="mt-auto inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#D8FF3E] px-4 py-3 text-sm font-black tracking-wide text-[#101010] transition-colors hover:bg-[#EAFCCB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#D8FF3E]"
+          >
+            <Zap size={16} />
+            {selectedMode === "practice" ? "OPEN PRACTICE" : "OPEN BATTLE LOBBY"}
+          </button>
         </motion.div>
       </div>
     </motion.div>

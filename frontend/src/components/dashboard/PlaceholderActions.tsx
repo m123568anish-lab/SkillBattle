@@ -3,7 +3,6 @@
 import type { LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, BarChart3, Calendar, Trophy, User, Sparkles } from "lucide-react";
-import GradientButton from "@/components/ui/gradient-button";
 
 const ICONS = {
   barChart3: BarChart3,
@@ -35,27 +34,28 @@ export default function PlaceholderActions({ actions }: PlaceholderActionsProps)
         return (
           <div
             key={action.title}
-            className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-violet-950/10"
+            className="rounded-[24px] border border-[#252525] bg-[#101010] p-6"
           >
             <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-400">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#D8FF3E]/25 bg-[#D8FF3E]/10 text-[#D8FF3E]">
                 <Icon className="h-6 w-6" />
               </div>
 
               <div>
-                <h2 className="text-xl font-bold text-white">{action.title}</h2>
-                <p className="mt-1 text-sm text-slate-400">{action.description}</p>
+                <h2 className="text-xl font-bold text-[#F5F5F5]">{action.title}</h2>
+                <p className="mt-1 text-sm text-[#A1A1AA]">{action.description}</p>
               </div>
             </div>
 
             <div className="mt-6">
-              <GradientButton
+              <button
+                type="button"
                 onClick={() => router.push(action.href)}
-                className="w-full justify-between"
+                className="inline-flex min-h-11 w-full items-center justify-between rounded-xl bg-[#D8FF3E] px-4 py-2.5 text-sm font-bold text-[#101010] transition hover:bg-[#EAFCCB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#D8FF3E]"
               >
                 Explore
                 <ArrowRight size={18} className="ml-2" />
-              </GradientButton>
+              </button>
             </div>
           </div>
         );

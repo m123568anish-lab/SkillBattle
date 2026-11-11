@@ -55,6 +55,15 @@ class BattleService:
     # Create Battle Room
     # ==========================================================
 
+    @staticmethod
+    def normalize_mode(mode: str | None) -> str:
+        value = (mode or "solo").strip().lower()
+        if value == "multiplayer":
+            return "duo"
+        if value in {"solo", "duo", "squad"}:
+            return value
+        return "solo"
+
     async def create_battle(
         self,
         db: AsyncSession,
@@ -66,6 +75,9 @@ class BattleService:
     ) -> BattleRoom:
 
         battle_type_val = request.battle_type.value if hasattr(request.battle_type, "value") else str(request.battle_type)
+        battle_mode_val = self.normalize_mode(
+            request.battle_mode.value if hasattr(request.battle_mode, "value") else str(request.battle_mode)
+        )
 
         # Resolve Configuration Template or Database Config
         sections_config = []
@@ -130,6 +142,8 @@ class BattleService:
             config_id=request.config_id,
             title=request.title,
             battle_type=battle_type_val,
+            battle_mode=battle_mode_val,
+            creator_id=current_user.id,
             difficulty=difficulty,
             problem_id=request.problem_id,
             max_players=request.max_players,
@@ -409,6 +423,7 @@ class BattleService:
             title="Daily Battle",
             difficulty="medium",
             battle_type=BattleTypeEnum.PRACTICE,
+            battle_mode="solo",
             max_players=1,
         )
         return await self.create_battle(db, current_user, request)
@@ -661,6 +676,8 @@ class BattleService:
             battle = BattleRoom(
                 title=f"{current_user.username} vs Friend Duel",
                 battle_type=battle_type_val,
+                battle_mode=self.normalize_mode(getattr(request, "mode", None) or "duo"),
+                creator_id=current_user.id,
                 difficulty=request.difficulty or tmpl["difficulty"],
                 problem_id=1,
                 sections_config=tmpl["sections"],
@@ -696,6 +713,8 @@ class BattleService:
         battle = BattleRoom(
             title=f"{request.difficulty.capitalize()} {battle_type_val.capitalize()} Battle",
             battle_type=battle_type_val,
+            battle_mode=self.normalize_mode(getattr(request, "mode", None) or "duo"),
+            creator_id=None,
             difficulty=request.difficulty,
             problem_id=1,
             sections_config=tmpl["sections"],

@@ -311,6 +311,7 @@ async def test_neon_identity_link_rejects_wrong_password_and_two_factor(client, 
     async with AsyncSessionLocal() as db:
         user = await db.get(User, user_id)
         assert user is not None
+        assert user.neon_user_id is None
         user.two_factor_enabled = True
         await db.commit()
 
@@ -320,3 +321,65 @@ async def test_neon_identity_link_rejects_wrong_password_and_two_factor(client, 
         json={"password": password},
     )
     assert two_factor_account.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_neon_identity_link_conflicts_preserve_existing_user_mappings(client, monkeypatch):
+    unique_id = uuid4().hex[:8]
+    password = "StrongPass#123"
+    first_email = f"mapped_first_{unique_id}@example.com"
+    second_email = f"mapped_second_{unique_id}@example.com"
+    first_registration = await client.post("/auth/register", json={
+        "username": f"mapped_first_{unique_id}",
+        "email": first_email,
+        "full_name": "First Legacy Account",
+        "password": password,
+    })
+    second_registration = await client.post("/auth/register", json={
+        "username": f"mapped_second_{unique_id}",
+        "email": second_email,
+        "full_name": "Second Legacy Account",
+        "password": password,
+    })
+    assert first_registration.status_code == 201, first_registration.text
+    assert second_registration.status_code == 201, second_registration.text
+    first_user_id = first_registration.json()["id"]
+    second_user_id = second_registration.json()["id"]
+    existing_neon_id = f"neon_existing_{unique_id}"
+    requested_neon_id = f"neon_requested_{unique_id}"
+
+    async with AsyncSessionLocal() as db:
+        first_user = await db.get(User, first_user_id)
+        assert first_user is not None
+        first_user.neon_user_id = existing_neon_id
+        await db.commit()
+
+    async def verify_token(token: str) -> dict:
+        if token == "different-neon-identity":
+            return {"sub": requested_neon_id, "email": first_email}
+        if token == "identity-owned-by-first-user":
+            return {"sub": existing_neon_id, "email": second_email}
+        pytest.fail(f"Unexpected token in identity-link regression test: {token}")
+
+    monkeypatch.setattr("app.modules.auth.router.verify_neon_token", verify_token)
+    replace_mapping = await client.post(
+        "/auth/neon/link",
+        headers={"Authorization": "Bearer different-neon-identity"},
+        json={"password": password},
+    )
+    assert replace_mapping.status_code == 409
+
+    reuse_mapping = await client.post(
+        "/auth/neon/link",
+        headers={"Authorization": "Bearer identity-owned-by-first-user"},
+        json={"password": password},
+    )
+    assert reuse_mapping.status_code == 409
+
+    async with AsyncSessionLocal() as db:
+        first_user = await db.get(User, first_user_id)
+        second_user = await db.get(User, second_user_id)
+        assert first_user is not None
+        assert second_user is not None
+        assert first_user.neon_user_id == existing_neon_id
+        assert second_user.neon_user_id is None

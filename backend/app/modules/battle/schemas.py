@@ -40,6 +40,7 @@ class BattleStateEnum(str, Enum):
 class BattleModeEnum(str, Enum):
     SOLO = "solo"
     DUO = "duo"
+    MULTIPLAYER = "multiplayer"
     SQUAD = "squad"
 
 

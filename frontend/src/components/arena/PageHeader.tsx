@@ -22,18 +22,18 @@ export function PageHeader({
 }: PageHeaderProps) {
   const accentGradient = {
     practice: "from-indigo-400 via-sky-300 to-indigo-200",
-    battle: "from-purple-400 via-fuchsia-300 to-amber-300",
+    battle: "from-[#D8FF3E] via-[#EAFCCB] to-[#A1A1AA]",
     neutral: "from-white via-slate-200 to-slate-400",
   }[theme];
 
   return (
-    <div className={`space-y-3 pb-4 border-b border-white/[0.08] ${className}`}>
+    <div className={`space-y-3 border-b border-[#252525] pb-4 ${className}`}>
       {breadcrumbs && <Breadcrumbs items={breadcrumbs} className="mb-2" />}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
             <h1
-              className={`text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r ${accentGradient} bg-clip-text text-transparent`}
+              className={`break-words text-2xl font-extrabold tracking-tight bg-gradient-to-r ${accentGradient} bg-clip-text text-transparent sm:text-3xl`}
             >
               {title}
             </h1>

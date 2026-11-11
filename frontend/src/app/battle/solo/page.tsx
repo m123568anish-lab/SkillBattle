@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
   PageHeader,
@@ -19,6 +19,9 @@ import { practiceService } from "@/services/practice.service";
 
 export default function SoloBattleSelectionPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const preferredMode = (searchParams.get("mode") || "mcq").toLowerCase();
 
   // MCQ Config state
   const [mcqCategory, setMcqCategory] = useState("Algorithms & Data Structures");
@@ -29,6 +32,13 @@ export default function SoloBattleSelectionPage() {
   const [codingDifficulty, setCodingDifficulty] = useState("Medium");
   const [codingLanguage, setCodingLanguage] = useState("python");
   const [creatingBattle, setCreatingBattle] = useState(false);
+  const [activeMode, setActiveMode] = useState<"mcq" | "coding">(
+    preferredMode === "coding" ? "coding" : "mcq",
+  );
+
+  useEffect(() => {
+    setActiveMode(preferredMode === "coding" ? "coding" : "mcq");
+  }, [preferredMode]);
 
   const handleStartMcq = () => {
     const params = new URLSearchParams({
@@ -36,7 +46,7 @@ export default function SoloBattleSelectionPage() {
       difficulty: mcqDifficulty.toLowerCase(),
       count: String(mcqQuestionsCount),
     });
-    router.push(`/practice/session?${params.toString()}`);
+    router.push(`/battle/solo/mcq?${params.toString()}`);
   };
 
   const handleStartCoding = async () => {
@@ -72,7 +82,7 @@ export default function SoloBattleSelectionPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8 pb-12">
+      <div className="space-y-6 pb-12 sm:space-y-8">
         <PageHeader
           title="Solo Challenges"
           subtitle="Practice with database-backed MCQ questions or create a server-managed coding challenge."
@@ -86,37 +96,53 @@ export default function SoloBattleSelectionPage() {
         <BattleNav />
 
         {/* Two Large Distinct Mode Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-8">
           {/* Card 1: MCQ Practice */}
-          <div className="relative flex flex-col justify-between space-y-6 overflow-hidden rounded-3xl border border-purple-500/30 bg-[var(--surface-card)] p-6 shadow-2xl sm:p-8">
+          <section
+            aria-labelledby="solo-mcq-title"
+            className={`relative flex flex-col justify-between space-y-5 overflow-hidden rounded-[24px] border p-4 transition-colors sm:space-y-6 sm:rounded-3xl sm:p-8 ${
+              activeMode === "mcq"
+                ? "border-[#D8FF3E]/45 bg-[#101010] ring-1 ring-[#D8FF3E]/20"
+                : "border-[#252525] bg-[#101010]"
+            }`}
+          >
             <div className="space-y-5">
-              <div className="flex items-center justify-between">
-                <div className="rounded-2xl border border-purple-500/40 bg-purple-500/10 p-3 text-purple-300">
+              <div className="flex items-center justify-between gap-3">
+                <div className="rounded-2xl border border-[#D8FF3E]/30 bg-[#D8FF3E]/10 p-3 text-[#D8FF3E]">
                   <BookOpen className="h-6 w-6" />
                 </div>
-                <span className="rounded-full border border-purple-500/40 bg-purple-500/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-purple-300">
-                  Question practice
-                </span>
+                <button
+                  type="button"
+                  aria-pressed={activeMode === "mcq"}
+                  onClick={() => setActiveMode("mcq")}
+                  className={`min-h-10 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors sm:text-xs ${
+                    activeMode === "mcq"
+                      ? "border-[#D8FF3E]/40 bg-[#D8FF3E]/10 text-[#D8FF3E]"
+                      : "border-[#252525] bg-[#0B0B0B] text-[#A1A1AA] hover:text-[#F5F5F5]"
+                  }`}
+                >
+                  {activeMode === "mcq" ? "Selected mode" : "Select MCQ"}
+                </button>
               </div>
 
               <div>
-                <h2 className="text-2xl font-black text-white">MCQ Practice</h2>
-                <p className="mt-1 text-xs sm:text-sm text-slate-300 leading-relaxed">
+                <h2 id="solo-mcq-title" className="text-xl font-black text-[#F5F5F5] sm:text-2xl">MCQ Practice</h2>
+                <p className="mt-1 text-xs leading-relaxed text-[#A1A1AA] sm:text-sm">
                   Answer eligible questions from the database. Your submitted answers and qualifying rewards are saved to your account.
                 </p>
               </div>
 
               {/* Configuration Controls */}
-              <div className="space-y-4 pt-2 border-t border-white/[0.08]">
+              <div className="space-y-4 border-t border-[#252525] pt-4">
                 {/* Category Selection */}
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-[#A1A1AA]">
                     Category Track
                   </label>
                   <select
                     value={mcqCategory}
                     onChange={(e) => setMcqCategory(e.target.value)}
-                    className="min-h-11 w-full rounded-xl border border-white/10 bg-black/50 px-3.5 py-2.5 text-xs font-semibold text-white focus:border-purple-500 focus:outline-none"
+                    className="min-h-12 w-full rounded-xl border border-[#252525] bg-[#050505] px-3.5 py-2.5 text-xs font-semibold text-[#F5F5F5] focus:border-[#D8FF3E]/60 focus:outline-none"
                   >
                     <option value="Algorithms & Data Structures">Algorithms & Data Structures</option>
                     <option value="System Design & Caching">System Design & Caching</option>
@@ -128,7 +154,7 @@ export default function SoloBattleSelectionPage() {
                 {/* Difficulty and question count */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-[#A1A1AA]">
                       Difficulty
                     </label>
                     <div className="flex items-center gap-1.5">
@@ -136,11 +162,12 @@ export default function SoloBattleSelectionPage() {
                         <button
                           key={d}
                           type="button"
+                          aria-pressed={mcqDifficulty === d}
                           onClick={() => setMcqDifficulty(d)}
-                          className={`min-h-11 flex-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          className={`min-h-11 flex-1 rounded-lg text-xs font-bold transition-colors ${
                             mcqDifficulty === d
-                              ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
-                              : "border border-white/10 bg-white/[0.04] text-slate-400 hover:text-white"
+                              ? "border border-[#D8FF3E]/40 bg-[#D8FF3E] text-[#101010]"
+                              : "border border-[#252525] bg-[#0B0B0B] text-[#A1A1AA] hover:text-[#F5F5F5]"
                           }`}
                         >
                           {d}
@@ -150,13 +177,13 @@ export default function SoloBattleSelectionPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-[#A1A1AA]">
                       Number of questions
                     </label>
                     <select
                       value={mcqQuestionsCount}
                       onChange={(event) => setMcqQuestionsCount(Number(event.target.value))}
-                      className="min-h-11 w-full rounded-lg border border-white/10 bg-black/50 px-3 py-2 text-xs font-bold text-white focus:border-purple-500 focus:outline-none"
+                      className="min-h-11 w-full rounded-lg border border-[#252525] bg-[#050505] px-3 py-2 text-xs font-bold text-[#F5F5F5] focus:border-[#D8FF3E]/60 focus:outline-none"
                     >
                       {[5, 10, 20].map((count) => (
                         <option key={count} value={count}>{count}</option>
@@ -172,38 +199,54 @@ export default function SoloBattleSelectionPage() {
               <button
                 type="button"
                 onClick={handleStartMcq}
-                className="min-h-12 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-6 py-4 text-sm font-black text-white shadow-xl shadow-purple-600/30 hover:scale-[1.01] hover:shadow-purple-500/40 transition-all cursor-pointer"
+                className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#D8FF3E] px-4 py-3 text-sm font-black text-[#101010] transition-colors hover:bg-[#EAFCCB] sm:rounded-2xl sm:px-6 sm:py-4"
               >
                 <Play className="h-4 w-4 fill-current" />
                 <span>Start MCQ Practice ({mcqQuestionsCount} Questions)</span>
               </button>
             </div>
-          </div>
+          </section>
 
           {/* Card 2: Coding Solo Battle */}
-          <div className="relative flex flex-col justify-between space-y-6 overflow-hidden rounded-3xl border border-cyan-500/30 bg-[var(--surface-card)] p-6 shadow-2xl sm:p-8">
+          <section
+            aria-labelledby="solo-coding-title"
+            className={`relative flex flex-col justify-between space-y-5 overflow-hidden rounded-[24px] border p-4 transition-colors sm:space-y-6 sm:rounded-3xl sm:p-8 ${
+              activeMode === "coding"
+                ? "border-[#D8FF3E]/45 bg-[#101010] ring-1 ring-[#D8FF3E]/20"
+                : "border-[#252525] bg-[#101010]"
+            }`}
+          >
             <div className="space-y-5">
-              <div className="flex items-center justify-between">
-                <div className="rounded-2xl border border-cyan-500/40 bg-cyan-500/10 p-3 text-cyan-300">
+              <div className="flex items-center justify-between gap-3">
+                <div className="rounded-2xl border border-[#D8FF3E]/30 bg-[#D8FF3E]/10 p-3 text-[#D8FF3E]">
                   <Code2 className="h-6 w-6" />
                 </div>
-                <span className="rounded-full border border-cyan-500/40 bg-cyan-500/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-cyan-300">
-                  Full IDE Suite
-                </span>
+                <button
+                  type="button"
+                  aria-pressed={activeMode === "coding"}
+                  onClick={() => setActiveMode("coding")}
+                  className={`min-h-10 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors sm:text-xs ${
+                    activeMode === "coding"
+                      ? "border-[#D8FF3E]/40 bg-[#D8FF3E]/10 text-[#D8FF3E]"
+                      : "border-[#252525] bg-[#0B0B0B] text-[#A1A1AA] hover:text-[#F5F5F5]"
+                  }`}
+                >
+                  {activeMode === "coding" ? "Selected mode" : "Select coding"}
+                </button>
               </div>
 
               <div>
-                <h2 className="text-2xl font-black text-white">Algorithmic Coding Battle</h2>
-                <p className="mt-1 text-xs sm:text-sm text-slate-300 leading-relaxed">
+                <h2 id="solo-coding-title" className="text-xl font-black text-[#F5F5F5] sm:text-2xl">Algorithmic Coding Battle</h2>
+                <p className="mt-1 text-xs leading-relaxed text-[#A1A1AA] sm:text-sm">
                   Solve LeetCode-style algorithmic challenges in our Monaco IDE. Run test cases against hidden unit tests and submit before the clock expires.
                 </p>
               </div>
 
               {/* Configuration Controls */}
-              <div className="space-y-4 pt-2 border-t border-white/[0.08]">
+              <div className="space-y-4 border-t border-[#252525] pt-4">
                 {/* Language Picker */}
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-[#A1A1AA]">
                     Programming Language
                   </label>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -216,11 +259,12 @@ export default function SoloBattleSelectionPage() {
                       <button
                         key={lang.id}
                         type="button"
+                        aria-pressed={codingLanguage === lang.id}
                         onClick={() => setCodingLanguage(lang.id)}
-                        className={`min-h-11 rounded-xl px-2 text-xs font-bold transition-all cursor-pointer ${
+                        className={`min-h-11 rounded-xl border px-2 text-xs font-bold transition-colors ${
                           codingLanguage === lang.id
-                            ? "bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30"
-                            : "border border-white/10 bg-white/[0.04] text-slate-300 hover:text-white"
+                            ? "border-[#D8FF3E]/40 bg-[#D8FF3E] text-[#101010]"
+                            : "border-[#252525] bg-[#0B0B0B] text-[#A1A1AA] hover:text-[#F5F5F5]"
                         }`}
                       >
                         {lang.label}
@@ -231,7 +275,7 @@ export default function SoloBattleSelectionPage() {
 
                 {/* Difficulty */}
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-[#A1A1AA]">
                     Challenge Difficulty
                   </label>
                   <div className="flex items-center gap-2">
@@ -239,11 +283,12 @@ export default function SoloBattleSelectionPage() {
                       <button
                         key={d}
                         type="button"
+                        aria-pressed={codingDifficulty === d}
                         onClick={() => setCodingDifficulty(d)}
-                        className={`min-h-11 flex-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        className={`min-h-11 flex-1 rounded-lg border text-xs font-bold transition-colors ${
                           codingDifficulty === d
-                            ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
-                            : "border border-white/10 bg-white/[0.04] text-slate-400 hover:text-white"
+                            ? "border-[#D8FF3E]/40 bg-[#D8FF3E]/10 text-[#D8FF3E]"
+                            : "border-[#252525] bg-[#0B0B0B] text-[#A1A1AA] hover:text-[#F5F5F5]"
                         }`}
                       >
                         {d}
@@ -260,19 +305,19 @@ export default function SoloBattleSelectionPage() {
                 type="button"
                 onClick={handleStartCoding}
                 disabled={creatingBattle}
-                className="min-h-12 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 px-6 py-4 text-sm font-black text-slate-950 shadow-xl shadow-cyan-500/25 hover:scale-[1.01] hover:shadow-cyan-400/40 transition-all cursor-pointer"
+                className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#D8FF3E] px-4 py-3 text-sm font-black text-[#101010] transition-colors hover:bg-[#EAFCCB] disabled:cursor-not-allowed disabled:opacity-60 sm:rounded-2xl sm:px-6 sm:py-4"
               >
                 <Play className="h-4 w-4 fill-current" />
                 <span>{creatingBattle ? "Creating battle..." : `Launch Coding IDE (${codingDifficulty})`}</span>
               </button>
             </div>
-          </div>
+          </section>
         </div>
 
         {/* Rules & Guidelines */}
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 space-y-3 text-xs text-slate-400">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <ShieldAlert className="h-4 w-4 text-amber-400" />
+        <div className="space-y-3 rounded-2xl border border-[#252525] bg-[#101010] p-4 text-xs text-[#A1A1AA] sm:p-6">
+          <h3 className="flex items-center gap-2 text-sm font-bold text-[#F5F5F5]">
+            <ShieldAlert className="h-4 w-4 text-[#F0BC58]" />
             <span>Solo Battle Rules & Rating Invariants</span>
           </h3>
           <p className="leading-relaxed">
