@@ -249,6 +249,20 @@ def ensure_database_compatibility() -> None:
                     "Automatic schema creation and repair are disabled; "
                     "use the authorized migration coordinator."
                 )
+            accepted_compatibilities = report.get(
+                "schema_compatibility_exceptions", []
+            )
+            if accepted_compatibilities:
+                rule_ids = [
+                    item.get("rule_id", "unknown")
+                    for item in accepted_compatibilities
+                    if isinstance(item, dict)
+                ]
+                logger.warning(
+                    "PostgreSQL preflight accepted explicitly allowlisted "
+                    "legacy schema compatibility rule(s): %s",
+                    rule_ids,
+                )
             logger.info("PostgreSQL schema preflight completed without writes.")
             return
 

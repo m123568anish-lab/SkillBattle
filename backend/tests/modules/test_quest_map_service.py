@@ -64,6 +64,7 @@ async def test_quest_battle_cannot_complete_before_every_question(monkeypatch):
     battle = SimpleNamespace(
         id="quest-battle",
         adaptive_owner_id=None,
+        sections_config=[],
         questions_data=[{"questions": [{"id": 101}, {"id": 102}]}],
         started_at=None,
         status="running",

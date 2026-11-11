@@ -64,6 +64,7 @@ async def test_daily_battle_cannot_finish_until_every_question_is_submitted(monk
     battle = SimpleNamespace(
         id="daily-battle",
         adaptive_owner_id="student-id",
+        sections_config=[],
         questions_data=[
             {"questions": [{"id": 101}, {"id": 102}]},
         ],

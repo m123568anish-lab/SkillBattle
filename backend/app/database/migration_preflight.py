@@ -90,13 +90,134 @@ def _compare_server_default(
     return inspected_value != metadata_value
 
 
-def compare_model_schema(connection: Connection) -> list[dict[str, object]]:
+_LEGACY_AUDIT_ORGANIZATION_INDEX = {
+    "operation": "remove_index",
+    "table": "audit_logs",
+    "name": "ix_audit_logs_organization_id",
+    "columns": ["organization_id"],
+}
+_MODEL_AUDIT_ORGANIZATION_INDEX = {
+    "operation": "add_index",
+    "table": "audit_logs",
+    "name": "ix_audit_logs_organization_id",
+    "columns": ["organization_type", "organization_id"],
+}
+
+
+def _apply_schema_compatibility_rules(
+    connection: Connection,
+    differences: list[dict[str, object]],
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    """Allow only the verified pre-composite audit index left by legacy installs."""
+    if (
+        differences.count(_LEGACY_AUDIT_ORGANIZATION_INDEX) != 1
+        or differences.count(_MODEL_AUDIT_ORGANIZATION_INDEX) != 1
+    ):
+        return differences, []
+
+    inspector = inspect(connection)
+    indexes = (
+        inspector.get_indexes("audit_logs", schema="public")
+        if connection.dialect.name == "postgresql"
+        else inspector.get_indexes("audit_logs")
+    )
+    legacy_index = next(
+        (
+            index
+            for index in indexes
+            if index.get("name") == "ix_audit_logs_organization_id"
+        ),
+        None,
+    )
+    if legacy_index is None or (
+        legacy_index.get("column_names") != ["organization_id"]
+        or legacy_index.get("unique") not in (False, 0)
+    ):
+        return differences, []
+
+    dialect_options = legacy_index.get("dialect_options") or {}
+    if (
+        dialect_options.get("postgresql_where") is not None
+        or dialect_options.get("postgresql_using", "btree") != "btree"
+        or dialect_options.get("postgresql_include")
+    ):
+        return differences, []
+    if connection.dialect.name == "postgresql":
+        usable = connection.execute(
+            text(
+                "SELECT index_state.indisvalid AND index_state.indisready "
+                "AND index_state.indislive "
+                "AND index_state.indpred IS NULL "
+                "AND index_state.indexprs IS NULL "
+                "FROM pg_catalog.pg_index AS index_state "
+                "JOIN pg_catalog.pg_class AS index_class "
+                "ON index_class.oid = index_state.indexrelid "
+                "JOIN pg_catalog.pg_class AS table_class "
+                "ON table_class.oid = index_state.indrelid "
+                "JOIN pg_catalog.pg_namespace AS table_schema "
+                "ON table_schema.oid = table_class.relnamespace "
+                "WHERE table_schema.nspname = :schema_name "
+                "AND table_class.relname = :table_name "
+                "AND index_class.relname = :index_name"
+            ),
+            {
+                "schema_name": "public",
+                "table_name": "audit_logs",
+                "index_name": "ix_audit_logs_organization_id",
+            },
+        ).scalar_one_or_none()
+        if usable is not True:
+            return differences, []
+
+    accepted = {
+        "rule_id": "legacy_audit_organization_id_index",
+        "schema": "public",
+        "table": "audit_logs",
+        "name": "ix_audit_logs_organization_id",
+        "actual_columns": ["organization_id"],
+        "model_columns": ["organization_type", "organization_id"],
+        "reason": (
+            "The index layout does not change query results; the existing "
+            "organization_id index remains usable for the organization-scoped "
+            "lookup. This exception does not claim equivalent composite-index "
+            "performance."
+        ),
+    }
+    return (
+        [
+            difference
+            for difference in differences
+            if difference not in (
+                _LEGACY_AUDIT_ORGANIZATION_INDEX,
+                _MODEL_AUDIT_ORGANIZATION_INDEX,
+            )
+        ],
+        [accepted],
+    )
+
+
+def _compare_model_schema(
+    connection: Connection,
+    *,
+    epoch: bool = False,
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    epoch_control_tables = {"qubira_epoch_control", "qubira_epoch_audit"}
+    options: dict[str, Any] = {
+        "compare_type": True,
+        "compare_server_default": _compare_server_default,
+    }
+    if epoch:
+        options.update(
+            {
+                "version_table": "alembic_version_epoch",
+                "include_object": lambda obj, name, kind, reflected, compare_to: not (
+                    kind == "table" and name in epoch_control_tables
+                ),
+            }
+        )
     migration_context = MigrationContext.configure(
         connection,
-        opts={
-            "compare_type": True,
-            "compare_server_default": _compare_server_default,
-        },
+        opts=options,
     )
     raw_differences = compare_metadata(migration_context, Base.metadata)
     differences = [
@@ -104,35 +225,19 @@ def compare_model_schema(connection: Connection) -> list[dict[str, object]]:
         for group in raw_differences
         for difference in (group if isinstance(group, list) else [group])
     ]
-    return [
+    formatted = [
         _format_schema_difference(difference)
         for difference in differences
     ]
+    return _apply_schema_compatibility_rules(connection, formatted)
+
+
+def compare_model_schema(connection: Connection) -> list[dict[str, object]]:
+    return _compare_model_schema(connection)[0]
 
 
 def compare_epoch_model_schema(connection: Connection) -> list[dict[str, object]]:
-    epoch_control_tables = {"qubira_epoch_control", "qubira_epoch_audit"}
-    migration_context = MigrationContext.configure(
-        connection,
-        opts={
-            "compare_type": True,
-            "compare_server_default": _compare_server_default,
-            "version_table": "alembic_version_epoch",
-            "include_object": lambda obj, name, kind, reflected, compare_to: not (
-                kind == "table" and name in epoch_control_tables
-            ),
-        },
-    )
-    raw_differences = compare_metadata(migration_context, Base.metadata)
-    differences = [
-        difference
-        for group in raw_differences
-        for difference in (group if isinstance(group, list) else [group])
-    ]
-    return [
-        _format_schema_difference(difference)
-        for difference in differences
-    ]
+    return _compare_model_schema(connection, epoch=True)[0]
 
 
 def epoch_target_fingerprint_digest() -> str:
@@ -217,6 +322,17 @@ def _format_schema_difference(difference: tuple) -> dict[str, object]:
                     "desired": _render_default(desired),
                 }
             )
+        return result
+
+    if operation in {"add_column", "remove_column"} and len(difference) >= 4:
+        column = difference[3]
+        result.update(
+            {
+                "schema": difference[1],
+                "table": difference[2],
+                "column": getattr(column, "name", None),
+            }
+        )
         return result
 
     target = difference[1] if len(difference) > 1 else None
@@ -359,7 +475,9 @@ def build_preflight_report(source_engine: Engine = application_engine) -> dict[s
                 expected_head or "",
                 table_names,
             )
-            schema_differences = compare_model_schema(connection)
+            schema_differences, schema_compatibility_exceptions = (
+                _compare_model_schema(connection)
+            )
             missing_applied_tables = (
                 find_missing_applied_tables(script, state)
                 if current_revision and not state_errors
@@ -396,6 +514,7 @@ def build_preflight_report(source_engine: Engine = application_engine) -> dict[s
         "table_count": len(state.table_names),
         "schema_difference_count": len(differences),
         "schema_differences": differences,
+        "schema_compatibility_exceptions": schema_compatibility_exceptions,
         "missing_applied_tables": list(missing_applied_tables),
         "pending_table_conflicts": list(table_conflicts),
         "eligible_for_migration": eligible,
@@ -417,6 +536,7 @@ def build_epoch_preflight_report(
     target_fingerprint_matches = False
     database_identity_matches = False
     schema_differences: list[dict[str, object]] = []
+    schema_compatibility_exceptions: list[dict[str, object]] = []
     actual_schema_fingerprint: str | None = None
     table_count = 0
     try:
@@ -505,7 +625,10 @@ def build_epoch_preflight_report(
                         state_errors.append(
                             "Epoch target fingerprint does not match the current DDL contract."
                         )
-                    schema_differences = compare_epoch_model_schema(connection)
+                    (
+                        schema_differences,
+                        schema_compatibility_exceptions,
+                    ) = _compare_model_schema(connection, epoch=True)
                     if schema_differences:
                         state_errors.append(
                             "Epoch schema differs from the registered model/control contract."
@@ -528,6 +651,7 @@ def build_epoch_preflight_report(
         "schema_difference_count": len(schema_differences)
         + (0 if target_fingerprint_matches else 1),
         "schema_fingerprint_matches": not schema_differences,
+        "schema_compatibility_exceptions": schema_compatibility_exceptions,
         "target_fingerprint_matches": target_fingerprint_matches,
         "database_identity_matches": database_identity_matches,
         "actual_schema_fingerprint": actual_schema_fingerprint,
