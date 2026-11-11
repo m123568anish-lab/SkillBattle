@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 import json
+import logging
 
 from app.database.session import get_db
 from app.models.user import User
@@ -40,6 +41,7 @@ router = APIRouter(
     prefix="/battle",
     tags=["Battle"],
 )
+logger = logging.getLogger(__name__)
 
 
 def battle_to_response(battle, *, submitted_question_ids: list[int] | None = None) -> BattleResponse:
@@ -446,21 +448,23 @@ async def battle_socket(
     websocket: WebSocket,
     battle_id: str,
 ):
-    await battle_ws.connect(battle_id, websocket)
-
-    # Broadcast player joined
-    await battle_ws.broadcast(
-        battle_id,
-        BattleEvent.PLAYER_JOINED.value,
-        {"players": battle_ws.room_size(battle_id)},
-    )
+    if not await battle_ws.connect(battle_id, websocket):
+        return
 
     try:
-        while True:
+        await battle_ws.broadcast(
+            battle_id,
+            BattleEvent.PLAYER_JOINED.value,
+            {"players": battle_ws.room_size(battle_id)},
+        )
+
+        while battle_ws.is_connected(websocket):
             raw = await websocket.receive_text()
             try:
                 message = json.loads(raw)
-            except Exception:
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(message, dict):
                 continue
 
             event = message.get("event")
@@ -477,12 +481,22 @@ async def battle_socket(
                 await battle_ws.broadcast(battle_id, event, data)
 
     except WebSocketDisconnect:
-        battle_ws.disconnect(battle_id, websocket)
-        await battle_ws.broadcast(
+        logger.debug("Battle WebSocket disconnected normally: battle_id=%s", battle_id)
+    except RuntimeError:
+        if battle_ws.is_connected(websocket):
+            raise
+        logger.debug(
+            "Battle WebSocket closed during send/receive: battle_id=%s",
             battle_id,
-            BattleEvent.PLAYER_LEFT.value,
-            {"players": battle_ws.room_size(battle_id)},
         )
+    finally:
+        if battle_ws.is_registered(battle_id, websocket):
+            battle_ws.disconnect(battle_id, websocket)
+            await battle_ws.broadcast(
+                battle_id,
+                BattleEvent.PLAYER_LEFT.value,
+                {"players": battle_ws.room_size(battle_id)},
+            )
 
 
 # ==========================================================

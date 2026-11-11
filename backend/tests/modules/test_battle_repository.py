@@ -30,10 +30,15 @@ async def test_active_battle_lookup_excludes_finished_rooms_and_limits_to_latest
 @pytest.mark.asyncio
 async def test_battle_socket_does_not_broadcast_client_submission(monkeypatch):
     broadcasts = AsyncMock()
-    monkeypatch.setattr("app.modules.battle.router.battle_ws.connect", AsyncMock())
+    monkeypatch.setattr(
+        "app.modules.battle.router.battle_ws.connect",
+        AsyncMock(return_value=True),
+    )
     monkeypatch.setattr("app.modules.battle.router.battle_ws.disconnect", lambda *_: None)
     monkeypatch.setattr("app.modules.battle.router.battle_ws.room_size", lambda *_: 1)
     monkeypatch.setattr("app.modules.battle.router.battle_ws.broadcast", broadcasts)
+    monkeypatch.setattr("app.modules.battle.router.battle_ws.is_connected", lambda *_: True)
+    monkeypatch.setattr("app.modules.battle.router.battle_ws.is_registered", lambda *_: True)
 
     websocket = SimpleNamespace(
         receive_text=AsyncMock(side_effect=[

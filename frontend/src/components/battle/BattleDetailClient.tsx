@@ -59,7 +59,14 @@ export default function BattleDetailClient({ id, battle, onRefresh }: BattleDeta
   const examples = currentQuestion?.examples ?? [];
 
   const handleSocketMessage = useCallback((message: BattleSocketMessage) => {
-    if (["player_joined", "player_left", "score_updated", "battle_finished"].includes(message.event)) {
+    if ([
+      "player_joined",
+      "player_left",
+      "battle_started",
+      "score_updated",
+      "battle_finished",
+      "state_sync",
+    ].includes(message.event)) {
       void onRefresh();
     }
   }, [onRefresh]);

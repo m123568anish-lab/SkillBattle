@@ -21,6 +21,7 @@ from collections import defaultdict
 from typing import Optional
 
 from fastapi import WebSocket
+from starlette.websockets import WebSocketDisconnect, WebSocketState
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +46,6 @@ class BattleWebSocketManager:
         # battle_id -> { user_id: asyncio.Task }
         self.disconnect_tasks: dict[str, dict[str, asyncio.Task]] = defaultdict(dict)
 
-        # battle_id -> state snapshot dict (updated by orchestrator each tick)
-        self.room_state: dict[str, dict] = {}
-
     # =====================================================
     # Connect
     # =====================================================
@@ -57,7 +55,10 @@ class BattleWebSocketManager:
         battle_id: str,
         websocket: WebSocket,
         user_id: Optional[str] = None,
-    ):
+    ) -> bool:
+        if self.is_registered(battle_id, websocket):
+            return self.is_connected(websocket)
+
         await websocket.accept()
         self.rooms[battle_id].append(websocket)
 
@@ -74,13 +75,66 @@ class BattleWebSocketManager:
 
             self.user_sockets[battle_id][user_id] = websocket
 
-            # Immediately send a STATE_SYNC so the client re-syncs
-            state = self.room_state.get(battle_id)
-            if state:
-                try:
-                    await websocket.send_json({"event": "state_sync", "data": state})
-                except Exception:
-                    pass
+        # The client refreshes persisted state through its authorized HTTP API.
+        return await self._send_to_socket(
+            battle_id,
+            websocket,
+            "state_sync",
+            {"refresh_required": True},
+        )
+
+    @staticmethod
+    def is_connected(websocket: WebSocket) -> bool:
+        return (
+            getattr(websocket, "application_state", None) == WebSocketState.CONNECTED
+            and getattr(websocket, "client_state", None) == WebSocketState.CONNECTED
+        )
+
+    def is_registered(self, battle_id: str, websocket: WebSocket) -> bool:
+        return websocket in self.rooms.get(battle_id, [])
+
+    async def _send_to_socket(
+        self,
+        battle_id: str,
+        websocket: WebSocket,
+        event: str,
+        data: dict,
+    ) -> bool:
+        if not self.is_connected(websocket):
+            self.disconnect(battle_id, websocket)
+            return False
+
+        try:
+            await websocket.send_json({"event": event, "data": data})
+            return True
+        except (WebSocketDisconnect, OSError):
+            logger.debug(
+                "WebSocket disconnected while sending event=%s battle_id=%s",
+                event,
+                battle_id,
+            )
+        except RuntimeError:
+            if self.is_connected(websocket):
+                logger.exception(
+                    "Unexpected WebSocket send state error for event=%s battle_id=%s",
+                    event,
+                    battle_id,
+                )
+            else:
+                logger.debug(
+                    "WebSocket closed during send event=%s battle_id=%s",
+                    event,
+                    battle_id,
+                )
+        except Exception:
+            logger.exception(
+                "Unexpected WebSocket send failure for event=%s battle_id=%s",
+                event,
+                battle_id,
+            )
+
+        self.disconnect(battle_id, websocket)
+        return False
 
     # =====================================================
     # Disconnect
@@ -109,6 +163,9 @@ class BattleWebSocketManager:
 
         if not self.rooms.get(battle_id):
             self.rooms.pop(battle_id, None)
+
+        if not user_sockets:
+            self.user_sockets.pop(battle_id, None)
 
         return disconnected_uid
 
@@ -148,22 +205,6 @@ class BattleWebSocketManager:
         return task
 
     # =====================================================
-    # Update Room State Snapshot (called by orchestrator/timer)
-    # =====================================================
-
-    def update_state(self, battle_id: str, state: dict):
-        """
-        Merges new state data into the room state snapshot.
-        This snapshot is sent to reconnecting clients as STATE_SYNC.
-        """
-        existing = self.room_state.get(battle_id, {})
-        existing.update(state)
-        self.room_state[battle_id] = existing
-
-    def clear_state(self, battle_id: str):
-        self.room_state.pop(battle_id, None)
-
-    # =====================================================
     # Broadcast to all sockets in a room
     # =====================================================
 
@@ -173,17 +214,8 @@ class BattleWebSocketManager:
         event: str,
         data: dict,
     ):
-        payload = {"event": event, "data": data}
-        dead = []
-
         for socket in list(self.rooms.get(battle_id, [])):
-            try:
-                await socket.send_json(payload)
-            except Exception:
-                dead.append(socket)
-
-        for socket in dead:
-            self.disconnect(battle_id, socket)
+            await self._send_to_socket(battle_id, socket, event, data)
 
     # =====================================================
     # Send to a specific user
@@ -199,10 +231,7 @@ class BattleWebSocketManager:
         ws = self.user_sockets.get(battle_id, {}).get(user_id)
         if ws is None:
             return
-        try:
-            await ws.send_json({"event": event, "data": data})
-        except Exception:
-            self.disconnect(battle_id, ws)
+        await self._send_to_socket(battle_id, ws, event, data)
 
     # =====================================================
     # Room Size / Connected Users
