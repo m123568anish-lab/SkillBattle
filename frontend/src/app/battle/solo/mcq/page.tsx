@@ -85,7 +85,7 @@ export default function SoloBattleMCQPage() {
     return () => {
       active = false;
     };
-  }, [difficulty, requestedCount, router, skillCategory]);
+  }, [difficulty, requestedCount, skillCategory]);
 
   if (error) {
     return (

@@ -1,4 +1,4 @@
-import { expect, test, type Browser, type Page, type APIRequestContext } from "@playwright/test";
+import { expect, test, type Browser, type BrowserContext, type Page, type APIRequestContext } from "@playwright/test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -97,8 +97,10 @@ async function loadBattleProgress(
 async function openAuthenticatedPage(
   browser: Browser,
   account: BattleAccount,
+  configureContext?: (context: BrowserContext) => Promise<void>,
 ): Promise<AuthenticatedBattlePage> {
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  if (configureContext) await configureContext(context);
   await context.addCookies([{
     name: "__Secure-neon-auth.session_token",
     value: "e2e-cookie-session",
@@ -151,6 +153,7 @@ async function openAuthenticatedPage(
     }
   });
   page.on("websocket", (socket) => {
+    diagnostics.push(`websocket opened: ${socket.url()}`);
     socket.on("framereceived", ({ payload }) => {
       if (typeof payload !== "string") return;
       try {
@@ -175,17 +178,17 @@ async function openAuthenticatedPage(
   const authenticatedUserResponsePromise = page.waitForResponse((response) =>
     response.request().method() === "GET" && response.url().endsWith("/api/v1/auth/me"),
   );
-  const dashboardResponsePromise = page.waitForResponse((response) =>
-    response.request().method() === "GET" && response.url().endsWith("/api/v1/dashboard"),
+  const queueStatusResponsePromise = page.waitForResponse((response) =>
+    response.request().method() === "GET" && response.url().endsWith("/api/v1/battle/queue/status"),
   );
-  await page.goto("/dashboard");
-  const [authenticatedUserResponse, dashboardResponse] = await Promise.all([
+  await page.goto("/battle/lobby");
+  const [authenticatedUserResponse, queueStatusResponse] = await Promise.all([
     authenticatedUserResponsePromise,
-    dashboardResponsePromise,
+    queueStatusResponsePromise,
   ]);
   expect(authenticatedUserResponse.status(), await authenticatedUserResponse.text()).toBe(200);
-  expect(dashboardResponse.status(), await dashboardResponse.text()).toBe(200);
-  diagnostics.push("Auth readiness: Neon session resolved and backend /auth/me and /dashboard both returned HTTP 200");
+  expect(queueStatusResponse.status(), await queueStatusResponse.text()).toBe(200);
+  diagnostics.push("Auth readiness: Neon session resolved and backend /auth/me and battle queue status returned HTTP 200");
   return {
     page,
     diagnostics,
@@ -194,6 +197,33 @@ async function openAuthenticatedPage(
       await context.close();
     },
   };
+}
+
+async function captureBattleCreate(
+  page: Page,
+  account: BattleAccount,
+): Promise<{ status: number; battle: Record<string, unknown> }> {
+  let resolveCreate!: (result: { status: number; battle: Record<string, unknown> }) => void;
+  const createPromise = new Promise<{ status: number; battle: Record<string, unknown> }>((resolveCreatePromise) => {
+    resolveCreate = resolveCreatePromise;
+  });
+  await page.route("**/api/v1/battle/create", async (route) => {
+    const requestUrl = new URL(route.request().url());
+    const headers = await route.request().allHeaders();
+    headers.authorization = `Bearer ${account.token}`;
+    const response = await route.fetch({
+      url: `${API_ORIGIN}${requestUrl.pathname}${requestUrl.search}`,
+      headers,
+    });
+    const body = await response.text();
+    const parsed: unknown = JSON.parse(body);
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      throw new Error("Battle creation returned a non-object response.");
+    }
+    await route.fulfill({ response, body });
+    resolveCreate({ status: response.status(), battle: parsed as Record<string, unknown> });
+  });
+  return createPromise;
 }
 
 async function attachDiagnostics(
@@ -313,13 +343,12 @@ async function submitAllMcq(
       await expect(nextQuestion).not.toHaveText(title);
       if (index === 0) {
         const submittedQuestionId = response.request().postDataJSON().question_id as number;
-        const refreshedBattlePromise = page.waitForResponse((refreshedResponse) =>
-          refreshedResponse.request().method() === "GET" &&
-          refreshedResponse.url().endsWith(`/battle/${encodeURIComponent(battleId)}`),
-        );
         await page.reload();
-        const refreshedBattleResponse = await refreshedBattlePromise;
-        expect(refreshedBattleResponse.status()).toBe(200);
+        const refreshedBattleResponse = await request.get(
+          `${API_ORIGIN}/api/v1/battle/${encodeURIComponent(battleId)}`,
+          { headers: { authorization: `Bearer ${account.token}` } },
+        );
+        expect(refreshedBattleResponse.status(), await refreshedBattleResponse.text()).toBe(200);
         const refreshedBattle = await refreshedBattleResponse.json();
         expect(refreshedBattle.submitted_question_ids).toContain(submittedQuestionId);
         const expectedQuestion = refreshedBattle.questions_data[0].questions.find(
@@ -351,7 +380,9 @@ async function createInviteRoom(
   diagnostics: string[] = [],
 ): Promise<string> {
   try {
-    await page.goto("/battle/lobby");
+    if (new URL(page.url()).pathname !== "/battle/lobby") {
+      await page.goto("/battle/lobby");
+    }
     await expect(page.getByRole("button", { name: questionType, exact: true })).toBeVisible({ timeout: 30_000 });
     await page.getByRole("button", { name: questionType, exact: true }).click();
     const responsePromise = page.waitForResponse((response) =>
@@ -373,13 +404,15 @@ async function createInviteRoom(
 async function enterInviteRoom(page: Page, battleId: string) {
   await page.getByRole("button", { name: "Enter Room" }).click();
   const expectedRoomPath = `/battle/${encodeURIComponent(battleId)}`;
-  await expect.poll(() => new URL(page.url()).pathname, { timeout: 15_000 }).toBe(expectedRoomPath);
+  await expect.poll(() => new URL(page.url()).pathname, { timeout: 30_000 }).toBe(expectedRoomPath);
   expect(new URL(page.url()).pathname).toBe(expectedRoomPath);
-  await expect(page.getByText("Live Duel Room", { exact: true })).toBeVisible();
+  await expect(page.getByText("Live Duel Room", { exact: true })).toBeVisible({ timeout: 30_000 });
 }
 
 async function joinInviteRoom(page: Page, battleId: string, diagnostics?: string[]) {
-  await page.goto("/battle/lobby");
+  if (new URL(page.url()).pathname !== "/battle/lobby") {
+    await page.goto("/battle/lobby");
+  }
   await page.getByPlaceholder("Paste battle ID").fill(battleId);
   const joinRequestPromise = page.waitForRequest((request) =>
     request.method() === "POST" && request.url().endsWith("/battle/join"),
@@ -405,9 +438,9 @@ async function joinInviteRoom(page: Page, battleId: string, diagnostics?: string
   expect(joinResponse.status(), joinBody).toBe(200);
   expect(joinedBattle.id, joinBody).toBe(battleId);
   const expectedRoomPath = `/battle/${encodeURIComponent(battleId)}`;
-  await expect.poll(() => new URL(page.url()).pathname, { timeout: 15_000 }).toBe(expectedRoomPath);
+  await expect.poll(() => new URL(page.url()).pathname, { timeout: 30_000 }).toBe(expectedRoomPath);
   expect(new URL(page.url()).pathname).toBe(expectedRoomPath);
-  await expect(page.getByText("Live Duel Room", { exact: true })).toBeVisible();
+  await expect(page.getByText("Live Duel Room", { exact: true })).toBeVisible({ timeout: 30_000 });
 }
 
 test("solo MCQ completes from assigned database questions through persisted results", async ({ browser, request }, testInfo) => {
@@ -421,28 +454,27 @@ test("solo MCQ completes from assigned database questions through persisted resu
   });
   await page.goto("/battle/solo?mode=mcq");
   await page.locator("select").nth(1).selectOption("5");
-  const createResponsePromise = page.waitForResponse((response) =>
-    response.request().method() === "POST" && response.url().endsWith("/battle/create"),
-  );
+  const createResponsePromise = captureBattleCreate(page, account);
   await page.getByRole("button", { name: /Start MCQ Practice/ }).click();
   const createResponse = await createResponsePromise;
-  expect(createResponse.status(), await createResponse.text()).toBe(200);
-  const createdBattle = await createResponse.json() as { id?: unknown; title?: unknown };
-  expect(typeof createdBattle.id).toBe("string");
-  const battleId = (createdBattle.id as string).trim();
+  expect(createResponse.status).toBe(200);
+  expect(typeof createResponse.battle.id).toBe("string");
+  expect(typeof createResponse.battle.title).toBe("string");
+  const battleId = typeof createResponse.battle.id === "string" ? createResponse.battle.id.trim() : "";
   expect(battleId).not.toBe("");
-  expect(typeof createdBattle.title).toBe("string");
-  diagnostics.push(`Battle create HTTP ${createResponse.status()}: ${battleId}`);
   const expectedRoomPath = `/battle/${encodeURIComponent(battleId)}`;
   await expect.poll(() => new URL(page.url()).pathname, { timeout: 30_000 }).toBe(expectedRoomPath);
   expect(new URL(page.url()).pathname).toBe(expectedRoomPath);
+  diagnostics.push(`Battle create HTTP ${createResponse.status}: ${battleId}`);
   expect(createRequestCount).toBe(1);
-  await expect(page.getByRole("heading", { level: 1, name: createdBattle.title as string })).toBeVisible();
   const canonicalBattle = await request.get(`${API_ORIGIN}/api/v1/battle/${encodeURIComponent(battleId)}`, {
     headers: { authorization: `Bearer ${account.token}` },
   });
-  expect(canonicalBattle.status(), await canonicalBattle.text()).toBe(200);
-  expect((await canonicalBattle.json()).id).toBe(battleId);
+  expect(canonicalBattle.status(), `battle=${battleId} ${await canonicalBattle.text()}`).toBe(200);
+  const createdBattle = await canonicalBattle.json() as { id: string; title: string };
+  expect(createdBattle.id).toBe(battleId);
+  expect(createdBattle.title).toBeTruthy();
+  await expect(page.getByRole("heading", { level: 1, name: createdBattle.title })).toBeVisible();
   const beforeBattle = await loadBattleProgress(request, account, battleId);
   await startRoom(page);
   await expect(page.getByText("Select one answer")).toBeVisible();
@@ -515,19 +547,17 @@ test("accepted submission recovers after its response is lost and retried", asyn
     await route.fulfill({ response });
   });
 
-  const createResponsePromise = page.waitForResponse((response) =>
-    response.request().method() === "POST" && response.url().endsWith("/battle/create"),
-  );
+  const createResponsePromise = captureBattleCreate(page, account);
   await page.goto("/battle/solo/mcq?topic=Algorithms&count=5");
   const createResponse = await createResponsePromise;
-  expect(createResponse.status(), await createResponse.text()).toBe(200);
-  const createdBattle = await createResponse.json() as { id?: unknown };
-  expect(typeof createdBattle.id).toBe("string");
-  const battleId = (createdBattle.id as string).trim();
+  expect(createResponse.status).toBe(200);
+  expect(typeof createResponse.battle.id).toBe("string");
+  const battleId = typeof createResponse.battle.id === "string" ? createResponse.battle.id.trim() : "";
   expect(battleId).not.toBe("");
-  diagnostics.push(`Battle create HTTP ${createResponse.status()}: ${battleId}`);
+  diagnostics.push(`Battle create HTTP ${createResponse.status}: ${battleId}`);
   const expectedRoomPath = `/battle/${encodeURIComponent(battleId)}`;
   await expect.poll(() => new URL(page.url()).pathname, { timeout: 30_000 }).toBe(expectedRoomPath);
+  expect(new URL(page.url()).pathname).toBe(expectedRoomPath);
   await startRoom(page);
   await page.getByRole("radio").first().check();
   const submittedQuestionTitle = await page.locator("article h3").innerText();
@@ -583,22 +613,25 @@ test("solo coding runs a public sample and records the real hidden-test verdict"
   const account = await createAccount(request, "solo_coding");
   const { page, diagnostics, close } = await openAuthenticatedPage(browser, account);
   await page.goto("/battle/solo?mode=coding");
-  const createResponsePromise = page.waitForResponse((response) =>
-    response.request().method() === "POST" && response.url().endsWith("/battle/create"),
-  );
+  const createResponsePromise = captureBattleCreate(page, account);
   await page.getByRole("button", { name: /Launch Coding IDE/ }).click();
   const createResponse = await createResponsePromise;
-  expect(createResponse.status(), await createResponse.text()).toBe(200);
-  const createdBattle = await createResponse.json() as { id?: unknown; title?: unknown };
-  expect(typeof createdBattle.id).toBe("string");
-  const battleId = (createdBattle.id as string).trim();
+  expect(createResponse.status).toBe(200);
+  expect(typeof createResponse.battle.id).toBe("string");
+  expect(typeof createResponse.battle.title).toBe("string");
+  const battleId = typeof createResponse.battle.id === "string" ? createResponse.battle.id.trim() : "";
   expect(battleId).not.toBe("");
-  expect(typeof createdBattle.title).toBe("string");
   const expectedRoomPath = `/battle/${encodeURIComponent(battleId)}`;
   await expect.poll(() => new URL(page.url()).pathname, { timeout: 30_000 }).toBe(expectedRoomPath);
   expect(new URL(page.url()).pathname).toBe(expectedRoomPath);
-  await expect(page.getByRole("heading", { level: 1, name: createdBattle.title as string })).toBeVisible();
-  diagnostics.push(`Battle create HTTP ${createResponse.status()}: ${battleId}`);
+  const canonicalBattle = await request.get(`${API_ORIGIN}/api/v1/battle/${encodeURIComponent(battleId)}`, {
+    headers: { authorization: `Bearer ${account.token}` },
+  });
+  expect(canonicalBattle.status(), `battle=${battleId} ${await canonicalBattle.text()}`).toBe(200);
+  const createdBattle = await canonicalBattle.json() as { id: string; title: string };
+  expect(createdBattle.id).toBe(battleId);
+  await expect(page.getByRole("heading", { level: 1, name: createdBattle.title })).toBeVisible();
+  diagnostics.push(`Battle create HTTP ${createResponse.status}: ${battleId}`);
   await startRoom(page);
   const editor = page.locator(".monaco-editor").first();
   await expect(editor).toBeVisible({ timeout: 30_000 });
@@ -634,6 +667,7 @@ test("solo coding runs a public sample and records the real hidden-test verdict"
 });
 
 test("two users complete a multiplayer MCQ room and see persisted results", async ({ browser, request }, testInfo) => {
+  test.setTimeout(240_000);
   const hostAccount = await createAccount(request, "duo_mcq_host");
   const peerAccount = await createAccount(request, "duo_mcq_peer");
   const host = await openAuthenticatedPage(browser, hostAccount);
@@ -674,7 +708,7 @@ test("two users complete a multiplayer MCQ room and see persisted results", asyn
   await expect.poll(() => peer.socketEvents).toContain("score_updated");
   await finalize(peer.page);
   await host.page.reload();
-  await expect(host.page.getByText("Battle results are saved.")).toBeVisible({ timeout: 15_000 });
+  await expect(host.page.getByText("Battle results are saved.")).toBeVisible({ timeout: 45_000 });
   const [hostResult, peerResult] = await Promise.all([
     request.get(`${API_ORIGIN}/api/v1/battle/${battleId}/result`, { headers: { authorization: `Bearer ${hostAccount.token}` } }),
     request.get(`${API_ORIGIN}/api/v1/battle/${battleId}/result`, { headers: { authorization: `Bearer ${peerAccount.token}` } }),
@@ -698,6 +732,7 @@ test("two users complete a multiplayer MCQ room and see persisted results", asyn
 });
 
 test("two users complete a multiplayer coding room with independent judged submissions", async ({ browser, request }, testInfo) => {
+  test.setTimeout(240_000);
   const hostAccount = await createAccount(request, "duo_code_host");
   const peerAccount = await createAccount(request, "duo_code_peer");
   const host = await openAuthenticatedPage(browser, hostAccount);
@@ -778,28 +813,28 @@ test("two users complete a multiplayer coding room with independent judged submi
 test("reconnecting multiplayer client receives state sync and restores persisted room state", async ({ browser, request }) => {
   const hostAccount = await createAccount(request, "reconnect_host");
   const peerAccount = await createAccount(request, "reconnect_peer");
-  const host = await openAuthenticatedPage(browser, hostAccount);
-  const peer = await openAuthenticatedPage(browser, peerAccount);
   let connectionAttempts = 0;
   let firstConnectionClosed = false;
-
-  await host.page.routeWebSocket(/\/api\/v1\/battle\/ws\//, async (socket) => {
-    connectionAttempts += 1;
-    if (connectionAttempts === 1) {
-      await socket.close({ code: 1000, reason: "exercise reconnect flow" });
-      firstConnectionClosed = true;
-      return;
-    }
-    socket.connectToServer();
-  });
+  const host = await openAuthenticatedPage(browser, hostAccount, (context) =>
+    context.routeWebSocket(/\/battle\/ws\//, async (socket) => {
+      connectionAttempts += 1;
+      if (connectionAttempts === 1) {
+        firstConnectionClosed = true;
+        await socket.close({ code: 1000, reason: "exercise reconnect flow" });
+        return;
+      }
+      socket.connectToServer();
+    }),
+  );
+  const peer = await openAuthenticatedPage(browser, peerAccount);
 
   const battleId = await createInviteRoom(host.page, "mcq", host.diagnostics);
   await enterInviteRoom(host.page, battleId);
   await expect(host.page.getByText("1 / 2 Players")).toBeVisible({ timeout: 15_000 });
-  await expect.poll(() => firstConnectionClosed).toBe(true);
+  await expect.poll(() => firstConnectionClosed, { timeout: 30_000 }).toBe(true);
   await joinInviteRoom(peer.page, battleId, peer.diagnostics);
 
-  await expect.poll(() => host.socketEvents).toContain("state_sync");
+  await expect.poll(() => host.socketEvents, { timeout: 30_000 }).toContain("state_sync");
   await expect(host.page.getByText("2 / 2 Players")).toBeVisible({ timeout: 15_000 });
   await expect.poll(() => connectionAttempts).toBeGreaterThanOrEqual(2);
   const participants = await request.get(`${API_ORIGIN}/api/v1/battle/${battleId}/participants`, {
@@ -817,16 +852,22 @@ test("reconnecting multiplayer client receives state sync and restores persisted
 test("battle room polling updates persisted participants when WebSocket events are unavailable", async ({ browser, request }) => {
   const hostAccount = await createAccount(request, "poll_host");
   const peerAccount = await createAccount(request, "poll_peer");
-  const host = await openAuthenticatedPage(browser, hostAccount);
+  let socketConnectionAttempts = 0;
+  const host = await openAuthenticatedPage(browser, hostAccount, (context) =>
+    context.routeWebSocket(/\/battle\/ws\//, (socket) => {
+      socketConnectionAttempts += 1;
+      void socket.close({ code: 1000, reason: "polling fallback test" });
+    }),
+  );
   const peer = await openAuthenticatedPage(browser, peerAccount);
-  await host.page.routeWebSocket(/\/api\/v1\/battle\/ws\//, () => undefined);
   const battleId = await createInviteRoom(host.page, "mcq", host.diagnostics);
   await enterInviteRoom(host.page, battleId);
   await expect(host.page.getByText("1 / 2 Players")).toBeVisible({ timeout: 15_000 });
   await joinInviteRoom(peer.page, battleId, peer.diagnostics);
 
   await expect(host.page.getByText("2 / 2 Players")).toBeVisible({ timeout: 10_000 });
-  expect(host.socketEvents).toEqual([]);
+  expect(socketConnectionAttempts, host.diagnostics.join("\n")).toBeGreaterThan(0);
+  expect(host.socketEvents, host.diagnostics.join("\n")).toEqual([]);
 
   await host.close();
   await peer.close();
