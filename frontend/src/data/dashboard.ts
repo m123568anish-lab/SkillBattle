@@ -29,8 +29,11 @@ import {
   HelpCircle,
   Activity,
   Target,
+  Bookmark,
   LucideIcon,
 } from "lucide-react";
+import type { User as AuthUser } from "@/types/auth";
+import { getDashboardPath } from "@/lib/auth-routing";
 
 export interface SidebarItem {
   title: string;
@@ -63,6 +66,13 @@ export function getPortalKind(pathname: string): PortalKind {
   if (pathname.startsWith("/college")) return "college";
   if (pathname.startsWith("/company")) return "company";
   return "student";
+}
+
+export function getUserPortalKind(
+  user: AuthUser | null | undefined,
+  pathname: string,
+): PortalKind {
+  return getPortalKind(user ? getDashboardPath(user) : pathname);
 }
 
 const collegeItems: PortalNavItem[] = [
@@ -158,33 +168,48 @@ export function getMobileNavigation(portal: PortalKind): PortalNavItem[] {
   ];
 }
 
-// ── COMPACT PRIMARY NAVIGATION (QUBIRA BRANDED) ──
-export const sidebarItems: SidebarItem[] = [
-  { title: "Dashboard", href: "/dashboard", icon: Home, category: "main" },
-  { title: "Qubira Learn", href: "/practice", icon: BookOpen, category: "main" },
-  { title: "Qubira Arena", href: "/battle", icon: Sword, category: "main" },
-  { title: "Qubira Rankings", href: "/leaderboard", icon: Trophy, category: "main" },
-  { title: "Friends", href: "/friends", icon: Users, category: "social" },
-  { title: "Achievements", href: "/achievements", icon: Medal, category: "social" },
-  { title: "Profile", href: "/profile", icon: User, category: "account" },
-  { title: "Settings", href: "/settings", icon: Settings, category: "account" },
-  { title: "Support", href: "/support", icon: HelpCircle, category: "account" },
-];
-
+// ── STRUCTURED PRIMARY NAVIGATION (QUBIRA V3 BRANDED) ──
 export const sidebarCategories: SidebarCategory[] = [
   {
     id: "main",
-    label: "Menu",
-    items: sidebarItems.filter((i) => i.category === "main"),
+    label: "Main",
+    items: [
+      { title: "Overview", href: "/dashboard", icon: Home, category: "main" },
+      { title: "Learn", href: "/practice", icon: BookOpen, category: "main" },
+      { title: "Battle Arena", href: "/battle", icon: Sword, category: "main" },
+      { title: "Daily Challenge", href: "/challenge", icon: Flame, category: "main" },
+      { title: "Rankings", href: "/leaderboard", icon: Trophy, category: "main" },
+    ],
   },
   {
-    id: "social",
-    label: "Social",
-    items: sidebarItems.filter((i) => i.category === "social"),
+    id: "career",
+    label: "Career Development",
+    items: [
+      { title: "AI Roadmap", href: "/career/roadmap", icon: Map, category: "career" },
+      { title: "Skill Assessment", href: "/assessments", icon: ClipboardCheck, category: "career" },
+      { title: "Practice", href: "/practice/tasks", icon: Code2, category: "career" },
+      { title: "Company Prep", href: "/opportunities", icon: BriefcaseBusiness, category: "career" },
+    ],
+  },
+  {
+    id: "personal",
+    label: "Personal",
+    items: [
+      { title: "My Progress", href: "/practice/progress", icon: BarChart3, category: "personal" },
+      { title: "Achievements", href: "/achievements", icon: Medal, category: "personal" },
+      { title: "Battle History", href: "/battle/history", icon: Activity, category: "personal" },
+      { title: "Saved Items", href: "/practice/saved", icon: Bookmark, category: "personal" },
+    ],
   },
   {
     id: "account",
     label: "Account",
-    items: sidebarItems.filter((i) => i.category === "account"),
+    items: [
+      { title: "Profile", href: "/profile", icon: User, category: "account" },
+      { title: "Settings", href: "/settings", icon: Settings, category: "account" },
+      { title: "Support", href: "/support", icon: HelpCircle, category: "account" },
+    ],
   },
 ];
+
+export const sidebarItems: SidebarItem[] = sidebarCategories.flatMap((cat) => cat.items);

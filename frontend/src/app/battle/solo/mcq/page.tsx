@@ -1,14 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2, XCircle } from "lucide-react";
-import { api } from "@/lib/api";
+import {
+  clearBattleCreationKey,
+  createBattleWithRetry,
+  getBattleCreationKey,
+} from "@/services/battle.service";
 
 function normalizeDifficulty(input: string | null) {
   const value = (input || "medium").toLowerCase();
   return value === "easy" || value === "medium" || value === "hard" ? value : "medium";
+}
+
+function normalizeBattleSkillCategory(value: string | null) {
+  const mapping: Record<string, string> = {
+    "Algorithms & Data Structures": "Algorithms",
+    "System Design & Caching": "System Design",
+    "SQL & Database Internals": "SQL",
+    "Web & JavaScript Core": "JavaScript",
+  };
+
+  const normalized = (value || "Algorithms").trim();
+  return mapping[normalized] ?? normalized;
 }
 
 export default function SoloBattleMCQPage() {
@@ -16,7 +32,11 @@ export default function SoloBattleMCQPage() {
   const searchParams = useSearchParams();
   const requestedCount = Number(searchParams.get("count") || "10");
   const difficulty = normalizeDifficulty(searchParams.get("difficulty"));
-  const skillCategory = searchParams.get("topic") || "Algorithms & Data Structures";
+  const skillCategory = normalizeBattleSkillCategory(searchParams.get("topic"));
+  const creationPromise = useRef<{
+    fingerprint: string;
+    promise: Promise<{ id: string }>;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,7 +44,7 @@ export default function SoloBattleMCQPage() {
 
     async function createBattle() {
       try {
-        const { data } = await api.post<{ id: string }>("/battle/create", {
+        const request = {
           title: `Solo MCQ Challenge - ${skillCategory}`,
           difficulty,
           battle_type: "general",
@@ -33,7 +53,22 @@ export default function SoloBattleMCQPage() {
           question_type: "mcq",
           skill_category: skillCategory,
           question_count: [5, 10, 15, 20].includes(requestedCount) ? requestedCount : 10,
-        });
+        };
+        const fingerprint = JSON.stringify(request);
+        const idempotencyKey = getBattleCreationKey("solo-mcq", request);
+        let currentCreation = creationPromise.current;
+        if (!currentCreation || currentCreation.fingerprint !== fingerprint) {
+          currentCreation = {
+            fingerprint,
+            promise: createBattleWithRetry<{ id: string }>(request, idempotencyKey)
+              .then((data) => {
+                clearBattleCreationKey("solo-mcq", idempotencyKey);
+                return data;
+              }),
+          };
+          creationPromise.current = currentCreation;
+        }
+        const data = await currentCreation.promise;
 
         if (!data.id) throw new Error("The server did not return a battle ID.");
         if (active) router.replace(`/battle/${encodeURIComponent(data.id)}`);

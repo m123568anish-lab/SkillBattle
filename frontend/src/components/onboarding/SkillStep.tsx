@@ -87,15 +87,15 @@ export default function SkillStep({
   return (
     <div>
 
-      <h1 className="text-4xl font-black text-white">
+      <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[var(--text-primary)]">
         Skill Assessment
       </h1>
 
-      <p className="mt-3 text-slate-400">
-        Tell us about your current level.
+      <p className="mt-3 text-sm sm:text-base text-[var(--text-secondary)]">
+        Tell us about your current level to personalize recommendations.
       </p>
 
-      <div className="mt-10 grid gap-5 md:grid-cols-2">
+      <div className="mt-8 grid gap-4 sm:gap-5 md:grid-cols-2">
 
         {skillLevels.map((item) => (
           <SkillCard
@@ -113,9 +113,8 @@ export default function SkillStep({
 
       </div>
 
-      <div className="mt-12">
-
-        <label className="text-white font-semibold">
+      <div className="mt-10 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6">
+        <label className="text-sm font-semibold text-[var(--text-primary)]">
           Confidence ({localConfidence}%)
         </label>
 
@@ -126,78 +125,45 @@ export default function SkillStep({
           value={localConfidence}
           onChange={(e) => {
             const value = Number(e.target.value);
-
             setLocalConfidence(value);
-
-            update({
-              confidence: value,
-            });
+            update({ confidence: value });
           }}
-          className="mt-4 w-full"
+          className="mt-4 w-full accent-[var(--accent)] cursor-pointer"
         />
-
       </div>
 
-      <div className="mt-10">
-
-        <label className="text-white font-semibold">
+      <div className="mt-8 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6">
+        <label className="text-sm font-semibold text-[var(--text-primary)]">
           Placement Target
         </label>
 
-        <div className="mt-4 flex flex-wrap gap-3">
-
+        <div className="mt-4 flex flex-wrap gap-2.5">
           {targets.map((item) => (
             <button
               key={item}
-              onClick={() =>
-                update({
-                  target: item,
-                })
-              }
-              className={`
-                rounded-full
-                px-5
-                py-2
-
-                ${
-                  target === item
-                    ? "bg-cyan-500 text-white"
-                    : "bg-white/5 text-slate-300"
-                }
-              `}
+              type="button"
+              onClick={() => update({ target: item })}
+              className={`rounded-xl px-4 py-2 text-sm font-medium transition-all ${
+                target === item
+                  ? "bg-[var(--accent)] text-[var(--text-on-accent)] shadow-sm font-semibold"
+                  : "bg-[var(--surface-elevated)] text-[var(--text-secondary)] border border-[var(--border-subtle)] hover:border-[var(--border-default)] hover:text-[var(--text-primary)]"
+              }`}
             >
               {item}
             </button>
           ))}
-
         </div>
-
       </div>
 
-      <div className="mt-10">
-
-        <label className="text-white font-semibold">
+      <div className="mt-8 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6">
+        <label className="text-sm font-semibold text-[var(--text-primary)]">
           Graduation Year
         </label>
 
         <select
           value={graduationYear}
-          onChange={(e) =>
-            update({
-              graduationYear: e.target.value,
-            })
-          }
-          className="
-            mt-4
-            h-14
-            w-full
-            rounded-xl
-            border
-            border-white/10
-            bg-white/5
-            px-4
-            text-white
-          "
+          onChange={(e) => update({ graduationYear: e.target.value })}
+          className="mt-4 h-12 w-full rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] px-4 text-sm font-medium text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
         >
           <option value="">
             Select Graduation Year

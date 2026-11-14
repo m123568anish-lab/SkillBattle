@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useBattleSocket, type BattleSocketMessage } from "@/hooks/useBattleSocket";
@@ -47,6 +48,8 @@ export default function BattleDetailClient({ id, battle, onRefresh }: BattleDeta
   const [runtime, setRuntime] = useState<number | null>(null);
   const [memory, setMemory] = useState<number | null>(null);
   const [testCases, setTestCases] = useState<TestCaseResult[]>([]);
+  const submissionInFlight = useRef(false);
+  const lastNetworkFailurePayload = useRef<string | null>(null);
 
   const section = battle.questions_data?.[battle.current_section_index ?? 0];
   const assignedQuestions = section?.questions ?? [];
@@ -73,13 +76,58 @@ export default function BattleDetailClient({ id, battle, onRefresh }: BattleDeta
   const { connected } = useBattleSocket({ battleId: id, onMessage: handleSocketMessage });
 
   const submitAnswer = async () => {
-    if (!section || !currentQuestion || submitting || battle.status !== "running") return;
+    if (!section || !currentQuestion || submitting || submissionInFlight.current || battle.status !== "running") return;
     if (section.question_type === "mcq" && !selectedOption) return;
     if (section.question_type === "coding" && !sourceCode.trim()) return;
 
+    const payload = {
+      battle_id: id,
+      question_id: currentQuestion.id,
+      section_index: section.section_index,
+      question_type: section.question_type,
+      mcq_option: section.question_type === "mcq" ? selectedOption : undefined,
+      source_code: section.question_type === "coding" ? sourceCode : undefined,
+      language,
+    };
+    const payloadSignature = JSON.stringify(payload);
+    const retryingAfterNetworkFailure = lastNetworkFailurePayload.current === payloadSignature;
+    submissionInFlight.current = true;
     setSubmitting(true);
     setError(null);
     setNotice(null);
+    const restorePersistedAnswer = async () => {
+      const { data: persistedSubmission } = await api.post<{
+        verified: boolean;
+        submission_id?: string | null;
+        verdict?: string | null;
+        score_earned?: number | null;
+        detail: string;
+      }>(
+        `/battle/${encodeURIComponent(id)}/submission/${currentQuestion.id}/verify`,
+        {
+          question_type: payload.question_type,
+          mcq_option: payload.mcq_option,
+          source_code: payload.source_code,
+          language: payload.language,
+        },
+      );
+      if (!persistedSubmission.verified) {
+        setError(
+          persistedSubmission.detail ||
+          "The server could not confirm this saved answer. Refresh the battle before retrying.",
+        );
+        return true;
+      }
+      lastNetworkFailurePayload.current = null;
+      setLocalSubmittedIds((previous) => [...new Set([...previous, currentQuestion.id])]);
+      setSelectedOption(null);
+      setVerdict(persistedSubmission.verdict ?? "Submitted");
+      setScore(persistedSubmission.score_earned ?? null);
+      setNotice("Your previous submission was accepted. Battle state has been restored.");
+      await onRefresh();
+      void useDashboardStore.getState().refresh();
+      return true;
+    };
     try {
       const { data } = await api.post<{
         id: string;
@@ -87,15 +135,8 @@ export default function BattleDetailClient({ id, battle, onRefresh }: BattleDeta
         score_earned: number;
         passed_tests: number;
         total_tests: number;
-      }>("/battle/submit-answer", {
-        battle_id: id,
-        question_id: currentQuestion.id,
-        section_index: section.section_index,
-        question_type: section.question_type,
-        mcq_option: section.question_type === "mcq" ? selectedOption : undefined,
-        source_code: section.question_type === "coding" ? sourceCode : undefined,
-        language,
-      });
+      }>("/battle/submit-answer", payload);
+      lastNetworkFailurePayload.current = null;
       setVerdict(data.verdict);
       setScore(data.score_earned);
       setLocalSubmittedIds((previous) => [...new Set([...previous, currentQuestion.id])]);
@@ -103,9 +144,59 @@ export default function BattleDetailClient({ id, battle, onRefresh }: BattleDeta
       await onRefresh();
       void useDashboardStore.getState().refresh();
     } catch (submitError: unknown) {
-      const detail = apiErrorDetail(submitError);
+      let recoveryError = submitError;
+      let detail = apiErrorDetail(submitError);
+      const status = apiErrorStatus(submitError);
+      const transientNetworkFailure = status === null || [502, 503, 504].includes(status);
+      if (transientNetworkFailure) {
+        lastNetworkFailurePayload.current = payloadSignature;
+        try {
+          const { data } = await api.post<{
+            verdict: string;
+            score_earned: number;
+          }>("/battle/submit-answer", payload);
+          lastNetworkFailurePayload.current = null;
+          setVerdict(data.verdict);
+          setScore(data.score_earned);
+          setLocalSubmittedIds((previous) => [...new Set([...previous, currentQuestion.id])]);
+          setSelectedOption(null);
+          setNotice("Submission retry succeeded.");
+          await onRefresh();
+          void useDashboardStore.getState().refresh();
+          return;
+        } catch (retryError: unknown) {
+          recoveryError = retryError;
+          detail = apiErrorDetail(retryError);
+          if (
+            apiErrorStatus(retryError) === 400 &&
+            detail === "This question has already been submitted."
+          ) {
+            try {
+              if (await restorePersistedAnswer()) return;
+            } catch {
+              // Keep the duplicate response visible if the persisted room cannot be checked.
+            }
+          }
+        }
+      } else if (
+        retryingAfterNetworkFailure &&
+        status === 400 &&
+        detail === "This question has already been submitted."
+      ) {
+        try {
+          if (await restorePersistedAnswer()) return;
+        } catch {
+          // Keep the duplicate response visible if the persisted room cannot be checked.
+        }
+      }
+      if (apiErrorStatus(recoveryError) === null) {
+        lastNetworkFailurePayload.current = payloadSignature;
+      } else {
+        lastNetworkFailurePayload.current = null;
+      }
       setError(detail || "Submission failed.");
     } finally {
+      submissionInFlight.current = false;
       setSubmitting(false);
     }
   };
@@ -176,7 +267,7 @@ export default function BattleDetailClient({ id, battle, onRefresh }: BattleDeta
   if (battle.status === "completed" || battle.status === "finished" || battle.status === "finalized") {
     return (
       <div role="status" className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-        Battle results are saved. View your individual score and reward in <a className="underline" href="/battle/history">battle history</a>.
+        Battle results are saved. View your individual score and reward in <Link className="underline" href="/battle/history">battle history</Link>.
       </div>
     );
   }
@@ -292,6 +383,7 @@ export default function BattleDetailClient({ id, battle, onRefresh }: BattleDeta
           )}
 
           {error && <p role="alert" className="text-sm text-rose-300">{error}</p>}
+          {notice && <p role="status" className="text-xs text-amber-200">{notice}</p>}
           <div className="flex flex-wrap gap-2">
             {section.question_type === "coding" && (
               <button type="button" onClick={runSamples} disabled={running || submitting} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--border-default)] px-4 text-xs font-semibold text-[var(--text-primary)] disabled:opacity-50">
@@ -331,4 +423,10 @@ function apiErrorDetail(error: unknown): string | null {
   if (typeof error !== "object" || error === null || !("response" in error)) return null;
   const response = (error as { response?: { data?: { detail?: unknown } } }).response;
   return typeof response?.data?.detail === "string" ? response.data.detail : null;
+}
+
+function apiErrorStatus(error: unknown): number | null {
+  if (typeof error !== "object" || error === null || !("response" in error)) return null;
+  const status = (error as { response?: { status?: unknown } }).response?.status;
+  return typeof status === "number" ? status : null;
 }

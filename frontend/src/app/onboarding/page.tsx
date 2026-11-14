@@ -80,17 +80,7 @@ export default function OnboardingPage() {
         <>
           <button
             onClick={previousStep}
-            className="
-              mb-8
-              rounded-xl
-              border
-              border-white/10
-              px-5
-              py-2
-              text-white
-              transition
-              hover:border-cyan-400
-            "
+            className="mb-6 inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] px-4 py-2 text-xs font-semibold text-[var(--text-secondary)] transition hover:border-[var(--accent)] hover:text-[var(--text-primary)]"
           >
             ← Back
           </button>

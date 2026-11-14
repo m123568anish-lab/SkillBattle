@@ -4,13 +4,14 @@ import { useEffect, useRef, useState, Suspense } from "react";
 import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
 import { motion, AnimatePresence } from "framer-motion";
-import { getMobileNavigation, getPortalKind } from "@/data/dashboard";
+import { getMobileNavigation, getUserPortalKind } from "@/data/dashboard";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useReducedMotion } from "framer-motion";
 import GridBackground from "@/components/background/GridBackground";
 import PageTransition from "@/components/common/PageTransition";
 import { MOTION_DURATIONS } from "@/lib/motion";
+import { useAuthStore } from "@/store/authStore";
 
 interface Props {
   children: React.ReactNode;
@@ -22,7 +23,8 @@ function DashboardLayoutInner({ children }: Props) {
   const drawerRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const portal = getPortalKind(pathname);
+  const user = useAuthStore((state) => state.user);
+  const portal = getUserPortalKind(user, pathname);
   const mobileNavigation = getMobileNavigation(portal);
   const reduceMotion = useReducedMotion();
 
@@ -190,7 +192,7 @@ function DashboardLayoutInner({ children }: Props) {
       <section
         id="main-content"
         tabIndex={-1}
-        className="relative z-10 min-w-0 flex-1 overflow-auto bg-transparent px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-3 outline-none sm:px-6 sm:pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:pt-5 lg:h-full lg:min-h-0 lg:px-10 lg:pb-10 lg:pt-7"
+        className="relative z-10 min-w-0 flex-1 overflow-auto bg-transparent px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-0 outline-none sm:px-6 sm:pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:pt-5 lg:h-full lg:min-h-0 lg:px-10 lg:pb-10 lg:pt-6"
       >
         <TopNavbar
           onToggleMobileNav={() => setMobileDrawerOpen((open) => !open)}

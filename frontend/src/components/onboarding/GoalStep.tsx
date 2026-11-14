@@ -49,15 +49,15 @@ export default function GoalStep({
   return (
     <div>
 
-      <h1 className="text-4xl font-black text-white">
+      <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[var(--text-primary)]">
         Learning Goals
       </h1>
 
-      <p className="mt-3 text-slate-400">
-        Choose your focus areas.
+      <p className="mt-3 text-sm sm:text-base text-[var(--text-secondary)]">
+        Choose your focus areas to tailor your study program.
       </p>
 
-      <div className="mt-10 grid gap-5 md:grid-cols-2">
+      <div className="mt-8 grid gap-4 sm:gap-5 md:grid-cols-2">
 
         {goals.map((goal) => (
           <GoalCard
@@ -77,21 +77,13 @@ export default function GoalStep({
       </div>
 
       {/* Daily Hours */}
-
-      <div className="mt-12">
-
-        <label className="text-lg font-semibold text-white">
-
+      <div className="mt-8 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6">
+        <label className="text-sm font-semibold text-[var(--text-primary)]">
           Daily Study Hours
-
         </label>
-
-        <p className="mt-2 text-slate-400">
-
-          {dailyHours} Hours / Day
-
+        <p className="mt-1 text-sm text-[var(--text-muted)]">
+          {dailyHours} {dailyHours === 1 ? "Hour" : "Hours"} / Day
         </p>
-
         <input
           type="range"
           min={1}
@@ -103,35 +95,18 @@ export default function GoalStep({
               Number(e.target.value)
             )
           }
-          className="mt-5 w-full"
+          className="mt-4 w-full accent-[var(--accent)] cursor-pointer"
         />
-
       </div>
 
       {/* Timeline */}
-
-      <div className="mt-10 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-6">
-
-        <h3 className="text-xl font-bold text-cyan-300">
-
+      <div className="mt-6 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-elevated)] p-6">
+        <h3 className="text-base font-bold text-[var(--accent)]">
           AI Estimate
-
         </h3>
-
-        <p className="mt-3 text-slate-300">
-
-          Based on your selected goals and
-
-          <strong> {dailyHours} hour(s)</strong>
-
-          of study each day, your estimated
-
-          roadmap completion is
-
-          <strong> {weeks} weeks.</strong>
-
+        <p className="mt-2 text-sm text-[var(--text-secondary)] leading-relaxed">
+          Based on your selected goals and <strong className="text-[var(--text-primary)]">{dailyHours} hour(s)</strong> of study each day, your estimated roadmap completion is <strong className="text-[var(--text-primary)]">{weeks} weeks</strong>.
         </p>
-
       </div>
 
       {/* Navigation */}

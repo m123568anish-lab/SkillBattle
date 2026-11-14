@@ -1,6 +1,51 @@
 import { api } from "@/lib/api";
 import { API_ENDPOINTS } from "@/lib/api-constants";
 
+function getErrorStatus(error: unknown): number | undefined {
+  if (typeof error !== "object" || error === null || !("response" in error)) return undefined;
+  const response = error.response;
+  if (typeof response !== "object" || response === null || !("status" in response)) {
+    return undefined;
+  }
+  return typeof response.status === "number" ? response.status : undefined;
+}
+
+export function getBattleCreationKey(scope: string, request: object): string {
+  const storagePrefix = `qubira:battle-create:${scope}`;
+  const fingerprint = JSON.stringify(request);
+  const storedFingerprint = sessionStorage.getItem(`${storagePrefix}:request`);
+  const storedKey = sessionStorage.getItem(`${storagePrefix}:key`);
+  if (storedFingerprint === fingerprint && storedKey) return storedKey;
+
+  const key = crypto.randomUUID();
+  sessionStorage.setItem(`${storagePrefix}:request`, fingerprint);
+  sessionStorage.setItem(`${storagePrefix}:key`, key);
+  return key;
+}
+
+export function clearBattleCreationKey(scope: string, key: string): void {
+  const storagePrefix = `qubira:battle-create:${scope}`;
+  if (sessionStorage.getItem(`${storagePrefix}:key`) !== key) return;
+  sessionStorage.removeItem(`${storagePrefix}:request`);
+  sessionStorage.removeItem(`${storagePrefix}:key`);
+}
+
+export async function createBattleWithRetry<T>(
+  payload: object,
+  idempotencyKey: string,
+): Promise<T> {
+  const request = { ...payload, idempotency_key: idempotencyKey };
+  const send = () => api.post<T>(API_ENDPOINTS.BATTLE.CREATE, request);
+  try {
+    return (await send()).data;
+  } catch (error: unknown) {
+    const status = getErrorStatus(error);
+    if (status !== undefined && ![502, 503, 504].includes(status)) throw error;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    return (await send()).data;
+  }
+}
+
 export interface BattleRecord {
   id: string;
   title?: string;
@@ -56,6 +101,7 @@ export interface CreateBattlePayload {
   difficulty: string;
   problem_id: number;
   max_players: number;
+  battle_mode?: string;
 }
 
 export interface MatchmakingRequest {
@@ -74,9 +120,8 @@ export interface MatchmakingStatus {
 }
 
 class BattleService {
-  async createBattle(payload: CreateBattlePayload) {
-    const response = await api.post<BattleRecord>(API_ENDPOINTS.BATTLE.CREATE, payload);
-    return response.data;
+  async createBattle(payload: CreateBattlePayload, idempotencyKey: string) {
+    return createBattleWithRetry<BattleRecord>(payload, idempotencyKey);
   }
 
   async joinBattle(battleId: string) {

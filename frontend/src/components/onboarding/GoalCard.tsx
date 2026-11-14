@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CheckCircle2, Star } from "lucide-react";
+import { Check, Star } from "lucide-react";
 
 interface Props {
   title: string;
@@ -20,43 +20,33 @@ export default function GoalCard({
 }: Props) {
   return (
     <motion.button
-      whileHover={{ scale: 1.03 }}
+      whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className={`
-        relative
-        rounded-2xl
-        border
-        p-6
-        text-left
-        transition-all
-
-        ${
-          selected
-            ? "border-cyan-400 bg-cyan-500/20"
-            : "border-white/10 bg-white/5 hover:border-cyan-500/30"
-        }
-      `}
+      className={`relative rounded-2xl border p-6 text-left transition-all duration-200 ${
+        selected
+          ? "border-[var(--accent)] bg-[var(--accent)]/15 shadow-[0_0_16px_rgba(216,255,62,0.15)] ring-1 ring-[var(--accent)]"
+          : "border-[var(--border-default)] bg-[var(--surface-elevated)] hover:border-[var(--border-focus)]/50 hover:bg-[var(--surface-subtle)]"
+      }`}
     >
       {selected && (
-        <CheckCircle2
-          size={22}
-          className="absolute right-5 top-5 text-cyan-400"
-        />
+        <span className="absolute right-5 top-5 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent)] text-[var(--text-on-accent)]">
+          <Check size={12} strokeWidth={3} />
+        </span>
       )}
 
       {recommended && (
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-yellow-500/20 px-3 py-1 text-xs text-yellow-300">
-          <Star size={14} />
-          Recommended
+        <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300">
+          <Star size={13} className="fill-current" />
+          <span>Recommended</span>
         </div>
       )}
 
-      <h3 className="text-xl font-bold text-white">
+      <h3 className="text-lg font-bold text-[var(--text-primary)]">
         {title}
       </h3>
 
-      <p className="mt-3 text-slate-400">
+      <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
         {description}
       </p>
     </motion.button>

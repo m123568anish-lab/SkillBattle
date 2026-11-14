@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Search, ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Menu, Search, X } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import api from "@/services/api";
 import NotificationMenu from "./NotificationMenu";
@@ -13,7 +13,7 @@ import ProfileMenu from "./ProfileMenu";
 import { useAuthStore } from "@/store/authStore";
 import { getDashboardPath } from "@/lib/auth-routing";
 import { ThemeToggle } from "@/components/common/ExperienceEnhancements";
-import QubiraLogo, { QubiraIcon } from "@/components/brand/QubiraLogo";
+import QubiraLogo from "@/components/brand/QubiraLogo";
 import { MOTION_DURATIONS, MOTION_EASINGS } from "@/lib/motion";
 
 type SearchResult = {
@@ -22,6 +22,37 @@ type SearchResult = {
   detail: string;
   href: string;
 };
+
+const pageTitles: Record<string, string> = {
+  "/dashboard": "Overview",
+  "/college/dashboard": "Campus overview",
+  "/company/dashboard": "Hiring overview",
+  "/admin": "Platform overview",
+  "/practice": "Learning",
+  "/practice/tasks": "Practice tasks",
+  "/practice/progress": "Learning progress",
+  "/battle": "Arena",
+  "/battle/solo": "Solo arena",
+  "/battle/lobby": "Multiplayer lobby",
+  "/battle/history": "Battle history",
+  "/leaderboard": "Rankings",
+  "/profile": "Profile",
+  "/settings": "Settings",
+  "/activity": "Activity",
+  "/achievements": "Achievements",
+  "/career/roadmap": "Career roadmap",
+  "/opportunities": "Opportunities",
+};
+
+function getPageTitle(pathname: string): string {
+  const exactTitle = pageTitles[pathname];
+  if (exactTitle) return exactTitle;
+  if (/^\/battle\/[^/]+$/.test(pathname)) return "Battle room";
+
+  const segment = pathname.split("/").filter(Boolean).at(-1);
+  return segment?.replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase())
+    || "Overview";
+}
 
 export default function TopNavbar({
   onToggleMobileNav,
@@ -42,13 +73,7 @@ export default function TopNavbar({
   const [searchError, setSearchError] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-
-  const pageLabel = pathname
-    .split("/")
-    .filter(Boolean)
-    .slice(-1)[0]
-    ?.replace(/[-_]/g, " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase()) || "Dashboard";
+  const pageLabel = getPageTitle(pathname);
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
@@ -105,21 +130,9 @@ export default function TopNavbar({
       initial={shouldReduceMotion ? false : { opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: MOTION_DURATIONS.fast * 1.5, ease: MOTION_EASINGS.command }}
-      className="
-        sticky top-0 z-20
-        -mx-4 mb-5 flex min-h-14 min-w-0 flex-row items-center justify-between gap-1.5 border-b
-        border-[#252525] bg-[#050505] px-4 py-2.5
-        transition-colors duration-200
-        sm:mx-0 sm:mb-8 sm:min-h-16 sm:gap-4 sm:px-0 sm:py-4
-      "
+      className="sticky top-0 z-20 -mx-4 mb-5 grid h-[calc(3.5rem+env(safe-area-inset-top))] min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-[var(--border-default)] bg-[var(--surface-canvas)]/95 backdrop-blur-md px-3 pt-[env(safe-area-inset-top)] transition-colors duration-200 sm:mx-0 sm:mb-8 sm:h-16 sm:grid-cols-[minmax(0,1fr)_minmax(11rem,24rem)_auto] sm:gap-4 sm:px-0 sm:pt-0"
     >
-      {/* Subtle Bottom Border Accent Line */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)]/20 to-transparent"
-      />
-
-      <div className="flex min-w-0 items-center gap-1.5 sm:gap-3">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         {onToggleMobileNav ? (
           <button
             type="button"
@@ -129,44 +142,37 @@ export default function TopNavbar({
             aria-controls="mobile-navigation-drawer"
             data-mobile-menu-trigger
             title={mobileNavExpanded ? "Close navigation menu" : "Open navigation menu"}
-            className={`group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] sm:hidden ${
+            className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] max-[359px]:h-9 max-[359px]:w-9 sm:hidden ${
               mobileNavExpanded
-                ? "border-[var(--accent)]/50 bg-[var(--accent)]/10"
-                : "border-[var(--border-default)] bg-[var(--surface-card)] hover:border-[var(--accent)]/50"
+                ? "border-[var(--accent)]/50 bg-[var(--accent)]/10 text-[var(--accent-strong)]"
+                : "border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-secondary)] hover:border-[var(--accent)]/50 hover:text-[var(--text-primary)]"
             }`}
           >
-            <QubiraIcon size={28} />
+            {mobileNavExpanded ? <X size={19} aria-hidden="true" /> : <Menu size={19} aria-hidden="true" />}
           </button>
         ) : null}
         <Link
           href={logoHref}
           aria-label="Go to your Qubira dashboard"
           title="Dashboard"
-          className="inline-flex min-w-0 shrink-0 items-center px-1 py-1 text-left transition hover:opacity-90"
+          className="inline-flex min-w-0 shrink-0 items-center rounded-lg px-1 py-1 text-left transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
         >
-          {onToggleMobileNav ? (
-            <>
-              <span className="inline-flex sm:hidden">
-                <QubiraLogo variant="wordmark" size="sm" />
-              </span>
-              <span className="hidden sm:inline-flex">
-                <QubiraLogo variant="full" size="sm" className="drop-shadow-[0_0_20px_rgba(216,255,62,0.08)]" />
-              </span>
-            </>
-          ) : (
-            <QubiraLogo variant="full" size="sm" className="drop-shadow-[0_0_20px_rgba(216,255,62,0.08)]" />
-          )}
+          <QubiraLogo variant="full" size="sm" />
         </Link>
+      </div>
 
-        {/* Global Search Input Bar & Command Palette */}
-        <div
-          className={`relative min-w-0 flex-1 lg:max-w-md ${
+      <div
+        className={`relative mx-auto flex w-full max-w-[36rem] min-w-0 items-center gap-4 ${
             mobileSearchOpen
-              ? "max-sm:absolute max-sm:left-0 max-sm:right-0 max-sm:top-[calc(100%+0.5rem)] max-sm:z-50 max-sm:rounded-xl max-sm:border max-sm:border-[var(--border-default)] max-sm:bg-[var(--surface-elevated)] max-sm:p-2 max-sm:shadow-2xl"
+              ? "max-sm:absolute max-sm:left-3 max-sm:right-3 max-sm:top-[calc(100%+0.5rem)] max-sm:z-50 max-sm:rounded-xl max-sm:border max-sm:border-[var(--border-default)] max-sm:bg-[var(--surface-elevated)] max-sm:p-2 max-sm:shadow-2xl"
               : "max-sm:hidden"
-          } sm:block`}
-        >
-          <div className="group/search flex w-full items-center gap-2 rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-2 transition-all duration-200 focus-within:border-[var(--accent)]/60 focus-within:shadow-[0_0_16px_rgba(200,239,114,0.12)] sm:gap-3 sm:px-4 sm:py-2.5">
+          } sm:flex`}
+      >
+        <div className="hidden min-w-0 shrink-0 lg:block">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Workspace</p>
+          <p data-current-page className="mt-0.5 truncate text-sm font-semibold text-[var(--text-primary)]">{pageLabel}</p>
+        </div>
+        <div className="group/search relative flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-2 transition-colors focus-within:border-[var(--accent)]/60 sm:gap-3 sm:px-4 sm:py-2.5">
             <Search
               size={17}
               className="shrink-0 text-[var(--text-muted)] transition-colors duration-200 group-focus-within/search:text-[var(--accent-strong)]"
@@ -293,13 +299,6 @@ export default function TopNavbar({
             )}
           </AnimatePresence>
         </div>
-      </div>
-
-      <div className="absolute left-0 top-full hidden items-center gap-1.5 pt-1 text-[10px] text-[var(--text-muted)] md:flex">
-        <span className="opacity-60">Workspace</span>
-        <span aria-hidden="true">/</span>
-        <span className="font-semibold text-[var(--text-secondary)]">{pageLabel}</span>
-      </div>
 
       <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-4">
         <button
@@ -317,7 +316,7 @@ export default function TopNavbar({
           <Search className="h-[17px] w-[17px]" />
         </button>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-          <span className="hidden sm:block"><ThemeToggle /></span>
+          <ThemeToggle />
           <span className="hidden sm:block"><ActivityMenu /></span>
           <NotificationMenu />
           <ProfileMenu />

@@ -74,12 +74,12 @@ export default function CompanyStep({
           opacity: 1,
           y: 0,
         }}
-        className="text-4xl font-black text-white"
+        className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)]"
       >
         Company Preferences
       </motion.h1>
 
-      <p className="mt-3 text-slate-400">
+      <p className="mt-2 text-sm text-[var(--text-secondary)]">
         Select organizations you are interested in. These are preference suggestions, not partner listings or current openings.
       </p>
 
@@ -91,25 +91,12 @@ export default function CompanyStep({
           setSearch(e.target.value)
         }
         placeholder="Search company..."
-        className="
-          mt-8
-          h-14
-          w-full
-          rounded-xl
-          border
-          border-white/10
-          bg-white/5
-          px-5
-          text-white
-          outline-none
-          transition
-          focus:border-cyan-400
-        "
+        className="mt-6 h-12 w-full rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] px-4 text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] transition-colors"
       />
 
       {/* Filter */}
 
-      <div className="mt-6 flex flex-wrap gap-3">
+      <div className="mt-4 flex flex-wrap gap-2">
 
         {["All", "Product", "Service"].map(
           (item) => (
@@ -120,18 +107,11 @@ export default function CompanyStep({
                   item as Filter
                 )
               }
-              className={`
-                rounded-full
-                px-5
-                py-2
-                transition
-
-                ${
-                  filter === item
-                    ? "bg-cyan-500 text-white"
-                    : "bg-white/5 text-slate-300"
-                }
-              `}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
+                filter === item
+                  ? "bg-[var(--accent)] text-[var(--text-on-accent)] font-bold shadow-sm"
+                  : "border border-[var(--border-default)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-focus)]/50"
+              }`}
             >
               {item}
             </button>

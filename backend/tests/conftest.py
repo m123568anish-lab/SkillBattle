@@ -49,57 +49,58 @@ async def battle_question_bank():
 
     suffix = uuid4().hex
     questions = []
-    for index in range(5):
-        questions.append(
-            Question(
-                title=f"Test MCQ {suffix}-{index}",
-                slug=f"test-mcq-{suffix}-{index}",
-                description="Synthetic test question with a valid description.",
-                difficulty="medium",
-                question_type="mcq",
-                options=[{"key": "A", "text": "Option A"}, {"key": "B", "text": "Option B"}],
-                correct_option="A",
-                is_active=True,
-                is_validated=True,
+    for difficulty in ("easy", "medium"):
+        for index in range(5):
+            questions.append(
+                Question(
+                    title=f"Test MCQ {difficulty} {suffix}-{index}",
+                    slug=f"test-mcq-{difficulty}-{suffix}-{index}",
+                    description="Synthetic test question with a valid description.",
+                    difficulty=difficulty,
+                    question_type="mcq",
+                    options=[{"key": "A", "text": "Option A"}, {"key": "B", "text": "Option B"}],
+                    correct_option="A",
+                    is_active=True,
+                    is_validated=True,
+                )
             )
-        )
-    for index in range(3):
-        questions.append(
-            Question(
-                title=f"Test coding {suffix}-{index}",
-                slug=f"test-coding-{suffix}-{index}",
-                description="Synthetic coding test question description.",
-                difficulty="medium",
-                question_type="coding",
-                hidden_test_cases=[{"input": "1", "output": "1"}],
-                is_active=True,
-                is_validated=True,
+        for index in range(3):
+            questions.append(
+                Question(
+                    title=f"Test coding {difficulty} {suffix}-{index}",
+                    slug=f"test-coding-{difficulty}-{suffix}-{index}",
+                    description="Synthetic coding test question description.",
+                    difficulty=difficulty,
+                    question_type="coding",
+                    hidden_test_cases=[{"input": "1", "output": "1"}],
+                    is_active=True,
+                    is_validated=True,
+                )
             )
+        questions.extend(
+            [
+                Question(
+                    title=f"Test debugging {difficulty} {suffix}",
+                    slug=f"test-debugging-{difficulty}-{suffix}",
+                    description="Synthetic debugging test question description.",
+                    difficulty=difficulty,
+                    question_type="debugging",
+                    buggy_code="print('broken'",
+                    is_active=True,
+                    is_validated=True,
+                ),
+                Question(
+                    title=f"Test technical {difficulty} {suffix}",
+                    slug=f"test-technical-{difficulty}-{suffix}",
+                    description="Synthetic technical test question description.",
+                    difficulty=difficulty,
+                    question_type="technical",
+                    explanation="Synthetic test explanation.",
+                    is_active=True,
+                    is_validated=True,
+                ),
+            ]
         )
-    questions.extend(
-        [
-            Question(
-                title=f"Test debugging {suffix}",
-                slug=f"test-debugging-{suffix}",
-                description="Synthetic debugging test question description.",
-                difficulty="medium",
-                question_type="debugging",
-                buggy_code="print('broken'",
-                is_active=True,
-                is_validated=True,
-            ),
-            Question(
-                title=f"Test technical {suffix}",
-                slug=f"test-technical-{suffix}",
-                description="Synthetic technical test question description.",
-                difficulty="medium",
-                question_type="technical",
-                explanation="Synthetic test explanation.",
-                is_active=True,
-                is_validated=True,
-            ),
-        ]
-    )
     async with AsyncSessionLocal() as db:
         db.add_all(questions)
         await db.commit()

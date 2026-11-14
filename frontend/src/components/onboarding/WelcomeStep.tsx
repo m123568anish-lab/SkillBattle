@@ -1,6 +1,5 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
 import GradientButton from "@/components/ui/gradient-button";
 import QubiraLogo from "@/components/brand/QubiraLogo";
 
@@ -15,17 +14,24 @@ export default function WelcomeStep({ onNext }: Props) {
         <QubiraLogo variant="icon" size="xl" />
       </div>
 
-      <h1 className="text-4xl sm:text-5xl font-black text-white">
-        Welcome to <span className="bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">QUBIRA</span>
-      </h1>
+      <div>
+        <span className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
+          Adaptive Skill Architecture
+        </span>
+        <h1 className="mt-3 text-4xl sm:text-5xl font-black tracking-tight text-[var(--text-primary)]">
+          Welcome to <span className="text-[var(--accent)]">QUBIRA</span>
+        </h1>
+      </div>
 
-      <p className="mx-auto max-w-xl text-lg text-slate-300">
-        Let&apos;s personalize your learning journey so Qubira Mentor can generate the perfect technical roadmap for you.
+      <p className="mx-auto max-w-xl text-base sm:text-lg leading-relaxed text-[var(--text-secondary)]">
+        Personalize your technical profile so Qubira can calibrate your skill benchmarks, practice challenges, and AI learning roadmap.
       </p>
 
-      <GradientButton onClick={onNext}>
-        Let&apos;s Begin
-      </GradientButton>
+      <div className="pt-2">
+        <GradientButton onClick={onNext} className="min-w-44">
+          Let&apos;s Begin
+        </GradientButton>
+      </div>
     </div>
   );
 }

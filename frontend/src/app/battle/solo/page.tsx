@@ -13,8 +13,12 @@ import {
   ShieldAlert,
   Play,
 } from "lucide-react";
-import { api } from "@/lib/api";
 import toast from "react-hot-toast";
+import {
+  clearBattleCreationKey,
+  createBattleWithRetry,
+  getBattleCreationKey,
+} from "@/services/battle.service";
 
 export default function SoloBattleSelectionPage() {
   const router = useRouter();
@@ -40,8 +44,18 @@ export default function SoloBattleSelectionPage() {
   }, [preferredMode]);
 
   const handleStartMcq = () => {
+    const topic = mcqCategory === "Algorithms & Data Structures"
+      ? "Algorithms"
+      : mcqCategory === "System Design & Caching"
+        ? "System Design"
+        : mcqCategory === "SQL & Database Internals"
+          ? "SQL"
+          : mcqCategory === "Web & JavaScript Core"
+            ? "JavaScript"
+            : mcqCategory;
+
     const params = new URLSearchParams({
-      topic: mcqCategory,
+      topic,
       difficulty: mcqDifficulty.toLowerCase(),
       count: String(mcqQuestionsCount),
     });
@@ -51,7 +65,7 @@ export default function SoloBattleSelectionPage() {
   const handleStartCoding = async () => {
     setCreatingBattle(true);
     try {
-      const { data } = await api.post<{ id: string }>("/battle/create", {
+      const request = {
         title: "Solo coding challenge",
         difficulty: codingDifficulty.toLowerCase(),
         battle_type: "general",
@@ -59,8 +73,11 @@ export default function SoloBattleSelectionPage() {
         max_players: 1,
         question_type: "coding",
         question_count: 1,
-      });
+      };
+      const idempotencyKey = getBattleCreationKey("solo-coding", request);
+      const data = await createBattleWithRetry<{ id: string }>(request, idempotencyKey);
       if (!data.id) throw new Error("The server did not return a battle ID.");
+      clearBattleCreationKey("solo-coding", idempotencyKey);
       router.push(`/battle/${encodeURIComponent(data.id)}?lang=${encodeURIComponent(codingLanguage)}`);
     } catch {
       toast.error("Unable to create a coding battle. Please try again.");

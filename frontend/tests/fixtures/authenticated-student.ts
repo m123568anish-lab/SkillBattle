@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import type { DashboardResponse } from "@/types/dashboard";
 
 export const testStudent = {
   id: "e2e-app-user",
@@ -36,7 +37,17 @@ const emptyDashboard = {
   daily_challenge: null,
 };
 
-export async function authenticateStudent(page: Page) {
+export async function authenticateStudent(
+  page: Page,
+  options: { role?: string; dashboard?: Partial<DashboardResponse> } = {},
+) {
+  const user = { ...testStudent, role: options.role ?? testStudent.role };
+  const dashboard = {
+    ...emptyDashboard,
+    ...options.dashboard,
+    user: { ...user, ...options.dashboard?.user },
+  };
+
   await page.context().addCookies([{
     name: "__Secure-neon-auth.session_token",
     value: "e2e-cookie-session",
@@ -50,17 +61,17 @@ export async function authenticateStudent(page: Page) {
     const requestUrl = new URL(route.request().url());
     const path = requestUrl.pathname;
     if (path.endsWith("/auth/me")) {
-      return route.fulfill({ json: testStudent });
+      return route.fulfill({ json: user });
     }
     if (path.endsWith("/dashboard")) {
-      return route.fulfill({ json: emptyDashboard });
+      return route.fulfill({ json: dashboard });
     }
     if (path.endsWith("/profile/me")) {
       return route.fulfill({
         json: {
-          username: testStudent.username,
-          full_name: testStudent.full_name,
-          email: testStudent.email,
+          username: user.username,
+          full_name: user.full_name,
+          email: user.email,
           total_xp: 840,
           level: 4,
           bio: "Building strong foundations through deliberate practice.",

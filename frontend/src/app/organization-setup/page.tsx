@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CircleCheck, CircleDashed, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { CircleCheck, CircleDashed, RefreshCw, ArrowLeft } from "lucide-react";
 import api from "@/services/api";
+import { QubiraLogo } from "@/components/brand/QubiraLogo";
 
 type OnboardingStep = {
   key: string;
@@ -51,52 +53,92 @@ export default function OrganizationSetupPage() {
   }, [refreshKey]);
 
   if (loading) {
-    return <main className="mx-auto max-w-3xl px-5 py-12 text-sm text-slate-400">Loading setup status…</main>;
-  }
-
-  if (!progress) {
     return (
-      <main className="mx-auto max-w-3xl px-5 py-12">
-        <div role="alert" className="flex items-center justify-between gap-4 border-l-2 border-amber-300 px-4 py-3 text-sm text-amber-100">
-          <span>{error}</span>
-          <button type="button" onClick={() => { setLoading(true); setRefreshKey((value) => value + 1); }} className="flex items-center gap-2 text-white hover:text-cyan-200">
-            <RefreshCw className="h-4 w-4" /> Retry
-          </button>
+      <main className="min-h-screen bg-[var(--surface-canvas)] flex items-center justify-center p-6 text-sm text-[var(--text-muted)]">
+        <div className="flex items-center gap-3">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+          <span>Loading setup status…</span>
         </div>
       </main>
     );
   }
 
-  return (
-    <main className="mx-auto max-w-3xl px-5 py-10 text-slate-100 sm:py-14">
-      <header className="border-b border-white/10 pb-6">
-        <p className="text-xs font-semibold uppercase text-cyan-300">{progress.organization_type} setup</p>
-        <h1 className="mt-2 text-2xl font-semibold text-white">{progress.organization_name}</h1>
-        <div className="mt-6 flex items-end justify-between gap-4">
-          <span className="text-sm text-slate-400">Setup progress</span>
-          <span className="text-sm font-medium text-white">{progress.progress_percent}% · {progress.completed_steps}/{progress.available_steps}</span>
+  if (!progress) {
+    return (
+      <main className="min-h-screen bg-[var(--surface-canvas)] flex items-center justify-center p-6 text-[var(--text-primary)]">
+        <div className="w-full max-w-lg rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6 shadow-2xl">
+          <div role="alert" className="flex items-center justify-between gap-4 border-l-2 border-[var(--status-warning)] pl-4 py-2 text-sm text-[var(--text-secondary)]">
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={() => { setLoading(true); setRefreshKey((value) => value + 1); }}
+              className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--accent)] hover:text-[var(--accent-strong)] transition"
+            >
+              <RefreshCw className="h-3.5 w-3.5" /> Retry
+            </button>
+          </div>
+          <div className="mt-6 pt-4 border-t border-[var(--border-subtle)]">
+            <Link href="/" className="inline-flex items-center gap-2 text-xs font-semibold text-[var(--accent-strong)] hover:underline">
+              <ArrowLeft size={14} /> Back to Home
+            </Link>
+          </div>
         </div>
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10" role="progressbar" aria-valuenow={progress.progress_percent} aria-valuemin={0} aria-valuemax={100}>
-          <div className="h-full rounded-full bg-cyan-300 transition-all" style={{ width: `${progress.progress_percent}%` }} />
-        </div>
-      </header>
+      </main>
+    );
+  }
 
-      <ol className="divide-y divide-white/10">
-        {progress.steps.map((step) => (
-          <li key={step.key} className="flex items-center gap-4 py-4">
-            {step.available && step.complete
-              ? <CircleCheck aria-hidden="true" className="h-5 w-5 shrink-0 text-emerald-300" />
-              : <CircleDashed aria-hidden="true" className="h-5 w-5 shrink-0 text-slate-500" />}
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-medium text-white">{step.title}</span>
-              <span className="mt-0.5 block text-xs text-slate-500">
-                {!step.available ? "Not available in this platform workflow" : step.complete ? "Complete" : "Needs setup"}
-              </span>
-            </span>
-            {step.count !== null && <span className="text-sm tabular-nums text-slate-400">{step.count}</span>}
-          </li>
-        ))}
-      </ol>
+  const dashboardHref = progress.organization_type === "college" ? "/college/dashboard" : "/company/dashboard";
+
+  return (
+    <main className="min-h-screen bg-[var(--surface-canvas)] text-[var(--text-primary)] py-12 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-3xl space-y-6">
+        <div className="flex items-center justify-between">
+          <QubiraLogo variant="full" size="sm" />
+          <Link
+            href={dashboardHref}
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] px-4 py-2 text-xs font-semibold text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--text-primary)] transition"
+          >
+            <span>Go to Dashboard</span>
+          </Link>
+        </div>
+
+        <div className="rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6 sm:p-10 shadow-2xl">
+          <header className="border-b border-[var(--border-subtle)] pb-6">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--accent-strong)]">{progress.organization_type} setup</p>
+            <h1 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)]">{progress.organization_name}</h1>
+            <div className="mt-6 flex items-end justify-between gap-4">
+              <span className="text-xs font-semibold text-[var(--text-muted)]">Setup Progress</span>
+              <span className="text-xs font-mono font-bold text-[var(--accent-strong)]">{progress.progress_percent}% · {progress.completed_steps}/{progress.available_steps} steps</span>
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--surface-elevated)] border border-[var(--border-subtle)]" role="progressbar" aria-valuenow={progress.progress_percent} aria-valuemin={0} aria-valuemax={100}>
+              <div className="h-full rounded-full bg-[var(--accent)] shadow-[0_0_10px_var(--accent)] transition-all duration-500" style={{ width: `${progress.progress_percent}%` }} />
+            </div>
+          </header>
+
+          <ol className="divide-y divide-[var(--border-subtle)] mt-2">
+            {progress.steps.map((step) => (
+              <li key={step.key} className="flex items-center gap-4 py-4.5">
+                {step.available && step.complete ? (
+                  <CircleCheck aria-hidden="true" className="h-5 w-5 shrink-0 text-[var(--status-success)]" />
+                ) : (
+                  <CircleDashed aria-hidden="true" className="h-5 w-5 shrink-0 text-[var(--text-muted)]" />
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-[var(--text-primary)]">{step.title}</span>
+                  <span className="mt-0.5 block text-xs text-[var(--text-muted)]">
+                    {!step.available ? "Not available in this platform workflow" : step.complete ? "Complete" : "Needs setup"}
+                  </span>
+                </span>
+                {step.count !== null && (
+                  <span className="rounded-md border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-2.5 py-1 text-xs font-mono text-[var(--text-secondary)]">
+                    {step.count}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
     </main>
   );
 }

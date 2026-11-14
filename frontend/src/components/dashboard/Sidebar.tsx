@@ -19,11 +19,12 @@ import {
   Flame,
   Users,
 } from "lucide-react";
-import { getPortalCategories, getPortalKind } from "@/data/dashboard";
+import { getPortalCategories, getUserPortalKind } from "@/data/dashboard";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuthStore } from "@/store/authStore";
 import { QubiraLogo } from "@/components/brand/QubiraLogo";
 import { MOTION_DURATIONS, MOTION_EASINGS } from "@/lib/motion";
+import { getDashboardPath } from "@/lib/auth-routing";
 
 interface SidebarProps {
   isMobile?: boolean;
@@ -39,7 +40,7 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
 
-  const portal = getPortalKind(pathname);
+  const portal = getUserPortalKind(user, pathname);
   const portalCategories = getPortalCategories(portal);
 
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -156,7 +157,7 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
     }
   };
 
-  const displayName = user?.full_name || user?.username || "Qubira Engineer";
+  const displayName = user?.full_name || user?.username || "Account";
   const userInitials = displayName
     .split(/\s+/)
     .filter(Boolean)
@@ -194,15 +195,16 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
         }
         className={`flex flex-col select-none relative ${
           isMobile
-            ? "h-full w-full rounded-r-2xl border-r border-[#252525] bg-[#090909] pt-[env(safe-area-inset-top)] text-[#F5F5F5]"
-            : "hidden lg:flex m-0 rounded-none border-0 border-r border-[#252525] bg-[#090909] text-[#F5F5F5] shadow-none overflow-hidden"
+            ? "h-full w-full rounded-r-2xl border-r border-[var(--border-default)] bg-[var(--surface-sidebar,var(--surface-card))] pt-[env(safe-area-inset-top)] text-[var(--text-primary)]"
+            : "hidden lg:flex m-0 rounded-none border-0 border-r border-[var(--border-default)] bg-[var(--surface-sidebar,var(--surface-card))] text-[var(--text-primary)] shadow-none overflow-hidden"
         }`}
       >
         {/* Top Header / Branding */}
         <div className="relative z-10 flex h-14 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] px-3.5">
           <Link
-            href={portal === "admin" ? "/admin" : portal === "college" ? "/college/dashboard" : portal === "company" ? "/company/dashboard" : "/dashboard"}
+            href={user ? getDashboardPath(user) : portal === "admin" ? "/admin" : portal === "college" ? "/college/dashboard" : portal === "company" ? "/company/dashboard" : "/dashboard"}
             onClick={onCloseMobile}
+            aria-label="Qubira home"
             className={`flex items-center gap-2.5 transition-opacity hover:opacity-90 ${effectiveCollapsed ? "mx-auto" : ""}`}
             title="Qubira — Learn. Build. Compete."
           >
@@ -220,7 +222,7 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
               onClick={toggleCollapsed}
               aria-label={effectiveCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
               title={effectiveCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
-              className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] p-1 text-[var(--text-secondary)] transition-all duration-150 hover:border-[var(--accent-strong)] hover:text-[var(--text-primary)] active:scale-95"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] transition-colors hover:border-[var(--accent-strong)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] active:scale-95"
             >
               {effectiveCollapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
             </button>

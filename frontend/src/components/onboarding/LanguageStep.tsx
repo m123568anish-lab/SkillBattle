@@ -36,31 +36,19 @@ export default function LanguageStep({
   return (
     <div>
 
-      <h1 className="text-4xl font-black text-white">
+      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)]">
         Programming Languages
       </h1>
 
-      <p className="mt-3 text-slate-400">
-        Choose every programming language you know.
+      <p className="mt-2 text-sm text-[var(--text-secondary)]">
+        Select every language you code in or are actively learning.
       </p>
 
       <input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search language..."
-        className="
-          mt-8
-          h-14
-          w-full
-          rounded-xl
-          border
-          border-white/10
-          bg-white/5
-          px-5
-          text-white
-          outline-none
-          focus:border-cyan-400
-        "
+        placeholder="Search programming languages..."
+        className="mt-6 h-12 w-full rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] px-4 text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] transition-colors"
       />
 
       <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">

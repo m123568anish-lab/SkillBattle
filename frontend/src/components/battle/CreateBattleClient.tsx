@@ -1,9 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import {
+  clearBattleCreationKey,
+  createBattleWithRetry,
+  getBattleCreationKey,
+} from "@/services/battle.service";
 
 export default function CreateBattleClient() {
   const [title, setTitle] = useState("");
@@ -12,9 +16,12 @@ export default function CreateBattleClient() {
 
   async function create() {
     try {
-      const resp = await api.post("/battle/create", { title, difficulty });
+      const request = { title, difficulty };
+      const idempotencyKey = getBattleCreationKey("legacy-create", request);
+      const battle = await createBattleWithRetry<{ id: string }>(request, idempotencyKey);
+      clearBattleCreationKey("legacy-create", idempotencyKey);
       toast.success("Battle created");
-      router.push(`/battle/${resp.data.id}`);
+      router.push(`/battle/${battle.id}`);
     } catch (e) {
       console.error(e);
       toast.error("Failed to create");

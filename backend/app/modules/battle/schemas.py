@@ -119,6 +119,12 @@ class CreateBattleRequest(BaseModel):
     skill_category: Optional[str] = Field(default=None, min_length=1, max_length=100)
     question_count: int = Field(default=1, ge=1, le=20)
     max_players: int = Field(default=2, ge=1, le=16)
+    idempotency_key: Optional[str] = Field(
+        default=None,
+        min_length=16,
+        max_length=128,
+        pattern=r"^[A-Za-z0-9._:-]+$",
+    )
 
 
 class JoinBattleRequest(BaseModel):
@@ -186,6 +192,21 @@ class SubmitAnswerRequest(BaseModel):
     language: str = "python"
     time_taken_seconds: int = 0
     telemetry: Dict[str, Any] = Field(default_factory=dict)
+
+
+class VerifyBattleSubmissionRequest(BaseModel):
+    question_type: QuestionTypeEnum
+    mcq_option: Optional[str] = None
+    source_code: Optional[str] = None
+    language: str = "python"
+
+
+class BattleSubmissionVerificationResponse(BaseModel):
+    verified: bool
+    submission_id: Optional[str] = None
+    verdict: Optional[str] = None
+    score_earned: Optional[float] = None
+    detail: str
 
 
 class SubmitCodeRequest(BaseModel):

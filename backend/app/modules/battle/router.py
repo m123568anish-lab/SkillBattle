@@ -21,11 +21,13 @@ from app.modules.battle.schemas import (
     BattleConfigCreate,
     BattleConfigResponse,
     SubmitAnswerRequest,
+    VerifyBattleSubmissionRequest,
     BattleSubmissionResponse,
+    BattleSubmissionVerificationResponse,
     BattleResultResponse,
 )
 
-from app.modules.battle.service import battle_service
+from app.modules.battle.service import BattleCreationConflict, battle_service
 from app.modules.battle.config.service import battle_config_service
 from app.modules.battle.question_engine import question_engine
 from app.modules.battle.websocket import battle_ws
@@ -193,6 +195,8 @@ async def create_battle(
                 is_completed=False,
             )
         return battle_to_response(battle)
+    except BattleCreationConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -359,6 +363,31 @@ async def submit_answer(
         return await battle_service.submit_answer(db, current_user, request)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post(
+    "/{battle_id}/submission/{question_id}/verify",
+    response_model=BattleSubmissionVerificationResponse,
+)
+async def verify_battle_submission(
+    battle_id: str,
+    question_id: int,
+    request: VerifyBattleSubmissionRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    battle = await battle_service.get_battle(db, battle_id)
+    if battle is None:
+        raise HTTPException(status_code=404, detail="Battle not found.")
+    if await battle_repository.get_participant(db, battle_id, current_user.id) is None:
+        raise HTTPException(status_code=403, detail="Only battle participants can verify a submission.")
+    return await battle_service.verify_saved_submission(
+        db,
+        current_user,
+        battle_id,
+        question_id,
+        request,
+    )
 
 
 # ==========================================================

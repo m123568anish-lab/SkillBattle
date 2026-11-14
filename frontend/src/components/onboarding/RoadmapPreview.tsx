@@ -68,127 +68,99 @@ export default function RoadmapPreview({
       className="mx-auto max-w-6xl"
     >
       <div className="text-center">
-
-        <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-cyan-500/10">
-
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-[var(--surface-elevated)] border border-[var(--border-default)]">
           <Sparkles
-            size={48}
-            className="text-cyan-400"
+            size={40}
+            className="text-[var(--accent)]"
           />
-
         </div>
 
-        <h1 className="mt-6 text-5xl font-black text-white">
+        <h1 className="mt-6 text-4xl sm:text-5xl font-extrabold tracking-tight text-[var(--text-primary)]">
           Your Personalized Roadmap
         </h1>
 
-        <p className="mt-4 text-slate-400">
+        <p className="mt-3 text-sm sm:text-base text-[var(--text-secondary)] max-w-2xl mx-auto">
           {roadmap
             ? `A ${roadmap.duration_weeks}-week preparation journey for ${roadmap.target_company}.`
             : message || "Your preferences are saved. A personalized roadmap can be generated when the AI service is available."}
         </p>
-
       </div>
 
-      <div className="mt-12 grid gap-6 md:grid-cols-3">
-
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-
-          <Calendar className="mb-3 text-cyan-400" />
-
-          <h3 className="font-bold text-white">
+      <div className="mt-10 grid gap-5 md:grid-cols-3">
+        <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6">
+          <Calendar className="mb-3 text-[var(--accent)]" />
+          <h3 className="font-semibold text-sm text-[var(--text-muted)]">
             Duration
           </h3>
-
-          <p className="mt-2 text-slate-400">
+          <p className="mt-1 text-xl font-bold text-[var(--text-primary)]">
             {roadmap ? `${roadmap.duration_weeks} Weeks` : "Not generated"}
           </p>
-
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-
-          <Clock className="mb-3 text-cyan-400" />
-
-          <h3 className="font-bold text-white">
+        <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6">
+          <Clock className="mb-3 text-[var(--accent)]" />
+          <h3 className="font-semibold text-sm text-[var(--text-muted)]">
             Daily Study
           </h3>
-
-          <p className="mt-2 text-slate-400">
+          <p className="mt-1 text-xl font-bold text-[var(--text-primary)]">
             {roadmap ? `${Math.round(roadmap.estimated_hours / Math.max(roadmap.duration_weeks * 5, 1))} Hours` : "Saved preferences"}
           </p>
-
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-
-          <Trophy className="mb-3 text-yellow-400" />
-
-          <h3 className="font-bold text-white">
+        <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6">
+          <Trophy className="mb-3 text-[var(--status-warning)]" />
+          <h3 className="font-semibold text-sm text-[var(--text-muted)]">
             XP Rewards
           </h3>
-
-          <p className="mt-2 text-slate-400">
+          <p className="mt-1 text-xl font-bold text-[var(--text-primary)]">
             {totalXP} XP
           </p>
-
         </div>
-
       </div>
 
-      <div className="mt-12 space-y-5">
-
+      <div className="mt-10 space-y-4">
         {(roadmap?.weeks ?? []).map((week) => (
           <div
             key={week.id}
-            className="rounded-2xl border border-white/10 bg-white/5 p-6"
+            className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6"
           >
-            <div className="flex justify-between">
-
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-
-                <h2 className="text-xl font-bold text-white">
+                <h2 className="text-lg font-bold text-[var(--text-primary)]">
                   Week {week.week_number}
                 </h2>
-
-                <p className="mt-2 text-cyan-400">
+                <p className="mt-1 text-sm font-medium text-[var(--accent)]">
                   {week.title}
                 </p>
-
               </div>
 
-              <span className="rounded-full bg-yellow-500/20 px-4 py-2 text-yellow-300">
+              <span className="self-start sm:self-auto rounded-full bg-[var(--surface-elevated)] border border-[var(--border-default)] px-3.5 py-1 text-xs font-semibold text-[var(--status-warning)]">
                 {week.completion}% complete
               </span>
-
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-3">
-
+            <div className="mt-4 flex flex-wrap gap-2">
               {week.tasks.map((task) => (
                 <span
                   key={task.id}
-                  className="rounded-full bg-cyan-500/15 px-3 py-2 text-sm text-cyan-300"
+                  className="rounded-lg bg-[var(--surface-elevated)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)]"
                 >
                   {task.topic}
                 </span>
               ))}
-
             </div>
-
           </div>
         ))}
-
       </div>
 
       {!roadmap && generationStatus === "pending" && (
         <div className="mt-8 text-center">
-          <p className="text-sm text-slate-400">{retryError}</p>
+          <p className="text-sm text-[var(--text-muted)]">{retryError}</p>
           <button
             type="button"
             onClick={handleRetry}
             disabled={retrying}
-            className="mt-3 rounded-lg border border-cyan-500/30 px-4 py-2 text-sm font-semibold text-cyan-300 disabled:opacity-50"
+            className="mt-3 rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] px-4 py-2 text-sm font-semibold text-[var(--accent)] hover:border-[var(--accent)] disabled:opacity-50"
           >
             {retrying ? "Retrying..." : "Retry roadmap generation"}
           </button>

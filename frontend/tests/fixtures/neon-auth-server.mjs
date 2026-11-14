@@ -99,4 +99,5 @@ const server = createServer((request, response) => {
   response.end(JSON.stringify({ message: "Not found" }));
 });
 
-server.listen(8765, "127.0.0.1");
+const port = Number(process.env.QUBIRA_PLAYWRIGHT_AUTH_PORT ?? "8765");
+server.listen(port, "127.0.0.1");

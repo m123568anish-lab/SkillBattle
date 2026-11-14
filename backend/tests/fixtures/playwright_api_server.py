@@ -1,4 +1,5 @@
 import asyncio
+import os
 import sys
 import uuid
 from pathlib import Path
@@ -65,4 +66,9 @@ async def seed_questions() -> None:
 
 
 asyncio.run(seed_questions())
-uvicorn.run(app, host="127.0.0.1", port=8000, log_level="warning")
+uvicorn.run(
+    app,
+    host="127.0.0.1",
+    port=int(os.environ.get("QUBIRA_PLAYWRIGHT_API_PORT", "8000")),
+    log_level="warning",
+)

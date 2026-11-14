@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { authenticateStudent } from "./fixtures/authenticated-student";
+import { authenticateStudent, testStudent } from "./fixtures/authenticated-student";
+import type { DashboardResponse } from "@/types/dashboard";
 
 const viewports = [
   { width: 1920, height: 1080 },
@@ -37,7 +38,14 @@ test("dashboard shell fits supported viewports and preserves mobile navigation t
   const menuButton = page.getByRole("button", { name: "Open navigation menu" });
   await menuButton.click();
   const navigationDrawer = page.getByRole("dialog", { name: "Navigation menu" });
+  await expect(page.getByRole("button", { name: "Close navigation menu" }).first()).toHaveAttribute("aria-expanded", "true");
+  expect(await page.evaluate(() => document.body.style.overflow)).toBe("hidden");
   await expect(navigationDrawer.getByRole("link", { name: "Support" })).toBeVisible();
+  await page.locator('div.fixed.inset-0.z-50 > button[aria-label="Close navigation menu"]').click();
+  await expect(navigationDrawer).toHaveCount(0);
+  expect(await page.evaluate(() => document.body.style.overflow)).toBe("");
+  await menuButton.click();
+  await expect(navigationDrawer).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(navigationDrawer).toHaveCount(0);
   await expect(menuButton).toBeFocused();
@@ -85,6 +93,125 @@ test("dashboard shell fits supported viewports and preserves mobile navigation t
       await page.screenshot({ path: "test-results/qubira-dashboard-mobile.png" });
     }
   }
+});
+
+test("dashboard organizes live progress, learning actions, and weekly activity", async ({ page }) => {
+  const dashboard: Partial<DashboardResponse> = {
+    user: { ...testStudent, full_name: "Mina Student" },
+    stats: {
+      xp: 1240,
+      level: 4,
+      next_level_xp: 1600,
+      xp_to_next_level: 360,
+      level_progress_percent: 67,
+      streak: 4,
+      longest_streak: 9,
+      rating: 1080,
+      battles_played: 8,
+      battles_completed: 7,
+      battles_won: 5,
+      battles_lost: 2,
+      practice_attempted: 18,
+      practice_completed: 12,
+      practice_tasks_completed: 10,
+      practice_accuracy: 76,
+      daily_challenge_completed: false,
+    },
+    weekly_activity: [
+      { day: "2025-03-10", xp: 10 },
+      { day: "2025-03-11", xp: 20 },
+      { day: "2025-03-12", xp: 0 },
+      { day: "2025-03-13", xp: 15 },
+      { day: "2025-03-14", xp: 5 },
+      { day: "2025-03-15", xp: 0 },
+      { day: "2025-03-16", xp: 30 },
+    ],
+    daily_challenge: {
+      id: "challenge-live-1",
+      title: "Trace a graph traversal",
+      difficulty: "Medium",
+      description: "Use breadth-first search to visit each reachable node.",
+      xp_reward: 40,
+      is_completed: false,
+    },
+    command_center: {
+      student_state: {
+        xp: 1240,
+        streak: 4,
+        target_company: "",
+        study_hours: { configured: true, minutes: 32 },
+      },
+      next_best_action: {
+        title: "Practice graph traversal",
+        type: "practice",
+        why: "Recent practice indicates this is a useful next step.",
+      },
+      daily_actions: [{
+        type: "Practice",
+        title: "Review graph basics",
+        description: "Work through a graph traversal exercise.",
+        time: "15 min",
+      }],
+      placement_readiness: { state: "BUILDING", confidence: "MEDIUM" },
+      skill_gaps: [{
+        skill_id: "graphs",
+        skill_name: "Graph traversal",
+        priority: "HIGH",
+        reason: "Recent practice shows this topic can improve.",
+      }],
+      roadmap: {
+        title: "Backend engineering",
+        progress: 35,
+        milestone: "Complete the data structures milestone.",
+      },
+      study_hours: { configured: true, minutes: 32 },
+      summary: { strong_skills: 2, weak_skills: 1, gap_count: 1 },
+    },
+  };
+
+  await authenticateStudent(page, { dashboard });
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto("/dashboard");
+
+  await expect(page.getByRole("heading", { name: "Welcome back, Mina" })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("region", { name: "Performance overview" })).toContainText("Lifetime XP");
+  await expect(page.getByRole("heading", { name: "Battle Arena" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Solo practice/ })).toHaveAttribute("href", "/battle/solo");
+  await expect(page.getByRole("link", { name: /Multiplayer arena/ })).toHaveAttribute("href", "/battle/lobby");
+  await expect(page.getByRole("heading", { name: "Trace a graph traversal" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Backend engineering" })).toBeVisible();
+  await expect(page.getByRole("progressbar", { name: "Roadmap progress" })).toHaveAttribute("aria-valuenow", "35");
+  await expect(page.getByRole("progressbar", { name: "2025-03-10: 10 XP" })).toBeVisible();
+  await expect(page.getByText("Mon", { exact: true })).toBeVisible();
+  await expect(page.getByText("Sun", { exact: true })).toBeVisible();
+
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    const layout = await page.evaluate(() => ({
+      viewportWidth: window.innerWidth,
+      documentWidth: document.documentElement.scrollWidth,
+    }));
+    expect(layout.documentWidth, `dashboard at ${viewport.width}px`).toBeLessThanOrEqual(layout.viewportWidth);
+    await expect(page.getByRole("heading", { name: "Battle Arena" })).toBeVisible();
+  }
+});
+
+test("mobile brand navigation follows the authenticated account role", async ({ page }) => {
+  await authenticateStudent(page, { role: "recruiter" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/profile");
+
+  const brand = page.getByRole("link", { name: "Go to your Qubira dashboard" });
+  await expect(brand).toHaveAttribute("href", "/company/dashboard");
+  const mobileHome = page.getByRole("navigation", { name: "Primary mobile navigation" })
+    .getByRole("link", { name: "Home" });
+  await expect(mobileHome).toHaveAttribute("href", "/company/dashboard");
+
+  await brand.click();
+  await page.waitForURL(/\/company\/dashboard$/);
+  await expect(page.getByRole("dialog", { name: "Navigation menu" })).toHaveCount(0);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator("[data-current-page]")).toHaveText("Hiring overview");
 });
 
 test("profile keeps its live details readable across mobile and desktop", async ({ page }) => {

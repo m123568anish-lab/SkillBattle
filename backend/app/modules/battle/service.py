@@ -13,12 +13,15 @@ Tournament, and Practice assessment formats.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.models.user import User
 from app.models.user_stats import UserStats
@@ -33,6 +36,7 @@ from app.modules.battle.schemas import (
     JoinBattleRequest,
     MatchmakingRequest,
     SubmitAnswerRequest,
+    VerifyBattleSubmissionRequest,
     BattleTypeEnum,
 )
 from app.modules.battle.config.service import battle_config_service
@@ -50,7 +54,65 @@ from app.modules.notification.service import notification_service
 from app.modules.audit.service import audit_service
 
 
+class BattleCreationConflict(ValueError):
+    pass
+
+
 class BattleService:
+
+    @staticmethod
+    def _creation_identity(
+        current_user_id: str,
+        request: CreateBattleRequest,
+        sections_override: list[dict] | None,
+        start_immediately: bool,
+    ) -> tuple[str, str]:
+        request_data = request.model_dump(mode="json", exclude={"idempotency_key"})
+        fingerprint_data = {
+            "request": request_data,
+            "sections_override": sections_override,
+            "start_immediately": start_immediately,
+        }
+        fingerprint = hashlib.sha256(
+            json.dumps(
+                fingerprint_data,
+                sort_keys=True,
+                separators=(",", ":"),
+                default=str,
+            ).encode("utf-8")
+        ).hexdigest()
+        battle_id = str(
+            uuid5(
+                NAMESPACE_URL,
+                f"qubira:battle:create:{current_user_id}:{request.idempotency_key}",
+            )
+        )
+        return battle_id, fingerprint
+
+    @staticmethod
+    def _assert_idempotent_creation_matches(
+        battle: BattleRoom,
+        current_user_id: str,
+        idempotency_key: str,
+        request_fingerprint: str,
+    ) -> None:
+        marker = next(
+            (
+                entry for entry in (battle.state_history or [])
+                if isinstance(entry, dict)
+                and entry.get("event") == "battle_created"
+                and entry.get("idempotency_key") == idempotency_key
+            ),
+            None,
+        )
+        if (
+            battle.creator_id != current_user_id
+            or marker is None
+            or marker.get("request_fingerprint") != request_fingerprint
+        ):
+            raise BattleCreationConflict(
+                "This battle creation key was already used with a different request."
+            )
 
     # ==========================================================
     # Create Battle Room
@@ -97,6 +159,34 @@ class BattleService:
         )
         battle_mode_val = self.resolve_battle_mode(battle_mode_input, request.max_players)
         self.validate_battle_shape(battle_mode_input, request.max_players)
+
+        idempotent_battle_id = None
+        request_fingerprint = None
+        if request.idempotency_key:
+            idempotent_battle_id, request_fingerprint = self._creation_identity(
+                str(current_user.id),
+                request,
+                sections_override,
+                start_immediately,
+            )
+            assert request_fingerprint is not None
+            await db.execute(
+                select(User.id)
+                .where(User.id == current_user.id)
+                .with_for_update()
+            )
+            existing_battle = await battle_repository.get_battle(
+                db,
+                idempotent_battle_id,
+            )
+            if existing_battle is not None:
+                self._assert_idempotent_creation_matches(
+                    existing_battle,
+                    str(current_user.id),
+                    request.idempotency_key,
+                    request_fingerprint,
+                )
+                return existing_battle
 
         # Resolve Configuration Template or Database Config
         sections_config = []
@@ -183,6 +273,7 @@ class BattleService:
 
         is_solo_assessment = (db_config is not None and db_config.battle_type in {"company", "college"} and request.max_players == 1) or start_immediately
         battle = BattleRoom(
+            id=idempotent_battle_id or str(uuid4()),
             config_id=request.config_id,
             title=request.title,
             battle_type=battle_type_val,
@@ -199,9 +290,38 @@ class BattleService:
             college_id=str(db_config.college_id) if db_config and db_config.college_id is not None else None,
             started_at=datetime.utcnow() if is_solo_assessment else None,
             created_at=datetime.utcnow(),
+            state_history=(
+                [{
+                    "event": "battle_created",
+                    "idempotency_key": request.idempotency_key,
+                    "request_fingerprint": request_fingerprint,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "user_id": str(current_user.id),
+                }]
+                if request.idempotency_key
+                else []
+            ),
         )
 
-        battle = await battle_repository.create_battle(db, battle)
+        try:
+            battle = await battle_repository.create_battle(db, battle)
+        except IntegrityError:
+            await db.rollback()
+            if not request.idempotency_key or not idempotent_battle_id or not request_fingerprint:
+                raise
+            existing_battle = await battle_repository.get_battle(
+                db,
+                idempotent_battle_id,
+            )
+            if existing_battle is None:
+                raise
+            self._assert_idempotent_creation_matches(
+                existing_battle,
+                str(current_user.id),
+                request.idempotency_key,
+                request_fingerprint,
+            )
+            return existing_battle
 
         participant = BattleParticipant(
             battle_id=battle.id,
@@ -220,7 +340,25 @@ class BattleService:
 
 
         if commit:
-            await db.commit()
+            try:
+                await db.commit()
+            except IntegrityError:
+                await db.rollback()
+                if not request.idempotency_key or not idempotent_battle_id or not request_fingerprint:
+                    raise
+                existing_battle = await battle_repository.get_battle(
+                    db,
+                    idempotent_battle_id,
+                )
+                if existing_battle is None:
+                    raise
+                self._assert_idempotent_creation_matches(
+                    existing_battle,
+                    str(current_user.id),
+                    request.idempotency_key,
+                    request_fingerprint,
+                )
+                return existing_battle
         return battle
 
     async def start_battle(
@@ -705,6 +843,57 @@ class BattleService:
         )
 
         return sub
+
+    async def verify_saved_submission(
+        self,
+        db: AsyncSession,
+        current_user: User,
+        battle_id: str,
+        question_id: int,
+        request: VerifyBattleSubmissionRequest,
+    ) -> dict[str, Any]:
+        submission_result = await db.execute(
+            select(BattleSubmission).where(
+                BattleSubmission.battle_id == battle_id,
+                BattleSubmission.user_id == current_user.id,
+                BattleSubmission.question_id == question_id,
+            )
+        )
+        submission = submission_result.scalar_one_or_none()
+        if submission is None:
+            return {
+                "verified": False,
+                "detail": "No saved submission was found for this question.",
+            }
+
+        question_type = (
+            request.question_type.value
+            if hasattr(request.question_type, "value")
+            else str(request.question_type)
+        )
+        matches_answer = submission.question_type == question_type
+        if question_type == "mcq":
+            matches_answer = matches_answer and submission.mcq_option == request.mcq_option
+        elif question_type in {"coding", "debugging", "technical"}:
+            matches_answer = (
+                matches_answer
+                and submission.source_code == (request.source_code or "")
+                and submission.language == request.language
+            )
+        else:
+            matches_answer = False
+
+        return {
+            "verified": matches_answer,
+            "submission_id": submission.id,
+            "verdict": submission.verdict,
+            "score_earned": submission.score_earned,
+            "detail": (
+                "The saved submission matches this answer."
+                if matches_answer
+                else "A different answer was already saved for this question."
+            ),
+        }
 
     # ==========================================================
     # Anti-Cheating Telemetry Logging

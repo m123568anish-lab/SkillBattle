@@ -89,11 +89,8 @@ export default function RoadmapStep({
       </div>
 
       {/* Progress Bar */}
-
       <div className="mt-10">
-
-        <div className="h-3 overflow-hidden rounded-full bg-white/10">
-
+        <div className="h-2.5 overflow-hidden rounded-full bg-[var(--surface-subtle)] border border-[var(--border-subtle)]">
           <motion.div
             animate={{
               width: `${progress}%`,
@@ -101,24 +98,13 @@ export default function RoadmapStep({
             transition={{
               duration: 1,
             }}
-            className="
-              h-full
-              rounded-full
-              bg-gradient-to-r
-              from-cyan-500
-              via-sky-500
-              to-violet-500
-            "
+            className="h-full rounded-full bg-[var(--accent)]"
           />
-
         </div>
 
-        <p className="mt-3 text-center text-slate-400">
-
+        <p className="mt-3 text-center text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
           {loading ? `${Math.round(progress)}%` : error ? "Retry available" : "Ready"}
-
         </p>
-
       </div>
 
       <ProgressStage
@@ -126,8 +112,8 @@ export default function RoadmapStep({
       />
 
       {error && (
-        <div className="mt-8 rounded-xl border border-rose-500/20 bg-rose-500/10 p-5 text-center">
-          <p className="text-sm text-rose-200">{error}</p>
+        <div className="mt-8 rounded-xl border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 p-5 text-center">
+          <p className="text-sm text-[var(--text-primary)]">{error}</p>
           <div className="mt-4 flex justify-center gap-3">
             <button
               type="button"
@@ -135,14 +121,14 @@ export default function RoadmapStep({
                 requestRef.current = null;
                 setAttempt((value) => value + 1);
               }}
-              className="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-semibold text-white"
+              className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--text-on-accent)] hover:opacity-90"
             >
               Retry
             </button>
             <button
               type="button"
               onClick={() => onComplete(null)}
-              className="rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold text-slate-200"
+              className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             >
               Continue without roadmap
             </button>
@@ -150,32 +136,14 @@ export default function RoadmapStep({
         </div>
       )}
 
-      <div className="mt-12 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-6">
-
-        <h3 className="text-lg font-bold text-cyan-300">
-
+      <div className="mt-10 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6">
+        <h3 className="text-base font-bold text-[var(--accent)]">
           AI Engine
-
         </h3>
 
-        <p className="mt-3 text-slate-300 leading-7">
-
-          We're combining your
-
-          <strong> programming languages</strong>,
-
-          <strong> dream companies</strong>,
-
-          <strong> skill assessment</strong>
-
-          and
-
-          <strong> learning goals</strong>
-
-          to build a personalized preparation roadmap.
-
+        <p className="mt-3 text-sm text-[var(--text-secondary)] leading-relaxed">
+          We're combining your <strong className="text-[var(--text-primary)]">programming languages</strong>, <strong className="text-[var(--text-primary)]">dream companies</strong>, <strong className="text-[var(--text-primary)]">skill assessment</strong>, and <strong className="text-[var(--text-primary)]">learning goals</strong> to build a personalized preparation roadmap.
         </p>
-
       </div>
 
     </motion.div>

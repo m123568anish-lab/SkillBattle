@@ -10,6 +10,11 @@ import {
 } from "@/components/arena";
 import { api } from "@/lib/api";
 import {
+  clearBattleCreationKey,
+  createBattleWithRetry,
+  getBattleCreationKey,
+} from "@/services/battle.service";
+import {
   Swords,
   Zap,
   UserPlus,
@@ -125,7 +130,7 @@ export default function BattleLobbyPage() {
   const handleCreateRoom = async () => {
     setRoomActionLoading(true);
     try {
-      const { data } = await api.post<{ id: string }>("/battle/create", {
+      const request = {
         title: "Invite battle",
         difficulty: selectedDifficulty,
         battle_type: "general",
@@ -133,8 +138,11 @@ export default function BattleLobbyPage() {
         max_players: 2,
         question_type: selectedQuestionType,
         question_count: 1,
-      });
+      };
+      const idempotencyKey = getBattleCreationKey("lobby-invite-room", request);
+      const data = await createBattleWithRetry<{ id: string }>(request, idempotencyKey);
       if (!data.id) throw new Error("The server did not return a battle ID.");
+      clearBattleCreationKey("lobby-invite-room", idempotencyKey);
       setCreatedRoomId(data.id);
       toast.success("Battle room created. Share its ID to invite another player.");
     } catch {

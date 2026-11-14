@@ -4,6 +4,7 @@ export interface UserSummary {
   full_name: string;
   email: string;
   avatar_url?: string | null;
+  avatar?: string | null;
   role?: string;
   is_superuser?: boolean;
 }

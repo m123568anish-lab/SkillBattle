@@ -17,10 +17,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--surface-canvas)]">
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
-          <p className="mt-5 text-slate-400 font-semibold">Verifying Administrator Privileges...</p>
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+          <p className="mt-4 text-[var(--text-secondary)] font-medium text-sm">Verifying Administrator Privileges...</p>
         </div>
       </div>
     );
@@ -38,20 +38,20 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   if (!isAdmin) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950">
-        <div className="flex flex-col items-center justify-center gap-6 text-center z-10">
-          <div className="rounded-3xl border border-rose-500/20 bg-rose-500/10 p-6 shadow-2xl shadow-rose-500/20">
-            <Shield className="h-16 w-16 text-rose-500" />
+      <div className="flex min-h-screen items-center justify-center bg-[var(--surface-canvas)] p-4">
+        <div className="flex flex-col items-center justify-center gap-5 text-center max-w-md">
+          <div className="rounded-2xl border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/10 p-5">
+            <Shield className="h-12 w-12 text-[var(--status-danger)]" />
           </div>
-          <h2 className="text-4xl font-extrabold text-white tracking-tight">System Locked</h2>
-          <p className="max-w-md text-slate-400 text-lg">
-            This portal is strictly reserved for platform Administrators. Security event logged.
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)] tracking-tight">Access Restricted</h2>
+          <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+            This portal is strictly reserved for platform Administrators. If you believe this is an error, contact your system administrator.
           </p>
           <button
             onClick={() => router.push("/dashboard")}
-            className="mt-4 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-8 py-3 font-bold text-white shadow-lg shadow-cyan-500/20 hover:opacity-90 transition"
+            className="mt-2 rounded-xl bg-[var(--accent)] px-6 py-2.5 font-bold text-sm text-[var(--text-on-accent)] hover:opacity-90 transition"
           >
-            Return to Safety
+            Return to Dashboard
           </button>
         </div>
       </div>
@@ -81,22 +81,20 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             Platform Controls
           </div>
           {navItems.map((item) => {
-            // For this basic layout, we'll just check if it's the dashboard vs a tab link. 
-            // In a real multi-page admin we'd use usePathname exactly.
             const isActive = pathname === item.href || (pathname === "/admin" && item.title === "Overview"); 
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 ${
+                className={`group flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
                   isActive
-                    ? "bg-violet-500/10 text-violet-400"
-                    : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                    ? "bg-[var(--surface-elevated)] text-[var(--accent)] border border-[var(--border-default)]"
+                    : "text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]"
                 }`}
               >
                 <item.icon
-                  className={`h-5 w-5 transition-transform duration-200 ${
-                    isActive ? "scale-110" : "group-hover:scale-110"
+                  className={`h-4 w-4 transition-transform duration-200 ${
+                    isActive ? "scale-110 text-[var(--accent)]" : "group-hover:scale-110"
                   }`}
                 />
                 {item.title}
@@ -105,15 +103,15 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           })}
         </nav>
 
-        <div className="border-t border-white/5 p-4">
-          <div className="mb-4 rounded-xl border border-white/5 bg-white/5 p-4">
+        <div className="border-t border-[var(--border-default)] p-4">
+          <div className="mb-4 rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] p-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10">
-                <Database className="h-5 w-5 text-emerald-400" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--status-success)]/10">
+                <Database className="h-4 w-4 text-[var(--status-success)]" />
               </div>
               <div>
-                <p className="text-sm font-bold text-white">System health</p>
-                <Link href="/admin?tab=server" className="text-xs text-cyan-300 hover:text-cyan-200">
+                <p className="text-xs font-bold text-[var(--text-primary)]">System health</p>
+                <Link href="/admin?tab=server" className="text-xs text-[var(--accent)] hover:underline">
                   Open live checks
                 </Link>
               </div>
@@ -122,7 +120,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           
           <button
             onClick={() => router.push("/dashboard")}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/5 px-4 py-3 text-sm font-bold text-slate-300 hover:bg-white/10 hover:text-white transition"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] px-4 py-2.5 text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-focus)] transition"
           >
             <LogOut className="h-4 w-4" />
             Exit Admin Portal

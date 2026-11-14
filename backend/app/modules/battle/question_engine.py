@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from datetime import datetime
 from typing import Dict, Any, List
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,6 +35,60 @@ class QuestionEngine:
     @staticmethod
     def _normalize_question_type(question_type: str | None) -> str:
         return str(question_type or "").strip().lower()
+
+    @staticmethod
+    def _normalize_skill_category(name: str | None) -> str:
+        if name is None:
+            return ""
+        normalized = str(name).strip().lower()
+        normalized = normalized.replace("&", " and ")
+        normalized = re.sub(r"[^a-z0-9]+", " ", normalized)
+        normalized = re.sub(r"\s+", " ", normalized).strip()
+        return normalized
+
+    @classmethod
+    def _canonical_skill_category(cls, category: str | None) -> str:
+        normalized = cls._normalize_skill_category(category)
+        aliases = {
+            "algorithms": {
+                "algorithms",
+                "algorithms and data structures",
+                "data structures",
+                "data structures and algorithms",
+                "dsa",
+            },
+            "system design": {
+                "system design",
+                "system design and caching",
+                "caching",
+            },
+            "sql": {
+                "sql",
+                "sql and database internals",
+                "database",
+                "databases",
+                "database internals",
+            },
+            "javascript": {
+                "javascript",
+                "javascript core",
+                "web and javascript core",
+            },
+        }
+        for canonical, category_aliases in aliases.items():
+            if normalized in category_aliases:
+                return canonical
+        return normalized
+
+    @classmethod
+    def category_matches(cls, requested: str | None, candidate: str | None) -> bool:
+        requested_norm = cls._canonical_skill_category(requested)
+        candidate_norm = cls._canonical_skill_category(candidate)
+        if not requested_norm and not candidate_norm:
+            return True
+        if not requested_norm or not candidate_norm:
+            return False
+        return requested_norm == candidate_norm
 
     def validate_question_data(self, data: Dict[str, Any]) -> bool:
         """
@@ -88,12 +143,27 @@ class QuestionEngine:
             return False
         if getattr(question, "is_validated", False) is False:
             return False
+        if len((getattr(question, "title", None) or "").strip()) < 3:
+            return False
+        if len((getattr(question, "description", None) or "").strip()) < 10:
+            return False
 
         qtype = self._normalize_question_type(getattr(question, "question_type", "coding"))
 
         if qtype in {"mcq", "aptitude"}:
             options = getattr(question, "options", None) or []
-            return bool(options) and bool(getattr(question, "correct_option", None))
+            correct_option = str(getattr(question, "correct_option", "") or "").strip().casefold()
+            option_values = set()
+            for option in options:
+                if isinstance(option, dict):
+                    option_values.update(
+                        str(option.get(key) or "").strip().casefold()
+                        for key in ("key", "text")
+                    )
+                else:
+                    option_values.add(str(option).strip().casefold())
+            option_values.discard("")
+            return len(options) >= 2 and bool(correct_option) and correct_option in option_values
 
         if qtype == "debugging":
             return bool((getattr(question, "buggy_code", None) or "").strip())
@@ -184,6 +254,7 @@ class QuestionEngine:
         difficulty: str = "medium",
     ) -> List[Dict[str, Any]]:
         resolved_sections: List[Dict[str, Any]] = []
+        seen_ids = set()
         for seq_index, section in enumerate(sections_config):
             qtype = self._normalize_question_type(section.get("question_type", "coding"))
             category = (section.get("skill_category") or "").strip()
@@ -191,11 +262,14 @@ class QuestionEngine:
             title = section.get("title", f"Section {seq_index + 1}")
 
             filters = [Question.question_type == qtype, Question.is_active.is_(True), Question.is_validated.is_(True)]
-            if category:
-                filters.append(func.lower(Question.skill_category) == category.casefold())
             stmt = select(Question).where(*filters)
             result = await db.execute(stmt)
-            candidate_rows = [row for row in result.scalars().all() if self._is_adaptively_eligible(row)]
+            candidate_rows = [
+                row for row in result.scalars().all()
+                if row.id not in seen_ids
+                and self._is_adaptively_eligible(row)
+                and (not category or self.category_matches(category, getattr(row, "skill_category", None)))
+            ]
 
             if len(candidate_rows) < required:
                 raise ValueError(
@@ -203,7 +277,6 @@ class QuestionEngine:
                 )
 
             skill_evidence = await self._get_user_skill_evidence(db, user_id, qtype, category)
-            seen_ids = set()
             chosen_rows = []
             selected_categories: Dict[str, int] = {}
             selected_types: Dict[str, int] = {}
@@ -412,10 +485,12 @@ class QuestionEngine:
         Refuses to fabricate synthetic questions when inventory is insufficient.
         """
         resolved_sections = []
+        assigned_question_ids = set()
 
         for sec_idx, sec in enumerate(sections_config):
             qtype = str(sec.get("question_type", "coding")).lower()
             skill_category = (sec.get("skill_category") or "").strip()
+            requested_difficulty = str(sec.get("difficulty") or difficulty).strip().lower()
             count = int(sec.get("question_count", 1))
             sec_title = sec.get("title", f"Section {sec_idx + 1}")
 
@@ -424,11 +499,17 @@ class QuestionEngine:
                 Question.is_active == True,
                 Question.is_validated == True,
             ]
-            if skill_category:
-                filters.append(func.lower(Question.skill_category) == skill_category.casefold())
-            stmt = select(Question).where(*filters)
+            stmt = select(Question).where(
+                *filters,
+                func.lower(func.trim(Question.difficulty)) == requested_difficulty,
+            ).order_by(Question.id)
             result = await db.execute(stmt)
-            qs = [row for row in result.scalars().all() if self._is_adaptively_eligible(row)]
+            qs = [
+                row for row in result.scalars().all()
+                if row.id not in assigned_question_ids
+                and self._is_adaptively_eligible(row)
+                and (not skill_category or self.category_matches(skill_category, getattr(row, "skill_category", None)))
+            ]
 
             if len(qs) < count:
                 raise ValueError(
@@ -437,6 +518,7 @@ class QuestionEngine:
 
             section_questions = []
             for q in qs[:count]:
+                assigned_question_ids.add(q.id)
                 section_questions.append({
                     "id": q.id,
                     "title": q.title,

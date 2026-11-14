@@ -10,9 +10,11 @@ const API_BASE_URL =
         ? API_ORIGIN
         : "";
 
+const API_TIMEOUT_MS = 20_000;
+
 const api = axios.create({
     baseURL: `${API_BASE_URL}/api/v1`,
-    timeout: 20_000,
+    timeout: API_TIMEOUT_MS,
     headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -42,7 +44,7 @@ function getNeonToken(): Promise<string | null> {
             return await Promise.race([
                 Promise.resolve().then(getter),
                 new Promise<never>((_, reject) => {
-                    timeoutId = setTimeout(() => reject(new Error("Timed out while resolving the Neon Auth session.")), 3500);
+                    timeoutId = setTimeout(() => reject(new Error("Timed out while resolving the Neon Auth session.")), API_TIMEOUT_MS);
                 }),
             ]);
         } finally {
