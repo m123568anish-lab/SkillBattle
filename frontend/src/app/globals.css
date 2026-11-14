@@ -50,6 +50,11 @@
   --motion-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --motion-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --surface-transition: background-color var(--motion-duration-normal) var(--motion-ease-standard), border-color var(--motion-duration-normal) var(--motion-ease-standard), transform var(--motion-duration-fast) var(--motion-ease-standard), box-shadow var(--motion-duration-normal) var(--motion-ease-standard);
+  --radius-panel: 18px;
+  --radius-control: 10px;
+  --shadow-panel: 0 18px 60px -32px rgba(0, 0, 0, 0.72);
+  --shadow-float: 0 24px 80px -36px rgba(0, 0, 0, 0.82);
+  --content-max: 1440px;
 }
 
 :root[data-theme="light"] {
@@ -232,10 +237,58 @@ body {
   background: var(--app-bg);
   color: var(--app-fg);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  letter-spacing: -0.008em;
 }
 
 * {
   box-sizing: border-box;
+}
+
+.q-shell {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 76% -12%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 31rem),
+    var(--surface-canvas);
+}
+
+.q-shell::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.22;
+  background-image: linear-gradient(color-mix(in srgb, var(--text-primary) 4%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--text-primary) 4%, transparent) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: linear-gradient(to bottom, black, transparent 70%);
+}
+
+.q-panel {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-panel);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--surface-card) 96%, white 4%), var(--surface-card));
+  box-shadow: var(--shadow-panel);
+}
+
+.q-kicker {
+  color: var(--accent-strong);
+  font-size: 0.66rem;
+  font-weight: 750;
+  letter-spacing: 0.18em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.q-display {
+  font-weight: 650;
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+}
+
+.q-control {
+  border-radius: var(--radius-control);
+  transition: var(--surface-transition);
 }
 
 a {

@@ -29,7 +29,7 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
     <section
       data-dashboard-hero
       aria-labelledby="dashboard-welcome-title"
-      className="grid gap-5 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-4 sm:gap-6 sm:p-7 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-stretch"
+      className="q-panel relative grid gap-5 overflow-hidden border-l-2 border-l-[var(--accent)] p-4 sm:gap-8 sm:p-7 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-stretch"
     >
       <div className="flex min-w-0 flex-col justify-between gap-6">
         <div className="flex min-w-0 items-center gap-4">
@@ -51,7 +51,7 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
             </div>
           )}
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--accent-strong)]">
+            <p className="q-kicker">
               Your learning workspace
             </p>
             <h1 id="dashboard-welcome-title" className="mt-1 truncate text-2xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-3xl">
@@ -82,7 +82,7 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
         </div>
       </div>
 
-      <div className="flex flex-col justify-center rounded-xl border border-[var(--border-default)] bg-[#090909] p-4 sm:p-5">
+      <div className="flex flex-col justify-center rounded-[14px] border border-[var(--border-default)] bg-[var(--surface-elevated)]/55 p-4 sm:p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">

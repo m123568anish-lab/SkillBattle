@@ -141,7 +141,7 @@ function DashboardLayoutInner({ children }: Props) {
   ));
 
   return (
-    <main suppressHydrationWarning className="relative flex min-h-screen bg-[var(--surface-canvas)] text-[var(--text-primary)] lg:h-dvh lg:min-h-0 lg:overflow-hidden">
+    <main suppressHydrationWarning className="q-shell relative flex min-h-screen bg-[var(--surface-canvas)] text-[var(--text-primary)] lg:h-dvh lg:min-h-0 lg:overflow-hidden">
       {/* Ambient Background System */}
       <GridBackground />
 
