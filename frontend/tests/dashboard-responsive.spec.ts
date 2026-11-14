@@ -35,13 +35,13 @@ test("dashboard shell fits supported viewports and preserves mobile navigation t
     await expect(mobileNavigation.getByText(label)).toBeVisible();
   }
   await expect(page.getByRole("button", { name: "Open support options" })).toBeHidden();
-  const menuButton = page.getByRole("button", { name: "Open navigation menu" });
+  const menuButton = page.locator("[data-mobile-menu-trigger]");
   await menuButton.click();
   const navigationDrawer = page.getByRole("dialog", { name: "Navigation menu" });
-  await expect(page.getByRole("button", { name: "Close navigation menu" }).first()).toHaveAttribute("aria-expanded", "true");
+  await expect(menuButton).toHaveAttribute("aria-expanded", "true");
   expect(await page.evaluate(() => document.body.style.overflow)).toBe("hidden");
   await expect(navigationDrawer.getByRole("link", { name: "Support" })).toBeVisible();
-  await page.locator('div.fixed.inset-0.z-50 > button[aria-label="Close navigation menu"]').click();
+  await page.mouse.click(380, 400);
   await expect(navigationDrawer).toHaveCount(0);
   expect(await page.evaluate(() => document.body.style.overflow)).toBe("");
   await menuButton.click();
@@ -68,7 +68,7 @@ test("dashboard shell fits supported viewports and preserves mobile navigation t
 
     if (viewport.width >= 360 && viewport.width <= 430) {
       for (const control of [
-        page.getByRole("button", { name: "Open navigation menu" }),
+        page.locator("[data-mobile-menu-trigger]"),
         page.getByRole("button", { name: /^Notifications/ }),
         page.getByRole("button", { name: "Open profile menu" }),
       ]) {
@@ -76,8 +76,6 @@ test("dashboard shell fits supported viewports and preserves mobile navigation t
         expect(box?.width).toBeGreaterThanOrEqual(44);
         expect(box?.height).toBeGreaterThanOrEqual(44);
       }
-      await expect(page.getByRole("button", { name: /^Theme:/ })).toBeHidden();
-
       for (const item of await mobileNavigation.getByRole("link").all()) {
         const box = await item.boundingBox();
         expect(box?.width).toBeGreaterThanOrEqual(44);

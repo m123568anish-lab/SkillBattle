@@ -57,6 +57,30 @@ export async function authenticateStudent(
     sameSite: "Lax",
   }]);
 
+  const sessionTimestamp = new Date().toISOString();
+  await page.route("**/api/auth/get-session**", (route) =>
+    route.fulfill({
+      json: {
+        session: {
+          id: "e2e-session",
+          token: "e2e.access.signature",
+          userId: user.id,
+          expiresAt: "2030-01-01T00:00:00.000Z",
+          createdAt: sessionTimestamp,
+          updatedAt: sessionTimestamp,
+        },
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.full_name,
+          emailVerified: true,
+          createdAt: sessionTimestamp,
+          updatedAt: sessionTimestamp,
+        },
+      },
+    })
+  );
+
   await page.route("**/api/v1/**", async (route) => {
     const requestUrl = new URL(route.request().url());
     const path = requestUrl.pathname;
@@ -85,6 +109,27 @@ export async function authenticateStudent(
           avatar: "",
         },
       });
+    }
+    if (path.endsWith("/admin/system-health")) {
+      return route.fulfill({
+        json: {
+          api: "healthy",
+          database: "healthy",
+          migration_version: null,
+          total_users: 0,
+          active_users: 0,
+          assessment_attempts: 0,
+          active_battles: 0,
+          completed_battles: 0,
+          ai_providers: {},
+          websocket: "initialized",
+          failed_jobs: 0,
+          notification_queue: "initialized",
+        },
+      });
+    }
+    if (path.endsWith("/admin/users")) {
+      return route.fulfill({ json: [] });
     }
     if (path.endsWith("/practice/problems")) {
       return route.fulfill({
