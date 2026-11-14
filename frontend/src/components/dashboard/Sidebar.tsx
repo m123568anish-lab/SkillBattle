@@ -15,14 +15,13 @@ import {
   Settings,
   HelpCircle,
   LogOut,
-  X,
   Flame,
   Users,
 } from "lucide-react";
 import { getPortalCategories, getUserPortalKind } from "@/data/dashboard";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuthStore } from "@/store/authStore";
-import { QubiraLogo } from "@/components/brand/QubiraLogo";
+import { QubiraIcon, QubiraLogo } from "@/components/brand/QubiraLogo";
 import { MOTION_DURATIONS, MOTION_EASINGS } from "@/lib/motion";
 import { getDashboardPath } from "@/lib/auth-routing";
 
@@ -181,6 +180,11 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
         : "Student";
 
   const effectiveCollapsed = isMobile ? false : isCollapsed;
+  const showCollapsedTooltip = (title: string, badge: string | undefined, element: HTMLElement) => {
+    if (!effectiveCollapsed) return;
+    const rect = element.getBoundingClientRect();
+    setActiveTooltip({ title, badge, top: rect.top + rect.height / 2 });
+  };
 
   return (
     <>
@@ -196,24 +200,48 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
         className={`flex flex-col select-none relative ${
           isMobile
             ? "h-full w-full rounded-r-2xl border-r border-[var(--border-default)] bg-[var(--surface-sidebar,var(--surface-card))] pt-[env(safe-area-inset-top)] text-[var(--text-primary)]"
-            : "hidden lg:flex m-0 rounded-none border-0 border-r border-[var(--border-default)] bg-[var(--surface-sidebar,var(--surface-card))] text-[var(--text-primary)] shadow-none overflow-hidden"
+            : "hidden lg:flex m-0 rounded-none border-0 border-r border-[var(--border-default)] bg-[var(--surface-sidebar,var(--surface-card))] text-[var(--text-primary)] shadow-[8px_0_24px_rgba(0,0,0,0.12)] overflow-hidden"
         }`}
       >
         {/* Top Header / Branding */}
-        <div className="relative z-10 flex h-14 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] px-3.5">
-          <Link
-            href={user ? getDashboardPath(user) : portal === "admin" ? "/admin" : portal === "college" ? "/college/dashboard" : portal === "company" ? "/company/dashboard" : "/dashboard"}
-            onClick={onCloseMobile}
-            aria-label="Qubira home"
-            className={`flex items-center gap-2.5 transition-opacity hover:opacity-90 ${effectiveCollapsed ? "mx-auto" : ""}`}
-            title="Qubira — Learn. Build. Compete."
-          >
-            <QubiraLogo
-              variant={effectiveCollapsed ? "icon" : "full"}
-              size={effectiveCollapsed ? "md" : "sm"}
-              portalBadge={portalBadge}
-            />
-          </Link>
+        <div className="relative z-10 flex h-16 shrink-0 items-center justify-between border-b border-[var(--border-default)] bg-[var(--surface-sidebar,var(--surface-card))] px-3.5">
+          {isMobile ? (
+            <div className="flex min-w-0 items-center gap-2.5">
+              <button
+                type="button"
+                onClick={onCloseMobile}
+                aria-label="Close navigation menu"
+                aria-expanded="true"
+                aria-controls="mobile-navigation-drawer"
+                title="Close navigation menu"
+                data-drawer-close
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] transition-colors hover:border-[var(--accent)]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+              >
+                <QubiraIcon size={27} />
+              </button>
+              <Link
+                href={user ? getDashboardPath(user) : portal === "admin" ? "/admin" : portal === "college" ? "/college/dashboard" : portal === "company" ? "/company/dashboard" : "/dashboard"}
+                onClick={onCloseMobile}
+                aria-label="Go to your Qubira dashboard"
+                className="truncate rounded px-1 py-2 text-sm font-black tracking-[0.12em] text-[var(--text-primary)] transition-colors hover:text-[var(--accent-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+              >
+                QUBIRA
+              </Link>
+            </div>
+          ) : (
+            <Link
+              href={user ? getDashboardPath(user) : portal === "admin" ? "/admin" : portal === "college" ? "/college/dashboard" : portal === "company" ? "/company/dashboard" : "/dashboard"}
+              aria-label="Qubira home"
+              className={`flex items-center gap-2.5 transition-opacity hover:opacity-90 ${effectiveCollapsed ? "mx-auto" : ""}`}
+              title="Qubira — Learn. Build. Compete."
+            >
+              <QubiraLogo
+                variant={effectiveCollapsed ? "icon" : "full"}
+                size={effectiveCollapsed ? "md" : "sm"}
+                portalBadge={portalBadge}
+              />
+            </Link>
+          )}
 
           {/* Desktop Collapse / Expand Button */}
           {!isMobile && (
@@ -228,36 +256,24 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
             </button>
           )}
 
-          {/* Mobile Close Button */}
-          {isMobile && (
-            <button
-              type="button"
-              onClick={onCloseMobile}
-              aria-label="Close navigation"
-              data-drawer-close
-              className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] p-1.5 text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
-            >
-              <X size={16} />
-            </button>
-          )}
         </div>
 
         {/* Scrollable Navigation Body */}
         <nav
           aria-label="Main Navigation"
-          className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden p-2.5 space-y-4 scrollbar-thin scrollbar-thumb-white/10"
+          className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-5 scrollbar-thin scrollbar-thumb-white/10"
         >
           {portalCategories.map((category) => {
             return (
               <div key={category.id} className="space-y-1">
                 {/* Minimal Section Label (Expanded mode only) */}
                 {!effectiveCollapsed && portalCategories.length > 1 && (
-                  <div className="px-2.5 pt-1.5 pb-1 text-[9px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                  <div className="px-2.5 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
                     {category.label}
                   </div>
                 )}
 
-                <div className="space-y-0.5">
+                <div className="space-y-1">
                   {category.items.map((item) => {
                     const Icon = item.icon;
                     const active = isActive(item.href);
@@ -270,56 +286,61 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
                         href={item.href}
                         onClick={() => {
                           setActiveTooltip(null);
-                          onCloseMobile?.();
                         }}
-                        onMouseEnter={(e) => {
-                          if (effectiveCollapsed) {
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            setActiveTooltip({
-                              title: item.title,
-                              badge: item.badge,
-                              top: rect.top + rect.height / 2,
-                            });
-                          }
-                        }}
+                        onMouseEnter={(e) => showCollapsedTooltip(item.title, item.badge, e.currentTarget)}
+                        onFocus={(e) => showCollapsedTooltip(item.title, item.badge, e.currentTarget)}
                         onMouseLeave={() => setActiveTooltip(null)}
+                        onBlur={() => setActiveTooltip(null)}
+                        title={effectiveCollapsed ? item.title : undefined}
                         aria-label={item.title}
                         aria-current={active ? "page" : undefined}
-                        className={`group relative flex h-11 items-center gap-3 rounded-xl px-2.5 text-xs font-semibold transition-all duration-150 ${
+                        className={`group relative flex h-11 items-center gap-3 rounded-lg px-2.5 text-xs font-semibold transition-colors duration-150 motion-reduce:transition-none ${
                           effectiveCollapsed ? "justify-center" : ""
                         } ${
                           active
-                            ? "text-[var(--text-primary)] font-bold"
+                            ? "bg-[var(--accent)]/[0.07] text-[var(--text-primary)] font-bold"
                             : "text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]"
                         }`}
                       >
-                        {/* Animated Active Route Indicator Pill */}
+                        {/* Restrained active-route marker */}
                         {active && (
                           <motion.span
                             layoutId="sidebar-active-indicator"
-                            className="absolute inset-0 rounded-xl bg-[var(--accent)]/15 border border-[var(--accent)]/40 pointer-events-none"
+                            aria-hidden="true"
+                            className="absolute bottom-2 left-0 top-2 w-[3px] rounded-r bg-[var(--accent)] pointer-events-none"
                             transition={
                               shouldReduceMotion
                                 ? { duration: 0 }
-                                : { type: "spring", damping: 28, stiffness: 320 }
+                                : { duration: MOTION_DURATIONS.fast, ease: MOTION_EASINGS.command }
                             }
                           />
                         )}
 
                         <Icon
                           size={18}
-                          className={`relative z-10 shrink-0 transition-transform duration-150 group-hover:scale-105 ${
+                          className={`relative z-10 shrink-0 transition-colors duration-150 motion-reduce:transition-none ${
                             active
                               ? "text-[var(--accent-strong)]"
                               : "text-[var(--text-muted)] group-hover:text-[var(--text-primary)]"
                           }`}
                         />
 
-                        {!effectiveCollapsed && (
-                          <span className="relative z-10 flex-1 truncate text-xs">
-                            {item.title}
-                          </span>
-                        )}
+                        <motion.span
+                          aria-hidden={effectiveCollapsed}
+                          initial={false}
+                          animate={{
+                            width: effectiveCollapsed ? 0 : "auto",
+                            opacity: effectiveCollapsed ? 0 : 1,
+                            x: effectiveCollapsed ? -4 : 0,
+                          }}
+                          transition={{
+                            duration: shouldReduceMotion ? 0 : MOTION_DURATIONS.fast,
+                            ease: MOTION_EASINGS.command,
+                          }}
+                          className="relative z-10 min-w-0 flex-1 truncate text-xs"
+                        >
+                          {item.title}
+                        </motion.span>
 
                         {active && !effectiveCollapsed && (
                           <span className="relative z-10 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />
@@ -341,12 +362,12 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
             aria-expanded={profileOpen}
             aria-haspopup="menu"
             aria-label="User account menu"
-            className={`group flex w-full items-center gap-2.5 rounded-xl p-1.5 transition hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] ${
+            className={`group flex w-full items-center gap-2.5 rounded-lg p-1.5 transition-colors hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] ${
               effectiveCollapsed ? "justify-center" : "text-left"
             }`}
           >
             {/* Avatar with subtle lime hover ring */}
-            <div className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--accent)]/15 border border-[var(--accent)]/30 text-xs font-bold text-[var(--accent-strong)] transition-all duration-200 group-hover:ring-2 group-hover:ring-[var(--accent)]/40 group-hover:shadow-[0_0_12px_rgba(200,239,114,0.3)]">
+            <div className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] text-xs font-bold text-[var(--accent-strong)]">
               {avatarUrl && !avatarError ? (
                 <img
                   src={avatarUrl}

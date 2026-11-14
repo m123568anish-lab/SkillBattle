@@ -121,75 +121,49 @@ export default function CompanyStep({
       </div>
 
       {/* Suggestions */}
+      <div className="mt-8">
+        <h2 className="mb-4 text-base font-bold text-[var(--text-primary)]">
+          Featured Organizations
+        </h2>
 
-      <h2 className="mt-10 mb-5 text-xl font-bold text-white">
-        Company suggestions
-      </h2>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-
-        {featuredCompanies.map(
-          (company) => (
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
+          {featuredCompanies.map((company) => (
             <CompanyCard
               key={company.id}
               company={company.name}
               type={company.type}
-              selected={selected.includes(
-                company.name
-              )}
-              onClick={() =>
-                toggleCompany(
-                  company.name
-                )
-              }
+              selected={selected.includes(company.name)}
+              onClick={() => toggleCompany(company.name)}
             />
-          )
-        )}
-
+          ))}
+        </div>
       </div>
 
       {/* More suggestions */}
+      {otherCompanies.length > 0 && (
+        <div className="mt-8">
+          <h2 className="mb-4 text-base font-bold text-[var(--text-primary)]">
+            Additional Companies
+          </h2>
 
-      <h2 className="mt-10 mb-5 text-xl font-bold text-white">
-        More suggestions
-      </h2>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-
-        {otherCompanies.map(
-          (company) => (
-            <CompanyCard
-              key={company.id}
-              company={company.name}
-              type={company.type}
-              selected={selected.includes(
-                company.name
-              )}
-              onClick={() =>
-                toggleCompany(
-                  company.name
-                )
-              }
-            />
-          )
-        )}
-
-      </div>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
+            {otherCompanies.map((company) => (
+              <CompanyCard
+                key={company.id}
+                company={company.name}
+                type={company.type}
+                selected={selected.includes(company.name)}
+                onClick={() => toggleCompany(company.name)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Bottom */}
-
-      <div className="mt-12 flex items-center justify-between">
-
-        <p className="text-slate-400">
-
-          Selected:
-
-          <span className="ml-2 font-bold text-cyan-400">
-
-            {selected.length}
-
-          </span>
-
+      <div className="mt-10 flex items-center justify-between pt-4 border-t border-[var(--border-subtle)]">
+        <p className="text-xs text-[var(--text-muted)]">
+          Selected: <span className="font-bold text-[var(--accent-strong)]">{selected.length}</span>
         </p>
 
         <GradientButton
@@ -198,7 +172,6 @@ export default function CompanyStep({
         >
           Continue
         </GradientButton>
-
       </div>
 
     </div>

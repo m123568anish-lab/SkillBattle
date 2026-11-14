@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2, XCircle } from "lucide-react";
 import {
@@ -28,7 +28,6 @@ function normalizeBattleSkillCategory(value: string | null) {
 }
 
 export default function SoloBattleMCQPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const requestedCount = Number(searchParams.get("count") || "10");
   const difficulty = normalizeDifficulty(searchParams.get("difficulty"));
@@ -71,7 +70,7 @@ export default function SoloBattleMCQPage() {
         const data = await currentCreation.promise;
 
         if (!data.id) throw new Error("The server did not return a battle ID.");
-        if (active) router.replace(`/battle/${encodeURIComponent(data.id)}`);
+        if (active) window.location.assign(`/battle/${encodeURIComponent(data.id)}`);
       } catch (createError: unknown) {
         if (!active) return;
         const responseError = createError as {

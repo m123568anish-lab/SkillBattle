@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { ArrowUpRight, Menu, Search, X } from "lucide-react";
+import { ArrowUpRight, Search } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import api from "@/services/api";
 import NotificationMenu from "./NotificationMenu";
@@ -13,7 +13,7 @@ import ProfileMenu from "./ProfileMenu";
 import { useAuthStore } from "@/store/authStore";
 import { getDashboardPath } from "@/lib/auth-routing";
 import { ThemeToggle } from "@/components/common/ExperienceEnhancements";
-import QubiraLogo from "@/components/brand/QubiraLogo";
+import QubiraLogo, { QubiraIcon } from "@/components/brand/QubiraLogo";
 import { MOTION_DURATIONS, MOTION_EASINGS } from "@/lib/motion";
 
 type SearchResult = {
@@ -148,14 +148,22 @@ export default function TopNavbar({
                 : "border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-secondary)] hover:border-[var(--accent)]/50 hover:text-[var(--text-primary)]"
             }`}
           >
-            {mobileNavExpanded ? <X size={19} aria-hidden="true" /> : <Menu size={19} aria-hidden="true" />}
+            <QubiraIcon size={27} />
           </button>
         ) : null}
         <Link
           href={logoHref}
           aria-label="Go to your Qubira dashboard"
           title="Dashboard"
-          className="inline-flex min-w-0 shrink-0 items-center rounded-lg px-1 py-1 text-left transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+          className="inline-flex min-w-0 shrink-0 items-center rounded-lg px-1 py-1 text-left transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] sm:hidden"
+        >
+          <span className="text-sm font-black tracking-[0.12em] text-[var(--text-primary)]">QUBIRA</span>
+        </Link>
+        <Link
+          href={logoHref}
+          aria-label="Go to your Qubira dashboard"
+          title="Dashboard"
+          className="hidden min-w-0 shrink-0 items-center rounded-lg px-1 py-1 text-left transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] sm:inline-flex"
         >
           <QubiraLogo variant="full" size="sm" />
         </Link>

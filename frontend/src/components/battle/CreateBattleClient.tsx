@@ -29,22 +29,36 @@ export default function CreateBattleClient() {
   }
 
   return (
-    <div className="p-6 rounded bg-gray-900 max-w-3xl mx-auto">
-      <h2 className="text-lg font-semibold mb-4">Create Battle</h2>
-      <div className="mb-2">
-        <label className="block text-sm">Title</label>
-        <input value={title} onChange={(e)=>setTitle(e.target.value)} className="mt-1 w-full rounded bg-gray-800 px-2 py-1" />
+    <div className="p-6 sm:p-8 rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)] max-w-3xl mx-auto text-[var(--text-primary)]">
+      <h2 className="text-xl sm:text-2xl font-bold tracking-tight mb-5">Create Custom Battle</h2>
+      <div className="mb-4">
+        <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)] mb-2">Battle Title</label>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="e.g., Dynamic Programming Faceoff"
+          className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] px-4 py-2.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)] transition-colors"
+        />
       </div>
-      <div className="mb-2">
-        <label className="block text-sm">Difficulty</label>
-        <select value={difficulty} onChange={(e)=>setDifficulty(e.target.value)} className="mt-1 w-40 rounded bg-gray-800 px-2 py-1">
+      <div className="mb-6">
+        <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)] mb-2">Difficulty</label>
+        <select
+          value={difficulty}
+          onChange={(e) => setDifficulty(e.target.value)}
+          className="w-full sm:w-48 rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] px-4 py-2.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)] transition-colors"
+        >
           <option value="easy">Easy</option>
           <option value="medium">Medium</option>
           <option value="hard">Hard</option>
         </select>
       </div>
-      <div className="mt-4">
-        <button onClick={create} className="rounded bg-blue-600 px-3 py-1">Create</button>
+      <div>
+        <button
+          onClick={create}
+          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--accent)] px-6 py-2.5 text-sm font-bold text-[var(--text-on-accent)] transition hover:opacity-90"
+        >
+          Create Battle Room
+        </button>
       </div>
     </div>
   );
