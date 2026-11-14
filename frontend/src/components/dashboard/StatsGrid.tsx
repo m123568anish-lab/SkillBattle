@@ -1,16 +1,12 @@
 "use client";
 
-import { Activity, Flame, Trophy, BookOpenCheck } from "lucide-react";
+import { Activity, Flame, Trophy, BookOpenCheck, Gauge } from "lucide-react";
 import CountUp from "react-countup";
 import { useReducedMotion } from "framer-motion";
 import type { DashboardStats } from "@/types/dashboard";
 
 export default function StatsGrid({ stats }: { stats: DashboardStats }) {
   const shouldReduceMotion = useReducedMotion();
-  const winRate = stats.battles_played
-    ? Math.round((stats.battles_won / stats.battles_played) * 100)
-    : null;
-
   const metrics = [
     {
       label: "Lifetime XP",
@@ -21,7 +17,7 @@ export default function StatsGrid({ stats }: { stats: DashboardStats }) {
       accent: true,
     },
     {
-      label: "Current streak",
+      label: "Daily streak",
       value: stats.streak,
       suffix: "days",
       detail: `Best: ${stats.longest_streak} days`,
@@ -29,23 +25,29 @@ export default function StatsGrid({ stats }: { stats: DashboardStats }) {
       accent: false,
     },
     {
-      label: "Arena rating",
-      value: stats.rating,
+      label: "Current level",
+      value: stats.level,
       suffix: "",
-      detail: winRate === null
-        ? "Play a match to establish your record"
-        : `${stats.battles_won} wins · ${winRate}% win rate`,
-      icon: Activity,
+      detail: `${stats.xp_to_next_level.toLocaleString()} XP to next level`,
+      icon: Gauge,
       accent: false,
     },
     {
-      label: "Practice solved",
+      label: "Practice completed",
       value: stats.practice_completed,
       suffix: "",
       detail: stats.practice_accuracy == null
-        ? `${stats.practice_attempted} attempts recorded`
+        ? `${stats.practice_attempted.toLocaleString()} attempts recorded`
         : `${Math.round(stats.practice_accuracy)}% practice accuracy`,
       icon: BookOpenCheck,
+      accent: false,
+    },
+    {
+      label: "Arena rating",
+      value: stats.rating,
+      suffix: "",
+      detail: `${stats.battles_won.toLocaleString()} wins · ${stats.battles_completed.toLocaleString()} completed`,
+      icon: Activity,
       accent: false,
     },
   ];
@@ -53,18 +55,12 @@ export default function StatsGrid({ stats }: { stats: DashboardStats }) {
   return (
     <section
       aria-label="Performance overview"
-      className="grid grid-cols-2 overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] xl:grid-cols-4"
+      className="grid grid-cols-2 gap-3 sm:grid-cols-3 2xl:grid-cols-5"
     >
-      {metrics.map(({ label, value, suffix, detail, icon: Icon, accent }, index) => (
+      {metrics.map(({ label, value, suffix, detail, icon: Icon, accent }) => (
         <div
           key={label}
-          className={`min-w-0 px-4 py-4 sm:px-5 sm:py-5 ${
-            index % 2 ? "border-l border-[var(--border-subtle)]" : ""
-          } ${
-            index > 1 ? "border-t border-[var(--border-subtle)] xl:border-t-0" : ""
-          } ${
-            index % 4 > 0 ? "xl:border-l" : "xl:border-l-0"
-          }`}
+          className="q-panel min-w-0 p-4 sm:p-5"
         >
           <div className="flex items-center justify-between gap-2">
             <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)] sm:text-[11px]">

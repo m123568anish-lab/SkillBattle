@@ -39,9 +39,17 @@ const emptyDashboard = {
 
 export async function authenticateStudent(
   page: Page,
-  options: { role?: string; dashboard?: Partial<DashboardResponse> } = {},
+  options: {
+    role?: string;
+    dashboard?: Partial<DashboardResponse>;
+    onboardingCompleted?: boolean;
+  } = {},
 ) {
-  const user = { ...testStudent, role: options.role ?? testStudent.role };
+  const user = {
+    ...testStudent,
+    role: options.role ?? testStudent.role,
+    onboarding_completed: options.onboardingCompleted ?? testStudent.onboarding_completed,
+  };
   const dashboard = {
     ...emptyDashboard,
     ...options.dashboard,

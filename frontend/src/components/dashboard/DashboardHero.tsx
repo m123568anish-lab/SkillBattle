@@ -2,16 +2,18 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { BookOpen, Map } from "lucide-react";
+import { ArrowRight, BookOpen, Swords } from "lucide-react";
 import type { UserSummary, DashboardStats } from "@/types/dashboard";
 import { formatDashboardNumber } from "@/lib/dashboard-data.mjs";
 
 interface DashboardHeroProps {
   user: UserSummary;
   stats: DashboardStats;
+  learningGoal?: string;
+  nextAction?: string;
 }
 
-export default function DashboardHero({ user, stats }: DashboardHeroProps) {
+export default function DashboardHero({ user, stats, learningGoal, nextAction }: DashboardHeroProps) {
   const name = user.full_name?.trim().split(/\s+/)[0] || user.username || "there";
   const level = Math.max(1, Number.isFinite(stats.level) ? stats.level : 1);
   const progress = Number.isFinite(stats.level_progress_percent)
@@ -29,10 +31,20 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
     <section
       data-dashboard-hero
       aria-labelledby="dashboard-welcome-title"
-      className="q-panel relative grid gap-5 overflow-hidden border-l-2 border-l-[var(--accent)] p-4 sm:gap-8 sm:p-7 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-stretch"
+      className="q-panel relative grid gap-5 overflow-hidden p-5 sm:gap-7 sm:p-7 xl:grid-cols-[minmax(0,1.3fr)_minmax(18rem,0.7fr)] xl:items-stretch"
     >
-      <div className="flex min-w-0 flex-col justify-between gap-6">
-        <div className="flex min-w-0 items-center gap-4">
+      <div className="flex min-w-0 flex-col justify-between gap-7">
+        <div>
+          <p className="q-kicker">Your learning workspace</p>
+          <h1 id="dashboard-welcome-title" className="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-4xl">
+            Welcome back, {name}.
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-[var(--text-secondary)] sm:text-base">
+            Build your skills. Win your battles. Get placement ready.
+          </p>
+        </div>
+
+        <div className="flex min-w-0 items-center gap-3 border-t border-[var(--border-subtle)] pt-4">
           {avatarUrl ? (
             <Image
               src={avatarUrl}
@@ -51,44 +63,45 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
             </div>
           )}
           <div className="min-w-0">
-            <p className="q-kicker">
-              Your learning workspace
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+              {learningGoal ? "Current learning goal" : "Learning roadmap"}
             </p>
-            <h1 id="dashboard-welcome-title" className="mt-1 truncate text-2xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-3xl">
-              Welcome back, {name}
-            </h1>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-              Choose a focused next step and keep your progress moving.
+            <p className="mt-1 truncate text-sm font-semibold text-[var(--text-primary)]">
+              {learningGoal || "Set up a roadmap to personalize your next steps"}
             </p>
+            {nextAction && (
+              <p className="mt-1 truncate text-xs text-[var(--text-secondary)]">
+                Next up: {nextAction}
+              </p>
+            )}
           </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <Link
             href="/practice"
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-3 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] sm:px-4"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
           >
             <BookOpen size={16} aria-hidden="true" />
-            Continue learning
+            Continue learning <ArrowRight size={15} aria-hidden="true" />
           </Link>
           <Link
-            href="/career/roadmap"
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] px-3 text-sm font-medium text-[var(--text-primary)] transition-colors hover:border-[var(--accent)]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] sm:px-4"
+            href="/battle"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] px-4 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:border-[var(--accent)]/40 hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
           >
-            <Map size={16} aria-hidden="true" />
-            <span className="sm:hidden">Roadmap</span>
-            <span className="hidden sm:inline">View roadmap</span>
+            <Swords size={16} aria-hidden="true" />
+            Enter Battle Arena
           </Link>
         </div>
       </div>
 
-      <div className="flex flex-col justify-center rounded-[14px] border border-[var(--border-default)] bg-[var(--surface-elevated)]/55 p-4 sm:p-5">
+      <div className="flex min-w-0 flex-col justify-center rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] p-4 sm:p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-              Current level
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+              Level progress
             </p>
-            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">Level {level}</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">Level {level}</p>
           </div>
           <span className="rounded-md border border-[var(--border-default)] bg-[var(--surface-card)] px-2.5 py-1 font-mono text-xs font-semibold tabular-nums text-[var(--accent-strong)]">
             {progress}%
@@ -96,7 +109,7 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
         </div>
 
         <div
-          className="mt-4 h-2 overflow-hidden rounded-full bg-[var(--surface-elevated)]"
+          className="mt-4 h-2 overflow-hidden rounded-full bg-[var(--surface-hover)]"
           role="progressbar"
           aria-label="Progress to next level"
           aria-valuenow={progress}
@@ -108,8 +121,9 @@ export default function DashboardHero({ user, stats }: DashboardHeroProps) {
             style={{ width: `${progress}%` }}
           />
         </div>
-        <p className="mt-2 text-xs text-[var(--text-muted)]">
-          {formatDashboardNumber(stats.xp_to_next_level)} XP to your next level
+        <p className="mt-2 flex items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
+          <span>{formatDashboardNumber(stats.xp_to_next_level)} XP to next level</span>
+          <span className="font-mono tabular-nums">{formatDashboardNumber(stats.xp)} total XP</span>
         </p>
       </div>
     </section>

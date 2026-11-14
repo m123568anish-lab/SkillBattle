@@ -130,7 +130,7 @@ export default function TopNavbar({
       initial={shouldReduceMotion ? false : { opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: MOTION_DURATIONS.fast * 1.5, ease: MOTION_EASINGS.command }}
-      className="sticky top-0 z-20 -mx-4 mb-5 grid h-[calc(3.5rem+env(safe-area-inset-top))] min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-[var(--border-default)] bg-[var(--surface-canvas)]/95 backdrop-blur-md px-3 pt-[env(safe-area-inset-top)] transition-colors duration-200 sm:mx-0 sm:mb-8 sm:h-16 sm:grid-cols-[minmax(0,1fr)_minmax(11rem,24rem)_auto] sm:gap-4 sm:px-0 sm:pt-0"
+      className="sticky top-0 z-40 grid h-[calc(4rem+env(safe-area-inset-top))] min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-[var(--border-default)] bg-[var(--surface-canvas)]/95 pt-[env(safe-area-inset-top)] backdrop-blur-md transition-colors duration-200 sm:h-[4.5rem] sm:grid-cols-[minmax(0,1fr)_minmax(12rem,28rem)_auto] sm:gap-4 sm:pt-0"
     >
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         {onToggleMobileNav ? (

@@ -10,61 +10,59 @@ interface Props {
 
 export default function WelcomeStep({ onNext }: Props) {
   return (
-    <div className="space-y-6 sm:space-y-8 text-center">
-      <div className="mx-auto flex justify-center">
-        <div className="relative">
-          <div className="absolute -inset-3 rounded-full bg-[var(--accent)]/10 blur-xl" />
-          <div className="relative rounded-2xl border border-[var(--border-default)] bg-[var(--surface-elevated)] p-4 shadow-xl">
-            <QubiraLogo variant="icon" size="xl" />
-          </div>
+    <div className="space-y-6 sm:space-y-8">
+      <div className="flex items-center gap-3">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[var(--accent)]/25 bg-[var(--accent)]/[0.08]">
+          <QubiraLogo variant="icon" size="sm" />
         </div>
+        <span className="q-kicker">Your Qubira journey starts here</span>
       </div>
 
       <div>
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-default)] bg-[var(--surface-elevated)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
-          <Sparkles size={13} className="text-[var(--accent)]" /> Competitive Learning Platform
+        <div className="inline-flex items-center gap-1.5 rounded-md border border-[var(--border-default)] bg-[var(--surface-elevated)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)]">
+          <Sparkles size={13} className="text-[var(--accent-strong)]" /> Personalized learning
         </div>
-        <h1 className="mt-4 text-3xl sm:text-5xl font-black tracking-tight text-[var(--text-primary)]">
-          Accelerate Your Mastery with <span className="text-[var(--accent)]">QUBIRA</span>
+        <h1 className="mt-4 max-w-[18ch] text-3xl font-semibold leading-tight tracking-tight text-[var(--text-primary)] sm:text-4xl">
+          Prepare with purpose.
         </h1>
-        <p className="mx-auto mt-3 max-w-xl text-sm sm:text-base leading-relaxed text-[var(--text-secondary)]">
-          A personalized learning and battle ecosystem calibrated to target software engineering careers at top product organizations.
+        <p className="mt-3 max-w-xl text-sm leading-relaxed text-[var(--text-secondary)] sm:text-base">
+          Tell us what you are learning and where you want to go. We&apos;ll use your preferences to shape your Qubira experience.
         </p>
       </div>
 
-      {/* Feature Highlights Grid */}
-      <div className="grid gap-3 sm:gap-4 sm:grid-cols-3 text-left">
-        <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-elevated)] p-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--accent)]/10 text-[var(--accent)] mb-3">
+      <div className="grid gap-3 text-left sm:grid-cols-3">
+        <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-4">
+          <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--accent-strong)]">
             <Trophy size={18} />
           </div>
-          <h3 className="text-xs font-bold text-[var(--text-primary)]">Live Arenas</h3>
-          <p className="mt-1 text-[11px] text-[var(--text-muted)] leading-relaxed">
-            Multiplayer coding battles & MCQ duels with verified rankings.
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Compete</h3>
+          <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
+            Practice solo or test your skills in the arena.
           </p>
         </div>
-        <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-elevated)] p-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--accent)]/10 text-[var(--accent)] mb-3">
+        <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-4">
+          <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--accent-strong)]">
             <Cpu size={18} />
           </div>
-          <h3 className="text-xs font-bold text-[var(--text-primary)]">AI Roadmap</h3>
-          <p className="mt-1 text-[11px] text-[var(--text-muted)] leading-relaxed">
-            Personalized study timeline tailored to your dream companies.
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Find your path</h3>
+          <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
+            Set goals and explore your personalized roadmap.
           </p>
         </div>
-        <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-elevated)] p-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--accent)]/10 text-[var(--accent)] mb-3">
+        <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-4">
+          <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--accent-strong)]">
             <Sparkles size={18} />
           </div>
-          <h3 className="text-xs font-bold text-[var(--text-primary)]">Skill Calibration</h3>
-          <p className="mt-1 text-[11px] text-[var(--text-muted)] leading-relaxed">
-            Placement readiness matrix tracked against real benchmarks.
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Track progress</h3>
+          <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
+            Keep your learning activity and achievements together.
           </p>
         </div>
       </div>
 
-      <div className="pt-2">
-        <GradientButton onClick={onNext} className="min-w-48 group">
+      <div className="flex flex-col gap-3 border-t border-[var(--border-subtle)] pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-[var(--text-muted)]">A few steps to make your workspace yours.</p>
+        <GradientButton onClick={onNext} className="min-h-11 min-w-48 rounded-lg group">
           <span className="flex items-center justify-center gap-2">
             Start Setup <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
           </span>

@@ -141,7 +141,7 @@ function DashboardLayoutInner({ children }: Props) {
   ));
 
   return (
-    <main suppressHydrationWarning className="q-shell relative flex min-h-screen bg-[var(--surface-canvas)] text-[var(--text-primary)] lg:h-dvh lg:min-h-0 lg:overflow-hidden">
+    <main suppressHydrationWarning className="q-shell relative flex h-dvh min-h-dvh overflow-hidden bg-[var(--surface-canvas)] text-[var(--text-primary)]">
       {/* Ambient Background System */}
       <GridBackground />
 
@@ -192,13 +192,17 @@ function DashboardLayoutInner({ children }: Props) {
       <section
         id="main-content"
         tabIndex={-1}
-        className="relative z-10 min-w-0 flex-1 overflow-auto bg-transparent px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-0 outline-none sm:px-6 sm:pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:pt-5 lg:h-full lg:min-h-0 lg:px-10 lg:pb-10 lg:pt-6"
+        className="relative z-10 min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain bg-transparent outline-none"
       >
-        <TopNavbar
-          onToggleMobileNav={() => setMobileDrawerOpen((open) => !open)}
-          mobileNavExpanded={mobileDrawerOpen}
-        />
-        <PageTransition>{children}</PageTransition>
+        <div className="mx-auto flex min-h-full w-full max-w-[1680px] flex-col px-4 sm:px-6 lg:px-10">
+          <TopNavbar
+            onToggleMobileNav={() => setMobileDrawerOpen((open) => !open)}
+            mobileNavExpanded={mobileDrawerOpen}
+          />
+          <div className="flex-1 py-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:py-7 sm:pb-[calc(6.5rem+env(safe-area-inset-bottom))] lg:pb-10">
+            <PageTransition>{children}</PageTransition>
+          </div>
+        </div>
       </section>
 
       {/* Mobile Bottom Navigation Bar */}

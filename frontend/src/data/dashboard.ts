@@ -188,6 +188,8 @@ export const sidebarCategories: SidebarCategory[] = [
       { title: "AI Roadmap", href: "/career/roadmap", icon: Map, category: "career" },
       { title: "Skill Assessment", href: "/assessments", icon: ClipboardCheck, category: "career" },
       { title: "Practice", href: "/practice/tasks", icon: Code2, category: "career" },
+      { title: "Learning Campaign", href: "/campaign", icon: Trophy, category: "career" },
+      { title: "AI Coach", href: "/coach", icon: Bot, category: "career" },
       { title: "Company Prep", href: "/opportunities", icon: BriefcaseBusiness, category: "career" },
     ],
   },
@@ -197,6 +199,7 @@ export const sidebarCategories: SidebarCategory[] = [
     items: [
       { title: "My Progress", href: "/practice/progress", icon: BarChart3, category: "personal" },
       { title: "Achievements", href: "/achievements", icon: Medal, category: "personal" },
+      { title: "Analytics", href: "/analytics", icon: FileBarChart, category: "personal" },
       { title: "Battle History", href: "/battle/history", icon: Activity, category: "personal" },
       { title: "Saved Items", href: "/practice/saved", icon: Bookmark, category: "personal" },
     ],

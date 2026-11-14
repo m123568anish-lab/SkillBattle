@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
   PageHeader,
@@ -36,6 +36,8 @@ type LobbyState = {
 
 export default function BattleLobbyPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedQuestionType = searchParams.get("question_type");
 
   const [lobbyState, setLobbyState] = useState<LobbyState>({ queue_size: null });
   const [selectedDifficulty, setSelectedDifficulty] = useState<"easy" | "medium" | "hard">("medium");
@@ -49,6 +51,12 @@ export default function BattleLobbyPage() {
   const [createdRoomId, setCreatedRoomId] = useState<string | null>(null);
   const [roomActionLoading, setRoomActionLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (requestedQuestionType === "mcq" || requestedQuestionType === "coding") {
+      setSelectedQuestionType(requestedQuestionType);
+    }
+  }, [requestedQuestionType]);
 
   const loadQueueStatus = useCallback(async () => {
     const response = await api.get<LobbyState>("/battle/queue/status");

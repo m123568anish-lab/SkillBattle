@@ -1,65 +1,109 @@
 import Link from "next/link";
-import { ArrowUpRight, Swords, Users, Zap } from "lucide-react";
+import {
+  ArrowUpRight,
+  BookOpen,
+  Code2,
+  Swords,
+  Users,
+} from "lucide-react";
+import type { DashboardStats } from "@/types/dashboard";
 
-export default function BattleDock() {
+const modes = [
+  {
+    title: "Solo MCQ",
+    detail: "Sharpen concepts at your pace.",
+    href: "/battle/solo?mode=mcq",
+    label: "Solo",
+    icon: BookOpen,
+  },
+  {
+    title: "Solo coding",
+    detail: "Solve a coding challenge.",
+    href: "/battle/solo?mode=coding",
+    label: "Solo",
+    icon: Code2,
+  },
+  {
+    title: "Multiplayer MCQ",
+    detail: "Create an MCQ room or join the lobby.",
+    href: "/battle/lobby?question_type=mcq",
+    label: "Multiplayer",
+    icon: Users,
+  },
+  {
+    title: "Multiplayer coding",
+    detail: "Create a coding room or join the lobby.",
+    href: "/battle/lobby?question_type=coding",
+    label: "Multiplayer",
+    icon: Swords,
+  },
+];
+
+export default function BattleDock({ stats }: { stats: DashboardStats }) {
+  const winRate = stats.battles_played > 0
+    ? Math.round((stats.battles_won / stats.battles_played) * 100)
+    : null;
+
   return (
     <section
       aria-labelledby="battle-arena-title"
-      className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-5 sm:p-6"
+      className="q-panel min-w-0 overflow-hidden"
     >
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] pb-4">
-        <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-xl border border-[var(--accent)]/25 bg-[var(--accent)]/[0.08] text-[var(--accent-strong)]">
-            <Swords size={19} aria-hidden="true" />
-          </span>
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-              Put your skills to the test
-            </p>
-            <h2 id="battle-arena-title" className="mt-0.5 text-lg font-semibold text-[var(--text-primary)]">
-              Battle Arena
-            </h2>
+      <div className="flex flex-col gap-5 border-b border-[var(--border-subtle)] p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
+        <div>
+          <p className="q-kicker">Compete on your terms</p>
+          <div className="mt-2 flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-lg border border-[var(--accent)]/25 bg-[var(--accent)]/[0.08] text-[var(--accent-strong)]">
+              <Swords size={19} aria-hidden="true" />
+            </span>
+            <div>
+              <h2 id="battle-arena-title" className="text-xl font-semibold text-[var(--text-primary)]">
+                Battle Arena
+              </h2>
+              <p className="mt-0.5 text-xs text-[var(--text-muted)]">Choose a format and put your skills to work.</p>
+            </div>
           </div>
         </div>
-        <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--border-default)] bg-[var(--surface-elevated)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)]">
-          <Zap size={13} className="text-[var(--accent-strong)]" aria-hidden="true" />
-          Choose your format
-        </span>
+
+        <div className="flex flex-wrap gap-x-6 gap-y-2 sm:justify-end">
+          <BattleStat label="Rating" value={stats.rating.toLocaleString()} />
+          <BattleStat label="Battles" value={stats.battles_completed.toLocaleString()} />
+          <BattleStat label="Win rate" value={winRate === null ? "—" : `${winRate}%`} />
+        </div>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <Link
-          href="/battle/solo"
-          className="group flex min-h-24 items-center justify-between gap-4 rounded-xl border border-[var(--border-default)] bg-[#090909] p-4 transition-colors hover:border-[var(--accent)]/40 hover:bg-[var(--surface-elevated)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
-        >
-          <span className="flex min-w-0 items-center gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] transition-colors group-hover:text-[var(--accent-strong)]">
-              <Swords size={17} aria-hidden="true" />
+      <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5">
+        {modes.map(({ title, detail, href, label, icon: Icon }) => (
+          <Link
+            key={title}
+            href={href}
+            className="group flex min-h-[6.25rem] min-w-0 items-center gap-3 rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] p-4 transition-colors duration-150 hover:border-[var(--accent)]/40 hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] motion-reduce:transition-none"
+          >
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-secondary)] transition-colors group-hover:text-[var(--accent-strong)]">
+              <Icon size={17} aria-hidden="true" />
             </span>
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold text-[var(--text-primary)]">Solo practice</span>
-              <span className="mt-1 block text-xs text-[var(--text-muted)]">Train at your own pace.</span>
+            <span className="min-w-0 flex-1">
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-semibold text-[var(--text-primary)]">{title}</span>
+                <span className="rounded border border-[var(--border-default)] px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+                  {label}
+                </span>
+              </span>
+              <span className="mt-1 block text-xs leading-relaxed text-[var(--text-muted)]">{detail}</span>
             </span>
-          </span>
-          <ArrowUpRight size={17} aria-hidden="true" className="shrink-0 text-[var(--text-muted)] transition-colors group-hover:text-[var(--accent-strong)]" />
-        </Link>
-
-        <Link
-          href="/battle/lobby"
-          className="group flex min-h-24 items-center justify-between gap-4 rounded-xl border border-[var(--border-default)] bg-[#090909] p-4 transition-colors hover:border-[var(--accent)]/40 hover:bg-[var(--surface-elevated)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
-        >
-          <span className="flex min-w-0 items-center gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] transition-colors group-hover:text-[var(--accent-strong)]">
-              <Users size={17} aria-hidden="true" />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold text-[var(--text-primary)]">Multiplayer arena</span>
-              <span className="mt-1 block text-xs text-[var(--text-muted)]">Find a player or join a room.</span>
-            </span>
-          </span>
-          <ArrowUpRight size={17} aria-hidden="true" className="shrink-0 text-[var(--text-muted)] transition-colors group-hover:text-[var(--accent-strong)]" />
-        </Link>
+            <ArrowUpRight size={16} aria-hidden="true" className="shrink-0 text-[var(--text-muted)] transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[var(--accent-strong)]" />
+          </Link>
+        ))}
       </div>
     </section>
+  );
+}
+
+function BattleStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-[4rem]">
+      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</p>
+      <p className="mt-0.5 font-mono text-sm font-semibold tabular-nums text-[var(--text-primary)]">{value}</p>
+    </div>
   );
 }

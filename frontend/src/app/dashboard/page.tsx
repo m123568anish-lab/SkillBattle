@@ -4,12 +4,15 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   ArrowRight,
+  Bot,
   Code2,
   Mic,
   Trophy,
 } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import DashboardHero from "@/components/dashboard/DashboardHero";
+import DailyFocus from "@/components/dashboard/DailyFocus";
+import LearningRoadmap from "@/components/dashboard/LearningRoadmap";
 import StatsGrid from "@/components/dashboard/StatsGrid";
 import { useDashboard } from "@/hooks/use-dashboard";
 import type { WeeklyActivity } from "@/types/dashboard";
@@ -24,11 +27,8 @@ function DashboardPlaceholder({ minHeight }: { minHeight: string }) {
   );
 }
 
-const DailyChallenge = dynamic(() => import("@/components/dashboard/DailyChallenge"), {
-  loading: () => <DashboardPlaceholder minHeight="17rem" />,
-});
 const BattleDock = dynamic(() => import("@/components/dashboard/BattleDock"), {
-  loading: () => <DashboardPlaceholder minHeight="17rem" />,
+  loading: () => <DashboardPlaceholder minHeight="19rem" />,
 });
 const LeaderboardWidget = dynamic(() => import("@/components/dashboard/LeaderboardWidget"), {
   loading: () => <DashboardPlaceholder minHeight="17rem" />,
@@ -42,9 +42,6 @@ const QuickSpeedrunWidget = dynamic(() => import("@/components/dashboard/QuickSp
 const AICoachCard = dynamic(() => import("@/components/dashboard/AICoachCard"), {
   loading: () => <DashboardPlaceholder minHeight="12rem" />,
 });
-const CommandCenterCard = dynamic(() => import("@/components/dashboard/CommandCenterCard"), {
-  loading: () => <DashboardPlaceholder minHeight="17rem" />,
-});
 const ServerStatus = dynamic(() => import("@/components/dashboard/ServerStatus"), {
   loading: () => <DashboardPlaceholder minHeight="12rem" />,
 });
@@ -54,7 +51,7 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="mx-auto max-w-[1440px] space-y-6 pb-4 sm:space-y-8">
+      <div className="mx-auto max-w-[1440px] space-y-6 pb-4 sm:space-y-7">
         {error && (
           <div
             role="alert"
@@ -79,51 +76,19 @@ export default function DashboardPage() {
 
         {dashboard ? (
           <>
-            <DashboardHero user={dashboard.user} stats={dashboard.stats} />
+            <DashboardHero
+              user={dashboard.user}
+              stats={dashboard.stats}
+              learningGoal={dashboard.command_center?.roadmap?.title}
+              nextAction={dashboard.command_center?.next_best_action?.title}
+            />
             <StatsGrid stats={dashboard.stats} />
-            <BattleDock />
-
-            <section aria-labelledby="learning-plan-title" className="space-y-4">
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                    Build your next skill
-                  </p>
-                  <h2 id="learning-plan-title" className="mt-1 text-xl font-semibold tracking-tight text-[var(--text-primary)]">
-                    Learning plan
-                  </h2>
-                </div>
-                <Link
-                  href="/career/roadmap"
-                  className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--accent-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
-                >
-                  Full roadmap <ArrowRight size={15} aria-hidden="true" />
-                </Link>
-              </div>
-
-              <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
-                {dashboard.command_center ? (
-                  <CommandCenterCard commandCenter={dashboard.command_center} />
-                ) : (
-                  <DashboardSectionEmpty
-                    title="Your roadmap is taking shape"
-                    detail="Complete a practice session or assessment to build a personalized next step."
-                    href="/career/roadmap"
-                    action="Open roadmap"
-                  />
-                )}
-                {dashboard.daily_challenge?.id ? (
-                  <DailyChallenge challenge={dashboard.daily_challenge} />
-                ) : (
-                  <DashboardSectionEmpty
-                    title="No daily challenge available"
-                    detail="There is no challenge assigned right now. Your learning plan and practice catalog are still available."
-                    href="/practice"
-                    action="Browse practice"
-                  />
-                )}
-              </div>
+            <section aria-label="Roadmap and daily focus" className="grid items-start gap-4 xl:grid-cols-2">
+              <LearningRoadmap commandCenter={dashboard.command_center} />
+              <DailyFocus challenge={dashboard.daily_challenge} commandCenter={dashboard.command_center} />
             </section>
+
+            <BattleDock stats={dashboard.stats} />
 
             <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.3fr)_minmax(18rem,0.7fr)]">
               <WeeklyActivityPanel activity={dashboard.weekly_activity} />
@@ -185,20 +150,26 @@ function ExploreLearning() {
     {
       href: "/interview",
       title: "Mock interview",
-      detail: "Open the interview practice experience.",
+      detail: "Practice interview questions and responses.",
       icon: Mic,
+    },
+    {
+      href: "/coach",
+      title: "AI coach",
+      detail: "Get support while you build your skills.",
+      icon: Bot,
     },
   ];
 
   return (
-    <section className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-4 sm:p-5">
+    <section className="q-panel min-w-0 p-5 sm:p-6">
       <div className="mb-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
           More ways to grow
         </p>
         <h2 className="mt-1 text-base font-semibold text-[var(--text-primary)]">Explore learning</h2>
       </div>
-      <div className="divide-y divide-[var(--border-subtle)]">
+      <div className="mt-3 divide-y divide-[var(--border-subtle)]">
         {destinations.map(({ href, title, detail, icon: Icon }) => (
           <Link
             key={href}
@@ -223,86 +194,71 @@ function ExploreLearning() {
 function WeeklyActivityPanel({ activity }: { activity: WeeklyActivity[] }) {
   const totalXp = activity.reduce((total, item) => total + item.xp, 0);
   const peakXp = Math.max(1, ...activity.map((item) => item.xp));
+  const activeDays = activity.filter((item) => item.xp > 0).length;
   const weekday = new Intl.DateTimeFormat(undefined, { weekday: "short", timeZone: "UTC" });
 
   return (
     <section
       aria-labelledby="weekly-activity-title"
-      className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-4 sm:p-5"
+      className="q-panel min-w-0 p-5 sm:p-6"
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-            Consistency
-          </p>
-          <h2 id="weekly-activity-title" className="mt-1 text-base font-semibold text-[var(--text-primary)]">
-            Weekly activity
+          <p className="q-kicker">Consistency</p>
+          <h2 id="weekly-activity-title" className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+            Your weekly rhythm
           </h2>
         </div>
         <div className="text-right">
-          <p className="font-mono text-lg font-semibold tabular-nums text-[var(--accent-strong)]">
+          <p className="font-mono text-xl font-semibold tabular-nums text-[var(--text-primary)]">
             {totalXp.toLocaleString()}
           </p>
-          <p className="text-[11px] text-[var(--text-muted)]">XP this week</p>
+          <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-muted)]">XP this week</p>
         </div>
       </div>
 
-      {activity.length === 0 ? (
-        <p className="mt-5 rounded-lg border border-dashed border-[var(--border-default)] px-4 py-6 text-center text-sm text-[var(--text-muted)]">
-          Weekly activity will appear here as you learn and practice.
-        </p>
+      {activity.length === 0 || activeDays === 0 ? (
+        <div className="mt-5 flex min-h-32 flex-col items-center justify-center rounded-lg border border-dashed border-[var(--border-default)] bg-[var(--surface-elevated)] px-4 py-6 text-center">
+          <p className="text-sm font-semibold text-[var(--text-primary)]">A fresh week starts here</p>
+          <p className="mt-1 max-w-xs text-xs leading-relaxed text-[var(--text-muted)]">
+            Your daily XP and learning consistency will show up as you practice.
+          </p>
+        </div>
       ) : (
-        <div className="mt-5 grid grid-cols-7 gap-2 sm:gap-3" aria-label="Weekly XP activity">
-          {activity.map((item) => {
-            const height = item.xp > 0 ? Math.max(10, (item.xp / peakXp) * 100) : 4;
-            const date = new Date(`${item.day}T00:00:00Z`);
-            const dayLabel = Number.isNaN(date.getTime()) ? item.day : weekday.format(date);
-            return (
-              <div key={item.day} className="flex min-w-0 flex-col items-center gap-2">
-                <div className="flex h-20 w-full items-end rounded-md border border-[var(--border-subtle)] bg-[#090909] p-1.5 sm:h-24">
-                  <div
-                    role="progressbar"
-                    aria-label={`${item.day}: ${item.xp} XP`}
-                    aria-valuenow={item.xp}
-                    aria-valuemin={0}
-                    aria-valuemax={peakXp}
-                    className={`w-full rounded-sm ${item.xp > 0 ? "bg-[var(--accent)]" : "bg-[var(--border-default)]"}`}
-                    style={{ height: `${height}%` }}
-                  />
+        <div className="mt-5" role="group" aria-label="Daily XP for the week">
+          <div className="grid grid-cols-7 gap-2 sm:gap-3">
+            {activity.map((item) => {
+              const height = item.xp > 0 ? Math.max(8, (item.xp / peakXp) * 100) : 3;
+              const date = new Date(`${item.day}T00:00:00Z`);
+              const dayLabel = Number.isNaN(date.getTime()) ? item.day : weekday.format(date);
+              return (
+                <div key={item.day} className="flex min-w-0 flex-col items-center gap-2">
+                  <div className="flex h-24 w-full items-end rounded-md border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-1.5 sm:h-28">
+                    <div
+                      role="progressbar"
+                      aria-label={`${item.day}: ${item.xp} XP`}
+                      aria-valuenow={item.xp}
+                      aria-valuemin={0}
+                      aria-valuemax={peakXp}
+                      title={`${item.xp.toLocaleString()} XP`}
+                      className={`w-full rounded-sm transition-[height] duration-300 motion-reduce:transition-none ${
+                        item.xp > 0 ? "bg-[var(--accent)]" : "bg-[var(--border-default)]"
+                      }`}
+                      style={{ height: `${height}%` }}
+                    />
+                  </div>
+                  <span className="max-w-full truncate text-[10px] font-medium text-[var(--text-muted)]">
+                    {dayLabel}
+                  </span>
                 </div>
-                <span className="max-w-full truncate text-[10px] font-medium text-[var(--text-muted)]">
-                  {dayLabel}
-                </span>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+          <p className="mt-4 border-t border-[var(--border-subtle)] pt-3 text-xs text-[var(--text-muted)]">
+            <span className="font-semibold text-[var(--text-primary)]">{activeDays}</span> active {activeDays === 1 ? "day" : "days"} from {activity.length} recorded
+          </p>
         </div>
       )}
-    </section>
-  );
-}
-
-function DashboardSectionEmpty({
-  title,
-  detail,
-  href,
-  action,
-}: {
-  title: string;
-  detail: string;
-  href: string;
-  action: string;
-}) {
-  return (
-    <section className="flex min-h-64 flex-col items-start justify-center rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-5 sm:p-6">
-      <h2 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h2>
-      <p className="mt-2 max-w-xl text-sm leading-relaxed text-[var(--text-secondary)]">{detail}</p>
-      <Link
-        href={href}
-        className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] px-3 text-sm font-medium text-[var(--text-primary)] transition-colors hover:border-[var(--accent)]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
-      >
-        {action} <ArrowRight size={14} aria-hidden="true" />
-      </Link>
     </section>
   );
 }
