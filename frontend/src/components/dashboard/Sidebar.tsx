@@ -18,7 +18,7 @@ import {
   Flame,
   Users,
 } from "lucide-react";
-import { getPortalCategories, getUserPortalKind } from "@/data/dashboard";
+import { getPortalCategories, getUserPortalKind, type PortalNavItem } from "@/data/dashboard";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuthStore } from "@/store/authStore";
 import { QubiraIcon, QubiraLogo } from "@/components/brand/QubiraLogo";
@@ -44,6 +44,7 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [activeTooltip, setActiveTooltip] = useState<{ title: string; badge?: string; top: number } | null>(null);
 
   const profileRef = useRef<HTMLDivElement>(null);
@@ -186,12 +187,47 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
     setActiveTooltip({ title, badge, top: rect.top + rect.height / 2 });
   };
 
+  const renderNavItem = (item: PortalNavItem, depth = 0): React.ReactNode => {
+    if (!item.available) return null;
+    const children = item.children ?? [];
+    const childActive = children.some((child) => isActive(child.href));
+    const active = isActive(item.href) || childActive;
+    const expanded = openGroups[item.title] ?? childActive;
+    const Icon = item.icon;
+    const content = (
+      <>
+        {active && <span aria-hidden="true" className="absolute bottom-2 left-0 top-2 w-[3px] rounded-r bg-[var(--accent)]" />}
+        <Icon size={18} className={`relative z-10 shrink-0 ${active ? "text-[var(--accent-strong)]" : "text-[var(--text-muted)] group-hover:text-[var(--text-primary)]"}`} />
+        <motion.span aria-hidden={effectiveCollapsed} initial={false} animate={{ width: effectiveCollapsed ? 0 : "auto", opacity: effectiveCollapsed ? 0 : 1, x: effectiveCollapsed ? -4 : 0 }} className="relative z-10 min-w-0 flex-1 truncate text-xs">
+          {item.title}
+        </motion.span>
+        {!effectiveCollapsed && children.length > 0 && <ChevronDown size={14} className={`relative z-10 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`} />}
+        {active && !effectiveCollapsed && children.length === 0 && <span className="relative z-10 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />}
+      </>
+    );
+
+    const parent = children.length > 0 ? (
+      <button type="button" onClick={() => setOpenGroups((current) => ({ ...current, [item.title]: !expanded }))} title={effectiveCollapsed ? item.title : undefined} aria-expanded={expanded} className={`group relative flex h-11 w-full items-center gap-3 rounded-lg px-2.5 text-left text-xs font-semibold transition-colors ${effectiveCollapsed ? "justify-center" : ""} ${active ? "bg-[var(--accent)]/[0.07] text-[var(--text-primary)] font-bold" : "text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]"}`}>
+        {content}
+      </button>
+    ) : item.href ? (
+      <Link href={item.href} onClick={() => { setActiveTooltip(null); onCloseMobile?.(); }} onMouseEnter={(e) => showCollapsedTooltip(item.title, item.badge, e.currentTarget)} onFocus={(e) => showCollapsedTooltip(item.title, item.badge, e.currentTarget)} onMouseLeave={() => setActiveTooltip(null)} onBlur={() => setActiveTooltip(null)} title={effectiveCollapsed ? item.title : undefined} aria-label={item.title} aria-current={active ? "page" : undefined} className={`group relative flex h-11 items-center gap-3 rounded-lg px-2.5 text-xs font-semibold transition-colors ${effectiveCollapsed ? "justify-center" : ""} ${active ? "bg-[var(--accent)]/[0.07] text-[var(--text-primary)] font-bold" : "text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]"}`}>
+        {content}
+      </Link>
+    ) : null;
+
+    return <div key={`${depth}-${item.title}`}>
+      {parent}
+      {!effectiveCollapsed && expanded && children.length > 0 && <div className="ml-5 space-y-1 border-l border-[var(--border-subtle)] pl-2">{children.map((child) => renderNavItem(child, depth + 1))}</div>}
+    </div>;
+  };
+
   return (
     <>
       <motion.aside
         suppressHydrationWarning
         initial={false}
-        animate={{ width: isMobile ? "100%" : effectiveCollapsed ? 68 : 232 }}
+        animate={{ width: isMobile ? "100%" : effectiveCollapsed ? 76 : 248 }}
         transition={
           shouldReduceMotion
             ? { duration: 0 }
@@ -274,80 +310,7 @@ export default function Sidebar({ isMobile = false, onCloseMobile }: SidebarProp
                 )}
 
                 <div className="space-y-1">
-                  {category.items.map((item) => {
-                    const Icon = item.icon;
-                    const active = isActive(item.href);
-
-                    if (!item.available || !item.href) return null;
-
-                    return (
-                      <Link
-                        key={item.title}
-                        href={item.href}
-                        onClick={() => {
-                          setActiveTooltip(null);
-                        }}
-                        onMouseEnter={(e) => showCollapsedTooltip(item.title, item.badge, e.currentTarget)}
-                        onFocus={(e) => showCollapsedTooltip(item.title, item.badge, e.currentTarget)}
-                        onMouseLeave={() => setActiveTooltip(null)}
-                        onBlur={() => setActiveTooltip(null)}
-                        title={effectiveCollapsed ? item.title : undefined}
-                        aria-label={item.title}
-                        aria-current={active ? "page" : undefined}
-                        className={`group relative flex h-11 items-center gap-3 rounded-lg px-2.5 text-xs font-semibold transition-colors duration-150 motion-reduce:transition-none ${
-                          effectiveCollapsed ? "justify-center" : ""
-                        } ${
-                          active
-                            ? "bg-[var(--accent)]/[0.07] text-[var(--text-primary)] font-bold"
-                            : "text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]"
-                        }`}
-                      >
-                        {/* Restrained active-route marker */}
-                        {active && (
-                          <motion.span
-                            layoutId="sidebar-active-indicator"
-                            aria-hidden="true"
-                            className="absolute bottom-2 left-0 top-2 w-[3px] rounded-r bg-[var(--accent)] pointer-events-none"
-                            transition={
-                              shouldReduceMotion
-                                ? { duration: 0 }
-                                : { duration: MOTION_DURATIONS.fast, ease: MOTION_EASINGS.command }
-                            }
-                          />
-                        )}
-
-                        <Icon
-                          size={18}
-                          className={`relative z-10 shrink-0 transition-colors duration-150 motion-reduce:transition-none ${
-                            active
-                              ? "text-[var(--accent-strong)]"
-                              : "text-[var(--text-muted)] group-hover:text-[var(--text-primary)]"
-                          }`}
-                        />
-
-                        <motion.span
-                          aria-hidden={effectiveCollapsed}
-                          initial={false}
-                          animate={{
-                            width: effectiveCollapsed ? 0 : "auto",
-                            opacity: effectiveCollapsed ? 0 : 1,
-                            x: effectiveCollapsed ? -4 : 0,
-                          }}
-                          transition={{
-                            duration: shouldReduceMotion ? 0 : MOTION_DURATIONS.fast,
-                            ease: MOTION_EASINGS.command,
-                          }}
-                          className="relative z-10 min-w-0 flex-1 truncate text-xs"
-                        >
-                          {item.title}
-                        </motion.span>
-
-                        {active && !effectiveCollapsed && (
-                          <span className="relative z-10 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />
-                        )}
-                      </Link>
-                    );
-                  })}
+                  {category.items.map((item) => renderNavItem(item))}
                 </div>
               </div>
             );

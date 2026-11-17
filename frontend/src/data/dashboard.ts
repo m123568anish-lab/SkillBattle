@@ -42,6 +42,7 @@ export interface SidebarItem {
   category: "home" | "compete" | "learn" | "career" | "community" | "account" | "main" | "track" | string;
   badge?: string;
   description?: string;
+  children?: SidebarItem[];
 }
 
 export interface SidebarCategory {
@@ -59,6 +60,7 @@ export interface PortalNavItem {
   category: string;
   available: boolean;
   badge?: string;
+  children?: PortalNavItem[];
 }
 
 export function getPortalKind(pathname: string): PortalKind {
@@ -73,6 +75,14 @@ export function getUserPortalKind(
   pathname: string,
 ): PortalKind {
   return getPortalKind(user ? getDashboardPath(user) : pathname);
+}
+
+function toPortalItem(item: SidebarItem): PortalNavItem {
+  return {
+    ...item,
+    available: true,
+    children: item.children?.map(toPortalItem),
+  };
 }
 
 const collegeItems: PortalNavItem[] = [
@@ -115,7 +125,7 @@ export function getPortalCategories(portal: PortalKind): Array<{ id: string; lab
   if (portal === "student") {
     return sidebarCategories.map((category) => ({
       ...category,
-      items: category.items.map((item) => ({ ...item, available: true })),
+      items: category.items.map(toPortalItem),
     }));
   }
 
@@ -175,33 +185,48 @@ export const sidebarCategories: SidebarCategory[] = [
     label: "Main",
     items: [
       { title: "Overview", href: "/dashboard", icon: Home, category: "main" },
-      { title: "Learn", href: "/practice", icon: BookOpen, category: "main" },
-      { title: "Battle Arena", href: "/battle", icon: Sword, category: "main" },
-      { title: "Daily Challenge", href: "/challenge", icon: Flame, category: "main" },
-      { title: "Rankings", href: "/leaderboard", icon: Trophy, category: "main" },
+      { title: "Learn", href: "/practice", icon: BookOpen, category: "main", children: [
+        { title: "Daily Challenge", href: "/challenge", icon: Flame, category: "main" },
+        { title: "Learning Campaign", href: "/campaign", icon: Trophy, category: "main" },
+      ] },
+      { title: "Battle Arena", href: "/battle", icon: Sword, category: "main", children: [
+        { title: "Rankings", href: "/leaderboard", icon: Trophy, category: "main" },
+        { title: "Battle History", href: "/battle/history", icon: Activity, category: "main" },
+      ] },
+      { title: "Practice", href: "/practice/coding", icon: Code2, category: "main", children: [
+        { title: "Coding Practice", href: "/practice/coding", icon: Code2, category: "main" },
+        { title: "Skill Assessment", href: "/assessments", icon: ClipboardCheck, category: "main" },
+        { title: "Saved Items", href: "/practice/saved", icon: Bookmark, category: "main" },
+      ] },
+      { title: "AI Coach", href: "/coach", icon: Bot, category: "main" },
     ],
   },
   {
     id: "career",
-    label: "Career Development",
+    label: "Growth",
     items: [
-      { title: "AI Roadmap", href: "/career/roadmap", icon: Map, category: "career" },
-      { title: "Skill Assessment", href: "/assessments", icon: ClipboardCheck, category: "career" },
-      { title: "Practice", href: "/practice/tasks", icon: Code2, category: "career" },
-      { title: "Learning Campaign", href: "/campaign", icon: Trophy, category: "career" },
-      { title: "AI Coach", href: "/coach", icon: Bot, category: "career" },
-      { title: "Company Prep", href: "/opportunities", icon: BriefcaseBusiness, category: "career" },
+      { title: "Career Hub", href: "/career/roadmap", icon: BriefcaseBusiness, category: "career", children: [
+        { title: "AI Roadmap", href: "/career/roadmap", icon: Map, category: "career" },
+        { title: "Company Prep", href: "/opportunities", icon: BriefcaseBusiness, category: "career" },
+      ] },
+      { title: "My Progress", href: "/practice/progress", icon: BarChart3, category: "career", children: [
+        { title: "Analytics", href: "/analytics", icon: BarChart3, category: "career" },
+        { title: "Achievements", href: "/achievements", icon: Medal, category: "career" },
+      ] },
+      { title: "More", href: "/friends", icon: HelpCircle, category: "career", children: [
+        { title: "Friends", href: "/friends", icon: Users, category: "career" },
+        { title: "Learning Campaign", href: "/campaign", icon: Trophy, category: "career" },
+        { title: "Daily Challenge", href: "/challenge", icon: Flame, category: "career" },
+        { title: "Battle History", href: "/battle/history", icon: Activity, category: "career" },
+      ] },
     ],
   },
   {
-    id: "personal",
-    label: "Personal",
+    id: "account",
+    label: "Account",
     items: [
-      { title: "My Progress", href: "/practice/progress", icon: BarChart3, category: "personal" },
-      { title: "Achievements", href: "/achievements", icon: Medal, category: "personal" },
-      { title: "Analytics", href: "/analytics", icon: FileBarChart, category: "personal" },
-      { title: "Battle History", href: "/battle/history", icon: Activity, category: "personal" },
-      { title: "Saved Items", href: "/practice/saved", icon: Bookmark, category: "personal" },
+      { title: "Settings", href: "/settings", icon: Settings, category: "account" },
+      { title: "Help & Support", href: "/support", icon: HelpCircle, category: "account" },
     ],
   },
   {

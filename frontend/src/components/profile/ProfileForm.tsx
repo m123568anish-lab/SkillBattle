@@ -15,6 +15,9 @@ import {
   User,
 } from "lucide-react";
 import { profileService, type Profile } from "@/services/profile.service";
+import { dashboardService } from "@/services/dashboard.service";
+import { practiceService } from "@/services/practice.service";
+import type { Achievement, DashboardStats, RecentActivity, SkillProgress } from "@/types/dashboard";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "react-hot-toast";
 import ProfilePhotoChooser from "./ProfilePhotoChooser";
@@ -52,6 +55,12 @@ const SECTIONS: SectionConfig[] = [
 
 export default function ProfileForm() {
   const [profile, setProfile] = useState<Profile>(defaultProfile);
+  const [savedProfile, setSavedProfile] = useState<Profile>(defaultProfile);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [codingSummary, setCodingSummary] = useState<{ solved: number; attempted: number; accuracy: number | null } | null>(null);
+  const [skillProgress, setSkillProgress] = useState<SkillProgress[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -67,16 +76,31 @@ export default function ProfileForm() {
 
     (async () => {
       try {
-        const data = await profileService.getMyProfile();
+        const [profileResult, dashboardResult, practiceResult] = await Promise.allSettled([
+          profileService.getMyProfile(),
+          dashboardService.getDashboard(),
+          practiceService.summary(),
+        ]);
         if (active) {
+          if (profileResult.status === "rejected") throw profileResult.reason;
+          const data = profileResult.value;
           setHasProfileStats(typeof data.total_xp === "number" && typeof data.level === "number");
-          setProfile({
+          const nextProfile = {
             ...defaultProfile,
             ...data,
             full_name: data.full_name || authUser?.full_name || "",
             email: data.email || authUser?.email || "",
             avatar: data.avatar || (authUser as any)?.avatar_url || "",
-          });
+          };
+          setProfile(nextProfile);
+          setSavedProfile(nextProfile);
+          if (dashboardResult.status === "fulfilled") {
+            setDashboardStats(dashboardResult.value.stats);
+            setSkillProgress(dashboardResult.value.skill_progress ?? []);
+            setAchievements(dashboardResult.value.achievements ?? []);
+            setRecentActivity(dashboardResult.value.recent_activity ?? []);
+          }
+          if (practiceResult.status === "fulfilled") setCodingSummary(practiceResult.value);
         }
       } catch (err: any) {
         if (active) setError(err?.response?.data?.detail || "Unable to load profile.");
@@ -95,7 +119,7 @@ export default function ProfileForm() {
     setError(null);
 
     try {
-      await profileService.updateProfile({
+      const updatedProfile = await profileService.updateProfile({
         full_name: profile.full_name,
         avatar: profile.avatar,
         bio: profile.bio,
@@ -107,6 +131,9 @@ export default function ProfileForm() {
         github: profile.github,
         linkedin: profile.linkedin,
       });
+
+      setProfile((current) => ({ ...current, ...updatedProfile }));
+      setSavedProfile((current) => ({ ...current, ...updatedProfile }));
 
       updateUserPartial({
         full_name: profile.full_name,
@@ -208,10 +235,42 @@ export default function ProfileForm() {
                   Class of {profile.graduation_year}
                 </span>
               )}
+              {authUser?.role && (
+                <span className="inline-flex min-h-8 items-center rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] px-3 text-xs font-semibold capitalize text-[var(--text-secondary)]">
+                  {authUser.role.replaceAll("_", " ")}
+                </span>
+              )}
             </div>
           </div>
         </div>
       </motion.section>
+
+      <section aria-label="Profile statistics" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          ["Total XP", dashboardStats ? dashboardStats.xp.toLocaleString() : "Unavailable"],
+          ["Level", dashboardStats ? String(dashboardStats.level) : "Unavailable"],
+          ["Current streak", dashboardStats ? `${dashboardStats.streak} days` : "Unavailable"],
+          ["Coding solved", codingSummary ? String(codingSummary.solved) : "Unavailable"],
+        ].map(([label, value]) => <div key={label} className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">{label}</p><p className="mt-2 text-xl font-black text-[var(--text-primary)]">{value}</p></div>)}
+      </section>
+
+      {(skillProgress.length > 0 || achievements.length > 0 || recentActivity.length > 0) && <section aria-label="Learning activity" className="grid gap-4 lg:grid-cols-3">
+        <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-4">
+          <h3 className="text-sm font-bold text-[var(--text-primary)]">Verified skills</h3>
+          <div className="mt-3 space-y-2">{skillProgress.slice(0, 4).map((skill) => <div key={skill.subject} className="flex items-center justify-between gap-3 text-xs"><span className="truncate text-[var(--text-secondary)]">{skill.subject}</span><span className="font-bold text-[var(--accent-strong)]">{skill.accuracy_percent}%</span></div>)}</div>
+          {skillProgress.length === 0 && <p className="mt-3 text-xs text-[var(--text-muted)]">No verified skill activity yet.</p>}
+        </div>
+        <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-4">
+          <h3 className="text-sm font-bold text-[var(--text-primary)]">Achievements</h3>
+          <div className="mt-3 space-y-2">{achievements.slice(0, 3).map((achievement) => <div key={achievement.id} className="text-xs"><p className="font-semibold text-[var(--text-secondary)]">{achievement.title}</p><p className="mt-0.5 text-[var(--text-muted)]">{achievement.description}</p></div>)}</div>
+          {achievements.length === 0 && <p className="mt-3 text-xs text-[var(--text-muted)]">No achievements earned yet.</p>}
+        </div>
+        <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-4">
+          <h3 className="text-sm font-bold text-[var(--text-primary)]">Recent activity</h3>
+          <div className="mt-3 space-y-2">{recentActivity.slice(0, 4).map((activity, index) => <div key={`${activity.activity_date}-${index}`} className="flex items-center justify-between gap-3 text-xs"><span className="truncate text-[var(--text-secondary)]">{activity.activity_type}</span><span className="shrink-0 font-bold text-[var(--accent-strong)]">+{activity.xp_earned} XP</span></div>)}</div>
+          {recentActivity.length === 0 && <p className="mt-3 text-xs text-[var(--text-muted)]">No recent activity yet.</p>}
+        </div>
+      </section>}
 
       <section aria-label="Profile details" className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-5 text-[var(--text-primary)] sm:p-7">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] pb-4">
@@ -223,11 +282,11 @@ export default function ProfileForm() {
             type="button"
             aria-expanded={editing}
             aria-controls={editing ? "profile-editor" : undefined}
-            onClick={() => setEditing((current) => !current)}
+            onClick={() => { if (editing) setProfile(savedProfile); setEditing((current) => !current); }}
             className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--accent)]/25 bg-[var(--accent)]/10 px-3 py-2 text-xs font-semibold text-[var(--accent-strong)] transition hover:bg-[var(--accent)]/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
           >
             <Pencil size={15} />
-            {editing ? "Close editor" : "Edit profile"}
+             {editing ? "Cancel" : "Edit profile"}
           </button>
         </div>
         <dl className="mt-5 grid gap-x-6 gap-y-5 sm:grid-cols-2">
@@ -292,7 +351,7 @@ export default function ProfileForm() {
                 <ProfilePhotoChooser
                   currentAvatar={profile.avatar}
                   fullName={profile.full_name || "User"}
-                  onAvatarUpdated={(newUrl) => setProfile({ ...profile, avatar: newUrl })}
+                  onAvatarUpdated={(newUrl) => { setProfile((current) => ({ ...current, avatar: newUrl })); setSavedProfile((current) => ({ ...current, avatar: newUrl })); }}
                 />
               </div>
 
