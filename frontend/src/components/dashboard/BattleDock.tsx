@@ -6,7 +6,7 @@ import {
   Swords,
   Users,
 } from "lucide-react";
-import type { DashboardStats } from "@/types/dashboard";
+import type { DashboardStats, RecentActivity } from "@/types/dashboard";
 
 const modes = [
   {
@@ -39,17 +39,26 @@ const modes = [
   },
 ];
 
-export default function BattleDock({ stats }: { stats: DashboardStats }) {
+export default function BattleDock({
+  stats,
+  recentActivity = [],
+}: {
+  stats: DashboardStats;
+  recentActivity?: RecentActivity[];
+}) {
   const winRate = stats.battles_played > 0
     ? Math.round((stats.battles_won / stats.battles_played) * 100)
     : null;
+  const recentBattles = recentActivity
+    .filter((activity) => /battle/i.test(activity.activity_type))
+    .slice(0, 3);
 
   return (
     <section
       aria-labelledby="battle-arena-title"
       className="q-panel min-w-0 overflow-hidden"
     >
-      <div className="flex flex-col gap-5 border-b border-[var(--border-subtle)] p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
+      <div className="flex flex-col gap-5 border-b border-[var(--border-subtle)] bg-[linear-gradient(110deg,color-mix(in_srgb,var(--accent)_5%,transparent),transparent_58%)] p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
         <div>
           <p className="q-kicker">Compete on your terms</p>
           <div className="mt-2 flex items-center gap-3">
@@ -94,6 +103,60 @@ export default function BattleDock({ stats }: { stats: DashboardStats }) {
             <ArrowUpRight size={16} aria-hidden="true" className="shrink-0 text-[var(--text-muted)] transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[var(--accent-strong)]" />
           </Link>
         ))}
+      </div>
+
+      <div className="grid gap-4 border-t border-[var(--border-subtle)] p-5 sm:grid-cols-[minmax(0,1fr)_minmax(14rem,0.8fr)] sm:items-center sm:px-6">
+        <div>
+          <div className="flex items-center justify-between gap-3 text-xs">
+            <span className="font-semibold text-[var(--text-secondary)]">Competitive progress</span>
+            <span className="font-mono tabular-nums text-[var(--text-primary)]">
+              {winRate === null ? "No battles yet" : `${winRate}% win rate`}
+            </span>
+          </div>
+          <div
+            className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--surface-hover)]"
+            role="progressbar"
+            aria-label="Battle win rate"
+            aria-valuenow={winRate ?? 0}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <div
+              className="h-full rounded-full bg-[var(--accent)] transition-[width] motion-reduce:transition-none"
+              style={{ width: `${winRate ?? 0}%` }}
+            />
+          </div>
+          <p className="mt-2 text-[11px] text-[var(--text-muted)]">
+            {stats.battles_won.toLocaleString()} wins from {stats.battles_played.toLocaleString()} battles played
+          </p>
+        </div>
+
+        {recentBattles.length > 0 && (
+          <div className="sm:border-l sm:border-[var(--border-subtle)] sm:pl-5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+              Recent battles
+            </p>
+            <ul className="mt-2 space-y-1.5">
+              {recentBattles.map((battle, index) => {
+                const date = new Date(battle.activity_date);
+                const dateLabel = Number.isNaN(date.getTime())
+                  ? battle.activity_date
+                  : new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(date);
+                return (
+                  <li
+                    key={`${battle.activity_date}-${battle.activity_type}-${index}`}
+                    className="flex min-w-0 items-center justify-between gap-3 text-xs"
+                  >
+                    <span className="truncate text-[var(--text-secondary)]">{battle.activity_type}</span>
+                    <span className="shrink-0 text-[var(--text-muted)]">
+                      {dateLabel}{battle.xp_earned > 0 ? ` · +${battle.xp_earned} XP` : ""}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
       </div>
     </section>
   );

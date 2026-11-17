@@ -6,6 +6,7 @@ import {
   ArrowRight,
   Bot,
   Code2,
+  Library,
   Mic,
   Trophy,
 } from "lucide-react";
@@ -88,10 +89,16 @@ export default function DashboardPage() {
               <DailyFocus challenge={dashboard.daily_challenge} commandCenter={dashboard.command_center} />
             </section>
 
-            <BattleDock stats={dashboard.stats} />
+            <BattleDock
+              stats={dashboard.stats}
+              recentActivity={dashboard.recent_activity}
+            />
 
             <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.3fr)_minmax(18rem,0.7fr)]">
-              <WeeklyActivityPanel activity={dashboard.weekly_activity} />
+              <WeeklyActivityPanel
+                activity={dashboard.weekly_activity}
+                completedTasks={dashboard.stats.practice_completed}
+              />
               <ExploreLearning />
             </div>
 
@@ -159,6 +166,12 @@ function ExploreLearning() {
       detail: "Get support while you build your skills.",
       icon: Bot,
     },
+    {
+      href: "/practice/topics",
+      title: "Learning resources",
+      detail: "Explore guided topics and skill references.",
+      icon: Library,
+    },
   ];
 
   return (
@@ -191,7 +204,13 @@ function ExploreLearning() {
   );
 }
 
-function WeeklyActivityPanel({ activity }: { activity: WeeklyActivity[] }) {
+function WeeklyActivityPanel({
+  activity,
+  completedTasks,
+}: {
+  activity: WeeklyActivity[];
+  completedTasks: number;
+}) {
   const totalXp = activity.reduce((total, item) => total + item.xp, 0);
   const peakXp = Math.max(1, ...activity.map((item) => item.xp));
   const activeDays = activity.filter((item) => item.xp > 0).length;
@@ -209,11 +228,19 @@ function WeeklyActivityPanel({ activity }: { activity: WeeklyActivity[] }) {
             Your weekly rhythm
           </h2>
         </div>
-        <div className="text-right">
-          <p className="font-mono text-xl font-semibold tabular-nums text-[var(--text-primary)]">
-            {totalXp.toLocaleString()}
-          </p>
-          <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-muted)]">XP this week</p>
+        <div className="flex items-center gap-5 text-right">
+          <div>
+            <p className="font-mono text-xl font-semibold tabular-nums text-[var(--text-primary)]">
+              {totalXp.toLocaleString()}
+            </p>
+            <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-muted)]">XP this week</p>
+          </div>
+          <div className="hidden border-l border-[var(--border-subtle)] pl-5 sm:block">
+            <p className="font-mono text-xl font-semibold tabular-nums text-[var(--text-primary)]">
+              {completedTasks.toLocaleString()}
+            </p>
+            <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-muted)]">Tasks completed</p>
+          </div>
         </div>
       </div>
 
@@ -259,6 +286,9 @@ function WeeklyActivityPanel({ activity }: { activity: WeeklyActivity[] }) {
           </p>
         </div>
       )}
+      <p className="mt-4 border-t border-[var(--border-subtle)] pt-3 text-xs text-[var(--text-muted)] sm:hidden">
+        <span className="font-semibold text-[var(--text-primary)]">{completedTasks.toLocaleString()}</span> practice tasks completed
+      </p>
     </section>
   );
 }

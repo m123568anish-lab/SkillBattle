@@ -46,7 +46,7 @@ export default function OnboardingPage() {
   }, [generateRoadmap]);
 
   return (
-    <OnboardingLayout>
+    <OnboardingLayout step={step}>
       <ProgressStepper
         step={step}
         total={7}

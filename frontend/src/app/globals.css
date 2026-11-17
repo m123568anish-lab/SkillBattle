@@ -3,23 +3,24 @@
 
 :root {
   color-scheme: dark;
-  --app-bg: #08090B;
-  --app-fg: #F5F7FA;
-  --surface-canvas: #08090B;
-  --surface-sidebar: #0B0D10;
-  --surface-topbar: #08090B;
-  --surface-card: #111419;
-  --surface-elevated: #171B22;
-  --surface-subtle: #1F242D;
-  --border-default: #252B35;
-  --border-subtle: #1A1F26;
+  --app-bg: #050505;
+  --app-fg: #F5F5F5;
+  --surface-canvas: #050505;
+  --surface-sidebar: #090909;
+  --surface-topbar: #080808;
+  --surface-card: #101010;
+  --surface-elevated: #151515;
+  --surface-subtle: #1B1B1B;
+  --surface-hover: var(--surface-subtle);
+  --border-default: #252525;
+  --border-subtle: #1D1D1D;
   --border-focus: #D8FF3E;
-  --text-primary: #F5F7FA;
-  --text-secondary: #B3BBC7;
-  --text-muted: #7E8998;
+  --text-primary: #F5F5F5;
+  --text-secondary: #D4D4D8;
+  --text-muted: #737373;
   --accent: #D8FF3E;
   --accent-strong: #EAFCCB;
-  --text-on-accent: #10120A;
+  --text-on-accent: #101010;
   --accent-secondary: #D8FF3E;
   --accent-secondary-strong: #EAFCCB;
   --accent-secondary-subtle: color-mix(in srgb, var(--accent-secondary) 14%, transparent);
@@ -267,7 +268,7 @@ body {
 .q-panel {
   border: 1px solid var(--border-default);
   border-radius: var(--radius-panel);
-  background: linear-gradient(145deg, color-mix(in srgb, var(--surface-card) 96%, white 4%), var(--surface-card));
+  background: var(--surface-card);
   box-shadow: var(--shadow-panel);
 }
 
