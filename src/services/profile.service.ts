@@ -44,6 +44,18 @@ class ProfileService {
     const response = await api.put<Profile>(API_ENDPOINTS.PROFILE.UPDATE, payload);
     return response.data;
   }
+
+  async uploadAvatar(file: File, onProgress?: (progress: number) => void) {
+    const form = new FormData();
+    form.append("file", file);
+    const response = await api.post<Profile>(API_ENDPOINTS.PROFILE.AVATAR_UPLOAD, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+      onUploadProgress: (event) => {
+        if (event.total) onProgress?.(Math.round((event.loaded / event.total) * 100));
+      },
+    });
+    return response.data;
+  }
 }
 
 export const profileService = new ProfileService();

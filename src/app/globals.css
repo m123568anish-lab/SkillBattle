@@ -2,6 +2,19 @@
 
 :root {
   color-scheme: dark;
+  --qb-background: #050505;
+  --qb-sidebar: #090909;
+  --qb-topbar: #080808;
+  --qb-surface: #101010;
+  --qb-elevated: #151515;
+  --qb-border: #252525;
+  --qb-text: #f5f5f5;
+  --qb-secondary: #d4d4d8;
+  --qb-muted: #a1a1aa;
+  --qb-subtle: #737373;
+  --qb-accent: #d8ff3e;
+  --qb-accent-foreground: #101010;
+  --qb-focus: #d8ff3e;
 }
 
 html[data-theme="dark"] {
@@ -49,12 +62,91 @@ html[data-theme="light"] .mobile-skillbattle-navbar button[aria-label="Open prof
 
 body {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top, rgba(34, 211, 238, 0.12), transparent 28%),
-    radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.12), transparent 25%),
-    #050816;
-  color: white;
+  background: var(--qb-background);
+  color: var(--qb-text);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Qubira shared controls. Keep these semantic classes as the single source of
+   truth for navigation and compact application-shell controls. */
+.qb-icon-button {
+  display: grid;
+  height: 2rem;
+  width: 2rem;
+  place-items: center;
+  border: 1px solid var(--qb-border);
+  border-radius: 0.65rem;
+  background: var(--qb-surface);
+  color: var(--qb-muted);
+  transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.qb-icon-button:hover,
+.qb-icon-button:focus-visible {
+  border-color: var(--qb-accent);
+  color: var(--qb-accent);
+  outline: none;
+}
+
+.qb-nav-item,
+.qb-nav-subitem,
+.qb-footer-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  color: var(--qb-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.qb-nav-item:hover,
+.qb-nav-item:focus-visible,
+.qb-nav-subitem:hover,
+.qb-nav-subitem:focus-visible,
+.qb-footer-link:hover,
+.qb-footer-link:focus-visible {
+  border-color: var(--qb-border);
+  background: var(--qb-elevated);
+  color: var(--qb-text);
+  outline: none;
+}
+
+.qb-nav-item-active,
+.qb-nav-item-active:hover,
+.qb-nav-subitem-active {
+  border-color: color-mix(in srgb, var(--qb-accent) 55%, transparent);
+  background: var(--qb-accent);
+  color: var(--qb-accent-foreground);
+}
+
+.qb-nav-item-active svg,
+.qb-nav-subitem-active svg {
+  color: var(--qb-accent-foreground);
+}
+
+.qb-nav-subitem,
+.qb-footer-link {
+  min-height: 2.25rem;
+  padding: 0.5rem 0.625rem;
+  font-size: 0.8125rem;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--qb-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
 
 html[data-theme="light"] body {

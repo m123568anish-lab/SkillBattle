@@ -14,6 +14,7 @@ export const API_ENDPOINTS = {
     GET: (userId: string) => `/profile/${userId}`,
     ME: "/profile/me",
     UPDATE: "/profile",
+    AVATAR_UPLOAD: "/profile/avatar",
     STATS: (userId: string) => `/profile/${userId}/stats`,
     AVATAR: (userId: string) => `/profile/${userId}/avatar`,
   },

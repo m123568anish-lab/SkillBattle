@@ -23,6 +23,8 @@ export default function ProfileMenu() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const displayName = user?.full_name || user?.username || "User";
+  const role = (user?.role || "student").toLowerCase();
+  const roleLabel = role === "admin" ? "Administrator" : role === "college" || role === "college_admin" ? "Institution" : role === "company" || role === "company_admin" ? "Enterprise" : "Student";
   const avatarUrl =
     user?.avatar_url ||
     user?.avatar ||
@@ -209,7 +211,7 @@ export default function ProfileMenu() {
                   </div>
                   <p className="mt-0.5 truncate text-xs text-slate-400">{user?.email || displayName}</p>
                   <div className="mt-2 flex items-center gap-2">
-                    <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-cyan-200">Admin</span>
+                    <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-cyan-200">{roleLabel}</span>
                     <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-200">Level {user?.level ?? 1}</span>
                   </div>
                 </div>

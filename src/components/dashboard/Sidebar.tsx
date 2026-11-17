@@ -1,185 +1,93 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Trophy, ChevronLeft, ChevronRight, Zap, PlusCircle, Briefcase } from "lucide-react";
-import {
-  studentSidebarCategories,
-  collegeSidebarCategories,
-  companySidebarCategories,
-} from "@/data/dashboard";
-import { useAuthStore } from "@/store/authStore";
+import { usePathname, useRouter } from "next/navigation";
+import { BarChart3, BriefcaseBusiness, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Code2, Home, LogOut, Map, Medal, MoreHorizontal, Settings, ShieldCheck, Sparkles, Sword, Target, Trophy, User, Users, type LucideIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
+import { collegeSidebarCategories, companySidebarCategories, SidebarCategory } from "@/data/dashboard";
+
+type NavEntry = { title: string; href: string; icon: LucideIcon };
+type NavGroup = NavEntry & { children: NavEntry[] };
+
+const studentPrimary: NavEntry[] = [
+  { title: "Overview", href: "/dashboard", icon: Home },
+  { title: "Learn", href: "/practice/topics", icon: Sparkles },
+  { title: "Battle Arena", href: "/battle", icon: Sword },
+  { title: "Practice", href: "/practice", icon: Code2 },
+  { title: "AI Coach", href: "/coach", icon: ShieldCheck },
+];
+
+const studentGroups: NavGroup[] = [
+  { title: "Career Hub", href: "/career/roadmap", icon: BriefcaseBusiness, children: [
+    { title: "AI Roadmap", href: "/career/roadmap", icon: Map },
+    { title: "Company Prep", href: "/career/resume", icon: Target },
+    { title: "Mock Interview", href: "/interview", icon: Users },
+  ] },
+  { title: "My Progress", href: "/analytics", icon: BarChart3, children: [
+    { title: "Analytics", href: "/analytics", icon: BarChart3 },
+    { title: "Achievements", href: "/achievements", icon: Medal },
+    { title: "Rankings", href: "/leaderboard", icon: Trophy },
+    { title: "Battle History", href: "/battle/history", icon: Sword },
+  ] },
+  { title: "More", href: "/friends", icon: MoreHorizontal, children: [
+    { title: "Friends", href: "/friends", icon: Users },
+    { title: "Tournaments", href: "/tournament", icon: Trophy },
+    { title: "Daily Challenge", href: "/daily-challenges", icon: Target },
+    { title: "Saved Items", href: "/practice?status=saved", icon: Medal },
+  ] },
+];
+
+function routeMatches(pathname: string, href: string) {
+  const route = href.split("?", 1)[0];
+  if (route === "/dashboard") return pathname === "/dashboard" || pathname === "/student/dashboard";
+  if (route === "/battle") return pathname === "/battle" || pathname.startsWith("/battle/");
+  return pathname === route || pathname.startsWith(`${route}/`);
+}
+
+function CategoryNavigation({ categories, collapsed, pathname }: { categories: SidebarCategory[]; collapsed: boolean; pathname: string }) {
+  return <div className="space-y-5">{categories.map((category) => <section key={category.id}>
+    {!collapsed && <h2 className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--qb-muted)]">{category.label}</h2>}
+    <div className="mt-2 space-y-1">{category.items.map((item) => { const Icon = item.icon; const active = routeMatches(pathname, item.href); return <Link key={`${category.id}-${item.href}`} href={item.href} title={collapsed ? item.title : undefined} className={`qb-nav-item ${active ? "qb-nav-item-active" : ""} ${collapsed ? "justify-center px-0" : ""}`}><Icon size={18} aria-hidden="true" />{!collapsed && <span className="truncate">{item.title}</span>}</Link>; })}</div>
+  </section>)}</div>;
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { user } = useAuthStore();
-  const logout = useAuthStore((state) => state.logout);
   const router = useRouter();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
+  const [collapsed, setCollapsed] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const role = (user?.role || "student").toLowerCase();
+  const isCollege = pathname.startsWith("/college") || ["college", "college_admin", "placement_officer", "faculty"].includes(role);
+  const isCompany = pathname.startsWith("/company") || ["company", "company_admin", "recruiter"].includes(role);
+  const roleCategories = isCollege ? collegeSidebarCategories : isCompany ? companySidebarCategories : null;
+  const displayName = user?.full_name || user?.username || "Your profile";
+  const roleLabel = isCollege ? "Institution" : isCompany ? "Enterprise" : role === "admin" ? "Administrator" : "Student";
+  const avatar = user?.avatar_url || user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=101010&color=D8FF3E&bold=true`;
+  const activeGroups = useMemo(() => Object.fromEntries(studentGroups.map((group) => [group.title, group.children.some((child) => routeMatches(pathname, child.href))])), [pathname]);
 
-  const role = (user?.role || "user").toLowerCase();
-  const isCollegePath = pathname.startsWith("/college");
-  const isCompanyPath = pathname.startsWith("/company");
+  async function handleLogout() { await logout(); router.replace("/login"); }
 
-  let categories = studentSidebarCategories;
-  let badgeTitle = "Arena";
-  let quickActionIcon = Zap;
-  let quickActionLabel = "Start Battle";
-  let quickActionHref = "/battle";
-
-  if (isCollegePath || ["college", "college_admin", "placement_officer", "faculty"].includes(role)) {
-    categories = collegeSidebarCategories;
-    badgeTitle = "Institution";
-    quickActionIcon = PlusCircle;
-    quickActionLabel = "Create Assessment";
-    quickActionHref = "/college/assessments/new";
-  } else if (isCompanyPath || ["company", "company_admin", "recruiter"].includes(role)) {
-    categories = companySidebarCategories;
-    badgeTitle = "Enterprise";
-    quickActionIcon = Briefcase;
-    quickActionLabel = "Create Job";
-    quickActionHref = "/company/jobs";
-  }
-
-  const isItemActive = (href: string) => {
-    if (pathname === href) return true;
-    if (href === "/student/dashboard" && pathname === "/student/dashboard") return true;
-    if (href === "/college/dashboard" && pathname === "/college/dashboard") return true;
-    if (href === "/company/dashboard" && pathname === "/company/dashboard") return true;
-    if (href === "/battle" && pathname.startsWith("/battle")) return true;
-    if (href === "/tournament" && (pathname.startsWith("/tournament") || pathname.startsWith("/tournaments"))) return true;
-    return pathname.startsWith(href + "/");
-  };
-
-  const QuickActionIcon = quickActionIcon;
-  const visibleCategories = useMemo(() => categories.filter((category) => category.items.length > 0), [categories]);
-
-  async function handleLogout() {
-    await logout();
-    router.replace("/login");
-  }
-
-  return (
-    <motion.aside
-      suppressHydrationWarning
-      initial={false}
-      animate={{ width: isCollapsed ? 88 : 280 }}
-      transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="hidden md:flex flex-col flex-shrink-0 m-4 mr-0 h-[calc(100vh-2rem)] h-[calc(100dvh-2rem)] rounded-2xl border border-white/10 bg-[#091120]/95 backdrop-blur-2xl shadow-2xl shadow-black/50 relative overflow-hidden z-30"
-    >
-      {/* Aurora Ambient Light */}
-      <div className="pointer-events-none absolute -top-24 -left-24 h-48 w-48 rounded-full bg-cyan-500/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -right-24 h-48 w-48 rounded-full bg-violet-500/10 blur-3xl" />
-
-      {/* Collapse Button */}
-      <button
-        suppressHydrationWarning
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className="absolute right-3 top-5 z-20 rounded-lg border border-white/10 bg-[#101b31] p-1.5 text-slate-400 hover:text-cyan-300 hover:border-cyan-400/40 transition"
-      >
-        {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-      </button>
-
-      {/* Header with Logo */}
-      <Link
-        href="/"
-        className="flex items-center gap-3 border-b border-white/10 p-5 relative z-10 flex-shrink-0 group cursor-pointer transition hover:opacity-90"
-        title="Go to Home"
-      >
-        <div className="rounded-2xl bg-gradient-to-br from-cyan-500/20 to-violet-500/20 p-3 border border-cyan-500/30 shadow-lg shadow-cyan-500/5 flex-shrink-0 group-hover:border-cyan-400/50 transition">
-          <Trophy className="text-cyan-300" size={22} />
-        </div>
-
-        {!isCollapsed && (
-          <motion.div
-            initial={false}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.2 }}
-          >
-            <h2 className="text-lg font-black bg-gradient-to-r from-white via-cyan-200 to-cyan-400 bg-clip-text text-transparent">
-              SkillBattle
-            </h2>
-            <p className="text-xs font-bold uppercase tracking-widest text-cyan-500/70">
-              {badgeTitle}
-            </p>
-          </motion.div>
-        )}
-      </Link>
-
-      {/* Navigation */}
-      <nav aria-label="Main Navigation" className="flex-1 min-h-0 overflow-y-auto relative z-10 scrollbar-hide">
-        <div className="p-3 space-y-4">
-          {visibleCategories.map((category) => (
-            <div key={category.id}>
-              {!isCollapsed && category.items.length > 0 && (
-                <motion.h3
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                  className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500"
-                >
-                  {category.label}
-                </motion.h3>
-              )}
-              <div className="space-y-1.5 mt-2">
-                {category.items.map((item) => {
-                  const Icon = item.icon;
-                  const active = isItemActive(item.href);
-
-                  const content = (
-                    <motion.div
-                      suppressHydrationWarning
-                      whileHover={{ x: isCollapsed ? 0 : 3 }}
-                      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 relative overflow-hidden group ${
-                        active
-                          ? "bg-cyan-400/12 text-cyan-200 border border-cyan-400/25 shadow-lg shadow-cyan-500/5"
-                          : "text-slate-400 border border-transparent hover:text-slate-100 hover:bg-white/5"
-                      }`}
-                    >
-                      {active && <span className="absolute left-0 h-5 w-0.5 rounded-r bg-cyan-300" />}
-                      <Icon size={18} className={`flex-shrink-0 ${active ? "text-cyan-300" : "group-hover:text-slate-200"}`} />
-                      {!isCollapsed && <span className="font-semibold text-sm whitespace-nowrap flex-1">{item.title}</span>}
-                      {active && !isCollapsed && <span className="h-1.5 w-1.5 rounded-full bg-cyan-300" />}
-                    </motion.div>
-                  );
-                  return item.action === "logout" ? (
-                    <button key={item.href} onClick={handleLogout} title={isCollapsed ? item.title : undefined} className="block w-full text-left">{content}</button>
-                  ) : (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className="block relative group"
-                      title={isCollapsed ? item.title : undefined}
-                    >
-                      {content}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      </nav>
-
-      {/* Footer - Role Quick Action */}
-      {!isCollapsed && (
-        <div className="border-t border-white/5 p-4 relative z-10 flex-shrink-0">
-          <Link href={quickActionHref}>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500/80 to-violet-500/80 px-4 py-2.5 font-bold text-sm text-white shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 transition duration-200"
-            >
-              <QuickActionIcon size={16} />
-              {quickActionLabel}
-            </motion.button>
-          </Link>
-        </div>
-      )}
-    </motion.aside>
-  );
+  return <motion.aside initial={false} animate={{ width: collapsed ? 76 : 248 }} transition={{ duration: 0.2, ease: "easeOut" }} className="hidden md:flex h-[calc(100dvh-2rem)] m-4 mr-0 shrink-0 flex-col overflow-hidden rounded-2xl border border-[var(--qb-border)] bg-[var(--qb-sidebar)] shadow-2xl shadow-black/30">
+    <div className={`flex h-20 shrink-0 items-center border-b border-[var(--qb-border)] ${collapsed ? "justify-center" : "justify-between px-4"}`}>
+      <Link href="/" className="flex min-w-0 items-center gap-3" title="Qubira home"><div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--qb-accent)] text-[var(--qb-accent-foreground)]"><Trophy size={20} /></div>{!collapsed && <div className="min-w-0"><p className="truncate text-base font-black tracking-tight text-[var(--qb-text)]">Qubira</p><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--qb-muted)]">{roleLabel}</p></div>}</Link>
+      {!collapsed && <button type="button" onClick={() => setCollapsed(true)} aria-label="Collapse sidebar" className="qb-icon-button"><ChevronLeft size={16} /></button>}
+    </div>
+    {collapsed && <button type="button" onClick={() => setCollapsed(false)} aria-label="Expand sidebar" className="qb-icon-button mx-auto mt-3"><ChevronRight size={16} /></button>}
+    <nav aria-label="Main navigation" className="min-h-0 flex-1 overflow-y-auto px-3 py-4 scrollbar-hide">
+      {roleCategories ? <CategoryNavigation categories={roleCategories} collapsed={collapsed} pathname={pathname} /> : <>
+        <div className="space-y-1">{studentPrimary.map((item) => { const Icon = item.icon; const active = routeMatches(pathname, item.href); return <Link key={item.href} href={item.href} title={collapsed ? item.title : undefined} className={`qb-nav-item ${active ? "qb-nav-item-active" : ""} ${collapsed ? "justify-center px-0" : ""}`}><Icon size={18} /><span className={collapsed ? "sr-only" : "truncate"}>{item.title}</span></Link>; })}</div>
+        <div className="mt-6 space-y-1">{!collapsed && <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--qb-muted)]">Growth</p>}{studentGroups.map((group) => { const Icon = group.icon; const active = activeGroups[group.title] || routeMatches(pathname, group.href); const expanded = openGroups[group.title] ?? active; return <div key={group.title}>
+          <button type="button" onClick={() => setOpenGroups((current) => ({ ...current, [group.title]: !expanded }))} title={collapsed ? group.title : undefined} aria-expanded={expanded} className={`qb-nav-item w-full ${active ? "qb-nav-item-active" : ""} ${collapsed ? "justify-center px-0" : ""}`}><Icon size={18} /><span className={collapsed ? "sr-only" : "flex-1 truncate text-left"}>{group.title}</span>{!collapsed && <ChevronDown size={15} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />}</button>
+          {!collapsed && expanded && <div className="ml-4 mt-1 space-y-1 border-l border-[var(--qb-border)] pl-3">{group.children.map((child) => { const ChildIcon = child.icon; const childActive = routeMatches(pathname, child.href); return <Link key={child.href} href={child.href} className={`qb-nav-subitem ${childActive ? "qb-nav-subitem-active" : ""}`}><ChildIcon size={15} /><span className="truncate">{child.title}</span></Link>; })}</div>}
+        </div>; })}</div>
+      </>}
+    </nav>
+    <div className="shrink-0 border-t border-[var(--qb-border)] p-3">{!collapsed && <Link href="/profile" className="mb-2 flex items-center gap-3 rounded-xl p-2 hover:bg-white/5"><img src={avatar} alt="" className="h-9 w-9 rounded-full border border-[var(--qb-border)] object-cover" /><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-[var(--qb-text)]">{displayName}</span><span className="block text-xs text-[var(--qb-muted)]">{roleLabel}</span></span><User size={16} className="text-[var(--qb-muted)]" /></Link>}
+      <div className={`flex ${collapsed ? "flex-col" : "items-center justify-between"} gap-1`}><Link href="/settings" title={collapsed ? "Settings" : undefined} className="qb-footer-link"><Settings size={16} />{!collapsed && "Settings"}</Link><Link href="/ai-coach" title={collapsed ? "Help & Support" : undefined} className="qb-footer-link"><CircleHelp size={16} />{!collapsed && "Help"}</Link><button type="button" onClick={handleLogout} title={collapsed ? "Sign out" : undefined} className="qb-footer-link text-rose-300 hover:bg-rose-400/10"><LogOut size={16} />{!collapsed && "Sign out"}</button></div>
+    </div>
+  </motion.aside>;
 }

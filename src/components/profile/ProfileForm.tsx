@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Award,
@@ -40,6 +40,14 @@ const defaultProfile: Profile = {
 
 type ProfileSection = "identity" | "education" | "career" | "social";
 
+function apiErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === "object" && "response" in error) {
+    const detail = (error as { response?: { data?: { detail?: unknown } } }).response?.data?.detail;
+    if (typeof detail === "string" && detail) return detail;
+  }
+  return fallback;
+}
+
 const SECTIONS = [
   { id: "identity", label: "Identity", icon: <User className="h-4 w-4" />, description: "Name, bio, and public profile" },
   { id: "education", label: "Education", icon: <GraduationCap className="h-4 w-4" />, description: "Academic background" },
@@ -53,6 +61,8 @@ export default function ProfileForm() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<ProfileSection>("identity");
+  const [avatarProgress, setAvatarProgress] = useState<number | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const authUser = useAuthStore((s) => s.user);
   const updateUserPartial = useAuthStore((s) => s.updateUserPartial);
@@ -71,9 +81,9 @@ export default function ProfileForm() {
           email: data.email || authUser?.email || "",
           avatar: data.avatar || authUser?.avatar_url || "",
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (active) {
-          setError(err?.response?.data?.detail || "Unable to load profile.");
+          setError(apiErrorMessage(err, "Unable to load profile."));
         }
       } finally {
         if (active) setLoading(false);
@@ -120,11 +130,30 @@ export default function ProfileForm() {
       });
 
       toast.success("Profile updated successfully! ✨");
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || "Failed to save profile.");
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, "Failed to save profile."));
       toast.error("Failed to save profile changes.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleAvatarUpload(file: File) {
+    if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
+      setError("Choose a JPG, PNG, WEBP, or GIF image up to 5 MB.");
+      return;
+    }
+    setError(null);
+    setAvatarProgress(0);
+    try {
+      const updated = await profileService.uploadAvatar(file, setAvatarProgress);
+      setProfile((current) => ({ ...current, ...updated, avatar: updated.avatar || current.avatar }));
+      updateUserPartial({ avatar: updated.avatar, avatar_url: updated.avatar });
+      toast.success("Avatar updated.");
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, "Avatar upload failed. Your existing avatar was kept."));
+    } finally {
+      setAvatarProgress(null);
     }
   }
 
@@ -155,6 +184,8 @@ export default function ProfileForm() {
                 alt={profile.full_name || "Profile photo"}
                 className="relative h-24 w-24 rounded-full border-4 border-slate-950 object-cover shadow-xl shadow-cyan-500/20"
               />
+              <button type="button" onClick={() => avatarInputRef.current?.click()} className="absolute -bottom-1 -right-1 rounded-full border border-[var(--qb-border)] bg-[var(--qb-accent)] p-2 text-[var(--qb-accent-foreground)]" aria-label="Upload profile avatar"><Camera className="h-4 w-4" /></button>
+              <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) void handleAvatarUpload(file); event.currentTarget.value = ""; }} />
             </div>
             <div>
               <p className="text-xs uppercase tracking-[0.32em] text-cyan-300">Player identity</p>
@@ -404,8 +435,8 @@ export default function ProfileForm() {
             <p className="text-xs uppercase tracking-[0.28em] text-violet-300">Competitive identity</p>
             <div className="mt-5 space-y-4">
               <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Battle rating</p>
-                <p className="mt-2 text-3xl font-black text-white">{profile.level ? profile.level * 120 : 120}</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Total XP</p>
+                <p className="mt-2 text-3xl font-black text-white">{Number(profile.total_xp ?? 0).toLocaleString()}</p>
               </div>
               <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4">
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Career readiness</p>
@@ -431,6 +462,7 @@ export default function ProfileForm() {
               </div>
             </div>
           </div>
+          {avatarProgress !== null && <div className="rounded-2xl border border-[var(--qb-border)] bg-[var(--qb-surface)] p-4 text-sm text-[var(--qb-secondary)]">Uploading avatar… {avatarProgress}%</div>}
         </aside>
       </div>
     </div>
