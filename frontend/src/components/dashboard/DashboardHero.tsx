@@ -78,8 +78,8 @@ export default function DashboardHero({
                 Placement Command Center
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 font-mono text-[11px] font-bold text-amber-300">
-                <Flame size={12} className="text-amber-400" />
-                {stats.streak} {stats.streak === 1 ? "day streak" : "day streak"}
+                <Flame size={12} className={stats.streak > 0 ? "text-amber-400 fill-amber-400/20" : "text-amber-400/50"} />
+                {stats.streak} day streak
               </span>
             </div>
 
@@ -269,7 +269,9 @@ export default function DashboardHero({
                 </span>
               </p>
               <p className="text-[10px] text-[var(--text-muted)]">
-                {stats.streak} {stats.streak === 1 ? "day" : "days"} active streak
+                {stats.streak === 0
+                  ? "Practice today to start streak"
+                  : `${stats.streak} ${stats.streak === 1 ? "day" : "days"} active streak`}
               </p>
             </div>
           </div>

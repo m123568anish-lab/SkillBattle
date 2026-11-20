@@ -17,6 +17,7 @@ export interface DashboardStats {
   level_progress_percent: number;
   streak: number;
   longest_streak: number;
+  is_active_today?: boolean;
   rating: number;
   battles_played: number;
   battles_completed: number;
@@ -82,6 +83,7 @@ export interface Achievement {
 export interface WeeklyActivity {
   day: string;
   xp: number;
+  is_active?: boolean;
 }
 export interface AIRecommendation {
   title: string;

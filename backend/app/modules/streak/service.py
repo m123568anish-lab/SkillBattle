@@ -50,12 +50,16 @@ class StreakService:
         yesterday = today - timedelta(days=1)
 
         if not streak:
-            return {
-                "current_streak": 0,
-                "best_streak": 0,
-                "last_active": datetime.utcnow(),
-                "is_active_today": False,
-            }
+            current, best = await self.reconcile_streak(db, user_id_str, commit=False)
+            stmt = select(Streak).where(Streak.user_id == user_id_str)
+            streak = (await db.execute(stmt)).scalar_one_or_none()
+            if not streak:
+                return {
+                    "current_streak": current,
+                    "best_streak": best,
+                    "last_active": datetime.utcnow(),
+                    "is_active_today": False,
+                }
 
         last_date = streak.last_activity_date or (
             streak.last_active.date() if streak.last_active else None

@@ -11,10 +11,13 @@ import pytest
 from app.database import staging_migration
 from app.core.config import load_environment_file_values
 from app.database.staging_migration import (
+    PLACEMENT_MIGRATION_DOWN_REVISION,
     PLACEMENT_MIGRATION_REVISION,
     StagingMigrationError,
+    assert_expected_current_revision,
     load_staging_migration_authorization,
     validate_staging_configuration,
+    validate_staging_revision_contract,
     verify_neon_staging_branch,
 )
 import run_migrations
@@ -30,7 +33,8 @@ def _environment(**overrides: str) -> dict[str, str]:
         "EXPECTED_NEON_BRANCH_ID": "br-dark-lake-axm12r04",
         "EXPECTED_DATABASE_NAME": "neondb",
         "EXPECTED_DATABASE_ROLE": "neondb_owner",
-        "EXPECTED_MIGRATION_REVISION": PLACEMENT_MIGRATION_REVISION,
+        "EXPECTED_CURRENT_MIGRATION_REVISION": PLACEMENT_MIGRATION_DOWN_REVISION,
+        "TARGET_MIGRATION_REVISION": PLACEMENT_MIGRATION_REVISION,
         "NEON_API_KEY": "not-a-real-api-key",
         "DATABASE_URL": (
             "postgresql+psycopg://neondb_owner:placeholder@"
@@ -112,10 +116,138 @@ def test_configuration_validation_rejects_pooled_migration_target() -> None:
             )
         )
 
-    with pytest.raises(StagingMigrationError, match="reviewed placement migration"):
+    with pytest.raises(StagingMigrationError, match="EXPECTED_MIGRATION_REVISION is ambiguous"):
         load_staging_migration_authorization(
             _environment(EXPECTED_MIGRATION_REVISION="head")
         )
+
+
+def _legacy_script():
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    config = Config(str(BACKEND_ROOT / "alembic.ini"))
+    return ScriptDirectory.from_config(config)
+
+
+def test_revision_contract_accepts_expected_current_and_placement_target() -> None:
+    validate_staging_revision_contract(
+        _legacy_script(),
+        PLACEMENT_MIGRATION_DOWN_REVISION,
+        PLACEMENT_MIGRATION_REVISION,
+    )
+
+
+def test_actual_database_revision_must_match_expected_current() -> None:
+    with pytest.raises(StagingMigrationError, match="does not match"):
+        assert_expected_current_revision("some-other-revision", PLACEMENT_MIGRATION_DOWN_REVISION)
+
+
+def test_target_revision_mismatch_is_rejected() -> None:
+    with pytest.raises(StagingMigrationError, match="TARGET_MIGRATION_REVISION"):
+        validate_staging_revision_contract(
+            _legacy_script(),
+            PLACEMENT_MIGRATION_DOWN_REVISION,
+            PLACEMENT_MIGRATION_DOWN_REVISION,
+        )
+
+
+@pytest.mark.parametrize(
+    "missing_name",
+    ["EXPECTED_CURRENT_MIGRATION_REVISION", "TARGET_MIGRATION_REVISION"],
+)
+def test_revision_contract_requires_both_revision_values(missing_name: str) -> None:
+    values = _environment()
+    values.pop(missing_name)
+    with pytest.raises(StagingMigrationError, match=missing_name):
+        load_staging_migration_authorization(values)
+
+
+def test_historical_revision_must_exist_in_migration_graph() -> None:
+    with pytest.raises(StagingMigrationError, match="EXPECTED_CURRENT_MIGRATION_REVISION is not in"):
+        validate_staging_revision_contract(
+            _legacy_script(),
+            "missing-historical-revision",
+            PLACEMENT_MIGRATION_REVISION,
+        )
+
+
+def test_target_must_be_reachable_from_expected_current_revision() -> None:
+    class DisconnectedGraph:
+        def get_revision(self, revision: str):
+            if revision == "historic":
+                return SimpleNamespace(revision=revision, down_revision=None)
+            if revision == PLACEMENT_MIGRATION_REVISION:
+                return SimpleNamespace(
+                    revision=revision,
+                    down_revision=PLACEMENT_MIGRATION_DOWN_REVISION,
+                )
+            return None
+
+        def get_heads(self):
+            return [PLACEMENT_MIGRATION_REVISION]
+
+        def iterate_revisions(self, *_args):
+            raise ValueError("No path between revisions")
+
+    with pytest.raises(StagingMigrationError, match="not reachable"):
+        validate_staging_revision_contract(
+            DisconnectedGraph(),
+            "historic",
+            PLACEMENT_MIGRATION_REVISION,
+        )
+
+
+def test_revision_contract_rejects_multiple_graph_heads() -> None:
+    class BranchedGraph:
+        def get_revision(self, revision: str):
+            if revision == PLACEMENT_MIGRATION_DOWN_REVISION:
+                return SimpleNamespace(revision=revision, down_revision=None)
+            if revision == PLACEMENT_MIGRATION_REVISION:
+                return SimpleNamespace(
+                    revision=revision,
+                    down_revision=PLACEMENT_MIGRATION_DOWN_REVISION,
+                )
+            return None
+
+        def get_heads(self):
+            return [PLACEMENT_MIGRATION_REVISION, "unexpected-head"]
+
+        def iterate_revisions(self, *_args):
+            return [self.get_revision(PLACEMENT_MIGRATION_REVISION)]
+
+    with pytest.raises(StagingMigrationError, match="exactly one head"):
+        validate_staging_revision_contract(
+            BranchedGraph(),
+            PLACEMENT_MIGRATION_DOWN_REVISION,
+            PLACEMENT_MIGRATION_REVISION,
+        )
+
+
+def test_revision_validation_is_local_and_never_connects_or_executes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        staging_migration,
+        "_neon_api_json",
+        lambda *_args, **_kwargs: pytest.fail("Neon API must not be called."),
+    )
+    monkeypatch.setattr(
+        run_migrations,
+        "acquire_postgresql_migration_ownership",
+        lambda *_args, **_kwargs: pytest.fail("Database must not be contacted."),
+    )
+    monkeypatch.setattr(
+        run_migrations.command,
+        "upgrade",
+        lambda *_args, **_kwargs: pytest.fail("Migration execution must not run."),
+    )
+    authorization = load_staging_migration_authorization(_environment())
+    validate_staging_revision_contract(
+        _legacy_script(),
+        authorization.expected_current_revision,
+        authorization.target_revision,
+    )
 
 
 def test_staging_authorization_rejects_pooled_or_mismatched_database_urls() -> None:

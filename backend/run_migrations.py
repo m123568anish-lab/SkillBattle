@@ -737,6 +737,7 @@ def run_staging_migration(*, execute: bool) -> int:
         StagingMigrationError,
         build_staging_preflight,
         load_staging_migration_authorization,
+        validate_staging_revision_contract,
         verify_neon_staging_branch,
         verify_staging_postflight,
     )
@@ -752,6 +753,14 @@ def run_staging_migration(*, execute: bool) -> int:
             raise StagingMigrationError(
                 "Staging migration execution requires a PostgreSQL application configuration."
             )
+
+        config = Config(str(Path(__file__).with_name("alembic.ini")))
+        script = ScriptDirectory.from_config(config)
+        validate_staging_revision_contract(
+            script,
+            authorization.expected_current_revision,
+            authorization.target_revision,
+        )
 
         application_url = make_url(str(settings.DATABASE_URL))
         application_host = (application_url.host or "").casefold().replace(
@@ -773,8 +782,6 @@ def run_staging_migration(*, execute: bool) -> int:
 
         phase = "neon_branch_identity"
         branch_identity = verify_neon_staging_branch(authorization)
-        config = Config(str(Path(__file__).with_name("alembic.ini")))
-        script = ScriptDirectory.from_config(config)
         phase = "postgresql_ownership"
         with acquire_postgresql_migration_ownership(
             authorization.database_url

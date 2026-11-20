@@ -212,7 +212,7 @@ class DashboardService:
         challenge = await dashboard_repository.get_daily_challenge(db)
         achievements = await dashboard_repository.get_achievements(db, user_id)
         battles_played, battles_won, battles_lost = await dashboard_repository.get_battle_stats(db, user_id)
-        current_streak, longest_streak = await dashboard_repository.get_streak_stats(db, user_id)
+        current_streak, longest_streak, is_active_today = await dashboard_repository.get_streak_stats(db, user_id)
 
         user_xp = await xp_service.reconcile_xp(db, current_user, commit=False)
         total_xp = int(user_xp.total_xp or 0)
@@ -330,6 +330,7 @@ class DashboardService:
             level_progress_percent=level_progress_percent,
             streak=current_streak,
             longest_streak=longest_streak,
+            is_active_today=is_active_today,
             rating=rating,
             battles_played=battles_played,
             battles_completed=battles_played,
@@ -374,7 +375,10 @@ class DashboardService:
                 day_str = act_date.isoformat()
                 activity_by_day[day_str] = max(activity_by_day.get(day_str, 0), int(act_xp or 0))
 
-        weekly = [WeeklyActivity(day=day, xp=xp) for day, xp in sorted(activity_by_day.items())]
+        weekly = [
+            WeeklyActivity(day=day, xp=xp, is_active=bool(xp > 0))
+            for day, xp in sorted(activity_by_day.items())
+        ]
 
         achievement_list = [
             Achievement(

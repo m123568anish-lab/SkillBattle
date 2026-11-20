@@ -57,7 +57,8 @@ $env:EXPECTED_NEON_PROJECT_ID = "<expected-project-id>"
 $env:EXPECTED_NEON_BRANCH_ID = "<expected-qubira-staging-branch-id>"
 $env:EXPECTED_DATABASE_NAME = "neondb"
 $env:EXPECTED_DATABASE_ROLE = "neondb_owner"
-$env:EXPECTED_MIGRATION_REVISION = "f9a1b2c3d4e5"
+$env:EXPECTED_CURRENT_MIGRATION_REVISION = "d1f5a8e7c2b4"
+$env:TARGET_MIGRATION_REVISION = "f9a1b2c3d4e5"
 $env:STAGING_MIGRATION_APPROVED = "false"
 
 # Set these three values privately in the shell or approved secret manager.
@@ -70,8 +71,24 @@ $env:NEON_API_KEY = "<staging-read-identity-api-key>"
 python run_migrations.py --staging-preflight
 
 # Clear every one-off value after the preflight, including secrets.
-Remove-Item Env:ENVIRONMENT, Env:EXPECTED_NEON_PROJECT_ID, Env:EXPECTED_NEON_BRANCH_ID, Env:EXPECTED_DATABASE_NAME, Env:EXPECTED_DATABASE_ROLE, Env:EXPECTED_MIGRATION_REVISION, Env:STAGING_MIGRATION_APPROVED, Env:DATABASE_URL, Env:ASYNC_DATABASE_URL, Env:MIGRATION_DATABASE_URL, Env:NEON_API_KEY -ErrorAction SilentlyContinue
+Remove-Item Env:ENVIRONMENT, Env:EXPECTED_NEON_PROJECT_ID, Env:EXPECTED_NEON_BRANCH_ID, Env:EXPECTED_DATABASE_NAME, Env:EXPECTED_DATABASE_ROLE, Env:EXPECTED_CURRENT_MIGRATION_REVISION, Env:TARGET_MIGRATION_REVISION, Env:EXPECTED_MIGRATION_REVISION, Env:STAGING_MIGRATION_APPROVED, Env:DATABASE_URL, Env:ASYNC_DATABASE_URL, Env:MIGRATION_DATABASE_URL, Env:NEON_API_KEY -ErrorAction SilentlyContinue
 ```
+
+### Revision variable contract
+
+- `EXPECTED_CURRENT_MIGRATION_REVISION` is the expected revision already
+  recorded in the staging database. Phase 12 documented
+  `d1f5a8e7c2b4` as a historical expectation, but did not verify the live
+  revision. A future preflight must compare the connected database's actual
+  revision with this value; it must not infer current state from this report.
+- `TARGET_MIGRATION_REVISION` is the intended migration graph target and must
+  be `f9a1b2c3d4e5`. The local graph check verifies it exists, is the sole
+  legacy head, and is the direct child of the expected current revision before
+  any Neon API or database access.
+- The legacy `EXPECTED_MIGRATION_REVISION` name is rejected whenever it has a
+  non-empty value. It is ambiguous because earlier code treated it as the
+  target while the Phase 12 report used the value as the expected current
+  revision. It must not be silently mapped to either new variable.
 
 `ASYNC_DATABASE_URL` is not needed by the one-off preflight itself, but it is
 shown for completeness when the same shell is also used to inspect staging
@@ -88,9 +105,10 @@ The read-only preflight requires all of the following before it connects:
   host is its unique read-write endpoint.
 - A direct, unpooled PostgreSQL URL whose connected database and role match
   the expected identity.
-- The exact current revision `d1f5a8e7c2b4`, a single target head at
-  `f9a1b2c3d4e5`, expected legacy question columns, and no existing placement
-  tables or placement provenance columns.
+- The actual current revision must equal
+  `EXPECTED_CURRENT_MIGRATION_REVISION`; the repository graph must have the
+  single target head `TARGET_MIGRATION_REVISION=f9a1b2c3d4e5`, expected legacy
+  question columns, and no existing placement tables or provenance columns.
 - A read-only count of legacy question types grouped by active and validation
   state, plus a static check that the target `upgrade()` contains no drop,
   truncate, or delete operation. The report also identifies destructive
@@ -116,6 +134,13 @@ This test executes the actual placement migration artifact and its downgrade
 against PostgreSQL, checking preservation of synthetic legacy question data,
 type/status backfills, and creation/removal of placement objects. It does not
 connect to Neon.
+
+The general pytest database harness ignores ambient `DATABASE_URL` and
+`ASYNC_DATABASE_URL` values and creates temporary SQLite by default. An
+explicit disposable test database may be selected with
+`QUBIRA_TEST_DATABASE_URL` and, if needed,
+`QUBIRA_TEST_ASYNC_DATABASE_URL`; the harness applies its loopback/disposable
+target checks. Never use staging or production credentials for these values.
 
 ### Rollback limitations and production protections
 

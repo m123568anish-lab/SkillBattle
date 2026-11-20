@@ -36,8 +36,8 @@ def test_test_harness_rejects_the_default_database_before_app_import():
     environment = os.environ.copy()
     environment.update(
         {
-            "DATABASE_URL": "sqlite:///./skillbattle.db",
-            "ASYNC_DATABASE_URL": "",
+            "QUBIRA_TEST_DATABASE_URL": "sqlite:///./skillbattle.db",
+            "QUBIRA_TEST_ASYNC_DATABASE_URL": "",
             "DATABASE_TYPE": "sqlite",
             "ENVIRONMENT": "test",
         }
@@ -60,8 +60,8 @@ def test_test_harness_keeps_an_explicit_loopback_postgresql_url():
     environment = os.environ.copy()
     environment.update(
         {
-            "DATABASE_URL": database_url,
-            "ASYNC_DATABASE_URL": database_url.replace("postgresql://", "postgresql+asyncpg://"),
+            "QUBIRA_TEST_DATABASE_URL": database_url,
+            "QUBIRA_TEST_ASYNC_DATABASE_URL": database_url.replace("postgresql://", "postgresql+asyncpg://"),
             "DATABASE_TYPE": "postgresql",
             "ENVIRONMENT": "test",
         }
@@ -81,6 +81,34 @@ def test_test_harness_keeps_an_explicit_loopback_postgresql_url():
 
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "postgresql"
+
+
+def test_test_harness_ignores_ambient_application_database_url():
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "DATABASE_URL": "not-a-test-database-url",
+            "ASYNC_DATABASE_URL": "not-a-test-database-url",
+            "ENVIRONMENT": "staging",
+        }
+    )
+    environment.pop("QUBIRA_TEST_DATABASE_URL", None)
+    environment.pop("QUBIRA_TEST_ASYNC_DATABASE_URL", None)
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from sqlalchemy.engine import make_url; from database_isolation_support import TEST_DATABASE_URL; print(make_url(TEST_DATABASE_URL).drivername)",
+        ],
+        cwd=Path(__file__).parent,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "sqlite"
 
 
 def test_sqlite_test_database_outside_system_temp_directory_is_rejected():

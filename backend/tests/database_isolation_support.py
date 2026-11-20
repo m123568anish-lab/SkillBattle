@@ -61,11 +61,16 @@ def _configure_test_database() -> str:
     os.environ.pop("QUBIRA_TEST_ENV_FILE", None)
     os.environ.pop("QUBIRA_TEST_ALLOW_ENV_FILES", None)
 
-    database_url = os.environ.get("DATABASE_URL", "").strip()
-    async_database_url = os.environ.get("ASYNC_DATABASE_URL", "").strip()
+    # Never inherit an application/deployment DATABASE_URL into pytest. Tests
+    # use temporary SQLite unless an explicitly named disposable test URL is
+    # supplied.
+    database_url = os.environ.get("QUBIRA_TEST_DATABASE_URL", "").strip()
+    async_database_url = os.environ.get("QUBIRA_TEST_ASYNC_DATABASE_URL", "").strip()
     if not database_url:
         if async_database_url:
-            raise ValueError("Tests require DATABASE_URL; an async-only database URL is not sufficient.")
+            raise ValueError(
+                "QUBIRA_TEST_ASYNC_DATABASE_URL requires QUBIRA_TEST_DATABASE_URL."
+            )
         _TEMP_DATABASE_DIRECTORY = tempfile.mkdtemp(prefix="qubira-pytest-")
         database_url = URL.create(
             "sqlite",

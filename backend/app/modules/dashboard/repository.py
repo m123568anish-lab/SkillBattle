@@ -132,27 +132,14 @@ class DashboardRepository:
         self,
         db: AsyncSession,
         user_id: str,
-    ) -> tuple[int, int]:
-        result = await db.execute(
-            select(Streak.current_streak, Streak.best_streak)
-            .where(Streak.user_id == str(user_id))
-        )
-        streak = result.one_or_none()
-        if streak is None:
-            return 0, 0
-        data = await self._get_effective_streak(db, user_id, streak[0])
-        return data, int(streak[1] or 0)
-
-    async def _get_effective_streak(
-        self,
-        db: AsyncSession,
-        user_id: str,
-        stored_streak: int,
-    ) -> int:
+    ) -> tuple[int, int, bool]:
         from app.modules.streak.service import streak_service
-
         data = await streak_service.get_streak(db, str(user_id))
-        return int(data.get("current_streak", stored_streak) or 0)
+        return (
+            int(data.get("current_streak", 0)),
+            int(data.get("best_streak", 0)),
+            bool(data.get("is_active_today", False)),
+        )
 
     async def get_recent_activity(
         self,

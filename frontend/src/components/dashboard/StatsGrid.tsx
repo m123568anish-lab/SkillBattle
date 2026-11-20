@@ -23,7 +23,10 @@ export default function StatsGrid({ stats }: { stats: DashboardStats }) {
       label: "Daily Streak",
       value: stats.streak,
       suffix: stats.streak === 1 ? "day" : "days",
-      detail: `Personal record: ${stats.longest_streak} days`,
+      detail:
+        stats.streak > 0
+          ? `${stats.streak}-day active run · Record: ${stats.longest_streak} ${stats.longest_streak === 1 ? "day" : "days"}`
+          : `Practice today to begin · Record: ${stats.longest_streak} ${stats.longest_streak === 1 ? "day" : "days"}`,
       icon: Flame,
       color: "text-amber-400",
       bg: "bg-amber-500/10",

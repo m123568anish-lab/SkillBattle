@@ -85,7 +85,8 @@ _REQUIRED_STAGING_SETTINGS = (
     "EXPECTED_NEON_BRANCH_ID",
     "EXPECTED_DATABASE_NAME",
     "EXPECTED_DATABASE_ROLE",
-    "EXPECTED_MIGRATION_REVISION",
+    "EXPECTED_CURRENT_MIGRATION_REVISION",
+    "TARGET_MIGRATION_REVISION",
     "NEON_API_KEY",
     "DATABASE_URL",
     "MIGRATION_DATABASE_URL",
@@ -106,6 +107,7 @@ class StagingMigrationAuthorization:
     branch_id: str
     database_name: str
     database_role: str
+    expected_current_revision: str
     target_revision: str
     neon_api_key: str = field(repr=False)
     database_url: URL = field(repr=False)
@@ -139,6 +141,12 @@ def validate_staging_configuration(
             "Staging migrations require ENVIRONMENT=staging explicitly."
         )
 
+    if values.get("EXPECTED_MIGRATION_REVISION", "").strip():
+        raise StagingMigrationError(
+            "EXPECTED_MIGRATION_REVISION is ambiguous and unsupported; use "
+            "EXPECTED_CURRENT_MIGRATION_REVISION and TARGET_MIGRATION_REVISION."
+        )
+
     missing = [
         name
         for name in _REQUIRED_STAGING_SETTINGS
@@ -161,7 +169,10 @@ def load_staging_migration_authorization(
     branch_id = _required_value("EXPECTED_NEON_BRANCH_ID", values)
     database_name = _required_value("EXPECTED_DATABASE_NAME", values)
     database_role = _required_value("EXPECTED_DATABASE_ROLE", values)
-    target_revision = _required_value("EXPECTED_MIGRATION_REVISION", values)
+    expected_current_revision = _required_value(
+        "EXPECTED_CURRENT_MIGRATION_REVISION", values
+    )
+    target_revision = _required_value("TARGET_MIGRATION_REVISION", values)
     neon_api_key = _required_value("NEON_API_KEY", values)
     migration_url = _required_value("MIGRATION_DATABASE_URL", values)
 
@@ -173,8 +184,12 @@ def load_staging_migration_authorization(
         database_name
     ) or not _DATABASE_IDENTITY_PATTERN.fullmatch(database_role):
         raise StagingMigrationError("Expected database identity settings have an invalid format.")
+    if not _REVISION_PATTERN.fullmatch(expected_current_revision):
+        raise StagingMigrationError(
+            "EXPECTED_CURRENT_MIGRATION_REVISION has an invalid format."
+        )
     if not _REVISION_PATTERN.fullmatch(target_revision):
-        raise StagingMigrationError("EXPECTED_MIGRATION_REVISION has an invalid format.")
+        raise StagingMigrationError("TARGET_MIGRATION_REVISION has an invalid format.")
     if target_revision != PLACEMENT_MIGRATION_REVISION:
         raise StagingMigrationError(
             "The authorized target must be the reviewed placement migration revision "
@@ -262,11 +277,81 @@ def load_staging_migration_authorization(
         branch_id=branch_id,
         database_name=database_name,
         database_role=database_role,
+        expected_current_revision=expected_current_revision,
         target_revision=target_revision,
         neon_api_key=neon_api_key,
         database_url=database_url,
         approved=approval in {"1", "true", "yes"},
     )
+
+
+def validate_staging_revision_contract(
+    script: ScriptDirectory,
+    expected_current_revision: str,
+    target_revision: str,
+) -> None:
+    """Verify the configured current revision and target against the local graph."""
+    if target_revision != PLACEMENT_MIGRATION_REVISION:
+        raise StagingMigrationError(
+            "TARGET_MIGRATION_REVISION must be the reviewed placement revision "
+            f"{PLACEMENT_MIGRATION_REVISION}."
+        )
+    try:
+        current = script.get_revision(expected_current_revision)
+    except Exception as error:
+        raise StagingMigrationError(
+            "EXPECTED_CURRENT_MIGRATION_REVISION is not in the repository graph."
+        ) from error
+    try:
+        target = script.get_revision(target_revision)
+    except Exception as error:
+        raise StagingMigrationError(
+            "TARGET_MIGRATION_REVISION is not in the repository graph."
+        ) from error
+    if current is None:
+        raise StagingMigrationError(
+            "EXPECTED_CURRENT_MIGRATION_REVISION is not in the repository graph."
+        )
+    if target is None or target.revision != PLACEMENT_MIGRATION_REVISION:
+        raise StagingMigrationError(
+            "TARGET_MIGRATION_REVISION is not the reviewed placement migration."
+        )
+    heads = script.get_heads()
+    if heads != [target_revision]:
+        raise StagingMigrationError(
+            "The placement target is ambiguous: the legacy graph must have exactly "
+            f"one head at {target_revision}."
+        )
+    try:
+        path = list(script.iterate_revisions(target_revision, "base"))
+    except Exception as error:
+        raise StagingMigrationError(
+            "TARGET_MIGRATION_REVISION is not reachable from "
+            "EXPECTED_CURRENT_MIGRATION_REVISION."
+        ) from error
+    reachable_revisions = {revision.revision for revision in path}
+    if target_revision not in reachable_revisions or expected_current_revision not in reachable_revisions:
+        raise StagingMigrationError(
+            "TARGET_MIGRATION_REVISION is not reachable from "
+            "EXPECTED_CURRENT_MIGRATION_REVISION."
+        )
+    if target.down_revision != expected_current_revision:
+        raise StagingMigrationError(
+            "The reviewed placement target must directly descend from "
+            "EXPECTED_CURRENT_MIGRATION_REVISION; the configured graph path is "
+            "not the reviewed one-step upgrade."
+        )
+
+
+def assert_expected_current_revision(
+    actual_revision: str | None,
+    expected_current_revision: str,
+) -> None:
+    if actual_revision != expected_current_revision:
+        raise StagingMigrationError(
+            "Actual staging revision does not match "
+            "EXPECTED_CURRENT_MIGRATION_REVISION."
+        )
 
 
 def _neon_api_json(path: str, api_key: str) -> dict[str, Any]:
@@ -469,25 +554,20 @@ def build_staging_preflight(
             f"Migration state or epoch-control preflight refused: {error}"
         ) from error
 
-    if (
-        state.current_revision != PLACEMENT_MIGRATION_DOWN_REVISION
-        or state.expected_head != authorization.target_revision
-    ):
+    assert_expected_current_revision(
+        state.current_revision,
+        authorization.expected_current_revision,
+    )
+    if state.expected_head != authorization.target_revision:
         raise StagingMigrationError(
-            "Staging revision state must be exactly "
-            f"{PLACEMENT_MIGRATION_DOWN_REVISION} before target "
-            f"{authorization.target_revision}."
+            "The repository migration head does not match TARGET_MIGRATION_REVISION."
         )
+    validate_staging_revision_contract(
+        script,
+        authorization.expected_current_revision,
+        authorization.target_revision,
+    )
     target = script.get_revision(authorization.target_revision)
-    if (
-        target is None
-        or target.revision != PLACEMENT_MIGRATION_REVISION
-        or target.down_revision != PLACEMENT_MIGRATION_DOWN_REVISION
-        or script.get_heads() != [PLACEMENT_MIGRATION_REVISION]
-    ):
-        raise StagingMigrationError(
-            "Repository migration target is not the reviewed placement revision."
-        )
     _assert_non_destructive_upgrade(target.path)
     downgrade_operations = _destructive_operations_in_function(
         target.path,

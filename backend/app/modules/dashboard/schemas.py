@@ -38,6 +38,7 @@ class DashboardStats(BaseModel):
     level_progress_percent: int
     streak: int
     longest_streak: int
+    is_active_today: bool = False
     rating: int
 
     battles_played: int
@@ -58,6 +59,7 @@ class DashboardStats(BaseModel):
 class WeeklyActivity(BaseModel):
     day: str
     xp: int
+    is_active: bool = False
 
 
 # =========================================================
