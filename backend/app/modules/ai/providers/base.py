@@ -25,3 +25,6 @@ class AIProvider(ABC):
         Generate AI response.
         """
         raise NotImplementedError
+
+    async def health_check(self) -> dict[str, str | bool]:
+        return {"available": False, "provider": type(self).__name__, "detail": "Health check is unsupported."}

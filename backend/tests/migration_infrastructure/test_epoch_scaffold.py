@@ -13,7 +13,7 @@ def test_epoch_baseline_is_separate_and_has_one_root_revision() -> None:
     epoch_script = ScriptDirectory.from_config(epoch_config)
 
     assert legacy_script.dir != epoch_script.dir
-    assert legacy_script.get_heads() == ["d1f5a8e7c2b4"]
+    assert legacy_script.get_heads() == ["f9a1b2c3d4e5"]
     assert len(epoch_script.get_heads()) == 1
     baseline = epoch_script.get_revision(epoch_script.get_heads()[0])
     assert baseline is not None

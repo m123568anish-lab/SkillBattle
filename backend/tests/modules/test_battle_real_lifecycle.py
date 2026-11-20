@@ -264,6 +264,41 @@ async def test_battle_judge_compares_output_against_hidden_test_cases():
 
 
 @pytest.mark.asyncio
+async def test_all_four_battle_modes_select_only_eligible_question_types(client, battle_question_bank):
+    headers = await _authenticated_user(client)
+
+    for mode, question_type, max_players in [
+        ("solo", "mcq", 1),
+        ("solo", "coding", 1),
+        ("multiplayer", "mcq", 2),
+        ("multiplayer", "coding", 2),
+    ]:
+        response = await client.post(
+            "/battle/create",
+            headers=headers,
+            json={
+                "title": f"{mode} {question_type} placement check",
+                "difficulty": "medium",
+                "battle_type": "general",
+                "battle_mode": mode,
+                "max_players": max_players,
+                "question_type": question_type,
+                "question_count": 1,
+            },
+        )
+
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        assert payload["mode"] == ("solo" if mode == "solo" else "duo")
+        assert payload["max_players"] == max_players
+        assert len(payload["questions_data"]) == 1
+        section = payload["questions_data"][0]
+        assert section["question_type"] == question_type
+        assert len(section["questions"]) == 1
+        assert section["questions"][0]["question_type"] == question_type
+
+
+@pytest.mark.asyncio
 async def test_all_four_battle_lifecycles_persist_submissions_results_and_xp(
     client, battle_question_bank
 ):

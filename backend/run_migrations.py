@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import logging
 import os
 import sys
@@ -14,9 +15,10 @@ from pathlib import Path
 from alembic import command
 from alembic.config import Config
 from alembic.script import ScriptDirectory
+from alembic.util.exc import CommandError
 from sqlalchemy import Connection, inspect, select, text
 from sqlalchemy.engine import URL, make_url
-from sqlalchemy.exc import ArgumentError
+from sqlalchemy.exc import ArgumentError, SQLAlchemyError
 
 from app.database.database import engine
 from app.core.config import settings
@@ -729,6 +731,131 @@ def run_migrations(
         return 1
 
 
+def run_staging_migration(*, execute: bool) -> int:
+    from app.database.staging_migration import (
+        PLACEMENT_MIGRATION_DOWN_REVISION,
+        StagingMigrationError,
+        build_staging_preflight,
+        load_staging_migration_authorization,
+        verify_neon_staging_branch,
+        verify_staging_postflight,
+    )
+
+    phase = "authorization"
+    try:
+        authorization = load_staging_migration_authorization()
+        if execute and not authorization.approved:
+            raise StagingMigrationError(
+                "Staging execution requires STAGING_MIGRATION_APPROVED=true."
+            )
+        if engine.dialect.name != "postgresql":
+            raise StagingMigrationError(
+                "Staging migration execution requires a PostgreSQL application configuration."
+            )
+
+        application_url = make_url(str(settings.DATABASE_URL))
+        application_host = (application_url.host or "").casefold().replace(
+            "-pooler.", "."
+        )
+        migration_host = (authorization.database_url.host or "").casefold()
+        application_port = application_url.port or 5432
+        migration_port = authorization.database_url.port or 5432
+        if (
+            application_url.get_backend_name() != "postgresql"
+            or application_host != migration_host
+            or application_port != migration_port
+            or application_url.database != authorization.database_name
+            or application_url.username != authorization.database_role
+        ):
+            raise StagingMigrationError(
+                "DATABASE_URL and MIGRATION_DATABASE_URL do not identify the same staging database."
+            )
+
+        phase = "neon_branch_identity"
+        branch_identity = verify_neon_staging_branch(authorization)
+        config = Config(str(Path(__file__).with_name("alembic.ini")))
+        script = ScriptDirectory.from_config(config)
+        phase = "postgresql_ownership"
+        with acquire_postgresql_migration_ownership(
+            authorization.database_url
+        ) as ownership:
+            ownership.assert_connection(ownership.connection)
+            ownership.connection.commit()
+            phase = "read_only_preflight"
+            preflight = build_staging_preflight(
+                ownership.connection,
+                authorization,
+                script,
+            )
+            preflight_report = dict(preflight.report)
+            preflight_report["branch_verified_by_neon_api"] = branch_identity
+            preflight_report["execution_requested"] = execute
+            print(json.dumps(preflight_report, indent=2, sort_keys=True))
+
+            if not execute:
+                ownership.connection.commit()
+                return 0
+
+            if not authorization.approved:
+                raise StagingMigrationError(
+                    "Staging execution requires STAGING_MIGRATION_APPROVED=true."
+                )
+            ownership.connection.commit()
+            phase = "final_branch_identity_check"
+            verify_neon_staging_branch(authorization)
+            ownership.assert_connection(ownership.connection)
+            phase = "alembic_upgrade"
+            _run_migrations_on_connection(
+                ownership.connection,
+                config,
+                script,
+                ownership,
+                {
+                    "phase": phase,
+                    "current_revision": PLACEMENT_MIGRATION_DOWN_REVISION,
+                    "sqlalchemy_transaction_active": None,
+                },
+            )
+            phase = "read_only_postflight"
+            ownership.connection.commit()
+            postflight = verify_staging_postflight(
+                ownership.connection,
+                authorization,
+                script,
+                preflight,
+            )
+            ownership.connection.commit()
+            print(
+                json.dumps(
+                    {
+                        "environment": "staging",
+                        "status": "migration_verified",
+                        **postflight,
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
+        return 0
+    except (RuntimeError, SQLAlchemyError, CommandError) as exc:
+        database_diagnostics = database_error_diagnostics(exc)
+        if isinstance(exc, RuntimeError):
+            detail = str(exc)
+        else:
+            detail = "operation failed; inspect sanitized diagnostics"
+        logger.error(
+            "STAGING MIGRATION FAILED phase=%s error_type=%s driver_error_type=%s "
+            "sqlstate=%s detail=%s traceback_frames=%s",
+            phase,
+            database_diagnostics["sqlalchemy_error_type"],
+            database_diagnostics["driver_error_type"],
+            database_diagnostics["sqlstate"],
+            detail,
+            safe_traceback_frames(exc),
+        )
+        return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -736,7 +863,24 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Deliberately invoke the coordinated migration operation.",
     )
+    staging_mode = parser.add_mutually_exclusive_group()
+    staging_mode.add_argument(
+        "--staging-preflight",
+        action="store_true",
+        help="Run the read-only, Neon-verified staging migration preflight.",
+    )
+    staging_mode.add_argument(
+        "--staging-execute",
+        action="store_true",
+        help="Apply the reviewed placement revision after explicit staging approval.",
+    )
     args = parser.parse_args(argv)
+    if args.execute and (args.staging_preflight or args.staging_execute):
+        parser.error("--execute cannot be combined with a staging migration mode.")
+    if args.staging_preflight:
+        return run_staging_migration(execute=False)
+    if args.staging_execute:
+        return run_staging_migration(execute=True)
     if not args.execute:
         logger.error(
             "Migration execution requires explicit --execute; API service "

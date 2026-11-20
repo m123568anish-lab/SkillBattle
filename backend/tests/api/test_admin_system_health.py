@@ -31,3 +31,28 @@ async def test_system_health_is_platform_admin_only_and_uses_database(client):
     finally:
         app.dependency_overrides.clear()
         app.dependency_overrides.update(previous_overrides)
+
+
+@pytest.mark.asyncio
+async def test_placement_intelligence_is_platform_admin_only_and_uses_database(client):
+    previous_overrides = app.dependency_overrides.copy()
+    user = SimpleNamespace(id="placement-admin-user", role="student", is_superuser=False)
+
+    async def override_current_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = override_current_user
+    try:
+        forbidden = await client.get("/api/v1/admin/placement-intelligence")
+        assert forbidden.status_code == 403
+
+        user.is_superuser = True
+        response = await client.get("/api/v1/admin/placement-intelligence")
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data["total_approved_questions"], int)
+        assert isinstance(data["job_queue_status"], dict)
+        assert isinstance(data["inventory_shortages"], list)
+    finally:
+        app.dependency_overrides.clear()
+        app.dependency_overrides.update(previous_overrides)

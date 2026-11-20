@@ -9,6 +9,7 @@ import BattleSettingsForm from "@/components/admin/BattleSettingsForm";
 import AdminOverview from "@/components/admin/AdminOverview";
 import SystemHealthPanel from "@/components/admin/SystemHealthPanel";
 import AdminVerificationPanel from "@/components/admin/AdminVerificationPanel";
+import SeoGrowthCenter from "@/components/admin/seo/SeoGrowthCenter";
 
 function AdminPageContent() {
   const searchParams = useSearchParams();
@@ -20,6 +21,7 @@ function AdminPageContent() {
       <div className="mb-8">
         <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-violet-500 tracking-tight">
           {activeTab === "overview" && "Platform Overview"}
+          {activeTab === "seo" && "SEO & Production Launch Center"}
           {activeTab === "challenge" && "Daily Challenge Control"}
           {activeTab === "users" && "User Management"}
           {activeTab === "logs" && "Live System Logs"}
@@ -29,6 +31,7 @@ function AdminPageContent() {
         </h1>
         <p className="mt-2 text-sm text-slate-400">
           {activeTab === "overview" && "High-level metrics and health of the BattleAI ecosystem."}
+          {activeTab === "seo" && "Control organic search presence, AI crawler visibility (llms.txt), and production readiness gates."}
           {activeTab === "challenge" && "Configure the coding challenge of the day."}
           {activeTab === "users" && "Manage accounts, roles, and ban users."}
           {activeTab === "logs" && "Monitor battle arena logs and match outcomes."}
@@ -41,6 +44,7 @@ function AdminPageContent() {
       {/* Content Rendering based on Tab */}
       <div className="rounded-3xl border border-white/[0.08] bg-[#0a0f1d] p-6 sm:p-8 shadow-2xl shadow-black/50">
         {activeTab === "overview" && <AdminOverview />}
+        {activeTab === "seo" && <SeoGrowthCenter />}
         {activeTab === "challenge" && (
           <div className="max-w-2xl mx-auto">
             <DailyChallengeForm />

@@ -25,6 +25,11 @@ logger = logging.getLogger(__name__)
 
 def load_environment_file_values() -> None:
     """Load local admin/runtime env values into os.environ without requiring hardcoded secrets."""
+    # A staging migration is an explicitly configured one-off operation. Never
+    # let a generic local/admin file silently supply production-looking values
+    # when the caller has selected staging.
+    if os.getenv("ENVIRONMENT", "").strip().casefold() == "staging":
+        return
     if os.getenv("QUBIRA_TEST_MODE") == "1":
         test_env_file = os.getenv("QUBIRA_TEST_ENV_FILE")
         if not test_env_file:
@@ -188,6 +193,12 @@ class Settings(BaseSettings):
 
     OLLAMA_MODEL: str = "llama3.1:8b"
 
+    AI_PROVIDER_CONNECT_TIMEOUT_SECONDS: float = Field(default=5, gt=0)
+    AI_PROVIDER_READ_TIMEOUT_SECONDS: float = Field(default=120, gt=0)
+    AI_PROVIDER_HEALTH_TIMEOUT_SECONDS: float = Field(default=3, gt=0)
+    AI_PROVIDER_MAX_ATTEMPTS: int = Field(default=3, ge=1, le=5)
+    AI_PROVIDER_RETRY_BASE_SECONDS: float = Field(default=0.5, ge=0, le=5)
+
     GEMINI_API_KEY: str = ""
 
     OPENAI_API_KEY: str = ""
@@ -263,15 +274,10 @@ class Settings(BaseSettings):
     # --------------------------------------------------
 
     model_config = SettingsConfigDict(
-        # Production configuration must be supplied by the deployment
-        # environment, not loaded from a local placeholder file.
-        # The platform admin bootstrap also uses a dedicated .env.admin file
-        # so environment-based credentials are available without hardcoding.
-        env_file=(
-            None
-            if os.getenv("QUBIRA_TEST_MODE") == "1"
-            else (".env.local", ".env", ".env.admin", ".env.admin.local")
-        ),
+        # File loading is performed explicitly by load_environment_file_values.
+        # Keeping pydantic-settings from loading a second set of files ensures
+        # staging cannot accidentally inherit a generic or production file.
+        env_file=None,
         case_sensitive=True,
         extra="ignore",
     )

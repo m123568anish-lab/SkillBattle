@@ -150,145 +150,95 @@ class ProblemGeneratorService:
             raise ValueError(
                 "AI returned invalid JSON."
             ) from exc
-async def generate_and_save(
-    self,
-    db: AsyncSession,
-    difficulty,
-    topic,
-    company=None,
-    rating=None,
-):
 
-    response = await self.generate(
-        difficulty=difficulty,
-        topic=topic,
-        company=company,
-        rating=rating,
-    )
+    async def generate_and_save(
+        self,
+        db: AsyncSession,
+        difficulty,
+        topic,
+        company=None,
+        rating=None,
+    ):
 
-    data = response.problem
-
-    problem = Problem(
-
-        title=data.title,
-
-        slug=data.title.lower().replace(" ", "-"),
-
-        difficulty=data.difficulty.value,
-
-        category=data.topic.value,
-
-        description=data.statement,
-
-        input_format=data.input_format,
-
-        output_format=data.output_format,
-
-        constraints=data.constraints,
-
-        explanation=data.editorial,
-
-        xp_reward=100,
-
-        time_limit=data.time_limit,
-
-        memory_limit=data.memory_limit,
-
-    )
-
-    problem = await problem_generator_repository.save_problem(
-        db,
-        problem,
-    )
-
-    for test in data.examples:
-
-        await problem_generator_repository.save_testcase(
-
-            db,
-
-            ProblemTestCase(
-
-                problem_id=problem.id,
-
-                input_data=test.input,
-
-                expected_output=test.output,
-
-                is_hidden=False,
-
-                explanation=test.explanation or "",
-
-            ),
-
+        response = await self.generate(
+            difficulty=difficulty,
+            topic=topic,
+            company=company,
+            rating=rating,
         )
 
-    for test in data.hidden_testcases:
+        data = response.problem
 
-        await problem_generator_repository.save_testcase(
-
-            db,
-
-            ProblemTestCase(
-
-                problem_id=problem.id,
-
-                input_data=test.input,
-
-                expected_output=test.output,
-
-                is_hidden=True,
-
-            ),
-
+        problem = Problem(
+            title=data.title,
+            slug=data.title.lower().replace(" ", "-"),
+            difficulty=data.difficulty.value,
+            category=data.topic.value,
+            description=data.statement,
+            input_format=data.input_format,
+            output_format=data.output_format,
+            constraints=data.constraints,
+            explanation=data.editorial,
+            xp_reward=100,
+            time_limit=data.time_limit,
+            memory_limit=data.memory_limit,
         )
 
-    for language, code in data.starter_code.items():
-
-        await problem_generator_repository.save_starter_code(
-
+        problem = await problem_generator_repository.save_problem(
             db,
-
-            ProblemStarterCode(
-
-                problem_id=problem.id,
-
-                language=language,
-
-                code=code,
-
-            ),
-
+            problem,
         )
 
-    for tag in data.tags:
+        for test in data.examples:
+            await problem_generator_repository.save_testcase(
+                db,
+                ProblemTestCase(
+                    problem_id=problem.id,
+                    input_data=test.input,
+                    expected_output=test.output,
+                    is_hidden=False,
+                    explanation=test.explanation or "",
+                ),
+            )
 
-        await problem_generator_repository.save_tag(
+        for test in data.hidden_testcases:
+            await problem_generator_repository.save_testcase(
+                db,
+                ProblemTestCase(
+                    problem_id=problem.id,
+                    input_data=test.input,
+                    expected_output=test.output,
+                    is_hidden=True,
+                ),
+            )
 
-            db,
+        for language, code in data.starter_code.items():
+            await problem_generator_repository.save_starter_code(
+                db,
+                ProblemStarterCode(
+                    problem_id=problem.id,
+                    language=language,
+                    code=code,
+                ),
+            )
 
-            ProblemTag(
+        for tag in data.tags:
+            await problem_generator_repository.save_tag(
+                db,
+                ProblemTag(
+                    problem_id=problem.id,
+                    tag=tag,
+                ),
+            )
 
-                problem_id=problem.id,
+        await db.commit()
+        await db.refresh(problem)
 
-                tag=tag,
+        return {
+            "success": True,
+            "problem_id": problem.id,
+            "title": problem.title,
+        }
 
-            ),
-
-        )
-
-    await db.commit()
-
-    await db.refresh(problem)
-
-    return {
-
-        "success": True,
-
-        "problem_id": problem.id,
-
-        "title": problem.title,
-
-    }
 
 problem_generator_service = ProblemGeneratorService()

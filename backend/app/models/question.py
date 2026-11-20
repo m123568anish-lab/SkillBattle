@@ -35,6 +35,25 @@ class Question(Base):
     slug: Mapped[str] = mapped_column(String(220), unique=True, index=True)
     description: Mapped[str] = mapped_column(Text)
     difficulty: Mapped[str] = mapped_column(String(20), index=True)
+
+    # Placement acquisition / provenance metadata
+    source_url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    source_classification: Mapped[str] = mapped_column(String(60), default="existing-inventory", nullable=False, index=True)
+    company: Mapped[str] = mapped_column(String(120), default="", nullable=False, index=True)
+    role: Mapped[str] = mapped_column(String(120), default="", nullable=False, index=True)
+    assessment_round: Mapped[str] = mapped_column(String(80), default="", nullable=False, index=True)
+    question_kind: Mapped[str] = mapped_column(String(40), default="mcq", nullable=False, index=True)
+    topic: Mapped[str] = mapped_column(String(120), default="", nullable=False, index=True)
+    subtopic: Mapped[str] = mapped_column(String(120), default="", nullable=False, index=True)
+    original_publish_date: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    license: Mapped[str] = mapped_column(String(300), default="", nullable=False)
+    verification_status: Mapped[str] = mapped_column(String(40), default="approved", nullable=False, index=True)
+    approval_status: Mapped[str] = mapped_column(String(40), default="approved", nullable=False, index=True)
+    lifecycle_state: Mapped[str] = mapped_column(String(40), default="PUBLISHED", nullable=False, index=True)
+    duplicate_of_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("questions.id", ondelete="SET NULL"), nullable=True, index=True)
+    failure_reasons: Mapped[list] = mapped_column(SafeJSON, default=list)
+    canonical_hash: Mapped[str] = mapped_column(String(128), default="", index=True)
+    reuse_permission: Mapped[str] = mapped_column(String(220), default="", nullable=False)
     
     # Advanced Battle Engine fields
     question_type: Mapped[str] = mapped_column(String(30), default="coding", index=True, nullable=False) # "mcq", "coding", "debugging", "technical"

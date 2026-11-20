@@ -31,6 +31,48 @@ export interface BattleSettings {
   allow_custom_battles: boolean;
 }
 
+export interface PlacementIntelligenceSummary {
+  total_approved_questions: number;
+  pending_review_count: number;
+  duplicate_candidates: number;
+  retry_history: number;
+  job_queue_status: { queued: number; running: number; failed: number };
+  source_records_processed: number;
+  inventory_shortages: Array<{
+    company: string;
+    role: string;
+    topic: string;
+    difficulty: string;
+    question_type: string;
+    target: number;
+    current: number;
+    missing: number;
+  }>;
+  recent_failed_jobs: Array<{
+    id: number;
+    type: string;
+    retry_count: number;
+    max_retries: number;
+    error_details: string;
+    updated_at: string;
+  }>;
+  recent_sources: Array<{
+    id: number;
+    source_url: string;
+    company: string;
+    role: string;
+    title: string;
+    discovered_at: string;
+    processed: boolean;
+  }>;
+}
+
+export interface PlacementProviderHealth {
+  available: boolean;
+  provider: string;
+  detail: string;
+}
+
 class AdminService {
   async setDailyChallenge(payload: DailyChallengePayload) {
     const res = await api.post("/admin/daily-challenge", payload);
@@ -54,6 +96,21 @@ class AdminService {
 
   async getBattleLogs(limit = 20) {
     const res = await api.get<BattleLog[]>(`/admin/battle-logs?limit=${limit}`);
+    return res.data;
+  }
+
+  async getPlacementIntelligence() {
+    const res = await api.get<PlacementIntelligenceSummary>("/admin/placement-intelligence");
+    return res.data;
+  }
+
+  async getPlacementProviderHealth() {
+    const res = await api.get<PlacementProviderHealth>("/admin/placement-provider-health");
+    return res.data;
+  }
+
+  async retryPlacementJob(jobId: number) {
+    const res = await api.post(`/admin/placement-jobs/${jobId}/retry`);
     return res.data;
   }
 

@@ -29,6 +29,16 @@ def test_deployable_render_commands_start_api_without_running_migrations() -> No
         assert any(path in health_check for path in ("/health", "/ready"))
 
 
+def test_staging_services_do_not_receive_migration_credentials() -> None:
+    staging_blueprint = (
+        REPOSITORY_ROOT / "render.staging.yaml"
+    ).read_text(encoding="utf-8")
+
+    assert "MIGRATION_DATABASE_URL" not in staging_blueprint
+    assert "NEON_API_KEY" not in staging_blueprint
+    assert "STAGING_MIGRATION_APPROVED" not in staging_blueprint
+
+
 def test_container_entrypoints_do_not_run_migrations() -> None:
     for entrypoint in (
         BACKEND_ROOT / "entrypoint.sh",

@@ -639,7 +639,7 @@ test("solo coding runs a public sample and records the real hidden-test verdict"
   await page.getByRole("button", { name: "python", exact: true }).click();
   await expect(page.getByRole("button", { name: "python", exact: true })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Run public samples" }).click();
-  await expect(page.getByText("1", { exact: true }).last()).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("button", { name: "Test Results 1/1" })).toBeVisible({ timeout: 30_000 });
   const submissionResponse = page.waitForResponse((response) =>
     response.request().method() === "POST" && response.url().endsWith("/battle/submit-answer"),
   );

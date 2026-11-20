@@ -23,27 +23,33 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://qubira.app"),
+  metadataBase: new URL("https://qubira.in"),
   title: {
     default: "Qubira — Learn. Build. Compete.",
     template: "%s | Qubira",
   },
   description: "Master technical skills, prepare for interviews, solve coding challenges, and compete with developers through Qubira, an intelligent skill development platform.",
   applicationName: "Qubira",
-  keywords: ["Qubira", "coding practice", "coding battles", "interview preparation", "DSA", "AI mentorship", "system design"],
+  keywords: ["Qubira", "coding practice", "coding battles", "interview preparation", "DSA", "AI mentorship", "system design", "competitive programming"],
   icons: { icon: "/icon.svg" },
   openGraph: {
     title: "Qubira — Learn. Build. Compete.",
     description: "Master technical skills, prepare for interviews, solve coding challenges, and compete with developers through Qubira, an intelligent skill development platform.",
+    url: "https://qubira.in",
     type: "website",
     siteName: "Qubira",
+    locale: "en_US",
     images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Qubira — Learn. Build. Compete." }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Qubira — Learn. Build. Compete.",
     description: "Master technical skills, prepare for interviews, solve coding challenges, and compete with developers through Qubira, an intelligent skill development platform.",
+    creator: "@qubira_in",
     images: ["/opengraph-image"],
+  },
+  alternates: {
+    canonical: "https://qubira.in",
   },
 };
 

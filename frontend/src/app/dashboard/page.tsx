@@ -5,10 +5,14 @@ import Link from "next/link";
 import {
   ArrowRight,
   Bot,
+  Calendar,
   Code2,
+  Flame,
   Library,
   Mic,
+  Sparkles,
   Trophy,
+  Zap,
 } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import DashboardHero from "@/components/dashboard/DashboardHero";
@@ -22,7 +26,7 @@ function DashboardPlaceholder({ minHeight }: { minHeight: string }) {
   return (
     <div
       aria-hidden="true"
-      className="animate-pulse rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)]"
+      className="animate-pulse rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)]"
       style={{ minHeight }}
     />
   );
@@ -31,70 +35,100 @@ function DashboardPlaceholder({ minHeight }: { minHeight: string }) {
 const BattleDock = dynamic(() => import("@/components/dashboard/BattleDock"), {
   loading: () => <DashboardPlaceholder minHeight="19rem" />,
 });
-const LeaderboardWidget = dynamic(() => import("@/components/dashboard/LeaderboardWidget"), {
-  loading: () => <DashboardPlaceholder minHeight="17rem" />,
-});
-const AchievementWidget = dynamic(() => import("@/components/dashboard/AchievementWidget"), {
-  loading: () => <DashboardPlaceholder minHeight="17rem" />,
-});
-const QuickSpeedrunWidget = dynamic(() => import("@/components/dashboard/QuickSpeedrunWidget"), {
-  loading: () => <DashboardPlaceholder minHeight="9rem" />,
-});
-const AICoachCard = dynamic(() => import("@/components/dashboard/AICoachCard"), {
-  loading: () => <DashboardPlaceholder minHeight="12rem" />,
-});
-const ServerStatus = dynamic(() => import("@/components/dashboard/ServerStatus"), {
-  loading: () => <DashboardPlaceholder minHeight="12rem" />,
-});
+const LeaderboardWidget = dynamic(
+  () => import("@/components/dashboard/LeaderboardWidget"),
+  {
+    loading: () => <DashboardPlaceholder minHeight="17rem" />,
+  }
+);
+const AchievementWidget = dynamic(
+  () => import("@/components/dashboard/AchievementWidget"),
+  {
+    loading: () => <DashboardPlaceholder minHeight="17rem" />,
+  }
+);
+const QuickSpeedrunWidget = dynamic(
+  () => import("@/components/dashboard/QuickSpeedrunWidget"),
+  {
+    loading: () => <DashboardPlaceholder minHeight="9rem" />,
+  }
+);
+const AICoachCard = dynamic(
+  () => import("@/components/dashboard/AICoachCard"),
+  {
+    loading: () => <DashboardPlaceholder minHeight="12rem" />,
+  }
+);
+const ServerStatus = dynamic(
+  () => import("@/components/dashboard/ServerStatus"),
+  {
+    loading: () => <DashboardPlaceholder minHeight="12rem" />,
+  }
+);
 
 export default function DashboardPage() {
   const { dashboard, loading, isRefreshing, error, refresh } = useDashboard();
 
   return (
     <DashboardLayout>
-      <div className="mx-auto max-w-[1440px] space-y-6 pb-4 sm:space-y-7">
+      <div className="mx-auto max-w-[1440px] space-y-6 pb-6 sm:space-y-8">
         {error && (
           <div
             role="alert"
-            className="flex flex-col justify-between gap-3 rounded-xl border border-rose-500/30 bg-rose-500/[0.06] p-4 text-sm sm:flex-row sm:items-center"
+            className="flex flex-col justify-between gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/[0.08] p-4 text-sm sm:flex-row sm:items-center shadow-lg"
           >
             <p className="text-rose-200">
-              <span className="font-semibold">{dashboard ? "Refresh issue:" : "Dashboard unavailable:"}</span>{" "}
+              <span className="font-bold">
+                {dashboard ? "Live sync alert:" : "Dashboard unavailable:"}
+              </span>{" "}
               {dashboard
-                ? `Live dashboard data could not be refreshed (${error}). Previously loaded data remains available.`
-                : `Live dashboard data could not be loaded (${error}).`}
+                ? `Live telemetry could not be updated (${error}). Cached data is shown.`
+                : `Live dashboard data could not be fetched (${error}).`}
             </p>
             <button
               type="button"
               onClick={() => void refresh()}
               disabled={isRefreshing}
-              className="min-h-10 shrink-0 rounded-lg border border-rose-300/25 px-3 text-xs font-semibold text-rose-100 transition-colors hover:bg-rose-400/10 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
+              className="min-h-10 shrink-0 rounded-xl border border-rose-300/30 bg-rose-500/20 px-4 text-xs font-bold text-rose-100 transition hover:bg-rose-500/30 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
             >
-              {isRefreshing ? "Refreshing…" : "Retry"}
+              {isRefreshing ? "Refreshing…" : "Retry Sync"}
             </button>
           </div>
         )}
 
         {dashboard ? (
           <>
+            {/* Command Center Hero */}
             <DashboardHero
               user={dashboard.user}
               stats={dashboard.stats}
               learningGoal={dashboard.command_center?.roadmap?.title}
               nextAction={dashboard.command_center?.next_best_action?.title}
             />
+
+            {/* Performance Metric Instruments */}
             <StatsGrid stats={dashboard.stats} />
-            <section aria-label="Roadmap and daily focus" className="grid items-start gap-4 xl:grid-cols-2">
+
+            {/* Roadmap & Daily Focus Dual Columns */}
+            <section
+              aria-label="Roadmap and daily focus"
+              className="grid items-stretch gap-6 xl:grid-cols-2"
+            >
               <LearningRoadmap commandCenter={dashboard.command_center} />
-              <DailyFocus challenge={dashboard.daily_challenge} commandCenter={dashboard.command_center} />
+              <DailyFocus
+                challenge={dashboard.daily_challenge}
+                commandCenter={dashboard.command_center}
+              />
             </section>
 
+            {/* Battle Arena Command Dock */}
             <BattleDock
               stats={dashboard.stats}
               recentActivity={dashboard.recent_activity}
             />
 
-            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.3fr)_minmax(18rem,0.7fr)]">
+            {/* Weekly Consistency & Learning Pathways */}
+            <div className="grid items-stretch gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(19rem,0.7fr)]">
               <WeeklyActivityPanel
                 activity={dashboard.weekly_activity}
                 completedTasks={dashboard.stats.practice_completed}
@@ -102,38 +136,59 @@ export default function DashboardPage() {
               <ExploreLearning />
             </div>
 
-            <section aria-labelledby="community-progress-title" className="space-y-4">
+            {/* Community, Leaderboard & Achievements */}
+            <section
+              aria-labelledby="community-progress-title"
+              className="space-y-4"
+            >
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                  Your progress, in context
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+                  Community & Standings
                 </p>
-                <h2 id="community-progress-title" className="mt-1 text-xl font-semibold tracking-tight text-[var(--text-primary)]">
-                  Standing & achievements
+                <h2
+                  id="community-progress-title"
+                  className="mt-1 text-2xl font-bold tracking-tight text-[var(--text-primary)]"
+                >
+                  Global Standing & Badges
                 </h2>
               </div>
-              <div className="grid items-start gap-5 xl:grid-cols-2">
+              <div className="grid items-start gap-6 xl:grid-cols-2">
                 <LeaderboardWidget />
                 <AchievementWidget />
               </div>
             </section>
 
-            <div className="grid items-start gap-5 xl:grid-cols-2">
+            {/* AI Skill Advisor & Platform Telemetry */}
+            <div className="grid items-start gap-6 xl:grid-cols-2">
               {dashboard.ai_recommendation && (
                 <AICoachCard recommendation={dashboard.ai_recommendation} />
               )}
               <ServerStatus />
             </div>
 
+            {/* Placement Quick Speedrun */}
             <QuickSpeedrunWidget />
           </>
         ) : loading ? (
-          <div className="grid gap-5 lg:grid-cols-2">
-            <DashboardPlaceholder minHeight="15rem" />
-            <DashboardPlaceholder minHeight="15rem" />
-            <DashboardPlaceholder minHeight="10rem" />
+          <div className="space-y-6">
+            <DashboardPlaceholder minHeight="18rem" />
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+              <DashboardPlaceholder minHeight="6rem" />
+              <DashboardPlaceholder minHeight="6rem" />
+              <DashboardPlaceholder minHeight="6rem" />
+              <DashboardPlaceholder minHeight="6rem" />
+              <DashboardPlaceholder minHeight="6rem" />
+            </div>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <DashboardPlaceholder minHeight="14rem" />
+              <DashboardPlaceholder minHeight="14rem" />
+            </div>
           </div>
         ) : (
-          <DashboardSectionError title="Live student statistics are unavailable" onRetry={refresh} />
+          <DashboardSectionError
+            title="Live student telemetry is currently unavailable"
+            onRetry={refresh}
+          />
         )}
       </div>
     </DashboardLayout>
@@ -144,61 +199,83 @@ function ExploreLearning() {
   const destinations = [
     {
       href: "/campaign",
-      title: "Learning campaign",
-      detail: "Progress through available learning stages.",
+      title: "Learning Campaign",
+      detail: "Progress through structured campus learning stages.",
       icon: Trophy,
+      accent: "text-[var(--accent-strong)]",
     },
     {
       href: "/tasks",
-      title: "Practice catalog",
-      detail: "Choose a coding task from the catalog.",
+      title: "Problem Catalog",
+      detail: "Curated DSA, System Design & Core CS tasks.",
       icon: Code2,
+      accent: "text-emerald-400",
     },
     {
       href: "/interview",
-      title: "Mock interview",
-      detail: "Practice interview questions and responses.",
+      title: "AI Mock Interview",
+      detail: "Practice live voice and coding interview rounds.",
       icon: Mic,
+      accent: "text-amber-400",
     },
     {
       href: "/coach",
-      title: "AI coach",
-      detail: "Get support while you build your skills.",
+      title: "AI Skill Coach",
+      detail: "Tailored debugging tips and concept explanations.",
       icon: Bot,
+      accent: "text-cyan-400",
     },
     {
       href: "/practice/topics",
-      title: "Learning resources",
-      detail: "Explore guided topics and skill references.",
+      title: "Curated Knowledge Base",
+      detail: "Cheat sheets, interview guides and core topics.",
       icon: Library,
+      accent: "text-violet-400",
     },
   ];
 
   return (
-    <section className="q-panel min-w-0 p-5 sm:p-6">
-      <div className="mb-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-          More ways to grow
+    <section className="relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6 shadow-xl sm:p-7">
+      <div>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
+            <Sparkles size={11} className="text-[var(--accent-strong)]" />
+            Career Accelerators
+          </span>
+        </div>
+        <h2 className="mt-1.5 text-xl font-bold tracking-tight text-[var(--text-primary)]">
+          Explore Learning Tracks
+        </h2>
+        <p className="mt-1 text-xs text-[var(--text-secondary)]">
+          Specialized preparation tracks designed for top tech placement.
         </p>
-        <h2 className="mt-1 text-base font-semibold text-[var(--text-primary)]">Explore learning</h2>
-      </div>
-      <div className="mt-3 divide-y divide-[var(--border-subtle)]">
-        {destinations.map(({ href, title, detail, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className="group flex min-h-[4.25rem] items-center gap-3 py-3 first:pt-1 last:pb-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--border-focus)]"
-          >
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[var(--border-default)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] transition-colors group-hover:border-[var(--accent)]/40 group-hover:text-[var(--accent-strong)]">
-              <Icon size={16} aria-hidden="true" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold text-[var(--text-primary)]">{title}</span>
-              <span className="mt-0.5 block text-xs text-[var(--text-muted)]">{detail}</span>
-            </span>
-            <ArrowRight size={15} aria-hidden="true" className="shrink-0 text-[var(--text-muted)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--accent-strong)]" />
-          </Link>
-        ))}
+
+        <div className="mt-4 divide-y divide-[var(--border-subtle)]">
+          {destinations.map(({ href, title, detail, icon: Icon, accent }) => (
+            <Link
+              key={href}
+              href={href}
+              className="group flex min-h-[4rem] items-center gap-3.5 py-3 first:pt-1 last:pb-1 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+            >
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[var(--border-default)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] transition-all group-hover:border-[var(--accent)]/40 group-hover:scale-105">
+                <Icon size={17} aria-hidden="true" className={accent} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-bold text-[var(--text-primary)] group-hover:text-[var(--accent-strong)] transition-colors">
+                  {title}
+                </span>
+                <span className="mt-0.5 block truncate text-[11px] text-[var(--text-muted)]">
+                  {detail}
+                </span>
+              </span>
+              <ArrowRight
+                size={15}
+                aria-hidden="true"
+                className="shrink-0 text-[var(--text-muted)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--accent-strong)]"
+              />
+            </Link>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -214,96 +291,141 @@ function WeeklyActivityPanel({
   const totalXp = activity.reduce((total, item) => total + item.xp, 0);
   const peakXp = Math.max(1, ...activity.map((item) => item.xp));
   const activeDays = activity.filter((item) => item.xp > 0).length;
-  const weekday = new Intl.DateTimeFormat(undefined, { weekday: "short", timeZone: "UTC" });
+  const weekday = new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    timeZone: "UTC",
+  });
 
   return (
     <section
       aria-labelledby="weekly-activity-title"
-      className="q-panel min-w-0 p-5 sm:p-6"
+      className="relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6 shadow-xl sm:p-7"
     >
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="q-kicker">Consistency</p>
-          <h2 id="weekly-activity-title" className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
-            Your weekly rhythm
-          </h2>
-        </div>
-        <div className="flex items-center gap-5 text-right">
+      <div>
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="font-mono text-xl font-semibold tabular-nums text-[var(--text-primary)]">
-              {totalXp.toLocaleString()}
-            </p>
-            <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-muted)]">XP this week</p>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
+                <Calendar size={11} className="text-[var(--accent-strong)]" />
+                Consistency Telemetry
+              </span>
+            </div>
+            <h2
+              id="weekly-activity-title"
+              className="mt-1.5 text-xl font-bold tracking-tight text-[var(--text-primary)]"
+            >
+              Weekly Learning Velocity
+            </h2>
           </div>
-          <div className="hidden border-l border-[var(--border-subtle)] pl-5 sm:block">
-            <p className="font-mono text-xl font-semibold tabular-nums text-[var(--text-primary)]">
-              {completedTasks.toLocaleString()}
-            </p>
-            <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-muted)]">Tasks completed</p>
-          </div>
-        </div>
-      </div>
 
-      {activity.length === 0 || activeDays === 0 ? (
-        <div className="mt-5 flex min-h-32 flex-col items-center justify-center rounded-lg border border-dashed border-[var(--border-default)] bg-[var(--surface-elevated)] px-4 py-6 text-center">
-          <p className="text-sm font-semibold text-[var(--text-primary)]">A fresh week starts here</p>
-          <p className="mt-1 max-w-xs text-xs leading-relaxed text-[var(--text-muted)]">
-            Your daily XP and learning consistency will show up as you practice.
-          </p>
-        </div>
-      ) : (
-        <div className="mt-5" role="group" aria-label="Daily XP for the week">
-          <div className="grid grid-cols-7 gap-2 sm:gap-3">
-            {activity.map((item) => {
-              const height = item.xp > 0 ? Math.max(8, (item.xp / peakXp) * 100) : 3;
-              const date = new Date(`${item.day}T00:00:00Z`);
-              const dayLabel = Number.isNaN(date.getTime()) ? item.day : weekday.format(date);
-              return (
-                <div key={item.day} className="flex min-w-0 flex-col items-center gap-2">
-                  <div className="flex h-24 w-full items-end rounded-md border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-1.5 sm:h-28">
-                    <div
-                      role="progressbar"
-                      aria-label={`${item.day}: ${item.xp} XP`}
-                      aria-valuenow={item.xp}
-                      aria-valuemin={0}
-                      aria-valuemax={peakXp}
-                      title={`${item.xp.toLocaleString()} XP`}
-                      className={`w-full rounded-sm transition-[height] duration-300 motion-reduce:transition-none ${
-                        item.xp > 0 ? "bg-[var(--accent)]" : "bg-[var(--border-default)]"
-                      }`}
-                      style={{ height: `${height}%` }}
-                    />
-                  </div>
-                  <span className="max-w-full truncate text-[10px] font-medium text-[var(--text-muted)]">
-                    {dayLabel}
-                  </span>
-                </div>
-              );
-            })}
+          <div className="flex items-center gap-4 text-right">
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-3 py-1.5">
+              <p className="font-mono text-base font-black tabular-nums text-[var(--accent-strong)] sm:text-lg">
+                {totalXp.toLocaleString()}
+              </p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                Weekly XP
+              </p>
+            </div>
+            <div className="hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-3 py-1.5 sm:block">
+              <p className="font-mono text-base font-black tabular-nums text-[var(--text-primary)] sm:text-lg">
+                {completedTasks.toLocaleString()}
+              </p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                Problems Solved
+              </p>
+            </div>
           </div>
-          <p className="mt-4 border-t border-[var(--border-subtle)] pt-3 text-xs text-[var(--text-muted)]">
-            <span className="font-semibold text-[var(--text-primary)]">{activeDays}</span> active {activeDays === 1 ? "day" : "days"} from {activity.length} recorded
-          </p>
         </div>
-      )}
-      <p className="mt-4 border-t border-[var(--border-subtle)] pt-3 text-xs text-[var(--text-muted)] sm:hidden">
-        <span className="font-semibold text-[var(--text-primary)]">{completedTasks.toLocaleString()}</span> practice tasks completed
-      </p>
+
+        {activity.length === 0 || activeDays === 0 ? (
+          <div className="mt-6 flex min-h-36 flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--surface-elevated)] px-4 py-8 text-center">
+            <Flame className="h-8 w-8 text-[var(--text-muted)]" />
+            <p className="mt-2 text-sm font-bold text-[var(--text-primary)]">
+              A fresh week begins here
+            </p>
+            <p className="mt-1 max-w-xs text-xs leading-relaxed text-[var(--text-muted)]">
+              Solve problems or duel in the Battle Arena today to record your first XP streak.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-6" role="group" aria-label="Daily XP for the week">
+            <div className="grid grid-cols-7 gap-2 sm:gap-3">
+              {activity.map((item) => {
+                const height =
+                  item.xp > 0 ? Math.max(10, (item.xp / peakXp) * 100) : 4;
+                const date = new Date(`${item.day}T00:00:00Z`);
+                const dayLabel = Number.isNaN(date.getTime())
+                  ? item.day
+                  : weekday.format(date);
+                return (
+                  <div
+                    key={item.day}
+                    className="flex min-w-0 flex-col items-center gap-2"
+                  >
+                    <div className="flex h-28 w-full items-end rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-1.5 sm:h-32">
+                      <div
+                        role="progressbar"
+                        aria-label={`${item.day}: ${item.xp} XP`}
+                        aria-valuenow={item.xp}
+                        aria-valuemin={0}
+                        aria-valuemax={peakXp}
+                        title={`${item.xp.toLocaleString()} XP`}
+                        className={`w-full rounded-lg transition-all duration-300 ${
+                          item.xp > 0
+                            ? "bg-[var(--accent)] shadow-[0_0_10px_rgba(216,255,62,0.35)]"
+                            : "bg-[var(--surface-subtle)]"
+                        }`}
+                        style={{ height: `${height}%` }}
+                      />
+                    </div>
+                    <span className="max-w-full truncate font-mono text-[10px] font-bold text-[var(--text-muted)]">
+                      {dayLabel}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-5 flex items-center justify-between border-t border-[var(--border-subtle)] pt-3 text-xs text-[var(--text-muted)]">
+              <span>
+                <strong className="font-bold text-[var(--text-primary)]">
+                  {activeDays}
+                </strong>{" "}
+                active days out of {activity.length} recorded
+              </span>
+              <span className="font-mono font-bold text-[var(--accent-strong)]">
+                Peak: {peakXp.toLocaleString()} XP/day
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
     </section>
   );
 }
 
-function DashboardSectionError({ title, onRetry }: { title: string; onRetry: () => void | Promise<void> }) {
+function DashboardSectionError({
+  title,
+  onRetry,
+}: {
+  title: string;
+  onRetry: () => void | Promise<void>;
+}) {
   return (
-    <section role="alert" className="flex min-h-48 flex-col justify-center rounded-2xl border border-rose-400/20 bg-rose-500/[0.06] p-6">
-      <h2 className="text-lg font-semibold text-rose-200">{title}</h2>
-      <p className="mt-2 text-sm text-rose-200/70">Live data could not be loaded.</p>
+    <section
+      role="alert"
+      className="flex min-h-52 flex-col items-center justify-center rounded-3xl border border-rose-400/25 bg-rose-500/[0.06] p-8 text-center"
+    >
+      <h2 className="text-xl font-bold text-rose-200">{title}</h2>
+      <p className="mt-2 text-sm text-rose-200/70">
+        Live data could not be retrieved from the server.
+      </p>
       <button
         type="button"
         onClick={() => void onRetry()}
-        className="mt-4 min-h-10 w-fit rounded-lg border border-rose-300/30 px-3 text-xs font-semibold text-rose-100 transition-colors hover:bg-rose-400/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
+        className="mt-5 min-h-11 rounded-xl border border-rose-300/30 bg-rose-500/20 px-5 text-xs font-bold text-rose-100 transition hover:bg-rose-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
       >
-        Retry
+        Retry Connection
       </button>
     </section>
   );

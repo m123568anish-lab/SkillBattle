@@ -292,7 +292,7 @@ def test_full_preflight_accepts_legacy_index_without_writing_database(tmp_path: 
             connection.execute(
                 text(
                     "INSERT INTO alembic_version (version_num) "
-                    "VALUES ('d1f5a8e7c2b4')"
+                    "VALUES ('f9a1b2c3d4e5')"
                 )
             )
             connection.execute(text("DROP INDEX ix_audit_logs_organization_id"))

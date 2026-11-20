@@ -1,0 +1,120 @@
+# Qubira staging-only Render blueprint.
+# Production remains defined separately in render.yaml and is not referenced here.
+# All sync:false values must be entered in Render from the Neon qubira-staging branch.
+services:
+  - type: web
+    name: qubira-staging-api
+    runtime: python
+    rootDir: backend
+    region: ohio
+    buildCommand: python --version && pip install --upgrade pip setuptools wheel && pip install --no-cache-dir -r requirements.txt
+    startCommand: exec uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: false
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: ENVIRONMENT
+        value: staging
+      - key: DEBUG
+        value: "false"
+      - key: DATABASE_READINESS_MODE
+        value: legacy
+      - key: SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: ASYNC_DATABASE_URL
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: NEON_AUTH_BASE_URL
+        sync: false
+      - key: NEON_AUTH_JWKS_URL
+        sync: false
+      - key: PLATFORM_ADMIN_EMAIL
+        sync: false
+      - key: PLATFORM_ADMIN_PASSWORD
+        sync: false
+      - key: PLATFORM_ADMIN_USERNAME
+        sync: false
+      - key: AI_PROVIDER
+        value: ollama
+      - key: OLLAMA_URL
+        sync: false
+      - key: OLLAMA_MODEL
+        value: llama3.1:8b
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: JSEARCH_API_KEY
+        sync: false
+      - key: JSEARCH_COUNTRIES
+        value: us,in,gb,ca,au,de
+      # Deliberately blank: staging must not send real email.
+      - key: RESEND_API_KEY
+        value: ""
+      - key: SMTP_HOST
+        value: ""
+      - key: SMTP_USERNAME
+        value: ""
+      - key: SMTP_PASSWORD
+        value: ""
+      - key: EMAIL_FROM
+        value: Qubira Staging <no-reply@staging.invalid>
+      - key: SMTP_FROM
+        value: Qubira Staging <no-reply@staging.invalid>
+
+  - type: worker
+    name: qubira-placement-worker-staging
+    runtime: python
+    rootDir: backend
+    region: ohio
+    buildCommand: python --version && pip install --upgrade pip setuptools wheel && pip install --no-cache-dir -r requirements.txt
+    startCommand: python -m app.workers.placement_job_worker
+    autoDeploy: false
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: ENVIRONMENT
+        value: staging
+      - key: DEBUG
+        value: "false"
+      - key: DATABASE_READINESS_MODE
+        value: legacy
+      - key: SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: ASYNC_DATABASE_URL
+        sync: false
+      - key: AI_PROVIDER
+        value: ollama
+      - key: OLLAMA_URL
+        sync: false
+      - key: OLLAMA_MODEL
+        value: llama3.1:8b
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: PLACEMENT_WORKER_NAME
+        value: qubira-placement-worker-staging
+      - key: PLACEMENT_JOB_POLL_SECONDS
+        value: "5"
+      - key: PLACEMENT_JOB_BATCH_SIZE
+        value: "10"
+      # Deliberately blank: staging must not send real email.
+      - key: RESEND_API_KEY
+        value: ""
+      - key: SMTP_HOST
+        value: ""
+      - key: SMTP_USERNAME
+        value: ""
+      - key: SMTP_PASSWORD
+        value: ""
+      - key: EMAIL_FROM
+        value: Qubira Staging <no-reply@staging.invalid>
+      - key: SMTP_FROM
+        value: Qubira Staging <no-reply@staging.invalid>
