@@ -76,7 +76,10 @@ async def update_user(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(get_current_admin),
 ):
-    updated = await admin_service.update_user(db, user_id, payload)
+    try:
+        updated = await admin_service.update_user(db, user_id, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     if not updated:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

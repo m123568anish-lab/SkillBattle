@@ -31,6 +31,11 @@ DEFAULT_SETTINGS = BattleSettings(
     allow_custom_battles=True,
 )
 
+ADMIN_ASSIGNABLE_ROLES = {
+    "user", "student", "mentor", "admin", "college_admin", "company_admin",
+    "placement_officer", "faculty", "trainer", "recruiter", "hiring_manager",
+}
+
 
 class AdminService:
 
@@ -106,7 +111,10 @@ class AdminService:
             return None
 
         if payload.role is not None:
-            user.role = payload.role
+            normalized_role = payload.role.strip().lower()
+            if normalized_role not in ADMIN_ASSIGNABLE_ROLES:
+                raise ValueError("Unsupported administrator-assigned role.")
+            user.role = normalized_role
         if payload.is_active is not None:
             user.is_active = payload.is_active
         if payload.full_name is not None:

@@ -61,10 +61,9 @@ export default function AdminVerificationPanel() {
       { label: "Authentication", ok: normalizeStatus(health.api) === "healthy" },
       { label: "Database", ok: normalizeStatus(health.database) === "healthy" },
       { label: "API health", ok: normalizeStatus(health.api) === "healthy" },
-      { label: "Platform admin access", ok: true },
-      { label: "AI providers", ok: Object.values(health.ai_providers).some(Boolean) || Object.keys(health.ai_providers).length > 0 },
+      { label: "Configured AI providers", ok: Object.values(health.ai_providers).some(Boolean) },
       { label: "WebSocket manager", ok: normalizeStatus(health.websocket) === "initialized" },
-      { label: "Notification queue", ok: normalizeStatus(health.notification_queue) !== "not_configured" || true },
+      { label: "Notification queue", ok: normalizeStatus(health.notification_queue) !== "not_configured" },
     ];
   }, [health]);
 
