@@ -109,9 +109,12 @@ def _apply_schema_compatibility_rules(
     differences: list[dict[str, object]],
 ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     """Allow only the verified pre-composite audit index left by legacy installs."""
+    def matches(candidate: dict[str, object], expected: dict[str, object]) -> bool:
+        return all(candidate.get(key) == value for key, value in expected.items())
+
     if (
-        differences.count(_LEGACY_AUDIT_ORGANIZATION_INDEX) != 1
-        or differences.count(_MODEL_AUDIT_ORGANIZATION_INDEX) != 1
+        sum(matches(item, _LEGACY_AUDIT_ORGANIZATION_INDEX) for item in differences) != 1
+        or sum(matches(item, _MODEL_AUDIT_ORGANIZATION_INDEX) for item in differences) != 1
     ):
         return differences, []
 
@@ -187,10 +190,8 @@ def _apply_schema_compatibility_rules(
         [
             difference
             for difference in differences
-            if difference not in (
-                _LEGACY_AUDIT_ORGANIZATION_INDEX,
-                _MODEL_AUDIT_ORGANIZATION_INDEX,
-            )
+            if not matches(difference, _LEGACY_AUDIT_ORGANIZATION_INDEX)
+            and not matches(difference, _MODEL_AUDIT_ORGANIZATION_INDEX)
         ],
         [accepted],
     )
@@ -302,35 +303,67 @@ def _format_schema_difference(difference: tuple) -> dict[str, object]:
     result: dict[str, object] = {"operation": operation}
 
     if operation.startswith("modify_") and len(difference) >= 7:
+        schema = difference[1]
+        table = difference[2]
+        column = difference[3]
         result.update(
             {
-                "schema": difference[1],
-                "table": difference[2],
-                "column": difference[3],
+                "schema": schema,
+                "table": table,
+                "column": column,
+                "object_id": _schema_object_id(schema, table, column),
             }
         )
         current = difference[5]
         desired = difference[6]
         if operation == "modify_type":
-            result.update({"current": str(current), "desired": str(desired)})
-        elif operation == "modify_nullable":
-            result.update({"current": current, "desired": desired})
-        elif operation == "modify_default":
             result.update(
                 {
-                    "current": _render_default(current),
-                    "desired": _render_default(desired),
+                    "current": str(current),
+                    "desired": str(desired),
+                    "observed": str(current),
+                    "expected": str(desired),
+                }
+            )
+        elif operation == "modify_nullable":
+            result.update(
+                {
+                    "current": current,
+                    "desired": desired,
+                    "observed": current,
+                    "expected": desired,
+                }
+            )
+        elif operation == "modify_default":
+            current_default = _render_default(current)
+            desired_default = _render_default(desired)
+            result.update(
+                {
+                    "current": current_default,
+                    "desired": desired_default,
+                    "observed": current_default,
+                    "expected": desired_default,
                 }
             )
         return result
 
     if operation in {"add_column", "remove_column"} and len(difference) >= 4:
         column = difference[3]
+        schema = difference[1]
+        table = difference[2]
+        definition = _schema_object_definition(column)
         result.update(
             {
-                "schema": difference[1],
-                "table": difference[2],
+                "schema": schema,
+                "table": table,
                 "column": getattr(column, "name", None),
+                "object_id": _schema_object_id(
+                    schema,
+                    table,
+                    getattr(column, "name", None),
+                ),
+                "expected": definition if operation == "add_column" else None,
+                "observed": definition if operation == "remove_column" else None,
             }
         )
         return result
@@ -338,7 +371,10 @@ def _format_schema_difference(difference: tuple) -> dict[str, object]:
     target = difference[1] if len(difference) > 1 else None
     table = getattr(target, "table", None)
     table_name = getattr(table, "name", None) or getattr(target, "name", None)
+    schema = getattr(table, "schema", None) if table is not None else None
+    definition = _schema_object_definition(target)
     result["table"] = table_name
+    result["schema"] = schema
     name = getattr(target, "name", None)
     if name:
         result["name"] = name
@@ -352,7 +388,67 @@ def _format_schema_difference(difference: tuple) -> dict[str, object]:
         ]
     if len(difference) > 2 and isinstance(difference[2], str):
         result.setdefault("table", difference[2])
+    result["object_id"] = _schema_object_id(schema, table_name, name)
+    result["expected"] = definition if operation.startswith("add_") else None
+    result["observed"] = definition if operation.startswith("remove_") else None
     return result
+
+
+def _schema_object_id(
+    schema: object,
+    table: object,
+    name: object,
+) -> str:
+    parts = [str(part) for part in (schema, table, name) if part not in (None, "")]
+    return ".".join(parts) or "unknown"
+
+
+def _schema_object_definition(value: object) -> dict[str, object] | None:
+    """Return a stable, non-secret representation of an Alembic object."""
+    if value is None:
+        return None
+    table = getattr(value, "table", None)
+    definition: dict[str, object] = {}
+    name = getattr(value, "name", None)
+    if name:
+        definition["name"] = str(name)
+    if table is not None:
+        definition["schema"] = getattr(table, "schema", None)
+        definition["table"] = getattr(table, "name", None)
+    columns = getattr(value, "columns", None)
+    if columns is not None:
+        definition["columns"] = [
+            {
+                "name": column.name,
+                "type": str(column.type),
+                "nullable": bool(column.nullable),
+                "default": _render_default(column.server_default),
+            }
+            for column in columns
+        ]
+    elif hasattr(value, "type") and hasattr(value, "nullable"):
+        definition.update(
+            {
+                "type": str(value.type),
+                "nullable": bool(value.nullable),
+                "default": _render_default(value.server_default),
+            }
+        )
+    if hasattr(value, "unique"):
+        definition["unique"] = bool(value.unique)
+    expressions = getattr(value, "expressions", None)
+    if expressions:
+        definition["expressions"] = [str(expression) for expression in expressions]
+    elements = getattr(value, "elements", None)
+    if elements is not None:
+        definition["references"] = [
+            {
+                "column": element.parent.name,
+                "target": element.target_fullname,
+            }
+            for element in elements
+        ]
+    return definition or {"type": type(value).__name__}
 
 
 def _render_default(value: object) -> str | None:

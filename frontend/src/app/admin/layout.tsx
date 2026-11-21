@@ -3,7 +3,7 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Shield, Users, Activity, Settings, LayoutDashboard, LogOut, Code, Server, Database, Globe } from "lucide-react";
+import { Shield, ShieldCheck, Users, Activity, Settings, LayoutDashboard, LogOut, Code, Server, Database, Globe } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useAuthStore } from "@/store/authStore";
 import QubiraLogo, { QubiraIcon } from "@/components/brand/QubiraLogo";
@@ -116,6 +116,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const navItems = [
     { title: "Overview", href: "/admin", icon: LayoutDashboard },
     { title: "SEO & Growth", href: "/admin?tab=seo", icon: Globe },
+    { title: "Security Trust Center", href: "/admin?tab=security", icon: ShieldCheck },
     { title: "Daily Challenge", href: "/admin?tab=challenge", icon: Code },
     { title: "User Management", href: "/admin?tab=users", icon: Users },
     { title: "System Logs", href: "/admin?tab=logs", icon: Activity },

@@ -50,9 +50,12 @@ _BLOCKED_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"\.\./", re.IGNORECASE),
 ]
 
-# Endpoints that accept binary/multipart bodies — skip JSON body inspection.
+# Endpoints that accept binary/multipart bodies or user source code execution — skip JSON body inspection.
 _SKIP_PREFIXES: tuple[str, ...] = (
     "/api/v1/uploads",
+    "/api/v1/compiler",
+    "/api/battle",
+    "/api/v1/battle",
     "/docs",
     "/redoc",
     "/openapi",

@@ -321,6 +321,8 @@ from fastapi import File, UploadFile
 import os
 import time
 
+from app.core.security.file_upload import validate_image_file
+
 MAX_AVATAR_SIZE = 5 * 1024 * 1024  # 5 MB
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
@@ -332,20 +334,15 @@ async def upload_avatar(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> ProfileResponse:
-    """Upload a profile picture from device with validation."""
+    """Upload a profile picture from device with magic bytes and size validation."""
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file selected.")
 
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in ALLOWED_EXTENSIONS or (file.content_type and file.content_type.lower() not in ALLOWED_MIME_TYPES):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid image type. Allowed formats: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
-        )
-
     content = await file.read()
-    if len(content) > MAX_AVATAR_SIZE:
-        raise HTTPException(status_code=400, detail="File size exceeds maximum allowed limit of 5 MB.")
+    # Validate magic bytes, extension and file size
+    validate_image_file(content, file.filename, max_size=MAX_AVATAR_SIZE)
+
+    ext = os.path.splitext(file.filename)[1].lower()
 
     os.makedirs("uploads/avatars", exist_ok=True)
     filename = f"avatar_{current_user.id}_{int(time.time())}{ext}"

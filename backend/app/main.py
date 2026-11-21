@@ -23,6 +23,7 @@ from app.core.logging.middleware import (
 )
 from app.core.monitoring.prometheus import router as metrics_router
 from app.core.monitoring.health import router as health_router
+from app.core.security.csrf import CSRFMiddleware
 from app.core.security.headers import (
     SecurityHeadersMiddleware,
 )
@@ -140,6 +141,7 @@ app.add_middleware(RequestIDMiddleware)
 app.add_middleware(TimingMiddleware)
 app.add_middleware(MaintenanceMiddleware)
 app.add_middleware(RateLimitMiddleware)
+app.add_middleware(CSRFMiddleware)
 app.add_middleware(XSSGuardMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 configure_cors(app)

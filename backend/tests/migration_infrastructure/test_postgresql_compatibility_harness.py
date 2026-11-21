@@ -63,7 +63,7 @@ def _write_profile(tmp_path, *, synthetic_data_only: bool = True):
         "review_evidence_id": "unit-test-review",
         "synthetic_data_only": synthetic_data_only,
         "supported_starting_revision": "c9b0f2d5a713",
-        "target_revision": "d1f5a8e7c2b4",
+        "target_revision": "f9a1b2c3d4e5",
         "server_version": "18.6",
         "schema_name": "public",
         "source_manifest": source_manifest,
@@ -85,7 +85,7 @@ def test_profile_requires_external_reviewed_digest_and_synthetic_fixture(tmp_pat
 
     assert profile.profile_id == "unit-test-profile"
     assert profile.supported_starting_revision == "c9b0f2d5a713"
-    assert profile.target_revision == "d1f5a8e7c2b4"
+    assert profile.target_revision == "f9a1b2c3d4e5"
     assert profile.preservation_tables == ("synthetic_accounts",)
     with pytest.raises(CompatibilityHarnessError, match="operator-approved digest"):
         load_verified_profile(path, expected_profile_sha256="0" * 64)

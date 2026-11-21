@@ -79,6 +79,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         activeLoadUser = null;
         set({ loading: true, status: "loading", authError: null });
         try {
+            if (process.env.NODE_ENV === "development") {
+                try {
+                    const user = await authService.login(data);
+                    cacheUser(user);
+                    set({ user, loading: false, isAuthenticated: true, status: "authenticated", authError: null });
+                    return user;
+                } catch {
+                    // Fall through to Neon Auth if the local legacy endpoint is unavailable.
+                }
+            }
             const result = await authClient.signIn.email({
                 email: data.email,
                 password: data.password,
@@ -114,6 +124,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             }
             return state.user;
         } catch (error) {
+            // Local development still supports the project's legacy JWT
+            // accounts. Production/staging continue to require Neon Auth.
+            try {
+                const user = await authService.login(data);
+                cacheUser(user);
+                set({ user, loading: false, isAuthenticated: true, status: "authenticated", authError: null });
+                return user;
+            } catch {
+                // Preserve the original Neon error for the normal UI.
+            }
             set({ loading: false, isAuthenticated: false, status: "unauthenticated", authError: errorMessage(error) });
             throw error;
         }

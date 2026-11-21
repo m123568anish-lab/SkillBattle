@@ -21,7 +21,7 @@ from app.database.migration_infrastructure.schema_manifest import (
     manifest_fingerprint,
 )
 
-CURRENT_TARGET_REVISION = "d1f5a8e7c2b4"
+CURRENT_TARGET_REVISION = "f9a1b2c3d4e5"
 
 
 class CompatibilityHarnessError(RuntimeError):

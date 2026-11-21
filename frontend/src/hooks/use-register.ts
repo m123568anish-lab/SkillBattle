@@ -29,6 +29,11 @@ export function useRegister() {
             }
 
             if (sessionResult.data?.user) {
+                // Neon Auth owns identity, while Qubira's backend owns the
+                // application profile and role. Resolve /auth/me once while
+                // the Neon bearer session is active so the local users row is
+                // created before signing out of the post-registration session.
+                await useAuthStore.getState().loadUser(`neon:${sessionResult.data.user.id}`);
                 await useAuthStore.getState().logout();
             } else {
                 useAuthStore.getState().clearSession();

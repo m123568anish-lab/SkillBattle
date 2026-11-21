@@ -22,6 +22,7 @@ from fastapi import UploadFile
 from starlette import status
 
 from app.core.config import settings
+from app.core.security.file_upload import validate_document_file
 
 
 class FileStorage:
@@ -73,32 +74,45 @@ class FileStorage:
 
         destination = self.upload_dir / filename
 
-        size = 0
+        # Magic byte validation on initial chunk
+        first_chunk = await file.read(1024)
+        if not first_chunk:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Uploaded file is empty.",
+            )
 
-        sha256 = hashlib.sha256()
+        if extension == ".pdf" and not first_chunk.startswith(b"%PDF-"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid PDF file: corrupted or invalid file signature.",
+            )
+        elif extension == ".docx" and not first_chunk.startswith(b"PK\x03\x04"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid DOCX file: corrupted or invalid file signature.",
+            )
+
+        size = len(first_chunk)
+        sha256 = hashlib.sha256(first_chunk)
 
         with destination.open("wb") as buffer:
+            buffer.write(first_chunk)
 
             while True:
-
                 chunk = await file.read(1024 * 1024)
-
                 if not chunk:
                     break
 
                 size += len(chunk)
-
                 if size > settings.MAX_UPLOAD_SIZE:
-
                     destination.unlink(missing_ok=True)
-
                     raise HTTPException(
                         status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                         detail="File exceeds maximum upload size.",
                     )
 
                 sha256.update(chunk)
-
                 buffer.write(chunk)
 
         await file.close()

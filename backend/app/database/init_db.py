@@ -241,11 +241,39 @@ def ensure_database_compatibility() -> None:
                 report = build_preflight_report(engine)
 
             if report.get("eligible_for_migration") is not True:
+                differences = report.get("schema_differences", [])
+                difference_summary = []
+                if isinstance(differences, list):
+                    for difference in differences[:20]:
+                        if not isinstance(difference, dict):
+                            continue
+                        operation = difference.get("operation", "unknown")
+                        schema = difference.get("schema")
+                        table = difference.get("table")
+                        column = difference.get("column")
+                        name = difference.get("name")
+                        target = column or name or table or "unknown"
+                        location = ".".join(
+                            str(part)
+                            for part in (schema, table)
+                            if part
+                        )
+                        difference_summary.append(
+                            f"{operation}:{location or table or 'unknown'}:{target}"
+                        )
+                if len(differences) > 20:
+                    difference_summary.append(
+                        f"...and {len(differences) - 20} more"
+                    )
                 raise RuntimeError(
                     "PostgreSQL schema preflight failed "
                     f"(revision={report.get('current_revision')!r}, "
+                    f"repository_head={report.get('repository_head')!r}, "
                     f"schema_differences={report.get('schema_difference_count', 0)}, "
-                    f"state_errors={report.get('state_errors', [])}). "
+                    f"state_errors={report.get('state_errors', [])}, "
+                    f"missing_applied_tables={report.get('missing_applied_tables', [])}, "
+                    f"pending_table_conflicts={report.get('pending_table_conflicts', [])}, "
+                    f"difference_summary={difference_summary}). "
                     "Automatic schema creation and repair are disabled; "
                     "use the authorized migration coordinator."
                 )
@@ -523,6 +551,25 @@ def _repair_battle_tables() -> None:
         if "questions" in tables:
             existing = {c["name"] for c in inspector.get_columns("questions")}
             cols = {
+                # Placement/admin inventory fields used by the current
+                # question-management and placement-intelligence endpoints.
+                "source_url": "VARCHAR(500) NOT NULL DEFAULT ''",
+                "source_classification": "VARCHAR(60) NOT NULL DEFAULT 'existing-inventory'",
+                "company": "VARCHAR(120) NOT NULL DEFAULT ''",
+                "role": "VARCHAR(120) NOT NULL DEFAULT ''",
+                "assessment_round": "VARCHAR(80) NOT NULL DEFAULT ''",
+                "question_kind": "VARCHAR(40) NOT NULL DEFAULT 'mcq'",
+                "topic": "VARCHAR(120) NOT NULL DEFAULT ''",
+                "subtopic": "VARCHAR(120) NOT NULL DEFAULT ''",
+                "original_publish_date": "VARCHAR(30)",
+                "license": "VARCHAR(300) NOT NULL DEFAULT ''",
+                "verification_status": "VARCHAR(40) NOT NULL DEFAULT 'approved'",
+                "approval_status": "VARCHAR(40) NOT NULL DEFAULT 'approved'",
+                "lifecycle_state": "VARCHAR(40) NOT NULL DEFAULT 'PUBLISHED'",
+                "duplicate_of_id": "INTEGER",
+                "failure_reasons": "JSON",
+                "canonical_hash": "VARCHAR(128) NOT NULL DEFAULT ''",
+                "reuse_permission": "VARCHAR(220) NOT NULL DEFAULT ''",
                 "question_type": "VARCHAR(30) DEFAULT 'coding'",
                 "options": "JSON",
                 "examples": "JSON",

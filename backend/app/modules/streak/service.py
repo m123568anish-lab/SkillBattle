@@ -46,7 +46,7 @@ class StreakService:
         stmt = select(Streak).where(Streak.user_id == user_id_str)
         streak = (await db.execute(stmt)).scalar_one_or_none()
 
-        today = datetime.utcnow().date()
+        today = date.today()
         yesterday = today - timedelta(days=1)
 
         if not streak:
@@ -99,7 +99,7 @@ class StreakService:
         Returns (current_streak, best_streak).
         """
         user_id_str = str(user_id)
-        target_date = activity_date or datetime.utcnow().date()
+        target_date = activity_date or date.today()
         now = datetime.utcnow()
 
         await db.execute(
@@ -191,7 +191,7 @@ class StreakService:
     ) -> list[dict[str, Any]]:
         """Retrieve daily activity records for consistency heatmaps."""
         user_id_str = str(user_id)
-        since_date = datetime.utcnow().date() - timedelta(days=days)
+        since_date = date.today() - timedelta(days=days)
         stmt = (
             select(UserDailyActivity)
             .where(
@@ -258,7 +258,7 @@ class StreakService:
             best_streak = max(best_streak, current_run)
             prev_date = d
 
-        today = datetime.utcnow().date()
+        today = date.today()
         yesterday = today - timedelta(days=1)
         last_date = unique_dates[-1]
 
@@ -315,7 +315,7 @@ class StreakService:
     def update_streak_sync(self, db: Session, current_user: User) -> Streak:
         streak = self.get_streak_sync(db, current_user)
         now = datetime.utcnow()
-        today = now.date()
+        today = date.today()
         yesterday = today - timedelta(days=1)
         last_date = streak.last_activity_date or streak.last_active.date()
 

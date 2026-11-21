@@ -76,6 +76,11 @@ export function AuthProvider({
                     useAuthStore.getState().updateUserPartial({ avatar_url: oauthImage });
                 }
             });
+        } else if (typeof window !== "undefined" && localStorage.getItem("access_token")) {
+            // A legacy Qubira JWT is a valid application session even when
+            // Neon Auth has no browser session (for example, platform admins
+            // bootstrapped through the backend).
+            void loadUser("legacy");
         } else {
             useAuthStore.getState().clearSession();
         }

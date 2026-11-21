@@ -183,6 +183,7 @@ def test_staging_migration_preflight_is_read_only_and_reports_legacy_counts() ->
         branch_id="br-qubira-staging-test",
         database_name=_POSTGRESQL_TEST_URL_OBJ.database or "",
         database_role=_POSTGRESQL_TEST_URL_OBJ.username or "",
+        expected_current_revision="d1f5a8e7c2b4",
         target_revision=PLACEMENT_MIGRATION_REVISION,
         neon_api_key="not-used-by-preflight-test",
         database_url=_POSTGRESQL_TEST_URL_OBJ,

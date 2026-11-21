@@ -399,8 +399,11 @@ def test_schema_difference_formatter_preserves_current_and_desired_values():
         "schema": None,
         "table": "sample",
         "column": "enabled",
+        "object_id": "sample.enabled",
         "current": True,
         "desired": False,
+        "observed": True,
+        "expected": False,
     }
     assert column_type["current"] == "VARCHAR(36)"
     assert column_type["desired"] == "INTEGER"

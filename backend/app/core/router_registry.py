@@ -25,6 +25,7 @@ from app.modules.streak.router import router as streak_router
 from app.modules.tournament.router import router as tournament_router
 from app.modules.xp.router import router as xp_router
 from app.modules.admin.router import router as admin_router
+from app.modules.admin.security_router import router as security_router
 from app.modules.seo.router import router as seo_router
 from app.modules.placement.router import router as placement_router
 from app.modules.college.router import router as college_router
@@ -43,6 +44,7 @@ ROUTERS: list[tuple[str, APIRouter]] = [
     ("profile", profile_router),
     ("dashboard", dashboard_router_module),
     ("admin", admin_router),
+    ("admin_security", security_router),
     ("admin_seo", seo_router),
     ("placement", placement_router),
     ("college", college_router),

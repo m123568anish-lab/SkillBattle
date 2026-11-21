@@ -1,10 +1,8 @@
 """
 =========================================================
 
-SkillBattle
-
+SkillBattle / Qubira
 Security Headers Middleware
-
 Production Version
 
 =========================================================
@@ -22,14 +20,17 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         request,
         call_next,
     ):
-
         response = await call_next(request)
 
         # Prevent MIME sniffing
         response.headers["X-Content-Type-Options"] = "nosniff"
 
-        # Prevent clickjacking
+        # Prevent clickjacking / framing
         response.headers["X-Frame-Options"] = "DENY"
+
+        # Cross-Origin Opener & Resource Isolation
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        response.headers["Cross-Origin-Resource-Policy"] = "same-site"
 
         # XSS Protection (legacy browsers)
         response.headers["X-XSS-Protection"] = "1; mode=block"
@@ -42,12 +43,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "camera=(), microphone=(), geolocation=()"
         )
 
-        # HSTS (enable only behind HTTPS)
+        # Strict-Transport-Security (HSTS)
         response.headers["Strict-Transport-Security"] = (
-            "max-age=31536000; includeSubDomains"
+            "max-age=31536000; includeSubDomains; preload"
         )
 
-        # Basic CSP
+        # Content-Security-Policy
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "img-src 'self' data: https:; "

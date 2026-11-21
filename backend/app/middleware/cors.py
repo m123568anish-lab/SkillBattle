@@ -20,6 +20,8 @@ _DEVELOPMENT_ORIGINS: list[str] = [
 ]
 
 _PRODUCTION_ORIGINS: list[str] = [
+    "https://qubira.in",
+    "https://www.qubira.in",
     "https://skill-battle-frontend.vercel.app",
     "https://skill-battle-one.vercel.app",
     "https://skill-battle-z2fa.vercel.app",
@@ -37,7 +39,7 @@ def configure_cors(app) -> None:
     environment = (settings.ENVIRONMENT or "development").strip().lower()
     # Preview and custom domains must be explicitly supplied through
     # ALLOWED_ORIGINS. A hosting-provider wildcard would authorize tenants
-    # that do not belong to SkillBattle.
+    # that do not belong to Qubira.
     builtin_origins = _PRODUCTION_ORIGINS if environment == "production" else _DEVELOPMENT_ORIGINS
     origins = sorted(set([*builtin_origins, *env_origins]))
     logger.info("CORS allow_origins configured: %s", origins)
@@ -47,7 +49,14 @@ def configure_cors(app) -> None:
         allow_origins=origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Accept", "Authorization", "Content-Type", "X-Request-ID"],
-        expose_headers=["X-Request-ID"],
+        allow_headers=[
+            "Accept",
+            "Authorization",
+            "Content-Type",
+            "X-Request-ID",
+            "X-CSRF-Token",
+            "X-Client-Version",
+        ],
+        expose_headers=["X-Request-ID", "Retry-After"],
         max_age=600,
     )

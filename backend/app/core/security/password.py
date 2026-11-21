@@ -2,12 +2,14 @@
 =========================================================
 
 Password Manager
+Argon2 with Bcrypt fallback and automatic rehashing.
 
 =========================================================
 """
 
 from __future__ import annotations
 
+import asyncio
 from passlib.context import CryptContext
 
 # Ensure compatibility: some `bcrypt` builds lack a `__about__` object
@@ -20,20 +22,17 @@ try:
         ver = getattr(_bcrypt_mod, "__version__", None) or getattr(_bcrypt_mod, "__version_ex__", None) or "<unknown>"
         _bcrypt_mod.__about__ = types.SimpleNamespace(__version__=ver)
 except Exception:
-    # Best-effort only; if this fails, passlib will handle detection.
     pass
 
 
 class PasswordManager:
 
     def __init__(self):
-
+        # Primary algorithm is Argon2, with Bcrypt fallback for legacy hashes.
+        # Deprecated="auto" will flag bcrypt hashes as needing upgrade.
         self.context = CryptContext(
-
-            schemes=["argon2"],
-
+            schemes=["argon2", "bcrypt"],
             deprecated="auto",
-
         )
 
     # =====================================================
@@ -44,7 +43,6 @@ class PasswordManager:
         self,
         password: str,
     ) -> str:
-
         return self.context.hash(password)
 
     # =====================================================
@@ -56,20 +54,25 @@ class PasswordManager:
         password: str,
         hashed_password: str,
     ) -> bool:
-
+        if not hashed_password or not password:
+            return False
         return self.context.verify(
-
             password,
-
             hashed_password,
-
         )
+
+    # =====================================================
+    # Needs Rehash Check
+    # =====================================================
+
+    def needs_rehash(self, hashed_password: str) -> bool:
+        """Check if hash should be upgraded (e.g. legacy bcrypt to argon2)."""
+        if not hashed_password:
+            return True
+        return self.context.needs_update(hashed_password)
 
 
 password_manager = PasswordManager()
-
-
-import asyncio
 
 
 def hash_password(password: str) -> str:
@@ -78,6 +81,10 @@ def hash_password(password: str) -> str:
 
 def verify_password(password: str, hashed_password: str) -> bool:
     return password_manager.verify(password, hashed_password)
+
+
+def needs_rehash(hashed_password: str) -> bool:
+    return password_manager.needs_rehash(hashed_password)
 
 
 async def hash_password_async(password: str) -> str:

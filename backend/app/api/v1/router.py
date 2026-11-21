@@ -17,6 +17,7 @@ from app.modules.learning_engine.router import router as learning_router
 from app.modules.battle_coach.router import router as coach_router
 from app.modules.battle_coach.coach_chat_router import router as coach_chat_router
 from app.modules.admin.router import router as admin_router
+from app.modules.admin.security_router import router as security_router
 from app.modules.analytics.router import router as analytics_router
 from app.modules.career.router import router as career_router
 from app.modules.notification.router import router as notification_router
@@ -53,6 +54,7 @@ api_router.include_router(coach_chat_router)
 api_router.include_router(learning_router)
 api_router.include_router(mentor_router)
 api_router.include_router(admin_router)
+api_router.include_router(security_router)
 api_router.include_router(analytics_router)
 api_router.include_router(career_router)
 api_router.include_router(notification_router)

@@ -16,14 +16,13 @@ from app.bootstrap.dependency_check import (
     check_dependencies,
 )
 
-from app.core.admin_bootstrap import ensure_platform_admin
 from app.core.redis.client import (
     redis_manager,
 )
+from app.core.admin_bootstrap import ensure_platform_admin
 
 logger = logging.getLogger(__name__)
 
-# Backward-compatible re-export for older imports.
 __all__ = ["ensure_platform_admin", "startup"]
 
 
@@ -56,15 +55,6 @@ async def startup():
     except Exception as exc:
 
         logger.exception(exc)
-
-    # ----------------------------------------------------
-    # Platform Admin Bootstrap
-    # ----------------------------------------------------
-
-    try:
-        await ensure_platform_admin()
-    except Exception:
-        logger.exception("Platform admin bootstrap failed")
 
     # ----------------------------------------------------
     # Future Initializers

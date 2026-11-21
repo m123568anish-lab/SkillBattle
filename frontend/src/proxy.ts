@@ -7,6 +7,9 @@ export default function proxy(request: NextRequest) {
     publicRoutes: [
       "/",
       "/login",
+      // The admin page is a client shell. Its data and every mutation remain
+      // protected by FastAPI's bearer-token RBAC, including legacy JWT admins.
+      "/admin",
       "/register",
       "/sign-in",
       "/sign-up",

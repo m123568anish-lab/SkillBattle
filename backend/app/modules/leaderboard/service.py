@@ -10,7 +10,7 @@ Leaderboard Service
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .repository import (
@@ -32,7 +32,7 @@ class LeaderboardService:
         )
 
         leaderboard = []
-        today = datetime.utcnow().date()
+        today = date.today()
         yesterday = today - timedelta(days=1)
 
         for user, xp, streak, stats, solved, battles_count, wins, losses, draws in rows:

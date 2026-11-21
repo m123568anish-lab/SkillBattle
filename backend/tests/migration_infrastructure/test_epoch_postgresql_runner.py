@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 import time
 
@@ -45,77 +46,100 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def test_epoch_fresh_install_is_coordinated_and_readiness_is_read_only() -> None:
+def test_epoch_fresh_install_is_coordinated_and_readiness_is_read_only(monkeypatch) -> None:
     assert _POSTGRESQL_TEST_URL_OBJ is not None
-    engine = database_module.engine
-    assert engine.dialect.name == "postgresql"
-    with engine.connect() as connection:
-        assert int(connection.exec_driver_sql("SHOW server_version_num").scalar_one()) == 180006
-        assert not inspect(connection).get_table_names()
+    database_name = f"qubira_test_epoch_{uuid.uuid4().hex}"
+    admin_url = _POSTGRESQL_TEST_URL_OBJ.set(database="postgres")
+    admin_engine = create_engine(admin_url, poolclass=NullPool)
+    test_url = _POSTGRESQL_TEST_URL_OBJ.set(database=database_name)
+    with admin_engine.connect().execution_options(isolation_level="AUTOCOMMIT") as connection:
+        connection.execute(text(f'CREATE DATABASE "{database_name}"'))
 
-    assert run_migrations.run_migrations() == 0
+    engine = create_engine(test_url, poolclass=NullPool)
+    monkeypatch.setattr(database_module, "engine", engine)
+    monkeypatch.setattr(run_migrations, "engine", engine)
+    monkeypatch.setattr(run_migrations.settings, "DATABASE_URL", str(test_url))
+    monkeypatch.setattr(run_migrations.settings, "MIGRATION_DATABASE_URL", str(test_url))
+    monkeypatch.setattr(run_migrations.settings, "ENVIRONMENT", "test")
+    monkeypatch.setenv("QUBIRA_TEST_POSTGRESQL_URL", str(test_url))
+    monkeypatch.setenv("QUBIRA_EPOCH_POSTGRESQL_TEST", "1")
+    monkeypatch.setenv("QUBIRA_TEST_MODE", "1")
 
-    epoch_config = Config(str(BACKEND_ROOT / "alembic_epoch.ini"))
-    epoch_script = ScriptDirectory.from_config(epoch_config)
-    assert len(epoch_script.get_heads()) == 1
-    with acquire_postgresql_migration_ownership(_POSTGRESQL_TEST_URL_OBJ) as owner:
-        names = set(inspect(owner.connection).get_table_names())
-        assert "alembic_version" not in names
-        assert "alembic_version_epoch" in names
-        assert CONTROL_TABLES <= names
-        revisions = owner.connection.execute(
-            text("SELECT version_num FROM alembic_version_epoch")
-        ).scalars().all()
-        assert revisions == epoch_script.get_heads()
-        snapshot = epoch_control_snapshot(owner.connection)
-        assert snapshot["state"] is EpochTransitionState.VERIFIED
-        assert snapshot["plan_digest"]
-        assert snapshot["database_identity_digest"]
-        assert len(
-            owner.connection.execute(select(EPOCH_AUDIT_TABLE.c.event_id)).all()
-        ) == 5
-        before_manifest = build_schema_manifest(owner.connection)["sha256"]
-        before_generation = snapshot["generation"]
-        owner.connection.commit()
+    try:
+        assert engine.dialect.name == "postgresql"
+        with engine.connect() as connection:
+            assert int(connection.exec_driver_sql("SHOW server_version_num").scalar_one()) == 180006
+            assert not inspect(connection).get_table_names()
 
-    report = build_epoch_preflight_report(engine)
-    assert report["eligible_for_migration"] is True
-    assert report["current_revision"] == epoch_script.get_heads()[0]
+        assert run_migrations.run_migrations() == 0
 
-    with acquire_postgresql_migration_ownership(_POSTGRESQL_TEST_URL_OBJ) as owner:
-        after_manifest = build_schema_manifest(owner.connection)["sha256"]
-        after_snapshot = epoch_control_snapshot(owner.connection)
-        assert after_manifest == before_manifest
-        assert after_snapshot["generation"] == before_generation
-        assert run_migrations.run_migrations() == 1
-        assert epoch_control_snapshot(owner.connection)["generation"] == before_generation
-        owner.connection.commit()
+        epoch_config = Config(str(BACKEND_ROOT / "alembic_epoch.ini"))
+        epoch_script = ScriptDirectory.from_config(epoch_config)
+        assert len(epoch_script.get_heads()) == 1
+        with acquire_postgresql_migration_ownership(test_url) as owner:
+            names = set(inspect(owner.connection).get_table_names())
+            assert "alembic_version" not in names
+            assert "alembic_version_epoch" in names
+            assert CONTROL_TABLES <= names
+            revisions = owner.connection.execute(
+                text("SELECT version_num FROM alembic_version_epoch")
+            ).scalars().all()
+            assert revisions == epoch_script.get_heads()
+            snapshot = epoch_control_snapshot(owner.connection)
+            assert snapshot["state"] is EpochTransitionState.VERIFIED
+            assert snapshot["plan_digest"]
+            assert snapshot["database_identity_digest"]
+            assert len(
+                owner.connection.execute(select(EPOCH_AUDIT_TABLE.c.event_id)).all()
+            ) == 5
+            before_manifest = build_schema_manifest(owner.connection)["sha256"]
+            before_generation = snapshot["generation"]
+            owner.connection.commit()
 
-    assert run_migrations.run_migrations() == 0
-    with acquire_postgresql_migration_ownership(_POSTGRESQL_TEST_URL_OBJ) as owner:
-        assert epoch_control_snapshot(owner.connection)["generation"] == before_generation
-        owner.connection.commit()
+        report = build_epoch_preflight_report(engine)
+        assert report["eligible_for_migration"] is True
+        assert report["current_revision"] == epoch_script.get_heads()[0]
 
-    environment = os.environ.copy()
-    direct = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "alembic",
-            "-c",
-            "alembic_epoch.ini",
-            "upgrade",
-            "head",
-        ],
-        cwd=BACKEND_ROOT,
-        env=environment,
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
-    )
-    assert direct.returncode != 0
-    assert "active coordinated PostgreSQL lease" in direct.stderr
+        with acquire_postgresql_migration_ownership(test_url) as owner:
+            after_manifest = build_schema_manifest(owner.connection)["sha256"]
+            after_snapshot = epoch_control_snapshot(owner.connection)
+            assert after_manifest == before_manifest
+            assert after_snapshot["generation"] == before_generation
+            assert run_migrations.run_migrations() == 1
+            assert epoch_control_snapshot(owner.connection)["generation"] == before_generation
+            owner.connection.commit()
+
+        assert run_migrations.run_migrations() == 0
+        with acquire_postgresql_migration_ownership(test_url) as owner:
+            assert epoch_control_snapshot(owner.connection)["generation"] == before_generation
+            owner.connection.commit()
+
+        environment = os.environ.copy()
+        environment["QUBIRA_TEST_POSTGRESQL_URL"] = str(test_url)
+        direct = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "alembic",
+                "-c",
+                "alembic_epoch.ini",
+                "upgrade",
+                "head",
+            ],
+            cwd=BACKEND_ROOT,
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        assert direct.returncode != 0
+        assert "active coordinated PostgreSQL lease" in direct.stderr
+    finally:
+        engine.dispose()
+        with admin_engine.connect().execution_options(isolation_level="AUTOCOMMIT") as connection:
+            connection.execute(text(f'DROP DATABASE "{database_name}"'))
+        admin_engine.dispose()
 
 
 def test_interrupted_epoch_attempt_is_not_retried_automatically(monkeypatch) -> None:

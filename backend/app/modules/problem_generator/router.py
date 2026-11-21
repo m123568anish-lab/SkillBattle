@@ -14,9 +14,12 @@ from __future__ import annotations
 
 from fastapi import (
     APIRouter,
+    Depends,
     HTTPException,
     status,
 )
+from app.core.dependencies import get_current_user
+from app.models.user import User
 
 from .schemas import (
     GenerateProblemRequest,
@@ -65,9 +68,8 @@ async def health():
 )
 
 async def generate_problem(
-
     request: GenerateProblemRequest,
-
+    current_user: User = Depends(get_current_user),
 ):
 
     try:

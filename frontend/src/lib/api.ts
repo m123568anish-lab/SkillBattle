@@ -60,6 +60,11 @@ api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
         const token = await getNeonToken();
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
+        } else {
+            const legacyToken = localStorage.getItem("access_token");
+            if (legacyToken && config.headers) {
+                config.headers.Authorization = `Bearer ${legacyToken}`;
+            }
         }
     }
     return config;

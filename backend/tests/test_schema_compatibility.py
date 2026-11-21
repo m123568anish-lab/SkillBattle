@@ -110,6 +110,53 @@ def test_postgresql_startup_fails_closed_without_schema_repair(monkeypatch):
         init_db.ensure_database_compatibility()
 
 
+def test_postgresql_preflight_failure_includes_safe_revision_and_difference_context(
+    monkeypatch,
+):
+    from app.database import migration_preflight
+
+    postgres_engine = SimpleNamespace(
+        dialect=SimpleNamespace(name="postgresql"),
+    )
+    monkeypatch.setattr(init_db, "engine", postgres_engine)
+    monkeypatch.setattr(
+        "app.core.config.get_settings",
+        lambda: SimpleNamespace(
+            ENVIRONMENT="production",
+            DATABASE_READINESS_MODE="legacy",
+        ),
+    )
+    monkeypatch.setattr(
+        migration_preflight,
+        "build_preflight_report",
+        lambda engine: {
+            "eligible_for_migration": False,
+            "current_revision": "d1f5a8e7c2b4",
+            "repository_head": "f9a1b2c3d4e5",
+            "schema_difference_count": 1,
+            "schema_differences": [
+                {
+                    "operation": "add_column",
+                    "schema": "public",
+                    "table": "questions",
+                    "column": "source_url",
+                }
+            ],
+            "state_errors": [],
+            "missing_applied_tables": [],
+            "pending_table_conflicts": [],
+        },
+    )
+
+    with pytest.raises(RuntimeError) as error:
+        init_db.ensure_database_compatibility()
+
+    message = str(error.value)
+    assert "repository_head='f9a1b2c3d4e5'" in message
+    assert "difference_summary=['add_column:public.questions:source_url']" in message
+    assert "password" not in message.lower()
+
+
 def test_compatible_postgresql_startup_is_preflight_only(monkeypatch):
     from app.database import migration_preflight
 
